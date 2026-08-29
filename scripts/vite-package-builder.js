@@ -546,20 +546,24 @@ function createPureCompoundComponentPlugin() {
 }
 
 function resolveAliasEntries(request) {
-  const runtimeVaporRoot = path.resolve(rootDir, 'packages/runtime-vapor')
+  const runtimeVaporDist = path.resolve(rootDir, 'packages/runtime-vapor/dist')
   const nodeRuntime = request.outputPlatform === 'node'
   const minimalVaporRuntime = isMinimalVaporBuild(request)
 
   return [
     ...workspaceAliasEntries,
     {
+      find: '@rue-js/runtime-vapor/protocol',
+      replacement: path.resolve(runtimeVaporDist, 'protocol.js'),
+    },
+    {
       find: '@rue-js/runtime-vapor/vapor',
-      replacement: path.resolve(runtimeVaporRoot, nodeRuntime ? 'vapor.node.js' : 'vapor.js'),
+      replacement: path.resolve(runtimeVaporDist, nodeRuntime ? 'vapor.node.js' : 'vapor.js'),
     },
     {
       find: '@rue-js/runtime-vapor/reactive',
       replacement: path.resolve(
-        runtimeVaporRoot,
+        runtimeVaporDist,
         nodeRuntime
           ? 'reactive.node.js'
           : minimalVaporRuntime
@@ -570,7 +574,7 @@ function resolveAliasEntries(request) {
     {
       find: '@rue-js/runtime-vapor',
       replacement: path.resolve(
-        runtimeVaporRoot,
+        runtimeVaporDist,
         nodeRuntime ? 'index.node.js' : minimalVaporRuntime ? 'vapor.js' : 'index.js',
       ),
     },

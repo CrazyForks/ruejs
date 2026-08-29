@@ -34,9 +34,11 @@ export default AttributesAndProps;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$setStyle, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$setStyle, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">属性、className、style 与 Props</h3>');
+const _$getTemplate2 = _$template('<div id="box" class="border p-2">className 与 id</div>');
 const Badge: FC<{
     label: string;
     color?: string;
@@ -60,15 +62,8 @@ const Badge: FC<{
 const AttributesAndProps: FC = ()=>vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold");
-        _$appendChild(_el1, _$createTextNode("属性、className、style 与 Props"));
-        const _el2 = _$createElement("div", _root);
-        _$appendChild(_root, _el2);
-        _$setAttribute(_el2, "id", "box");
-        _$setClassName(_el2, "border p-2");
-        _$appendChild(_el2, _$createTextNode("className 与 id"));
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
         const _el3 = _$createElement("div", _root);
         _$appendChild(_root, _el3);
         _$setStyle(_el3, {

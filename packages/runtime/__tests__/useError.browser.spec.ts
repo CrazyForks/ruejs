@@ -42,7 +42,7 @@ describe('useError browser bridge', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-  it('rewrites bare wasm unreachable traps into actionable diagnostics', async () => {
+  it('preserves host runtime errors without framework-specific rewriting', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const reason = new WebAssembly.RuntimeError('unreachable')
     const event = new Event('unhandledrejection') as Event & {
@@ -62,12 +62,9 @@ describe('useError browser bridge', () => {
     window.dispatchEvent(event)
     await flush()
 
-    expect(getOverlayText()).toContain('Rue Vapor/Wasm trapped with "unreachable"')
-    expect(getOverlayText()).toContain(
-      'assembling a fresh object instead of deleting or rewriting fields',
-    )
-    expect(getOverlayText()).toContain('RUE_VAPOR_TRANSFORMED')
-    expect(getOverlayText()).toContain('Original trap: RuntimeError: unreachable.')
+    expect(getOverlayText()).toContain('unreachable')
+    expect(getOverlayText()).toContain('RuntimeError: unreachable')
+    expect(getOverlayText()).not.toContain('Rue Vapor/Wasm trapped')
     expect(consoleError).not.toHaveBeenCalled()
   })
 

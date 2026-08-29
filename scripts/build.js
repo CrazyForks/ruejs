@@ -120,28 +120,19 @@ async function ensureRuntimeVaporBuilt(targets) {
   }
 
   const requiredArtifacts = [
-    {
-      filePath: path.resolve('packages/runtime-vapor/pkg-vapor/rue_runtime_vapor.js'),
-      label: 'canonical browser package',
-      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build'],
-    },
-    {
-      filePath: path.resolve('packages/runtime-vapor/pkg-node/rue_runtime_vapor.js'),
-      label: 'node package',
-      command: ['--filter', '@rue-js/runtime-vapor', 'run', 'build-node'],
-    },
+    'packages/runtime-vapor/dist/index.js',
+    'packages/runtime-vapor/dist/index.node.js',
+    'packages/runtime-vapor/dist/reactive-kernel/index.js',
   ]
 
-  for (const artifact of requiredArtifacts) {
-    if (fs.existsSync(artifact.filePath)) {
-      continue
-    }
-
-    console.log(pico.cyan(`\nBuilding @rue-js/runtime-vapor ${artifact.label}...`))
-    await exec('pnpm', artifact.command, {
-      stdio: 'inherit',
-    })
+  if (requiredArtifacts.every(filePath => fs.existsSync(path.resolve(filePath)))) {
+    return
   }
+
+  console.log(pico.cyan('\nBuilding @rue-js/runtime-vapor TypeScript artifacts...'))
+  await exec('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-ts'], {
+    stdio: 'inherit',
+  })
 }
 
 /**

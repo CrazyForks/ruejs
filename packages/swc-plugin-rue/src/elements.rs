@@ -27,6 +27,10 @@ pub fn build_element(
     stmts: &mut Vec<Stmt>,
 ) {
     log::debug("elements: build_element");
+    if crate::vapor::template::emit_marked_template_child(vt, jsx_el, parent, stmts) {
+        log::debug("elements: static html template branch");
+        return;
+    }
     if let Some(router_link_el) = crate::router_link::rewrite_router_link_fast_path(jsx_el) {
         log::debug("elements: RouterLink fast path -> native anchor");
         build_element(vt, &router_link_el, parent, stmts);

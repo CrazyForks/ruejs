@@ -1,19 +1,17 @@
 // @vitest-environment jsdom
 
-import { createRequire } from 'node:module'
-
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
-import { createRue as createJsRue } from '../../runtime-vapor/js-runtime/create-rue.js'
-import { wrapCreateRue } from '../../runtime-vapor/runtime-entry-wrap.js'
-import { installSharedBridge } from '../../runtime-vapor/vapor-bridge.js'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
+import { createReactiveKernel } from '../../runtime-vapor/dist/reactive-kernel/index.js'
+import { createRue as createJsRue } from '../../runtime-vapor/dist/js-runtime/create-rue.js'
+import { wrapCreateRue } from '../../runtime-vapor/dist/runtime-entry-wrap.js'
+import { installSharedBridge } from '../../runtime-vapor/dist/vapor-bridge.js'
 import '../src/error-capture'
 
 import '../src/dom'
 
-const require = createRequire(import.meta.url)
-const graphKernel = require('../../runtime-vapor/pkg-node/rue_runtime_vapor.js')
+const reactiveKernel = createReactiveKernel()
 
 type ComponentHost = Record<string, unknown>
 
@@ -77,7 +75,7 @@ const getDOMBridge = () =>
     .__rue_dom
 
 const createBackends = () => {
-  const jsFacade = createReactiveFacade(graphKernel)
+  const jsFacade = createReactiveFacade(reactiveKernel)
   installSharedBridge(jsFacade.default)
   const createWrappedJsRue = wrapCreateRue(
     (adapter: unknown) => createJsRue(adapter, jsFacade),

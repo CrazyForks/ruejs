@@ -2413,6 +2413,114 @@ pub fn process_function(func: &mut Function) {
     inject_setup(block, ret_idx, names_const, names_let, collected);
 }
 
+struct RenderControlJsxDetector {
+    found: bool,
+}
+
+impl Visit for RenderControlJsxDetector {
+    fn visit_jsx_element(&mut self, _element: &JSXElement) {
+        self.found = true;
+    }
+
+    fn visit_jsx_fragment(&mut self, _fragment: &JSXFragment) {
+        self.found = true;
+    }
+}
+
+/// Detect block-arrow render logic that must remain live instead of becoming one-time setup.
+pub fn arrow_has_reactive_render_control(arrow: &ArrowExpr) -> bool {
+    let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() else {
+        return false;
+    };
+    let Some(ret_idx) = find_first_return_index(block) else {
+        return false;
+    };
+    block.stmts.iter().take(ret_idx + 1).any(|stmt| {
+        if !matches!(stmt, Stmt::If(_)) || stmt_contains_return(stmt) {
+            return false;
+        }
+        let mut jsx = RenderControlJsxDetector { found: false };
+        stmt.visit_with(&mut jsx);
+        jsx.found
+    })
+}
+
+struct ExplicitVaporReturnDetector {
+    found: bool,
+}
+
+impl Visit for ExplicitVaporReturnDetector {
+    fn visit_return_stmt(&mut self, ret: &ReturnStmt) {
+        let Some(arg) = &ret.arg else {
+            return;
+        };
+        let Expr::Call(call) = crate::utils::unwrap_expr(arg.as_ref()) else {
+            return;
+        };
+        if call_expr_callee_ident_name(call) == Some("vapor") {
+            self.found = true;
+        }
+    }
+}
+
+/// Explicit hand-written Vapor factories capture render snapshots before their setup runs.
+/// They need component-level dependency tracking so a props/signal change can rebuild that
+/// snapshot, while compiler-generated JSX components remain on the fine-grained DOM path.
+pub fn block_has_explicit_vapor_return(block: &BlockStmt) -> bool {
+    let mut detector = ExplicitVaporReturnDetector { found: false };
+    block.visit_with(&mut detector);
+    detector.found
+}
+
+fn block_has_component_render_reactive_marker(block: &BlockStmt) -> bool {
+    block.stmts.iter().any(|stmt| {
+        let Stmt::Expr(expr_stmt) = stmt else {
+            return false;
+        };
+        let Expr::Call(call) = crate::utils::unwrap_expr(expr_stmt.expr.as_ref()) else {
+            return false;
+        };
+        call_expr_callee_ident_name(call) == Some("_$vaporMarkComponentRenderReactive")
+    })
+}
+
+pub fn mark_component_render_reactive(block: &mut BlockStmt) {
+    if block_has_component_render_reactive_marker(block) {
+        return;
+    }
+
+    block.stmts.insert(
+        0,
+        Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::new(crate::emit::call_ident("_$vaporMarkComponentRenderReactive", vec![])),
+        }),
+    );
+}
+
+/// Nested JSX-returning closures stay on the classic JSX runtime path when they are passed as
+/// opaque component props. Annotate the closure before mounting so its first render can collect
+/// dependencies without performing an untracked duplicate render.
+pub fn mark_nested_jsx_render_closure(expr: &mut Box<Expr>) -> bool {
+    let should_mark = match expr.as_ref() {
+        Expr::Arrow(arrow) => match arrow.body.as_ref() {
+            BlockStmtOrExpr::Expr(body) => matches!(
+                crate::utils::unwrap_expr(body.as_ref()),
+                Expr::JSXElement(_) | Expr::JSXFragment(_)
+            ),
+            BlockStmtOrExpr::BlockStmt(_) => false,
+        },
+        _ => false,
+    };
+    if !should_mark {
+        return false;
+    }
+
+    let closure = expr.as_ref().clone();
+    *expr = Box::new(crate::emit::call_ident("_$vaporMarkComponentRenderReactive", vec![closure]));
+    true
+}
+
 /// 判定 FnDecl 是否需要转换：
 /// - 条件一：其函数体中返回 JSX 或 h(...) 形式的可渲染内容；
 /// - 条件二：其返回类型显式标注为 JSX.Element。
@@ -2530,6 +2638,11 @@ pub fn process_var_decl(v: &mut VarDecl) {
             BlockStmtOrExpr::BlockStmt(b) => b,
             _ => continue,
         };
+        // Render-control components must recompute their local branch snapshots on every render.
+        // Moving those locals into useSetup would freeze the first branch forever.
+        if block_has_component_render_reactive_marker(block) {
+            continue;
+        }
         // 如果已存在 _$useSetup 声明，避免重复注入
         if block_has_use_setup(block) {
             continue;

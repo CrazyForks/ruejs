@@ -5,16 +5,18 @@ Vapor core 入口
 */
 
 import { getCurrentInstance } from '@rue-js/runtime-vapor/vapor'
+import {
+  RUE_CLEANUP_BUCKET_KEY,
+  RUE_KEEP_ALIVE_HOOK_TARGET_KEY,
+  RUE_PORTABLE_VAPOR_SETUP_KEY,
+  RUE_REPEATABLE_MOUNT_FACTORY_KEY,
+} from '@rue-js/runtime-vapor/protocol'
 import { withDOMHostOperations } from './dom'
 import type { DomElementLike } from './dom'
-import type { RenderableOutput, VaporSetupResult } from './rue'
+import type { RenderableOutput, VaporSetupResult } from './runtime-types'
 
-const RUE_CLEANUP_BUCKET_KEY = '__rue_cleanup_bucket'
 const RUE_CONTEXT_OWNER_PARENT_KEY = '__rue_context_owner_parent__'
 const RUE_CONTEXT_PARENT_INSTANCE_KEY = '__rue_context_parent_instance__'
-const RUE_KEEP_ALIVE_HOOK_TARGET_KEY = '__rue_keep_alive_hook_target__'
-const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
-const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
 
 type VaporScopeBridge = {
   beginVaporScope(owner: unknown): boolean
@@ -66,6 +68,6 @@ const createVaporSetupHandle = (
   return handle
 }
 
-/** 创建轻量 Vapor setup handle，并让响应式 scope 与卸载清理共享 pkg-vapor 实例。 */
+/** 创建轻量 Vapor setup handle，并让响应式 scope 与卸载清理共享 TypeScript 内核实例。 */
 export const vapor = (setup: (parentContext?: DomElementLike | null) => VaporSetupResult) =>
   createVaporSetupHandle(setup)

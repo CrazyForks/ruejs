@@ -1,7 +1,14 @@
 mod block;
 mod component;
 mod helpers;
+pub(crate) mod template;
 mod visitor;
+
+#[cfg(test)]
+pub(crate) use block::expr_container::is_compiled_scalar_expr;
+pub(crate) use block::expr_container::{
+    emit_compiled_text_binding, is_compiled_scalar_expr_with_shadows,
+};
 
 use std::collections::HashSet;
 
@@ -29,6 +36,7 @@ Vapor 深编译转换器说明：
 /// - 访问箭头函数体；若返回 JSX/Fragment，替换为 `vapor(() => { ... })`
 /// - 在块体内调用 `elements::build_element` 递归生成原生 DOM 创建与插入代码
 /// - 标记 `did_transform = true` 以便模块级注入运行时 import
+#[derive(Clone)]
 pub struct VaporTransform {
     /// 递增的原生元素计数，用于生成 `_elX` 名称
     pub next_el: usize,
@@ -42,6 +50,8 @@ pub struct VaporTransform {
     pub once_depth: usize,
     /// 标记当前模块是否发生过 Vapor 转换，用于触发运行时 import 注入
     pub did_transform: bool,
+    /// 是否允许生成依赖原生 HTMLTemplateElement 的浏览器静态模板快路径。
+    pub static_templates: bool,
     /// 记录已创建元素的标识符与标签名，用于特殊处理（例如 style 子文本）
     pub el_tag_by_ident: std::collections::HashMap<String, String>,
     /// 当前可见的“renderable local” 变量名栈，用于把 bare ident child 判定为 slot 候选
@@ -51,6 +61,33 @@ pub struct VaporTransform {
 }
 
 impl VaporTransform {
+    const ASYNC_FUNCTION_SCOPE: &'static str = "\0rue:async-function";
+    const SYNC_FUNCTION_SCOPE: &'static str = "\0rue:sync-function";
+    pub(crate) fn push_function_scope(&mut self, is_async: bool) {
+        let mut scope = HashSet::new();
+        scope.insert(
+            if is_async { Self::ASYNC_FUNCTION_SCOPE } else { Self::SYNC_FUNCTION_SCOPE }
+                .to_string(),
+        );
+        self.renderable_local_scopes.push(scope);
+    }
+
+    pub(crate) fn pop_function_scope(&mut self) {
+        self.renderable_local_scopes.pop();
+    }
+
+    pub(crate) fn current_function_is_async(&self) -> bool {
+        for scope in self.renderable_local_scopes.iter().rev() {
+            if scope.contains(Self::ASYNC_FUNCTION_SCOPE) {
+                return true;
+            }
+            if scope.contains(Self::SYNC_FUNCTION_SCOPE) {
+                return false;
+            }
+        }
+        false
+    }
+
     pub(crate) fn is_once_context(&self) -> bool {
         self.once_depth > 0
     }
@@ -224,6 +261,46 @@ pub(crate) fn coalesce_list_row_binding_effects(
     }));
     *stmts = retained;
     Some(patch_ident)
+}
+
+/// 从 direct-row patch 中分离 selector 订阅。返回的语句由列表 codegen 放进
+/// 当前行 owner 的独立 effect，避免外部 selected source 成为列表 reconcile 的依赖。
+pub(crate) fn take_list_row_selector_effects(
+    stmts: &mut Vec<Stmt>,
+    selector_ident: &Ident,
+) -> Vec<Stmt> {
+    struct UsesSelector<'a> {
+        selector_ident: &'a Ident,
+        found: bool,
+    }
+
+    impl Visit for UsesSelector<'_> {
+        fn visit_ident(&mut self, ident: &Ident) {
+            if ident.to_id() == self.selector_ident.to_id() {
+                self.found = true;
+            }
+        }
+    }
+
+    let mut retained = Vec::with_capacity(stmts.len());
+    let mut selector_stmts = Vec::new();
+    for stmt in std::mem::take(stmts) {
+        if let Some(body) = watch_effect_body(&stmt) {
+            let mut uses_selector = UsesSelector { selector_ident, found: false };
+            body.visit_with(&mut uses_selector);
+            if uses_selector.found {
+                selector_stmts.push(Stmt::Block(BlockStmt {
+                    span: DUMMY_SP,
+                    ctxt: swc_core::common::SyntaxContext::empty(),
+                    stmts: body,
+                }));
+                continue;
+            }
+        }
+        retained.push(stmt);
+    }
+    *stmts = retained;
+    selector_stmts
 }
 
 /// 将安全 direct-root 行里的 ref helper 绑定到当前行 owner。

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -17,7 +19,7 @@ import {
 import {
   vaporKeyedList as vaporVaporKeyedList,
   type VaporListItemRange as VaporVaporListItemRange,
-} from '../src/vapor-helpers-vapor'
+} from '../src/vapor-helpers'
 
 setReactiveScheduling('sync')
 
@@ -39,7 +41,6 @@ type ListHelper = (args: {
   before: Comment
   singleRoot: boolean
   trackIndex: boolean
-  directRoot: boolean
   renderItem: (item: Row, parent: HTMLElement, start: Comment, end: Comment, index?: number) => void
   state?: ListState
 }) => Map<unknown, DefaultVaporListItemRange | VaporVaporListItemRange>
@@ -84,7 +85,6 @@ const exerciseStableSingleRoot = (vaporKeyedList: ListHelper) => {
       before: end,
       singleRoot: true,
       trackIndex: false,
-      directRoot: true,
       renderItem: (item, listParent, anchor) => {
         const id = item.id
         const row = document.createElement('div')
@@ -167,174 +167,18 @@ const exerciseStableSingleRoot = (vaporKeyedList: ListHelper) => {
   expect(bindingRuns.get(1)).toBe(firstRunsBeforeClear)
 }
 
-const exercisePrimitiveDirectRoot = (vaporKeyedList: ListHelper) => {
-  const parent = document.createElement('div')
-  const end = document.createComment('rue:list:end')
-  const tick = signal(0, {}, true)
-  const bindingRuns = new Map<string, number>()
-  let elements = new Map<unknown, DefaultVaporListItemRange | VaporVaporListItemRange>()
+describe('vaporKeyedList compatibility owner path', () => {
+  it('does not expose compiler-only row flags or owner state', () => {
+    const source = readFileSync(
+      path.join(process.cwd(), 'packages/runtime/src/vapor-helpers.ts'),
+      'utf8',
+    )
+    const removedNames = ['direct' + 'Root', 'compiled' + 'RowPatch']
 
-  parent.appendChild(end)
-  document.body.appendChild(parent)
-
-  const render = (value?: string) => {
-    elements = vaporKeyedList({
-      items: value === undefined ? [] : ([value] as unknown as Row[]),
-      getKey: () => 'stable-key',
-      elements,
-      parent,
-      before: end,
-      singleRoot: true,
-      trackIndex: false,
-      directRoot: true,
-      renderItem: (item, listParent, anchor) => {
-        const primitive = item as unknown as string
-        const row = document.createElement('div')
-        listParent.insertBefore(row, anchor)
-        watchEffect(() => {
-          bindingRuns.set(primitive, (bindingRuns.get(primitive) ?? 0) + 1)
-          row.textContent = `${primitive}:${tick.get()}`
-        })
-      },
-    })
-  }
-
-  const retiredRuns = new Map<string, number>()
-
-  for (let round = 0; round < 3; round += 1) {
-    const initial = `initial-${round}`
-    const replacement = `replacement-${round}`
-
-    render(initial)
-    const firstRow = parent.querySelector('div')
-    expect(firstRow?.textContent).toBe(`${initial}:${round * 2}`)
-
-    render(replacement)
-    const secondRow = parent.querySelector('div')
-    expect(parent.querySelectorAll('div')).toHaveLength(1)
-    expect(secondRow).not.toBe(firstRow)
-    expect(secondRow?.textContent).toBe(`${replacement}:${round * 2}`)
-
-    retiredRuns.set(initial, bindingRuns.get(initial)!)
-    tick.set(round * 2 + 1)
-    expect(bindingRuns.get(initial)).toBe(retiredRuns.get(initial))
-    expect(secondRow?.textContent).toBe(`${replacement}:${round * 2 + 1}`)
-
-    render()
-    expect(parent.querySelectorAll('div')).toHaveLength(0)
-    retiredRuns.set(replacement, bindingRuns.get(replacement)!)
-
-    tick.set(round * 2 + 2)
-    retiredRuns.forEach((runs, label) => {
-      expect(bindingRuns.get(label)).toBe(runs)
-    })
-  }
-
-  render('live')
-  const liveRow = parent.querySelector('div')
-  const liveRuns = bindingRuns.get('live')!
-  tick.set(7)
-
-  retiredRuns.forEach((runs, label) => {
-    expect(bindingRuns.get(label)).toBe(runs)
+    for (const name of removedNames) expect(source).not.toContain(name)
   })
-  expect(bindingRuns.get('live')).toBe(liveRuns + 1)
-  expect(liveRow?.textContent).toBe('live:7')
-}
 
-const exerciseCommonDiffOperations = (vaporKeyedList: ListHelper) => {
-  const parent = document.createElement('div')
-  const end = document.createComment('rue:list:end')
-  let elements = new Map<unknown, DefaultVaporListItemRange | VaporVaporListItemRange>()
-
-  parent.appendChild(end)
-  document.body.appendChild(parent)
-
-  const render = (items: Row[]) => {
-    elements = vaporKeyedList({
-      items,
-      getKey: item => item.id,
-      elements,
-      parent,
-      before: end,
-      singleRoot: true,
-      trackIndex: false,
-      directRoot: true,
-      renderItem: (item, listParent, anchor) => {
-        const row = document.createElement('div')
-        row.dataset.id = String(item.id)
-        listParent.insertBefore(row, anchor)
-        watchEffect(() => {
-          row.textContent = item.label
-        })
-      },
-    })
-  }
-
-  const first = { id: 1, label: 'Alpha', className: 'idle' }
-  const second = { id: 2, label: 'Beta', className: 'ready' }
-  const third = { id: 3, label: 'Gamma', className: 'waiting' }
-  render([first, second, third])
-
-  const firstRow = parent.querySelector('[data-id="1"]')
-  const secondRow = parent.querySelector('[data-id="2"]')
-  const thirdRow = parent.querySelector('[data-id="3"]')
-  const insertBefore = vi.spyOn(parent, 'insertBefore')
-  const appendChild = vi.spyOn(parent, 'appendChild')
-  const removeChild = vi.spyOn(parent, 'removeChild')
-  const resetOperationCounts = () => {
-    insertBefore.mockClear()
-    appendChild.mockClear()
-    removeChild.mockClear()
-  }
-
-  const updatedFirst = { ...first, label: 'Alpha 2' }
-  const updatedSecond = { ...second, label: 'Beta 2' }
-  const updatedThird = { ...third, label: 'Gamma 2' }
-  render([updatedFirst, updatedSecond, updatedThird])
-
-  expect(insertBefore).not.toHaveBeenCalled()
-  expect(appendChild).not.toHaveBeenCalled()
-  expect(removeChild).not.toHaveBeenCalled()
-  expect(parent.querySelector('[data-id="1"]')).toBe(firstRow)
-  expect(parent.querySelector('[data-id="2"]')).toBe(secondRow)
-  expect(parent.querySelector('[data-id="3"]')).toBe(thirdRow)
-  expect(firstRow?.textContent).toBe('Alpha 2')
-  expect(secondRow?.textContent).toBe('Beta 2')
-  expect(thirdRow?.textContent).toBe('Gamma 2')
-
-  resetOperationCounts()
-  const fourth = { id: 4, label: 'Delta', className: 'new' }
-  render([updatedFirst, updatedSecond, updatedThird, fourth])
-
-  expect(insertBefore).toHaveBeenCalledTimes(1)
-  expect(appendChild).not.toHaveBeenCalled()
-  expect(removeChild).not.toHaveBeenCalled()
-  expect(Array.from(parent.querySelectorAll('[data-id]')).slice(0, 3)).toEqual([
-    firstRow,
-    secondRow,
-    thirdRow,
-  ])
-
-  resetOperationCounts()
-  render([updatedFirst, updatedSecond, updatedThird])
-
-  expect(insertBefore).not.toHaveBeenCalled()
-  expect(appendChild).not.toHaveBeenCalled()
-  expect(removeChild).toHaveBeenCalledTimes(1)
-  expect(Array.from(parent.querySelectorAll('[data-id]'))).toEqual([firstRow, secondRow, thirdRow])
-
-  resetOperationCounts()
-  render([updatedThird, updatedFirst, updatedSecond])
-
-  expect(insertBefore).toHaveBeenCalledTimes(1)
-  expect(appendChild).not.toHaveBeenCalled()
-  expect(removeChild).not.toHaveBeenCalled()
-  expect(Array.from(parent.querySelectorAll('[data-id]'))).toEqual([thirdRow, firstRow, secondRow])
-}
-
-describe('vaporKeyedList stable single-root fast path', () => {
-  it('detaches a fully owned parent before rebuilding keyed order', () => {
+  it('keeps keyed row identity while rebuilding order', () => {
     const exercise = (vaporKeyedList: ListHelper) => {
       const parent = document.createElement('div')
       const end = document.createComment('rue:list:end')
@@ -356,7 +200,6 @@ describe('vaporKeyedList stable single-root fast path', () => {
           before: end,
           singleRoot: true,
           trackIndex: false,
-          directRoot: true,
           renderItem: (item, listParent, anchor) => {
             const row = document.createElement('div')
             row.dataset.id = String(item.id)
@@ -372,24 +215,7 @@ describe('vaporKeyedList stable single-root fast path', () => {
           node,
         ]),
       )
-      const nativeAppendChild = Node.prototype.appendChild
-      let connectedFragmentTransfers = 0
-      const appendChild = vi.spyOn(Node.prototype, 'appendChild').mockImplementation(function <
-        T extends Node,
-      >(this: Node, child: T): T {
-        if (this.nodeType === Node.DOCUMENT_FRAGMENT_NODE && child.parentNode === parent) {
-          connectedFragmentTransfers += 1
-        }
-        return nativeAppendChild.call(this, child) as T
-      })
-
-      try {
-        render(rows.slice().reverse())
-      } finally {
-        appendChild.mockRestore()
-      }
-
-      expect(connectedFragmentTransfers).toBe(0)
+      render(rows.slice().reverse())
       expect(Array.from(parent.querySelectorAll<HTMLElement>('[data-id]'))).toEqual(
         rows
           .slice()
@@ -430,7 +256,6 @@ describe('vaporKeyedList stable single-root fast path', () => {
               before: end,
               singleRoot: true,
               trackIndex: false,
-              directRoot: true,
               renderItem: (item, listParent, anchor) => {
                 const scope = getCurrentScope()
                 expect(scope).toBeDefined()
@@ -564,7 +389,6 @@ describe('vaporKeyedList stable single-root fast path', () => {
             before: failed.parent.lastChild as Comment,
             singleRoot: true,
             trackIndex: false,
-            directRoot: true,
             renderItem: item => {
               onScopeDispose(() => {})
               if (item.id === 2) throw new Error('owner-build-failed')
@@ -606,7 +430,6 @@ describe('vaporKeyedList stable single-root fast path', () => {
             before: end,
             singleRoot: true,
             trackIndex: false,
-            directRoot: true,
             renderItem: (item, listParent, anchor) => {
               const rowScope = getCurrentScope()
               expect(rowScope).toBeDefined()
@@ -683,7 +506,6 @@ describe('vaporKeyedList stable single-root fast path', () => {
           before: end,
           singleRoot: true,
           trackIndex: false,
-          directRoot: true,
           renderItem: (item, listParent, anchor) => {
             const row = document.createElement('div')
             row.textContent = item.label
@@ -725,7 +547,6 @@ describe('vaporKeyedList stable single-root fast path', () => {
         before: end,
         singleRoot: true,
         trackIndex: false,
-        directRoot: true,
         renderItem: (item, listParent, anchor) => {
           liveScope = getCurrentScope()
           const row = document.createElement('div')
@@ -754,7 +575,6 @@ describe('vaporKeyedList stable single-root fast path', () => {
           before: end,
           singleRoot: true,
           trackIndex: false,
-          directRoot: true,
           renderItem: item => {
             watchEffect(() => item.label)
             if (item.id === 3) throw new Error('row-build-failed')
@@ -776,15 +596,5 @@ describe('vaporKeyedList stable single-root fast path', () => {
 
   it('keeps the Vapor entry helper semantically aligned', () => {
     exerciseStableSingleRoot(vaporVaporKeyedList as ListHelper)
-  })
-
-  it('remounts primitive direct roots when a stable key points to a new value', () => {
-    exercisePrimitiveDirectRoot(defaultVaporKeyedList as ListHelper)
-    exercisePrimitiveDirectRoot(vaporVaporKeyedList as ListHelper)
-  })
-
-  it('bounds DOM operations for unchanged, append, tail-remove, and small reorder paths', () => {
-    exerciseCommonDiffOperations(defaultVaporKeyedList as ListHelper)
-    exerciseCommonDiffOperations(vaporVaporKeyedList as ListHelper)
   })
 })

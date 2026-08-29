@@ -11,7 +11,9 @@ vi.mock('../../../app/pages/site/SidebarPlaygroundDesign', () => ({
 }))
 
 vi.mock('../../../app/pages/site/components/Code', () => ({
-  default: () => null,
+  default: (props: { code?: string }) => (
+    <pre data-testid="mock-loading-code">{props.code ?? ''}</pre>
+  ),
 }))
 
 vi.mock('@rue-js/design', async () => {
@@ -51,7 +53,7 @@ afterEach(() => {
 })
 
 describe('Loading actual page', () => {
-  it('renders loading demos and restores the spinner preview after toggling code', async () => {
+  it('replaces preview and code branches without retaining previous content', async () => {
     setEnabledPreviews('Loading spinner')
 
     const container = mountContainer()
@@ -73,16 +75,79 @@ describe('Loading actual page', () => {
       ).toBe(5)
     })
 
-    await click(findTabButton(spinnerDemo!, 'JSX代码'))
-    expect(
-      findDemo(container, '# Loading spinner')?.querySelectorAll('.loading-spinner').length,
-    ).toBe(0)
-    await click(findTabButton(findDemo(container, '# Loading spinner')!, '预览'))
+    for (let turn = 0; turn < 3; turn += 1) {
+      const currentDemo = findDemo(container, '# Loading spinner')!
+      await click(findTabButton(currentDemo, 'JSX代码'))
+      expect(currentDemo.querySelectorAll('.loading-spinner')).toHaveLength(0)
+      expect(currentDemo.querySelectorAll('[data-testid="mock-loading-code"]')).toHaveLength(1)
+
+      await click(findTabButton(currentDemo, '预览'))
+      await waitForContent(() => {
+        expect(currentDemo.querySelectorAll('.loading-spinner')).toHaveLength(5)
+      })
+      expect(currentDemo.querySelectorAll('[data-testid="mock-loading-code"]')).toHaveLength(0)
+    }
+  })
+
+  it('updates the delayed loading state and reveals it after the configured delay', async () => {
+    setEnabledPreviews('Delay')
+
+    const container = mountContainer()
+    render(<LoadingPage />, container)
 
     await waitForContent(() => {
+      expect(findDemo(container, '# Delay')).not.toBeNull()
+    })
+
+    const delayDemo = findDemo(container, '# Delay')!
+    const requestButton = Array.from(delayDemo.querySelectorAll('button')).find(
+      button => button.textContent?.trim() === '模拟请求',
+    )
+    await click(requestButton ?? null)
+
+    await waitForContent(() => {
+      expect(delayDemo.textContent).toContain('结束请求')
+      const section = delayDemo.querySelector('[data-rue-loading-section="true"]')
+      expect(section).not.toBeNull()
+      expect(section?.classList.contains('opacity-0')).toBe(true)
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 650))
+    await waitForContent(() => {
       expect(
-        findDemo(container, '# Loading spinner')?.querySelectorAll('.loading-spinner').length,
-      ).toBe(5)
+        delayDemo
+          .querySelector('[data-rue-loading-section="true"]')
+          ?.classList.contains('opacity-0'),
+      ).toBe(false)
+    })
+  })
+
+  it('opens fullscreen loading and closes it when the mask is clicked', async () => {
+    setEnabledPreviews('Fullscreen')
+
+    const container = mountContainer()
+    render(<LoadingPage />, container)
+
+    await waitForContent(() => {
+      expect(findDemo(container, '# Fullscreen')).not.toBeNull()
+    })
+
+    const fullscreenDemo = findDemo(container, '# Fullscreen')!
+    const openButton = Array.from(fullscreenDemo.querySelectorAll('button')).find(
+      button => button.textContent?.trim() === 'Show fullscreen',
+    )
+    await click(openButton ?? null)
+
+    let mask: HTMLElement | null = null
+    await waitForContent(() => {
+      mask = document.querySelector('[role="status"].fixed.inset-0') as HTMLElement | null
+      expect(mask).not.toBeNull()
+      expect(mask?.textContent).toContain('同步全局配置')
+    })
+
+    await click(mask)
+    await waitForContent(() => {
+      expect(document.querySelectorAll('[role="status"].fixed.inset-0')).toHaveLength(0)
     })
   })
 })

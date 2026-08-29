@@ -67,6 +67,18 @@
       "import": "./dist/rue.vapor.esm-bundler.js",
       "require": "./dist/rue.vapor.cjs.js"
     },
+    "./compiled": {
+      "types": "./src/compiled.ts",
+      "node": {
+        "production": "./dist/rue.compiled.cjs.prod.js",
+        "development": "./dist/rue.compiled.cjs.js",
+        "default": "./dist/rue.compiled.cjs.js"
+      },
+      "development": "./src/compiled.ts",
+      "module": "./dist/rue.compiled.esm-bundler.js",
+      "import": "./dist/rue.compiled.esm-bundler.js",
+      "require": "./dist/rue.compiled.cjs.js"
+    },
     "./server-renderer": {
       "types": "./src/server-renderer.ts",
       "node": {
@@ -141,6 +153,14 @@
       {
         "entry": "src/vapor.ts",
         "filename": "rue.vapor",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
+      {
+        "entry": "src/compiled.ts",
+        "filename": "rue.compiled",
         "formats": [
           "esm-bundler",
           "cjs"

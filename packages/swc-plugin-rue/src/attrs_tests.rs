@@ -62,6 +62,174 @@ fn normalize(src: &str) -> String {
     out.trim().to_string()
 }
 
+fn transform_module(src: &str) -> String {
+    let cm = Arc::new(SourceMap::default());
+    let fm = cm.new_source_file(
+        FileName::Custom("compiled-attrs-test.tsx".into()).into(),
+        src.to_string(),
+    );
+    let mut parser = Parser::new(
+        Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+        StringInput::from(&*fm),
+        None,
+    );
+    let program = parser.parse_program().expect("parse module");
+    let transformed = crate::apply(program);
+    let mut buf = Vec::new();
+    let mut emitter = Emitter {
+        cfg: Default::default(),
+        comments: None,
+        cm: cm.clone(),
+        wr: JsWriter::new(cm, "\n", &mut buf, None),
+    };
+    emitter.emit_program(&transformed).expect("emit transformed module");
+    String::from_utf8(buf).expect("utf8")
+}
+
+#[test]
+fn compiles_proven_scalar_attrs_to_owned_direct_dom_effects() {
+    let output = transform_module(
+        r#"
+import { signal } from '@rue-js/rue';
+export const View = () => {
+  const state = signal(0);
+  return (
+  <section
+    className={state.get() === 0 ? 'idle' : 'ready'}
+    style={String(state.get() === 0 ? 'color:red' : 'color:blue')}
+    title={state.get() === 0 ? 'first' : null}
+  >
+    <input
+      value={String(state.get())}
+      checked={Boolean(state.get())}
+      disabled={Boolean(state.get())}
+      multiple={Boolean(state.get())}
+    />
+  </section>
+  );
+};
+"#,
+    );
+    let out = normalize(&output);
+
+    assert!(!out.contains("from \"@rue-js/rue/compiled\""), "{output}");
+    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
+    assert!(out.contains("_$compiledRoot"), "{output}");
+    assert!(out.contains("effect(()=>"), "{output}");
+    assert!(out.contains("_$compiledCreateElement(\"section\""), "{output}");
+    assert!(out.contains("_$compiledAppendChild(_root, _el1)"), "{output}");
+    assert!(!out.contains("document.createElement"), "{output}");
+    assert!(out.contains("_root.className"), "{output}");
+    assert!(out.contains("_root.style.cssText"), "{output}");
+    assert!(out.contains("_root.removeAttribute(\"title\")"), "{output}");
+    assert!(out.contains(".value ="), "{output}");
+    assert!(out.contains(".checked ="), "{output}");
+    assert!(out.contains(".disabled ="), "{output}");
+    assert!(out.contains(".multiple ="), "{output}");
+    assert!(!out.contains("watchEffect"), "{output}");
+    assert!(!out.contains("_$setClassName"), "{output}");
+    assert!(!out.contains("_$setStyle"), "{output}");
+    assert!(!out.contains("_$setAttribute"), "{output}");
+    assert!(!out.contains("_$setValue"), "{output}");
+    assert!(!out.contains("_$setChecked"), "{output}");
+    assert!(!out.contains("_$setDisabled"), "{output}");
+}
+
+#[test]
+fn keeps_unproven_attr_values_on_the_vapor_fallback() {
+    let output = transform_module(
+        r#"
+const makeStyle = () => ({ color: 'red' });
+export const View = () => <div style={makeStyle()} title={loadValue()} />;
+"#,
+    );
+    let out = normalize(&output);
+
+    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
+    assert!(out.contains("watchEffect"), "{output}");
+    assert!(out.contains("_$setStyle"), "{output}");
+    assert!(out.contains("_$setAttribute"), "{output}");
+    assert!(!out.contains("_$compiledRoot"), "{output}");
+}
+
+#[test]
+fn keeps_shadowed_scalar_constructors_on_the_vapor_fallback() {
+    let output = transform_module(
+        r#"
+import { signal } from '@rue-js/rue';
+export const View = () => {
+  const state = signal(0);
+  const String = (value: unknown) => ({ value });
+  return <div title={String(state.get())} />;
+};
+"#,
+    );
+    let out = normalize(&output);
+
+    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
+    assert!(out.contains("_$setAttribute"), "{output}");
+    assert!(!out.contains("_$compiledRoot"), "{output}");
+}
+
+#[test]
+fn compiles_native_events_and_refs_to_owned_browser_operations() {
+    let output = transform_module(
+        r#"
+export const View = (props) => (
+  <section>
+    <button ref={props.buttonRef} onClick={props.onClick} onFocusCapture={props.onFocus}>
+      Save
+    </button>
+  </section>
+);
+"#,
+    );
+    let out = normalize(&output);
+    let compiled_import = output
+        .lines()
+        .find(|line| line.contains("@rue-js/rue/compiled"))
+        .expect("compiled runtime import");
+
+    assert!(out.contains("from \"@rue-js/rue/compiled\""), "{output}");
+    assert!(compiled_import.contains("onCleanup"), "{output}");
+    assert!(out.contains("_$compiledRoot"), "{output}");
+    assert!(out.contains("onCleanup"), "{output}");
+    assert!(out.contains(".addEventListener(\"click\", __event"), "{output}");
+    assert!(out.contains(".removeEventListener(\"click\", __event"), "{output}");
+    assert!(out.contains(".addEventListener(\"focus\", __event"), "{output}");
+    assert!(out.contains(".removeEventListener(\"focus\", __event"), "{output}");
+    assert!(out.contains("capture: true"), "{output}");
+    assert!(out.contains("props.onClick"), "{output}");
+    assert!(out.contains("typeof __ref"), "{output}");
+    assert!(out.contains(".current ="), "{output}");
+    assert!(out.contains("null"), "{output}");
+    assert!(!out.contains("_$addEventListener"), "{output}");
+    assert!(!out.contains("_$vaporBindUseRef"), "{output}");
+    assert!(!out.contains("from \"@rue-js/rue/vapor\""), "{output}");
+}
+
+#[test]
+fn keeps_complex_event_and_ref_capabilities_on_the_vapor_fallback() {
+    let output = transform_module(
+        r#"
+export const Modified = () => <button r-on:click-stop={handleClick}>Modified</button>;
+export const DynamicEvents = () => <button {...eventProps}>Dynamic</button>;
+export const DynamicRef = () => <button ref={chooseRef()}>Ref</button>;
+export const ComponentRef = () => <Panel ref={panelRef} />;
+export const NativeBridge = () => <Panel r-on:click-native={handleClick} />;
+"#,
+    );
+    let out = normalize(&output);
+
+    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
+    assert!(out.contains("_$vaporWithEventModifiers"), "{output}");
+    assert!(out.contains("_$spreadAttributes"), "{output}");
+    assert!(out.contains("_$vaporBindUseRef"), "{output}");
+    assert!(out.contains("_$createComponent"), "{output}");
+    assert!(out.contains("_$vaporWithNativeEvents"), "{output}");
+    assert!(!out.contains("_$compiledRoot"), "{output}");
+}
+
 #[test]
 fn extracts_static_literals_strings_truthy_values_and_style_objects() {
     assert!(matches!(

@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
 import { build } from 'vite'
-import wasm from 'vite-plugin-wasm'
 import { formatBytes } from './format-bytes.js'
 
 const sizeDir = path.resolve('temp/size')
@@ -85,7 +84,6 @@ async function generateBundle(preset, write) {
       publicDir: false,
       appType: 'custom',
       logLevel: 'silent',
-      plugins: [wasm()],
       define: {
         'process.env.NODE_ENV': '"production"',
         ...preset.replace,

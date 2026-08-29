@@ -26,7 +26,7 @@
 1. Vite 将 `src/app.tsx` 打包为 `dist/ssr-entry.js`，供 Rust / `deno_core` 做 SSR。
 2. Vite 将 `src/client.tsx` 打包为 `dist/client.js`，供浏览器或 WebView 做交互。
 3. `@rue-js/vite-plugin-rue` 执行 Rue JSX 编译转换。
-4. `vite-plugin-wasm` 内联真实的 `packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm`。
+4. `@rue-js/runtime-vapor` 的 TypeScript 响应式内核直接进入 JavaScript bundle。
 5. SWC 对最终 JS chunk 做压缩和变量名压缩。
 6. 构建阶段生成 `client.js.gz` 和 `ssr-entry.js.gz`。
 7. Cargo 将 SSR bundle、client bundle、gzip client asset 嵌入 Rust 二进制。
@@ -36,14 +36,7 @@
 - `dist/ssr-entry.js`：服务端专用。Rust 嵌入它，并用 `deno_core` 执行它来生成 HTML。
 - `dist/client.js`：浏览器/WebView 专用。Rust 通过 `/client.js` 返回它，用于前端交互。
 
-两者体积接近，是因为这个 Demo 为了保持自包含，两边都内联了真实 Wasm runtime。当前大概是：
-
-```text
-dist/ssr-entry.js     549K
-dist/ssr-entry.js.gz  216K
-dist/client.js        545K
-dist/client.js.gz     215K
-```
+两者体积接近，是因为这个 Demo 为了保持自包含，两边都会打包 Rue 的 JavaScript runtime。具体体积以每次构建生成的 `.gz` 文件为准。
 
 `ssr-entry.js.gz` 只是用来展示压缩体积；当前 HTTP 服务真正返回的是 `client.js.gz`。
 
@@ -174,5 +167,5 @@ Vary: Accept-Encoding
 
 - 这是 remounting demo，还不是完整 SSR hydration。
 - 文件选择暂时通过路径输入完成，还没有系统文件选择对话框。
-- 二进制打包用于部署便利，不等于源码保护；嵌入的 JS/Wasm 仍然可以被逆向提取。
+- 二进制打包用于部署便利，不等于源码保护；嵌入的 JavaScript 仍然可以被逆向提取。
 - 还没有打成 macOS `.app`、dmg 或 Windows installer；当前输出是可执行文件。

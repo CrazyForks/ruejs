@@ -1,6 +1,6 @@
 /*
 Vapor 应用管理 Hook 概述
-- 每个应用默认创建独立 Vapor runtime，也允许显式传入 runtime。
+- 默认复用当前 DOM bridge 的 client runtime，也允许显式传入独立 runtime。
 - 保持 use/component/mount/unmount 同步链式 API 与默认 useApp 一致。
 - 挂载期间切换活动 runtime，使动态组件注册和 Vapor helper 命中同一实例。
 */
@@ -8,7 +8,7 @@ Vapor 应用管理 Hook 概述
 import { registerRuntimeComponent } from '../component-registry'
 import { querySelector, setAttribute, settextContent } from '../dom'
 import type { DomElementLike } from '../dom'
-import { ensureRuntimeDOMBridge, runWithRuntime } from '../runtime-context'
+import { ensureRuntimeDOMBridge, getClientRuntime, runWithClientRuntime } from '../client-runtime'
 import {
   confirmAppContainer,
   releaseAppContainer,
@@ -16,7 +16,6 @@ import {
   rollbackAppContainer,
 } from './app-container-ownership'
 import type { ComponentInstance, FC, RenderableOutput, Rue } from '../rue'
-import { createVaporRuntime } from '../vapor-runtime'
 
 /** 创建绑定 Vapor runtime 的应用管理器。 */
 export function useVaporApp(
@@ -31,7 +30,7 @@ export function useVaporApp(
   let containerRef: DomElementLike | null = null
   let pendingContainerRef: DomElementLike | null = null
   const containerOwner = {}
-  const appRue = (runtime as any) || createVaporRuntime()
+  const appRue = (runtime as any) || getClientRuntime()
   ensureRuntimeDOMBridge(appRue)
 
   const App: ComponentInstance =
@@ -60,7 +59,7 @@ export function useVaporApp(
 
   return {
     use(plugin: any, ...options: any[]) {
-      runWithRuntime(appRue, () => {
+      runWithClientRuntime(appRue, () => {
         appRue.use(plugin, ...options)
       })
       return this
@@ -91,9 +90,13 @@ export function useVaporApp(
           settextContent(element, '')
         }
         runtimeMountStarted = true
-        runWithRuntime(appRue, () => {
-          appRue.mount(App, element)
-        })
+        runWithClientRuntime(
+          appRue,
+          () => {
+            appRue.mount(App, element)
+          },
+          element,
+        )
         if ((element as any).nodeType === 1) {
           setAttribute(element, 'data-rue-app', '')
         }
@@ -102,9 +105,13 @@ export function useVaporApp(
       } catch (error) {
         if (runtimeMountStarted) {
           try {
-            runWithRuntime(appRue, () => {
-              appRue.unmount(element)
-            })
+            runWithClientRuntime(
+              appRue,
+              () => {
+                appRue.unmount(element)
+              },
+              element,
+            )
           } catch {}
         }
         rollbackAppContainer(reservation)
@@ -120,9 +127,13 @@ export function useVaporApp(
       }
       containerRef = null
       try {
-        runWithRuntime(appRue, () => {
-          appRue.unmount(mountedContainer)
-        })
+        runWithClientRuntime(
+          appRue,
+          () => {
+            appRue.unmount(mountedContainer)
+          },
+          mountedContainer,
+        )
       } finally {
         releaseAppContainer(mountedContainer, containerOwner)
       }

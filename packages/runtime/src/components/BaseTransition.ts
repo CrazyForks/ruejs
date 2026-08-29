@@ -6,7 +6,7 @@
 - 事件流转：通过 useEmit(props) 派发生命周期事件（before/after-appear/enter/leave），便于外部监听。
 - 可扩展性：用户可覆盖类名或提供 onEnter/onLeave/onAppear 钩子，自行控制动画并在结束时调用 done()。
 */
-import { useEmit } from '../vapor-runtime'
+import { useEmit } from '../rue'
 import {
   type TransitionPhase,
   type TransitionType,

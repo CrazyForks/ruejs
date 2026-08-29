@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as rustEntry from '@rue-js/runtime-vapor'
-import { createRue as createJsRue } from '../../runtime-vapor/js-runtime/create-rue.js'
+import { createRue as createJsRue } from '../../runtime-vapor/dist/js-runtime/create-rue.js'
 
 import '../src/dom'
 
@@ -11,6 +11,7 @@ type RuntimeLike = {
   mount(app: (props: Record<string, unknown>) => unknown, container: Element): void
   render(input: unknown, container: Element): void
   unmount(container: Element): void
+  vapor(setup: () => unknown): Record<string, unknown>
 }
 
 const getDOMBridge = () =>
@@ -122,6 +123,49 @@ afterEach(() => {
 })
 
 describe('runtime-vapor JavaScript container parity', () => {
+  it('isolates exceptional portable cleanup and drains every callback exactly once', async () => {
+    const results = []
+    for (const backend of createBackends()) {
+      const runtime = backend.create(defaultDOMBridge)
+      const throwingCleanup = vi.fn(() => {
+        throw new Error('expected cleanup failure')
+      })
+      const followingCleanup = vi.fn()
+      try {
+        const container = document.createElement('main')
+        const mounted = runtime.vapor(() => {
+          const fragment = document.createDocumentFragment()
+          fragment.append('mounted')
+          return fragment
+        })
+        mounted.__rue_cleanup_bucket = [throwingCleanup, followingCleanup]
+        runtime.render(mounted, container)
+        runtime.render(
+          runtime.vapor(() => document.createTextNode('replacement')),
+          container,
+        )
+        await settleRuntime()
+
+        results.push({
+          label: backend.label,
+          html: container.innerHTML,
+          throwing: throwingCleanup.mock.calls.length,
+          following: followingCleanup.mock.calls.length,
+        })
+      } finally {
+        runtime.free()
+      }
+    }
+
+    expect(results[1]).toEqual({ ...results[0], label: 'js' })
+    expect(results[0]).toEqual({
+      label: 'rust',
+      html: 'replacement',
+      throwing: 1,
+      following: 1,
+    })
+  })
+
   it('matches Rust mount, repeated mount, prop removal, and unmount DOM results', async () => {
     const results = []
     for (const backend of createBackends()) {

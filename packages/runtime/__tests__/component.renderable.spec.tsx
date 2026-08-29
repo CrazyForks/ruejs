@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   Component,
+  Teleport,
   h,
   render,
   renderAnchor,
@@ -14,7 +15,11 @@ import {
   watchEffect,
   type FC,
 } from '../src'
-import { _$createComponent, _$vaporWithHookId } from '../src/vapor'
+import {
+  _$createComponent,
+  _$vaporMarkComponentRenderReactive,
+  _$vaporWithHookId,
+} from '../src/vapor'
 import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -29,6 +34,32 @@ const flush = async () => {
 }
 
 describe('Component renderable boundary', () => {
+  it('tracks an explicitly marked portable JSX render closure', async () => {
+    const host = document.createElement('div')
+    const active = signal(false)
+    const Preview = _$vaporMarkComponentRenderReactive((() =>
+      h(
+        'button',
+        {
+          'data-testid': 'reactive-preview',
+          onClick: () => active.set(!active.get()),
+        },
+        active.get() ? 'active' : 'idle',
+      )) as FC)
+
+    document.body.appendChild(host)
+    render(h(Preview, null) as any, host)
+    await flush()
+
+    const button = host.querySelector('[data-testid="reactive-preview"]') as HTMLButtonElement
+    expect(button.textContent).toBe('idle')
+
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await flush()
+
+    expect(host.querySelector('[data-testid="reactive-preview"]')?.textContent).toBe('active')
+  })
+
   it('mounts class components through portable component handles', async () => {
     const host = document.createElement('div')
 
@@ -361,6 +392,53 @@ describe('Component renderable boundary', () => {
     await flush()
 
     expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')
+  })
+
+  it('preserves nested component setup state when a parent JSX host rerenders', async () => {
+    const host = document.createElement('div')
+    const target = document.createElement('aside')
+
+    document.body.append(host, target)
+
+    const FormatPicker: FC<{ color: string }> = props => {
+      const format = useSetup(() => signal('hex'))
+      return (
+        <div data-testid="format-picker" data-color={props.color}>
+          <Teleport to={target}>
+            <button data-testid="format" onClick={() => format.set('rgb')}>
+              {format.get()}
+            </button>
+          </Teleport>
+        </div>
+      )
+    }
+
+    const Parent: FC = () => {
+      const color = useSetup(() => signal('#1677ff'))
+      return (
+        <section>
+          <button data-testid="update-color" onClick={() => color.set('#22c55e')}>
+            update
+          </button>
+          <FormatPicker color={color.get()} />
+        </section>
+      )
+    }
+
+    render(<Parent />, host)
+    await flush()
+
+    ;(target.querySelector('[data-testid="format"]') as HTMLButtonElement).click()
+    await flush()
+    expect(target.textContent).toBe('rgb')
+
+    ;(host.querySelector('[data-testid="update-color"]') as HTMLButtonElement).click()
+    await flush()
+
+    expect(host.querySelector('[data-testid="format-picker"]')?.getAttribute('data-color')).toBe(
+      '#22c55e',
+    )
+    expect(target.textContent).toBe('rgb')
   })
 
   it('replays component children after a props.children branch is unmounted and shown again', async () => {

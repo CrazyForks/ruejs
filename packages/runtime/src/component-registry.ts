@@ -1,4 +1,6 @@
 import type { ComponentInstance } from './rue'
+import { getClientRuntime } from './client-runtime'
+import { resolveActiveRuntime } from './runtime-context'
 
 /*
 运行时组件注册表概述
@@ -13,21 +15,7 @@ const globalComponentRegistry = new Map<string, ComponentInstance<any>>()
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
 
-const getCurrentRuntime = () => {
-  const globalRecord = globalThis as typeof globalThis & {
-    __rue_active?: unknown
-    __rue?: unknown
-    __rue_vapor?: unknown
-    __rue_vapor_preferred?: unknown
-  }
-
-  return (
-    globalRecord.__rue_active ??
-    globalRecord.__rue ??
-    globalRecord.__rue_vapor_preferred ??
-    globalRecord.__rue_vapor
-  )
-}
+const getCurrentRuntime = () => resolveActiveRuntime(getClientRuntime)
 
 /** 给指定 runtime 注册一个可按名称解析的组件。 */
 export const registerRuntimeComponent = (

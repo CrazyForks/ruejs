@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { addEventListener } from '../src/dom'
-import { vaporWithEventModifiers, vaporWithNativeEvents } from '../src/vapor-helpers-vapor'
+import { vaporWithEventModifiers, vaporWithNativeEvents } from '../src/vapor-helpers'
 
 describe('event directive runtime helpers', () => {
   it('applies stop/prevent/once through modifier wrapper metadata', () => {

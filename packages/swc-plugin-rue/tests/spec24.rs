@@ -32,42 +32,38 @@ export default Chain
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, _$createElement, _$createTextNode, _$appendChild } from "@rue-js/rue/vapor";
+import { _$template } from "@rue-js/rue/compiled";
 import { type FC } from '@rue-js/rue';
+const _$getTemplate1 = _$template("<div>【<div>A</div>】 【<div>B</div>】 【<div>C d</div>】 【<div>D</div>】 【<div>E g</div>】 【<div>F</div>】 【<div>E</div>】</div>");
 const Chain: FC = ()=>{
-    return vapor(()=>{
-        const _root = _$createElement("div");
-        _$appendChild(_root, _$createTextNode("【"));
-        const _el1 = _$createElement("div");
-        _$appendChild(_root, _el1);
-        _$appendChild(_el1, _$createTextNode("A"));
-        _$appendChild(_root, _$createTextNode("】 【"));
-        const _el2 = _$createElement("div");
-        _$appendChild(_root, _el2);
-        _$appendChild(_el2, _$createTextNode("B"));
-        _$appendChild(_root, _$createTextNode("】 【"));
-        const _el3 = _$createElement("div");
-        _$appendChild(_root, _el3);
-        _$appendChild(_el3, _$createTextNode("C d"));
-        _$appendChild(_root, _$createTextNode("】 【"));
-        const _el4 = _$createElement("div");
-        _$appendChild(_root, _el4);
-        _$appendChild(_el4, _$createTextNode("D"));
-        _$appendChild(_root, _$createTextNode("】 【"));
-        const _el5 = _$createElement("div");
-        _$appendChild(_root, _el5);
-        _$appendChild(_el5, _$createTextNode("E g"));
-        _$appendChild(_root, _$createTextNode("】 【"));
-        const _el6 = _$createElement("div");
-        _$appendChild(_root, _el6);
-        _$appendChild(_el6, _$createTextNode("F"));
-        _$appendChild(_root, _$createTextNode("】 【"));
-        const _el7 = _$createElement("div");
-        _$appendChild(_root, _el7);
-        _$appendChild(_el7, _$createTextNode("E"));
-        _$appendChild(_root, _$createTextNode("】"));
-        return _root;
-    });
+    return (()=>{
+        let _root;
+        let _disposed = false;
+        const _dispose = ()=>{
+            if (_disposed) return;
+            _disposed = true;
+            if (_root && _root.parentNode) {
+                _root.parentNode.removeChild(_root);
+            }
+        };
+        return {
+            __rue_cleanup_bucket: [
+                _dispose
+            ],
+            __rue_vapor_setup: (__rue_parent_context)=>{
+                if (_disposed) {
+                    throw new Error("Cannot mount a disposed static root");
+                }
+                if (_root) {
+                    throw new Error("A static root can only be mounted once");
+                }
+                const _fragment = _$getTemplate1().content.cloneNode(true);
+                _root = _fragment.firstChild;
+                return _root;
+            },
+            dispose: _dispose
+        };
+    })();
 };
 export default Chain;
 "##;

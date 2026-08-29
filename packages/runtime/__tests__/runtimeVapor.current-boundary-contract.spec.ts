@@ -1,15 +1,9 @@
-import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
-
 import { afterEach, describe, expect, it } from 'vitest'
 
 import * as fullEntry from '@rue-js/runtime-vapor'
 import * as vaporEntry from '@rue-js/runtime-vapor/vapor'
 
 import '../src/dom'
-
-const runtimeVaporDir = path.resolve(process.cwd(), 'packages/runtime-vapor')
 
 const expectedFullRuntimeMethods = [
   '__rtd',
@@ -124,6 +118,8 @@ const expectedSharedEntryExports = [
 ].sort()
 
 const expectedVaporOnlyExports = [
+  '__rueActivateEffectOwnerTracking',
+  '__rueActivateRenderTriggered',
   '__rueBeginRenderDebugOwner',
   '__rueCreateDetachedEffectScope',
   '__rueCurrentEffectId',
@@ -137,22 +133,6 @@ const expectedVaporOnlyExports = [
   '__ruePushEffectScope',
   'normalizeRenderTriggeredEvent',
 ].sort()
-
-const readArtifact = (directory: 'pkg-vapor' | 'pkg-node') => {
-  const file = path.resolve(runtimeVaporDir, directory, 'rue_runtime_vapor_bg.wasm')
-  const bytes = readFileSync(file)
-  const module = new WebAssembly.Module(bytes)
-  const runtimeMethods = WebAssembly.Module.exports(module)
-    .map(item => item.name)
-    .filter(name => name.startsWith('wasmrue_'))
-    .map(name => name.slice('wasmrue_'.length))
-    .sort()
-  return {
-    directory,
-    sha256: createHash('sha256').update(bytes).digest('hex'),
-    runtimeMethods,
-  }
-}
 
 const runtimeMethodNames = (runtime: object) => {
   if (Object.getPrototypeOf(runtime) === Object.prototype) {
@@ -177,60 +157,7 @@ describe('runtime-vapor canonical graph-kernel boundary', () => {
     )
   })
 
-  it('records the final capability matrix with one browser graph artifact', () => {
-    const browser = readArtifact('pkg-vapor')
-    const node = readArtifact('pkg-node')
-
-    const matrix = {
-      'browser:full': {
-        artifact: browser.directory,
-        completeRuntime: true,
-        runtimeMethods: browser.runtimeMethods,
-      },
-      'browser:vapor': {
-        artifact: browser.directory,
-        completeRuntime: true,
-        runtimeMethods: browser.runtimeMethods,
-      },
-      node: {
-        artifact: node.directory,
-        completeRuntime: true,
-        runtimeMethods: node.runtimeMethods,
-      },
-    }
-    console.info('[runtime-vapor current capability matrix]', matrix)
-
-    expect(matrix).toEqual({
-      'browser:full': {
-        artifact: 'pkg-vapor',
-        completeRuntime: true,
-        runtimeMethods: [],
-      },
-      'browser:vapor': {
-        artifact: 'pkg-vapor',
-        completeRuntime: true,
-        runtimeMethods: [],
-      },
-      node: {
-        artifact: 'pkg-node',
-        completeRuntime: true,
-        runtimeMethods: [],
-      },
-    })
-  })
-
-  it('keeps the canonical browser and Node artifacts independently identifiable by hash', () => {
-    const artifacts = [readArtifact('pkg-vapor'), readArtifact('pkg-node')]
-    console.info(
-      '[runtime-vapor current artifact identities]',
-      artifacts.map(({ directory, sha256 }) => ({ directory, sha256 })),
-    )
-
-    expect(artifacts.every(artifact => /^[a-f0-9]{64}$/.test(artifact.sha256))).toBe(true)
-    expect(new Set(artifacts.map(artifact => artifact.sha256)).size).toBe(2)
-  })
-
-  it('uses one pkg-node identity for the complete and Vapor Node conditions', () => {
+  it('uses one TypeScript kernel identity for the complete and Vapor entries', () => {
     const adapter = (globalThis as typeof globalThis & { __rue_dom: unknown }).__rue_dom
     const fullRuntime = fullEntry.createRue(adapter)
     const vaporRuntime = vaporEntry.createRue(adapter)

@@ -20,6 +20,17 @@ const entries = []
 
 const nonSrcPackages = ['sfc-playground']
 
+for (const subEntry of ['protocol', 'reactive', 'vapor']) {
+  entries.push({
+    find: new RegExp(`^@rue-js/runtime-vapor/${subEntry}$`),
+    replacement: resolveSubEntryForPkg('runtime-vapor', subEntry),
+  })
+}
+entries.push({
+  find: /^@rue-js\/runtime-vapor$/,
+  replacement: resolveEntryForPkg('runtime-vapor'),
+})
+
 for (const dir of dirs) {
   const key = `rue-${dir}`
   const isDir = statSync(new URL(`../packages/${dir}`, import.meta.url)).isDirectory()

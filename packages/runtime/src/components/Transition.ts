@@ -23,6 +23,7 @@ import {
 import { createElement, createComment, appendChild } from '../dom'
 import type { DomNodeLike } from '../dom'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
+import { RUE_PORTABLE_COMPONENT_TYPE_KEY } from '@rue-js/runtime-vapor/protocol'
 import { markBuiltinComponent } from './builtinMarkers'
 import { registerAsyncExternalPropsUpdater } from './asyncExternalPropsBridge'
 
@@ -46,7 +47,6 @@ type TransitionChildIdentity = {
 }
 
 const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
-const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
 
 const collectTransitionChildren = (
   children: unknown,

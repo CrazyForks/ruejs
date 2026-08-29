@@ -28,7 +28,7 @@ export {
   renderBetween,
   useEmit,
   createComponent as _$createComponent,
-} from './vapor-runtime'
+} from './rue'
 
 export { useVaporApp as useApp } from './hooks/useVaporApp'
 
@@ -51,7 +51,13 @@ export {
   setDisabled as _$setDisabled,
   setProperty as _$setProperty,
   spreadAttributes as _$spreadAttributes,
+  createElement as _$compiledCreateElement,
+  createTextNode as _$compiledCreateTextNode,
+  createComment as _$compiledCreateComment,
+  appendChild as _$compiledAppendChild,
 } from './dom'
+
+export { template as _$template } from './compiled-dom'
 
 export {
   vaporKeyedList as _$vaporKeyedList,
@@ -61,7 +67,17 @@ export {
   vaporWithEventModifiers as _$vaporWithEventModifiers,
   vaporWithNativeEvents as _$vaporWithNativeEvents,
   vaporWithHookId as _$vaporWithHookId,
-} from './vapor-helpers-vapor'
+  vaporMarkComponentRenderReactive as _$vaporMarkComponentRenderReactive,
+} from './vapor-helpers'
+
+export {
+  _$compiledRoot,
+  createOwner,
+  createSelector,
+  disposeOwner,
+  runWithOwner,
+} from './compiled-vapor'
+export { _$reconcileKeyed } from './compiled-keyed-list'
 
 export { Slot, type SlotBag, type SlotProps, type SlotValue } from './components/Slot'
 export { Component, type DynamicComponentProps } from './components/Component'
@@ -69,6 +85,7 @@ export { KeepAlive } from './components/KeepAlive'
 export type { KeepAliveMatchPattern, KeepAliveProps } from './components/KeepAlive'
 export { Suspense } from './components/Suspense'
 export type { SuspenseProps } from './components/Suspense'
+export { Teleport, type TeleportProps } from './components/Teleport'
 export { Template, type TemplateProps } from './components/Template'
 export { Transition } from './components/Transition'
 export type { TransitionMode, TransitionProps } from './components/Transition'

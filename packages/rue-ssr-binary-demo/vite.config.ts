@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { minify as minifySwc } from '@swc/core'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
-import wasm from 'vite-plugin-wasm'
 
 const demoDir = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(demoDir, '../..')
@@ -57,7 +56,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      wasm(),
       VitePluginRue({
         transformTimeoutMs: 60000,
       }),
@@ -88,12 +86,19 @@ export default defineConfig(({ mode }) => {
       conditions: ['development', 'browser'],
       alias: {
         '@rue-js/jsx-runtime': path.resolve(repoRoot, 'packages/jsx-runtime/src'),
-        '@rue-js/runtime-vapor/vapor': path.resolve(repoRoot, 'packages/runtime-vapor/vapor.js'),
+        '@rue-js/runtime-vapor/protocol': path.resolve(
+          repoRoot,
+          'packages/runtime-vapor/src/protocol.ts',
+        ),
+        '@rue-js/runtime-vapor/vapor': path.resolve(
+          repoRoot,
+          'packages/runtime-vapor/dist/vapor.js',
+        ),
         '@rue-js/runtime-vapor/reactive': path.resolve(
           repoRoot,
-          'packages/runtime-vapor/reactive.js',
+          'packages/runtime-vapor/dist/reactive.js',
         ),
-        '@rue-js/runtime-vapor': path.resolve(repoRoot, 'packages/runtime-vapor/index.js'),
+        '@rue-js/runtime-vapor': path.resolve(repoRoot, 'packages/runtime-vapor/dist/index.js'),
         '@rue-js/runtime/server': path.resolve(repoRoot, 'packages/runtime/src/server.ts'),
         '@rue-js/runtime': path.resolve(repoRoot, 'packages/runtime/src'),
         '@rue-js/rue': path.resolve(repoRoot, 'packages/rue/src'),

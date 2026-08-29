@@ -18,7 +18,7 @@ import {
   type FC,
 } from '../src'
 import { vaporKeyedList as defaultVaporKeyedList } from '../src/vapor-helpers'
-import { vaporKeyedList as vaporVaporKeyedList } from '../src/vapor-helpers-vapor'
+import { vaporKeyedList as vaporVaporKeyedList } from '../src/vapor-helpers'
 import { flush, mountContainer } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -400,14 +400,12 @@ describe('complex list-row factor semantics', () => {
   semanticIt.each([
     ['default helper', defaultVaporKeyedList],
     ['vapor helper', vaporVaporKeyedList],
-  ])('%s releases compiled row closures after churn', (_name, vaporKeyedList) => {
+  ])('%s keeps owned-mount cleanup on the complex-capability fallback', (_name, vaporKeyedList) => {
     const parent = document.createElement('ul')
     const listEnd = document.createComment('rue:list:end')
-    const state: { elements: Map<unknown, any>; dispose?: () => void } = {
-      elements: new Map(),
-    }
-    const retiredOwners: any[] = []
-    let disposedRecords = 0
+    const rows = buildRows(3)
+    const state: { elements: Map<unknown, any> } = { elements: new Map() }
+    const cleanups: number[] = []
     parent.appendChild(listEnd)
     document.body.appendChild(parent)
 
@@ -421,110 +419,28 @@ describe('complex list-row factor semantics', () => {
         before: listEnd,
         singleRoot: true,
         trackIndex: false,
-        directRoot: true,
-        compiledRowPatch: true,
-        renderItem: (item, listParent, start, _end, index) => {
+        ownedMount: true,
+        renderItem: (item, listParent, start, _end, _index, registerRefCleanup) => {
           const row = document.createElement('li')
           row.dataset.rowId = String(item.id)
           row.textContent = item.label
-          ;(listParent as Node).insertBefore(row, (start as Node | null) ?? null)
-          return {
-            patch: (nextItem: ComplexRow, nextIndex: number) => {
-              row.textContent = `${nextItem.label}:${nextIndex}`
-            },
-            dispose: () => {
-              disposedRecords += 1
-              void row
-              void index
-            },
-          }
+          registerRefCleanup(() => cleanups.push(item.id))
+          ;(listParent as Node).insertBefore(row, start as Node)
         },
       })
     }
 
-    for (let round = 0; round < 100; round += 1) {
-      renderRows(buildRows(5, round * 100))
-      retiredOwners.push(...state.elements.values())
-      renderRows([])
-      expect(state.elements).toHaveLength(0)
-      expect(parent.querySelectorAll('li')).toHaveLength(0)
-    }
+    renderRows(rows)
+    expect(Array.from(state.elements.values()).every(range => range.scope !== undefined)).toBe(true)
 
-    state.dispose?.()
-    expect(disposedRecords).toBe(500)
-    expect(
-      retiredOwners.every(
-        owner =>
-          owner.compiledRowPatch === undefined &&
-          owner.compiledItem === undefined &&
-          owner.compiledIndex === undefined &&
-          owner.start === undefined &&
-          owner.end === undefined &&
-          owner.scope === undefined &&
-          owner.stop === undefined,
-      ),
-    ).toBe(true)
+    renderRows([])
+    expect(cleanups.sort((left, right) => left - right)).toEqual(rows.map(row => row.id))
   })
 
   semanticIt.each([
     ['default helper', defaultVaporKeyedList],
     ['vapor helper', vaporVaporKeyedList],
-  ])(
-    '%s keeps compiled row records on the complex-capability cleanup fallback',
-    (_name, vaporKeyedList) => {
-      const parent = document.createElement('ul')
-      const listEnd = document.createComment('rue:list:end')
-      const rows = buildRows(3)
-      const state: { elements: Map<unknown, any> } = { elements: new Map() }
-      const cleanups: number[] = []
-      const recordDisposals: number[] = []
-      parent.appendChild(listEnd)
-      document.body.appendChild(parent)
-
-      const renderRows = (items: ComplexRow[]) => {
-        state.elements = vaporKeyedList({
-          items,
-          getKey: item => item.id,
-          elements: state.elements,
-          state,
-          parent,
-          before: listEnd,
-          singleRoot: true,
-          trackIndex: false,
-          directRoot: true,
-          ownedMount: true,
-          compiledRowPatch: true,
-          renderItem: (item, listParent, start, _end, _index, registerRefCleanup) => {
-            const row = document.createElement('li')
-            row.dataset.rowId = String(item.id)
-            row.textContent = item.label
-            registerRefCleanup(() => cleanups.push(item.id))
-            ;(listParent as Node).insertBefore(row, start as Node)
-            return {
-              patch: () => {},
-              dispose: () => recordDisposals.push(item.id),
-            }
-          },
-        })
-      }
-
-      renderRows(rows)
-      expect(
-        Array.from(state.elements.values()).every(
-          range => range.compiledRowPatch === undefined && range.scope !== undefined,
-        ),
-      ).toBe(true)
-
-      renderRows([])
-      expect(cleanups.sort((left, right) => left - right)).toEqual(rows.map(row => row.id))
-      expect(recordDisposals).toEqual([])
-    },
-  )
-
-  semanticIt.each([
-    ['default helper', defaultVaporKeyedList],
-    ['vapor helper', vaporVaporKeyedList],
-  ])('%s keeps range-bound direct roots on the anchored fallback', (_name, vaporKeyedList) => {
+  ])('%s keeps range-bound rows on the anchored fallback', (_name, vaporKeyedList) => {
     const parent = document.createElement('ul')
     const listStart = document.createComment('rue:list:start')
     const listEnd = document.createComment('rue:list:end')
@@ -544,7 +460,6 @@ describe('complex list-row factor semantics', () => {
       start: listStart,
       singleRoot: true,
       trackIndex: false,
-      directRoot: true,
       renderItem: (item, listParent, start, _end, _index, registerRefCleanup) => {
         const row = document.createElement('li')
         row.dataset.rowId = String(item.id)
@@ -572,7 +487,6 @@ describe('complex list-row factor semantics', () => {
       start: listStart,
       singleRoot: true,
       trackIndex: false,
-      directRoot: true,
       renderItem: () => {},
     })
     expect(cleanups.sort((left, right) => left - right)).toEqual(rows.map(row => row.id))
@@ -599,7 +513,6 @@ describe('complex list-row factor semantics', () => {
         before: listEnd,
         singleRoot: false,
         trackIndex: false,
-        directRoot: false,
         renderItem: (item, listParent, _start, end) => {
           const label = document.createElement('li')
           const detail = document.createElement('li')

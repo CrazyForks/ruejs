@@ -14190,8 +14190,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
       "type": "paragraph",
-      "text": "Rue 将列表结构、CPU、内存、生产体积和首屏采样分成两层手动预算验证。结构与产物来源先由确定性测试和 size audit 检查；随后才在同一台机器、同一个 Chromium 版本上，将多轮中位数与仓库保存的基线比较。机器计时不能跨机器直接比较，Vue 结果用于同场景对照，也不是替换 Rue 历史基线的预算来源。发布流程只输出 runtime size 报告，不执行 --check 或浏览器性能预算，预算失败不会阻止发布。",
-      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) rue 将列表结构、cpu、内存、生产体积和首屏采样分成两层手动预算验证。结构与产物来源先由确定性测试和 size audit 检查；随后才在同一台机器、同一个 chromium 版本上，将多轮中位数与仓库保存的基线比较。机器计时不能跨机器直接比较，vue 结果用于同场景对照，也不是替换 rue 历史基线的预算来源。发布流程只输出 runtime size 报告，不执行 --check 或浏览器性能预算，预算失败不会阻止发布。 guide/best-practices/performance"
+      "text": "Rue 将列表结构、CPU、内存、生产体积和首屏采样分成两层预算验证。结构与产物来源先由确定性测试和 size audit 检查；随后在同一台机器、同一个 Chromium 版本和同一轮运行窗口中，将 Rue 与 Vue 对照实现一起采样。机器计时不能跨机器直接比较，历史基线用于发现漂移，同轮 Vue 用于发布门禁；两者不能互相替代。",
+      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) rue 将列表结构、cpu、内存、生产体积和首屏采样分成两层预算验证。结构与产物来源先由确定性测试和 size audit 检查；随后在同一台机器、同一个 chromium 版本和同一轮运行窗口中，将 rue 与 vue 对照实现一起采样。机器计时不能跨机器直接比较，历史基线用于发现漂移，同轮 vue 用于发布门禁；两者不能互相替代。 guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:17",
@@ -14201,8 +14201,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
       "type": "paragraph",
-      "text": "标准 keyed 列表行只有在编译器能证明它是同步、原生、单根 DOM 行，并且 class、文本和属性绑定可生成局部 patch 时，才进入 compiled-row 快路径。该路径由一个列表 effect 批量扫描，行记录保存 DOM、原始 item、patch 和 dispose；相等值不会重复写 DOM，简单行也不创建逐行 signal、proxy、scope 或注释锚点。",
-      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 标准 keyed 列表行只有在编译器能证明它是同步、原生、单根 dom 行，并且 class、文本和属性绑定可生成局部 patch 时，才进入 compiled-row 快路径。该路径由一个列表 effect 批量扫描，行记录保存 dom、原始 item、patch 和 dispose；相等值不会重复写 dom，简单行也不创建逐行 signal、proxy、scope 或注释锚点。 guide/best-practices/performance"
+      "text": "体积报告区分静态零 Rue 值依赖、compiled core 和完整 Vapor 入口。compiled core 的预算不是应用包大小承诺：真实应用还包含业务代码、第三方依赖和所用复杂能力；同样，“静态零运行时”也不适用于包含 Signal、组件、路由或 Hydration 的页面。",
+      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 体积报告区分静态零 rue 值依赖、compiled core 和完整 vapor 入口。compiled core 的预算不是应用包大小承诺：真实应用还包含业务代码、第三方依赖和所用复杂能力；同样，“静态零运行时”也不适用于包含 signal、组件、路由或 hydration 的页面。 guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:18",
@@ -14212,11 +14212,22 @@
       "title": "性能 (Performance)",
       "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
       "type": "paragraph",
-      "text": "组件行、多根行、异步或不透明 renderable、结构指令、需要逐行 ref/生命周期所有权的内容，以及 hydration 无法安全采用的形状，会保留 range/owner fallback。fallback 以语义完整性为优先，不应为了命中性能预算而改写成手工 DOM benchmark 特例。应用代码若把外部依赖隐藏在普通成员调用中，编译器同样会选择 fallback；可证明安全的直接 selected.value 或 selected.get() 读取才能进入 compiled-row patch。",
-      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 组件行、多根行、异步或不透明 renderable、结构指令、需要逐行 ref/生命周期所有权的内容，以及 hydration 无法安全采用的形状，会保留 range/owner fallback。fallback 以语义完整性为优先，不应为了命中性能预算而改写成手工 dom benchmark 特例。应用代码若把外部依赖隐藏在普通成员调用中，编译器同样会选择 fallback；可证明安全的直接 selected.value 或 selected.get() 读取才能进入 compiled-row patch。 guide/best-practices/performance"
+      "text": "标准 keyed 列表行只有在编译器能证明它是同步、原生、单根 DOM 行，并且 class、文本和属性绑定可生成局部 patch 时，才进入 compiled keyed core。相等值不会重复写 DOM，简单行也不会带入通用 Vapor 列表 helper。",
+      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 标准 keyed 列表行只有在编译器能证明它是同步、原生、单根 dom 行，并且 class、文本和属性绑定可生成局部 patch 时，才进入 compiled keyed core。相等值不会重复写 dom，简单行也不会带入通用 vapor 列表 helper。 guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:19",
+      "docId": "guide/best-practices/performance",
+      "route": "/guide/guide/best-practices/performance",
+      "href": "/guide/guide/best-practices/performance#end-to-end-performance-budgets",
+      "title": "性能 (Performance)",
+      "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
+      "type": "paragraph",
+      "text": "组件行、多根行、异步或不透明 renderable、结构指令、需要逐行 ref/生命周期所有权的内容，以及 Hydration 无法安全采用的形状，会保留 range/owner fallback。fallback 以语义完整性为优先，不应为了命中性能预算而改写成手工 DOM benchmark 特例。应用代码若把外部依赖隐藏在普通成员调用中，编译器同样会选择 fallback；可证明安全的直接 Signal 读取才能进入 compiled binding 或 keyed reconcile。",
+      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 组件行、多根行、异步或不透明 renderable、结构指令、需要逐行 ref/生命周期所有权的内容，以及 hydration 无法安全采用的形状，会保留 range/owner fallback。fallback 以语义完整性为优先，不应为了命中性能预算而改写成手工 dom benchmark 特例。应用代码若把外部依赖隐藏在普通成员调用中，编译器同样会选择 fallback；可证明安全的直接 signal 读取才能进入 compiled binding 或 keyed reconcile。 guide/best-practices/performance"
+    },
+    {
+      "id": "guide/best-practices/performance:20",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#end-to-end-performance-budgets",
@@ -14227,7 +14238,7 @@
       "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 从仓库根目录复现完整检查： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:20",
+      "id": "guide/best-practices/performance:21",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#end-to-end-performance-budgets",
@@ -14238,17 +14249,6 @@
       "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) pnpm exec vitest run --project unit scripts/__tests__/js-framework-performance.spec.ts scripts/__tests__/runtime-size-audit.spec.ts pnpm run size-runtime -- --check pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-baseline.json --budget scripts/js-framework-performance-budget.json --output temp/performance/final.json guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:21",
-      "docId": "guide/best-practices/performance",
-      "route": "/guide/guide/best-practices/performance",
-      "href": "/guide/guide/best-practices/performance#end-to-end-performance-budgets",
-      "title": "性能 (Performance)",
-      "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
-      "type": "paragraph",
-      "text": "浏览器命令会先重建 workspace 的 Rue 产物和 Vapor 专用 Wasm，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行 1 轮预热和 5 轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；budget.entries 给出 Rue 相对 0.8.13 基线的 CPU、select/swap、create-clear heap、Brotli 与 first-paint 比率。validSamples 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。",
-      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 浏览器命令会先重建 workspace 的 rue 产物和 vapor 专用 wasm，验证版本、workspace 解析路径、lockfile 与构建产物 sha-256 在采样前后保持一致，然后运行 1 轮预热和 5 轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 rue ref、rue native signal 和 vue 等价实现；budget.entries 给出 rue 相对 0.8.13 基线的 cpu、select/swap、create-clear heap、brotli 与 first-paint 比率。validsamples 必须满足预算中的最小样本数，缺失 vue、版本、hash 或样本都会使命令非零退出。 guide/best-practices/performance"
-    },
-    {
       "id": "guide/best-practices/performance:22",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
@@ -14256,11 +14256,22 @@
       "title": "性能 (Performance)",
       "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
       "type": "paragraph",
-      "text": "pnpm run size-runtime -- --check 单独审计发布入口的模块图。Vapor preset 必须只加载一个 pkg-vapor Wasm，不能同时保留完整 Wasm、默认 runtime、SSR renderer 或未使用的内置组件；完整 runtime preset 则必须只加载完整 Wasm。scripts/runtime-size-baseline.json 是可审查的当前产物记录，真正判定超限的是独立的 scripts/runtime-size-budget.json，因此更新 baseline 不会自动放宽预算。",
-      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) pnpm run size-runtime -- --check 单独审计发布入口的模块图。vapor preset 必须只加载一个 pkg-vapor wasm，不能同时保留完整 wasm、默认 runtime、ssr renderer 或未使用的内置组件；完整 runtime preset 则必须只加载完整 wasm。scripts/runtime-size-baseline.json 是可审查的当前产物记录，真正判定超限的是独立的 scripts/runtime-size-budget.json，因此更新 baseline 不会自动放宽预算。 guide/best-practices/performance"
+      "text": "浏览器命令会先重建 workspace 的 Rue 与 runtime-vapor TypeScript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；budget.entries 给出尺寸、CPU、select/swap、heap 与 first-paint 比率。validSamples 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。",
+      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 浏览器命令会先重建 workspace 的 rue 与 runtime-vapor typescript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 sha-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 rue ref、rue native signal 和 vue 等价实现；budget.entries 给出尺寸、cpu、select/swap、heap 与 first-paint 比率。validsamples 必须满足预算中的最小样本数，缺失 vue、版本、hash 或样本都会使命令非零退出。 guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:23",
+      "docId": "guide/best-practices/performance",
+      "route": "/guide/guide/best-practices/performance",
+      "href": "/guide/guide/best-practices/performance#end-to-end-performance-budgets",
+      "title": "性能 (Performance)",
+      "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
+      "type": "paragraph",
+      "text": "pnpm run size-runtime -- --check 单独审计发布入口的模块图和 JavaScript 压缩体积。静态 preset 不得出现 Rue 值模块；compiled preset 只允许最小响应式、owner、selector、DOM 和键控列表核心，不得包含 facade、js-runtime、默认 runtime、SSR renderer 或通用 Vapor helper。scripts/runtime-size-baseline.json 是可审查的当前产物记录，真正判定超限的是独立的 scripts/runtime-size-budget.json，因此更新 baseline 不会自动放宽预算。",
+      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) pnpm run size-runtime -- --check 单独审计发布入口的模块图和 javascript 压缩体积。静态 preset 不得出现 rue 值模块；compiled preset 只允许最小响应式、owner、selector、dom 和键控列表核心，不得包含 facade、js-runtime、默认 runtime、ssr renderer 或通用 vapor helper。scripts/runtime-size-baseline.json 是可审查的当前产物记录，真正判定超限的是独立的 scripts/runtime-size-budget.json，因此更新 baseline 不会自动放宽预算。 guide/best-practices/performance"
+    },
+    {
+      "id": "guide/best-practices/performance:24",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#page-load-optimizations",
@@ -14271,7 +14282,7 @@
       "searchText": "性能 (performance) 页面加载优化 (page load optimizations) 页面加载优化 (page load optimizations) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:24",
+      "id": "guide/best-practices/performance:25",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#page-load-optimizations",
@@ -14282,7 +14293,7 @@
       "searchText": "性能 (performance) 页面加载优化 (page load optimizations) 有许多与框架无关的方面可以优化页面加载性能 - 查看 此 web.dev 指南 以获取全面的总结。在这里，我们将主要关注 rue 特定的技术。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:25",
+      "id": "guide/best-practices/performance:26",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#page-load-optimizations",
@@ -14293,7 +14304,7 @@
       "searchText": "性能 (performance) 页面加载优化 (page load optimizations) 如果您的主应用必须是 spa，但有营销页面（落地页、关于、博客），请将它们分开部署！您的营销页面最好使用 ssg 部署为具有最少 js 的静态 html。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:26",
+      "id": "guide/best-practices/performance:27",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#bundle-size-and-tree-shaking",
@@ -14304,7 +14315,7 @@
       "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) 包大小和 tree-shaking (bundle size and tree-shaking) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:27",
+      "id": "guide/best-practices/performance:28",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#bundle-size-and-tree-shaking",
@@ -14315,18 +14326,29 @@
       "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) 提高页面加载性能的最有效方法之一是提供更小的 javascript 包。以下是使用 rue 时减小包大小的一些方法： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:28",
+      "id": "guide/best-practices/performance:29",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#bundle-size-and-tree-shaking",
       "title": "性能 (Performance)",
       "sectionTitle": "包大小和 Tree-shaking (Bundle Size and Tree-shaking)",
       "type": "list",
-      "text": "如果可能，请使用构建步骤。 - 如果通过现代构建工具打包，Rue 的许多 API 都是 \"可 tree-shake 的\"。例如，如果您不使用内置的 组件，它不会包含在最终的生产包中。Tree-shaking 还可以移除源代码中未使用的其他模块。",
-      "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) 如果可能，请使用构建步骤。 - 如果通过现代构建工具打包，rue 的许多 api 都是 \"可 tree-shake 的\"。例如，如果您不使用内置的 组件，它不会包含在最终的生产包中。tree-shaking 还可以移除源代码中未使用的其他模块。 guide/best-practices/performance"
+      "text": "如果可能，请使用构建步骤。 - 构建插件会自动选择静态 DOM、compiled core 或 Vapor fallback。应用代码继续从 @rue-js/rue 导入；除非在开发编译器或底层集成，不要手工依赖生成 helper。",
+      "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) 如果可能，请使用构建步骤。 - 构建插件会自动选择静态 dom、compiled core 或 vapor fallback。应用代码继续从 @rue-js/rue 导入；除非在开发编译器或底层集成，不要手工依赖生成 helper。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:29",
+      "id": "guide/best-practices/performance:30",
+      "docId": "guide/best-practices/performance",
+      "route": "/guide/guide/best-practices/performance",
+      "href": "/guide/guide/best-practices/performance#bundle-size-and-tree-shaking",
+      "title": "性能 (Performance)",
+      "sectionTitle": "包大小和 Tree-shaking (Bundle Size and Tree-shaking)",
+      "type": "list",
+      "text": "- 纯静态 JSX 可以不包含 Rue 值运行时；Signal 页面只加载它实际使用的 compiled core。组件、路由、Hydration、Transition 等复杂能力会按需增加对应代码。 - 如果通过现代构建工具打包，Rue 的许多 API 都是 \"可 tree-shake 的\"。例如，如果您不使用内置的 组件，它不会包含在最终的生产包中。Tree-shaking 还可以移除源代码中未使用的其他模块。",
+      "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) - 纯静态 jsx 可以不包含 rue 值运行时；signal 页面只加载它实际使用的 compiled core。组件、路由、hydration、transition 等复杂能力会按需增加对应代码。 - 如果通过现代构建工具打包，rue 的许多 api 都是 \"可 tree-shake 的\"。例如，如果您不使用内置的 组件，它不会包含在最终的生产包中。tree-shaking 还可以移除源代码中未使用的其他模块。 guide/best-practices/performance"
+    },
+    {
+      "id": "guide/best-practices/performance:31",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#bundle-size-and-tree-shaking",
@@ -14337,7 +14359,7 @@
       "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) - 使用构建步骤时，模板会被预编译，因此我们不需要将 rue 编译器发送到浏览器。这节省了 14kb min+gzipped 的 javascript 并避免了运行时编译成本。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:30",
+      "id": "guide/best-practices/performance:32",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#bundle-size-and-tree-shaking",
@@ -14348,7 +14370,7 @@
       "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) 引入新依赖时要注意大小！在实际应用中，臃肿的包通常是由于在不知情的情况下引入了重型依赖项造成的。 - 如果使用构建步骤，请优先选择提供 es 模块格式且支持 tree-shaking 的依赖项。例如，优先选择 lodash-es 而不是 lodash。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:31",
+      "id": "guide/best-practices/performance:33",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#bundle-size-and-tree-shaking",
@@ -14359,7 +14381,7 @@
       "searchText": "性能 (performance) 包大小和 tree-shaking (bundle size and tree-shaking) - 检查依赖项的大小并评估它提供的功能是否值得。请注意，如果依赖项支持 tree-shaking，实际大小增加将取决于您实际从中导入的 api。像 bundlejs.com 这样的工具可用于快速检查，但使用实际构建设置进行测量总是最准确的。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:32",
+      "id": "guide/best-practices/performance:34",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#code-splitting",
@@ -14370,7 +14392,7 @@
       "searchText": "性能 (performance) 代码分割 (code splitting) 代码分割 (code splitting) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:33",
+      "id": "guide/best-practices/performance:35",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#code-splitting",
@@ -14381,7 +14403,7 @@
       "searchText": "性能 (performance) 代码分割 (code splitting) 代码分割是构建工具将应用包分割成多个较小的块，然后可以按需或并行加载的过程。通过适当的代码分割，页面加载时所需的功能可以立即下载，额外的块只在需要时懒加载，从而提高性能。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:34",
+      "id": "guide/best-practices/performance:36",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#code-splitting",
@@ -14392,7 +14414,7 @@
       "searchText": "性能 (performance) 代码分割 (code splitting) 像 rollup（vite 基于此）或 webpack 这样的打包工具可以通过检测 esm 动态导入语法自动创建分割块： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:35",
+      "id": "guide/best-practices/performance:37",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#code-splitting",
@@ -14403,7 +14425,7 @@
       "searchText": "性能 (performance) 代码分割 (code splitting) // lazy.js 及其依赖项将被分割成单独的块 // 并且只在调用 `loadlazy()` 时加载。 function loadlazy() { return import('./lazy.js') } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:36",
+      "id": "guide/best-practices/performance:38",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#code-splitting",
@@ -14414,7 +14436,7 @@
       "searchText": "性能 (performance) 代码分割 (code splitting) 懒加载最好用于初始页面加载后不需要立即使用的功能。在 rue 应用中，这可以与 rue 的 异步组件 功能结合使用，为组件树创建分割块： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:37",
+      "id": "guide/best-practices/performance:39",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#code-splitting",
@@ -14425,7 +14447,7 @@
       "searchText": "性能 (performance) 代码分割 (code splitting) import { lazy } from '@rue-js/rue' import type { fc } from '@rue-js/rue' // 为 foo.tsx 及其依赖项创建一个单独的块。 // 它只在异步组件在页面上渲染时按需获取。 const foo = lazy(() => import('./foo')) const app: fc = () => { return ( <div> <foo /> </div> ) } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:38",
+      "id": "guide/best-practices/performance:40",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#code-splitting",
@@ -14436,7 +14458,7 @@
       "searchText": "性能 (performance) 代码分割 (code splitting) 对于使用 rue router 的应用，强烈建议对路由组件使用懒加载。rue router 对懒加载有显式支持，与 lazy 分开。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:39",
+      "id": "guide/best-practices/performance:41",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#client-islands",
@@ -14447,7 +14469,7 @@
       "searchText": "性能 (performance) 用客户端岛减少首屏 javascript 用客户端岛减少首屏 javascript guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:40",
+      "id": "guide/best-practices/performance:42",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#client-islands",
@@ -14458,7 +14480,7 @@
       "searchText": "性能 (performance) 用客户端岛减少首屏 javascript 对于以内容为主、只有局部交互的页面，优先使用客户端岛屿，而不是加载完整 spa 入口。无 client: 的页面会保持零 rue js；有岛的页面只加载小型启动器，并在对应策略触发时下载组件 chunk。需要完整客户端路由和全局状态的页面再显式选择 meta.clientmode: 'app'。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:41",
+      "id": "guide/best-practices/performance:43",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#client-islands",
@@ -14469,7 +14491,7 @@
       "searchText": "性能 (performance) 用客户端岛减少首屏 javascript 主题初始化、埋点等业务内联脚本不由岛资源模式管理。应让它们保持独立、短小，并避免把应用主入口伪装成普通用户脚本来绕过资源所有权判断。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:42",
+      "id": "guide/best-practices/performance:44",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#update-optimizations",
@@ -14480,7 +14502,7 @@
       "searchText": "性能 (performance) 更新优化 (update optimizations) 更新优化 (update optimizations) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:43",
+      "id": "guide/best-practices/performance:45",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14491,7 +14513,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) props 稳定性 (props stability) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:44",
+      "id": "guide/best-practices/performance:46",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14502,7 +14524,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 在 rue 中，子组件只有在接收到的至少一个 props 发生变化时才会更新。考虑以下示例： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:45",
+      "id": "guide/best-practices/performance:47",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14513,7 +14535,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) // 不理想的方式 list.map(item => <listitem key={item.id} id={item.id} activeid={activeid} />) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:46",
+      "id": "guide/best-practices/performance:48",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14524,7 +14546,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 在 组件内部，它使用其 id 和 activeid props 来确定它是否是当前活动项。虽然这可行，但问题是每当 activeid 变化时，列表中的 每个 都必须更新！ guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:47",
+      "id": "guide/best-practices/performance:49",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14535,7 +14557,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 理想情况下，只有活动状态发生变化的项才应该更新。我们可以通过将活动状态计算移到父组件中，并让 直接接受 active prop 来实现： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:48",
+      "id": "guide/best-practices/performance:50",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14546,7 +14568,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) // 更好的方式 list.map(item => <listitem key={item.id} id={item.id} active={item.id === activeid} />) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:49",
+      "id": "guide/best-practices/performance:51",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#props-stability",
@@ -14557,7 +14579,7 @@
       "searchText": "性能 (performance) props 稳定性 (props stability) 现在，对于大多数组件，当 activeid 变化时，active prop 将保持不变，因此它们不再需要更新。一般来说，想法是保持传递给子组件的 props 尽可能稳定。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:50",
+      "id": "guide/best-practices/performance:52",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-memo",
@@ -14568,7 +14590,7 @@
       "searchText": "性能 (performance) 使用 memo 优化 (using memo) 使用 memo 优化 (using memo) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:51",
+      "id": "guide/best-practices/performance:53",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-memo",
@@ -14579,7 +14601,7 @@
       "searchText": "性能 (performance) 使用 memo 优化 (using memo) rue 提供了 memo 工具来帮助优化组件重渲染。您可以使用它来记忆化组件或值： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:52",
+      "id": "guide/best-practices/performance:54",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-memo",
@@ -14590,7 +14612,7 @@
       "searchText": "性能 (performance) 使用 memo 优化 (using memo) import { memo, usememo } from '@rue-js/rue' import type { fc } from '@rue-js/rue' // 记忆化组件 const expensivecomponent: fc<{ data: data }> = memo(({ data }) => { return <div>{/* 昂贵的渲染 */}</div> }) // 在组件内部记忆化值 const mycomponent: fc = () => { const expensivevalue = usememo(() => { return computeexpensivevalue(deps) }, [deps]) return <div>{expensivevalue}</div> } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:53",
+      "id": "guide/best-practices/performance:55",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14601,7 +14623,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 计算稳定性 (computed stability) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:54",
+      "id": "guide/best-practices/performance:56",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14612,7 +14634,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 使用 usememo 时，只有当计算值从前一个值发生变化时，rue 才会触发更新。例如，以下 iseven 计算只在返回值从 true 变为 false 或反之亦然时触发效果： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:55",
+      "id": "guide/best-practices/performance:57",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14623,7 +14645,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) import { usememo, usestate, useeffect } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const [count, setcount] = usestate(0) const iseven = usememo(() => count % 2 === 0, [count]) useeffect(() => { console.log(iseven) }, [iseven]) // 只在 iseven 变化时触发 // 不会触发新的日志，因为计算值保持 `true` // count: 2, 4 都不会触发 return <div>{count}</div> } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:56",
+      "id": "guide/best-practices/performance:58",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14634,7 +14656,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 这减少了不必要的效果触发，但如果计算每次计算都创建一个新对象，则不起作用： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:57",
+      "id": "guide/best-practices/performance:59",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14645,7 +14667,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) const computedobj = usememo(() => { return { iseven: count % 2 === 0, } }, [count]) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:58",
+      "id": "guide/best-practices/performance:60",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14656,7 +14678,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 因为每次都创建一个新对象，所以新值在技术上总是与旧值不同。即使 iseven 属性保持不变，rue 也无法知道，除非它对旧值和新值执行深度比较。这样的比较可能很昂贵，可能不值得。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:59",
+      "id": "guide/best-practices/performance:61",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14667,7 +14689,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 相反，我们可以通过手动比较新值和旧值来优化，如果知道没有任何变化，则条件性地返回旧值： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:60",
+      "id": "guide/best-practices/performance:62",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14678,7 +14700,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) const computedobj = usememo( oldvalue => { const newvalue = { iseven: count % 2 === 0, } if (oldvalue && oldvalue.iseven === newvalue.iseven) { return oldvalue } return newvalue }, [count], ) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:61",
+      "id": "guide/best-practices/performance:63",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#computed-stability",
@@ -14689,7 +14711,7 @@
       "searchText": "性能 (performance) 计算稳定性 (computed stability) 注意，您应该在比较和返回旧值之前始终执行完整的计算，以便在每次运行时收集相同的依赖项。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:62",
+      "id": "guide/best-practices/performance:64",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#general-optimizations",
@@ -14700,7 +14722,7 @@
       "searchText": "性能 (performance) 一般优化 (general optimizations) 一般优化 (general optimizations) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:63",
+      "id": "guide/best-practices/performance:65",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#general-optimizations",
@@ -14711,7 +14733,7 @@
       "searchText": "性能 (performance) 一般优化 (general optimizations) 以下提示影响页面加载和更新性能。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:64",
+      "id": "guide/best-practices/performance:66",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14722,7 +14744,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 虚拟化大型列表 (virtualize large lists) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:65",
+      "id": "guide/best-practices/performance:67",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14733,7 +14755,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 所有前端应用中最常见的性能问题之一是渲染大型列表。无论框架多么高性能，渲染包含数千个项目的列表 都会 很慢，因为浏览器需要处理大量的 dom 节点。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:66",
+      "id": "guide/best-practices/performance:68",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14744,7 +14766,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 然而，我们不一定需要预先渲染所有这些节点。在大多数情况下，用户的屏幕大小只能显示我们大型列表的一小部分。我们可以通过 列表虚拟化 大大提高性能，该技术只渲染大型列表中当前在视口内或靠近视口的项目。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:67",
+      "id": "guide/best-practices/performance:69",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14755,7 +14777,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 实现列表虚拟化并不容易，幸运的是有现有的社区库可以直接使用： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:68",
+      "id": "guide/best-practices/performance:70",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14766,7 +14788,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) react-window react-virtualized @tanstack/react-virtual guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:69",
+      "id": "guide/best-practices/performance:71",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14777,7 +14799,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:70",
+      "id": "guide/best-practices/performance:72",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14788,7 +14810,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) rue 的响应式系统默认是深度的。虽然这使得状态管理直观，但当数据大小很大时，它确实会产生一定程度的开销，因为每次属性访问都会触发执行依赖跟踪的代理陷阱。这通常在处理深层嵌套对象的大型数组时变得明显，其中单个渲染需要访问 100,000 多个属性，因此它应该只影响非常特定的用例。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:71",
+      "id": "guide/best-practices/performance:73",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14799,7 +14821,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) rue 确实提供了一个逃生口，通过使用浅层状态选择退出深度响应式。浅层 api 创建仅在根级别具有响应式的状态，并暴露所有未更改的嵌套对象。这使嵌套属性访问保持快速，代价是我们现在必须将所有嵌套对象视为不可变的，并且更新只能通过替换根状态来触发： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:72",
+      "id": "guide/best-practices/performance:74",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14810,7 +14832,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) import { usestate } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const [shallowarray, setshallowarray] = usestate(() => [ /* 大量深层对象 */ ]) // 这不会触发更新... const handlepush = () => { shallowarray.push(newobject) } // 这会： const handleadd = () => { setshallowarray([...shallowarray, newobject]) } return <div>{/* ... */}</div> } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:73",
+      "id": "guide/best-practices/performance:75",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14821,7 +14843,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 避免不必要的组件抽象 (avoid unnecessary component abstractions) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:74",
+      "id": "guide/best-practices/performance:76",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14832,7 +14854,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 有时我们可能会创建 无渲染组件 或高阶组件（即使用额外 props 渲染其他组件的组件）以获得更好的抽象或代码组织。虽然这没有错，但请记住，组件实例比纯 dom 节点昂贵得多，由于抽象模式创建太多组件实例会产生性能成本。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:75",
+      "id": "guide/best-practices/performance:77",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14843,7 +14865,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 请注意，只减少几个实例不会有明显的效果，所以如果组件在应用中只渲染几次，请不要担心。考虑这种优化的最佳场景再次是大型列表。想象一下 100 个项目的列表，其中每个项目组件包含许多子组件。在这里删除一个不必要的组件抽象可能会导致数百个组件实例的减少。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:76",
+      "id": "guide/best-practices/performance:78",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#rue-specific-performance-tips",
@@ -14854,7 +14876,7 @@
       "searchText": "性能 (performance) rue 特定的性能提示 (rue-specific performance tips) rue 特定的性能提示 (rue-specific performance tips) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:77",
+      "id": "guide/best-practices/performance:79",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14865,7 +14887,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) 使用 key 属性 (using the key attribute) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:78",
+      "id": "guide/best-practices/performance:80",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14876,7 +14898,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) 在渲染列表时，始终使用稳定且唯一的 key 属性： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:79",
+      "id": "guide/best-practices/performance:81",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14887,7 +14909,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) // 好的做法 items.map(item => <div key={item.id}>{item.name}</div>) // 避免 - 使用索引作为 key 可能导致性能问题 items.map((item, index) => <div key={index}>{item.name}</div>) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:80",
+      "id": "guide/best-practices/performance:82",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -14898,7 +14920,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) 延迟加载非关键组件 (lazy load non-critical components) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:81",
+      "id": "guide/best-practices/performance:83",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -14909,7 +14931,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) 对于不需要立即显示的组件，使用 lazy 进行延迟加载： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:82",
+      "id": "guide/best-practices/performance:84",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -14920,7 +14942,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) import { lazy, suspense } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const heavycomponent = lazy(() => import('./heavycomponent')) const app: fc = () => { return ( <suspense fallback={<div>加载中...</div>}> <heavycomponent /> </suspense> ) } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:83",
+      "id": "guide/best-practices/performance:85",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
@@ -14931,7 +14953,7 @@
       "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) 优化事件处理程序 (optimize event handlers) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:84",
+      "id": "guide/best-practices/performance:86",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
@@ -14942,7 +14964,7 @@
       "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) 使用 usecallback 来记忆化事件处理程序，避免不必要的子组件重渲染： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:85",
+      "id": "guide/best-practices/performance:87",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
@@ -36146,8 +36168,8 @@
       "title": "渲染机制",
       "sectionTitle": "渲染机制",
       "type": "paragraph",
-      "text": "Rue 的渲染机制建立在细粒度响应式系统之上。模板与 JSX 在编译阶段会尽量直接降到可执行的 Renderable / Block 指令，运行时围绕 DOM 锚点、区间和响应式副作用做最小更新。",
-      "searchText": "渲染机制 渲染机制 rue 的渲染机制建立在细粒度响应式系统之上。模板与 jsx 在编译阶段会尽量直接降到可执行的 renderable / block 指令，运行时围绕 dom 锚点、区间和响应式副作用做最小更新。 guide/extras/rendering-mechanism"
+      "text": "Rue 的渲染机制由编译器选择最小可用层级：静态 JSX 直接降为原生 DOM 操作；Signal 驱动的安全同步路径使用 compiled core；无法静态证明的复杂能力按需回退到 Vapor 兼容层。",
+      "searchText": "渲染机制 渲染机制 rue 的渲染机制由编译器选择最小可用层级：静态 jsx 直接降为原生 dom 操作；signal 驱动的安全同步路径使用 compiled core；无法静态证明的复杂能力按需回退到 vapor 兼容层。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:2",
@@ -36168,11 +36190,44 @@
       "title": "渲染机制",
       "sectionTitle": "公开渲染输出",
       "type": "paragraph",
-      "text": "Rue 允许你手写 h() 或 JSX。编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 DOM 操作的渲染计划。",
-      "searchText": "渲染机制 公开渲染输出 rue 允许你手写 h() 或 jsx。编译器会提前把静态结构、动态绑定、锚点布局和清理边界编码进输出。运行时拿到的是一段更接近真实 dom 操作的渲染计划。 guide/extras/rendering-mechanism"
+      "text": "Rue 允许你手写 h() 或 JSX。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小输出。应用代码通常继续从 @rue-js/rue 导入；@rue-js/rue/compiled 和 @rue-js/rue/vapor 主要是编译产物和底层集成的入口，不需要为普通组件手动切换。",
+      "searchText": "渲染机制 公开渲染输出 rue 允许你手写 h() 或 jsx。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小输出。应用代码通常继续从 @rue-js/rue 导入；@rue-js/rue/compiled 和 @rue-js/rue/vapor 主要是编译产物和底层集成的入口，不需要为普通组件手动切换。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:5",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#three-tier-execution-model",
+      "title": "渲染机制",
+      "sectionTitle": "三层执行模型",
+      "type": "heading",
+      "text": "三层执行模型",
+      "searchText": "渲染机制 三层执行模型 三层执行模型 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:6",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#three-tier-execution-model",
+      "title": "渲染机制",
+      "sectionTitle": "三层执行模型",
+      "type": "list",
+      "text": "静态 DOM：没有 Rue 动态值的原生 JSX 会被直接编译成 DOM 创建与插入代码，Rue 值依赖为零。 Compiled core：Signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 DOM 核心，不依赖 createRue、JSX facade 或通用 Vapor helper。 Vapor fallback：组件、多根或结构化列表、Hydration、Teleport、Transition、生命周期、异步或不透明 renderable 等复杂能力进入兼容层，以完整语义为优先。",
+      "searchText": "渲染机制 三层执行模型 静态 dom：没有 rue 动态值的原生 jsx 会被直接编译成 dom 创建与插入代码，rue 值依赖为零。 compiled core：signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 dom 核心，不依赖 createrue、jsx facade 或通用 vapor helper。 vapor fallback：组件、多根或结构化列表、hydration、teleport、transition、生命周期、异步或不透明 renderable 等复杂能力进入兼容层，以完整语义为优先。 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:7",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#three-tier-execution-model",
+      "title": "渲染机制",
+      "sectionTitle": "三层执行模型",
+      "type": "paragraph",
+      "text": "“静态零运行时”只描述第一层的构建产物。只要页面使用交互状态或复杂能力，就会加载与该能力匹配的运行时代码。",
+      "searchText": "渲染机制 三层执行模型 “静态零运行时”只描述第一层的构建产物。只要页面使用交互状态或复杂能力，就会加载与该能力匹配的运行时代码。 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:8",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
@@ -36183,7 +36238,7 @@
       "searchText": "渲染机制 渲染管道 渲染管道 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:6",
+      "id": "guide/extras/rendering-mechanism:9",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
@@ -36194,29 +36249,29 @@
       "searchText": "渲染机制 渲染管道 在高层次上，当 rue 组件挂载和更新时，会发生以下事情： guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:7",
+      "id": "guide/extras/rendering-mechanism:10",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
       "title": "渲染机制",
       "sectionTitle": "渲染管道",
       "type": "list",
-      "text": "编译：模板或 JSX 被编译成 Block / Renderable 导向的输出。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：运行时执行编译产物，创建真实 DOM、插入锚点、建立区间边界，并在执行过程中收集相关响应式依赖。 更新：依赖变更后，只重新执行受影响的 block / effect。运行时直接更新对应 DOM 节点、区间或组件边界。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 DOM 区间一并释放。",
-      "searchText": "渲染机制 渲染管道 编译：模板或 jsx 被编译成 block / renderable 导向的输出。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：运行时执行编译产物，创建真实 dom、插入锚点、建立区间边界，并在执行过程中收集相关响应式依赖。 更新：依赖变更后，只重新执行受影响的 block / effect。运行时直接更新对应 dom 节点、区间或组件边界。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 dom 区间一并释放。 guide/extras/rendering-mechanism"
+      "text": "编译：模板或 JSX 被分类为静态 DOM、compiled core 或 Vapor fallback。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：静态输出直接创建真实 DOM；动态输出由对应的最小层建立 effect、owner、锚点或区间边界。 更新：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 DOM。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 DOM 区间一并释放。",
+      "searchText": "渲染机制 渲染管道 编译：模板或 jsx 被分类为静态 dom、compiled core 或 vapor fallback。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：静态输出直接创建真实 dom；动态输出由对应的最小层建立 effect、owner、锚点或区间边界。 更新：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 dom。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 dom 区间一并释放。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:8",
+      "id": "guide/extras/rendering-mechanism:11",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#render-pipeline",
       "title": "渲染机制",
       "sectionTitle": "渲染管道",
       "type": "paragraph",
-      "text": "可以把它理解成一条线性的管道：源码先被编译成带有更新提示和边界信息的输出，运行时再据此完成初次挂载、按需更新以及最终清理。",
-      "searchText": "渲染机制 渲染管道 可以把它理解成一条线性的管道：源码先被编译成带有更新提示和边界信息的输出，运行时再据此完成初次挂载、按需更新以及最终清理。 guide/extras/rendering-mechanism"
+      "text": "可以把它理解成一条能力路由管道：编译器先证明最小安全能力集，再生成静态 DOM 或导入恰好足够的运行时层，后者负责挂载、更新与清理。",
+      "searchText": "渲染机制 渲染管道 可以把它理解成一条能力路由管道：编译器先证明最小安全能力集，再生成静态 dom 或导入恰好足够的运行时层，后者负责挂载、更新与清理。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:9",
+      "id": "guide/extras/rendering-mechanism:12",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36227,7 +36282,7 @@
       "searchText": "渲染机制 模板与渲染函数 模板与渲染函数 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:10",
+      "id": "guide/extras/rendering-mechanism:13",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36238,18 +36293,18 @@
       "searchText": "渲染机制 模板与渲染函数 rue 依然支持手写渲染函数，但默认推荐模板或普通 jsx，原因和以前不同了： guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:11",
+      "id": "guide/extras/rendering-mechanism:14",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
       "sectionTitle": "模板与渲染函数",
       "type": "list",
-      "text": "它们更接近 HTML 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而直接生成更高效的 Block 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。",
-      "searchText": "渲染机制 模板与渲染函数 它们更接近 html 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而直接生成更高效的 block 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。 guide/extras/rendering-mechanism"
+      "text": "它们更接近 HTML 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而选择静态 DOM 或更小的 compiled 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。",
+      "searchText": "渲染机制 模板与渲染函数 它们更接近 html 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而选择静态 dom 或更小的 compiled 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:12",
+      "id": "guide/extras/rendering-mechanism:15",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36260,7 +36315,7 @@
       "searchText": "渲染机制 模板与渲染函数 手写渲染函数仍然有价值，尤其适合： guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:13",
+      "id": "guide/extras/rendering-mechanism:16",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36271,7 +36326,7 @@
       "searchText": "渲染机制 模板与渲染函数 高度动态的可复用组件 需要精确控制 children / render prop 的基础组件 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:14",
+      "id": "guide/extras/rendering-mechanism:17",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
@@ -36282,7 +36337,7 @@
       "searchText": "渲染机制 模板与渲染函数 如果你需要手写 h()，请把它视为显式边界，而不是默认开发路径。相关写法见 渲染函数与 jsx。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:15",
+      "id": "guide/extras/rendering-mechanism:18",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36293,18 +36348,18 @@
       "searchText": "渲染机制 编译器知情的渲染路径 编译器知情的渲染路径 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:17",
+      "id": "guide/extras/rendering-mechanism:20",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
       "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
-      "text": "Rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。",
-      "searchText": "渲染机制 编译器知情的渲染路径 rue 的核心优势在于同时掌控编译器与运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；运行时则只执行这些已经被压缩过的信息。 guide/extras/rendering-mechanism"
+      "text": "Rue 的核心优势在于同时掌控编译器与分层运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；无法证明安全时则保守回退，而不是牺牲行为一致性。",
+      "searchText": "渲染机制 编译器知情的渲染路径 rue 的核心优势在于同时掌控编译器与分层运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；无法证明安全时则保守回退，而不是牺牲行为一致性。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:18",
+      "id": "guide/extras/rendering-mechanism:21",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36315,18 +36370,18 @@
       "searchText": "渲染机制 编译器知情的渲染路径 rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量接近真实 dom 变更本身。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:19",
+      "id": "guide/extras/rendering-mechanism:22",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
       "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
-      "text": "下面这些优化服务于编译后可直接执行的渲染计划。",
-      "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化服务于编译后可直接执行的渲染计划。 guide/extras/rendering-mechanism"
+      "text": "下面这些优化服务于静态 DOM 与 compiled core；遇到组件或复杂结构时，相同源码会自动改用 Vapor fallback。",
+      "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化服务于静态 dom 与 compiled core；遇到组件或复杂结构时，相同源码会自动改用 vapor fallback。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:20",
+      "id": "guide/extras/rendering-mechanism:23",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36337,7 +36392,7 @@
       "searchText": "渲染机制 静态提升 静态提升 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:21",
+      "id": "guide/extras/rendering-mechanism:24",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36348,7 +36403,7 @@
       "searchText": "渲染机制 静态提升 模板中不含动态绑定的片段，会在编译阶段被提升、缓存或折叠成可复用的静态结构。这样更新时无需重新创建这些节点，也无需再次遍历它们。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:22",
+      "id": "guide/extras/rendering-mechanism:25",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36359,7 +36414,7 @@
       "searchText": "渲染机制 静态提升 <div> <div>foo</div> <div>bar</div> <div>{dynamic.value}</div> </div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:23",
+      "id": "guide/extras/rendering-mechanism:26",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36370,7 +36425,7 @@
       "searchText": "渲染机制 静态提升 在这个例子里，只有 dynamic 所在的片段需要参与更新；静态节点会在初次挂载后尽量复用。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:24",
+      "id": "guide/extras/rendering-mechanism:27",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36381,7 +36436,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 patch 标记与精准更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:25",
+      "id": "guide/extras/rendering-mechanism:28",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36392,7 +36447,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 对于有动态绑定的节点，编译器会把“究竟什么会变”编码进产物，例如文本、class、style、属性或稳定片段。运行时据此直接走对应的更新路径。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:26",
+      "id": "guide/extras/rendering-mechanism:29",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36403,7 +36458,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 <div class={active.value ? 'active' : ''}></div> <input id={id.value} value={value.value} /> <div>{dynamic.value}</div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:27",
+      "id": "guide/extras/rendering-mechanism:30",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36414,7 +36469,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 这类提示让运行时可以把更新收敛为“改 class”“改 value”“改 text”这样的定点操作。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:28",
+      "id": "guide/extras/rendering-mechanism:31",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -36425,7 +36480,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 树扁平化与区间更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:29",
+      "id": "guide/extras/rendering-mechanism:32",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -36436,7 +36491,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 编译器会把真正可能变化的后代节点提取出来，以 block 或区间边界的方式组织。这样组件更新时，运行时通常只需要遍历动态段，而不是重新访问整个静态子树。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:30",
+      "id": "guide/extras/rendering-mechanism:33",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -36835,6 +36890,17 @@
       "id": "guide/extras/ways-of-using-rue:2",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
+      "href": "/guide/guide/extras/ways-of-using-rue#ways-of-using-rue",
+      "title": "使用 Rue 的方式",
+      "sectionTitle": "使用 Rue 的方式",
+      "type": "paragraph",
+      "text": "使用构建插件时，普通应用代码保持从 @rue-js/rue 导入。编译器会按能力选择三层交付：纯静态 JSX 直接生成 DOM，Signal 交互使用 compiled core，组件和复杂结构按需回退 Vapor。@rue-js/rue/compiled 与 @rue-js/rue/vapor 主要面向编译产物或底层集成，不是要求应用作者维护的两套编程模型。",
+      "searchText": "使用 rue 的方式 使用 rue 的方式 使用构建插件时，普通应用代码保持从 @rue-js/rue 导入。编译器会按能力选择三层交付：纯静态 jsx 直接生成 dom，signal 交互使用 compiled core，组件和复杂结构按需回退 vapor。@rue-js/rue/compiled 与 @rue-js/rue/vapor 主要面向编译产物或底层集成，不是要求应用作者维护的两套编程模型。 guide/extras/ways-of-using-rue"
+    },
+    {
+      "id": "guide/extras/ways-of-using-rue:3",
+      "docId": "guide/extras/ways-of-using-rue",
+      "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#standalone-script",
       "title": "使用 Rue 的方式",
       "sectionTitle": "独立脚本",
@@ -36843,7 +36909,7 @@
       "searchText": "使用 rue 的方式 独立脚本 独立脚本 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:3",
+      "id": "guide/extras/ways-of-using-rue:4",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#standalone-script",
@@ -36854,7 +36920,18 @@
       "searchText": "使用 rue 的方式 独立脚本 rue 可以用作独立脚本文件——无需构建步骤！如果你已经有后端框架渲染大部分 html，或者你的前端逻辑不足以证明构建步骤的合理性，这是将 rue 集成到你的技术栈中最简单的方法。你可以将 rue 视为 jquery 的更具声明性的替代品。 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:4",
+      "id": "guide/extras/ways-of-using-rue:5",
+      "docId": "guide/extras/ways-of-using-rue",
+      "route": "/guide/guide/extras/ways-of-using-rue",
+      "href": "/guide/guide/extras/ways-of-using-rue#standalone-script",
+      "title": "使用 Rue 的方式",
+      "sectionTitle": "独立脚本",
+      "type": "paragraph",
+      "text": "独立脚本没有编译期能力分级，因此不适用“静态零 Rue 运行时”。如果页面以静态内容为主并关心最小 JavaScript，优先使用构建步骤或客户端岛。",
+      "searchText": "使用 rue 的方式 独立脚本 独立脚本没有编译期能力分级，因此不适用“静态零 rue 运行时”。如果页面以静态内容为主并关心最小 javascript，优先使用构建步骤或客户端岛。 guide/extras/ways-of-using-rue"
+    },
+    {
+      "id": "guide/extras/ways-of-using-rue:6",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#standalone-script",
@@ -36865,7 +36942,7 @@
       "searchText": "使用 rue 的方式 独立脚本 我们之前提供了一个名为 petite-rue 的替代发行版，专门针对渐进式增强现有 html 进行了优化。然而，petite-rue 不再积极维护，最后一个版本发布于 rue 3.2.27。 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:5",
+      "id": "guide/extras/ways-of-using-rue:7",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#embedded-web-components",
@@ -36876,7 +36953,7 @@
       "searchText": "使用 rue 的方式 嵌入式 web 组件 嵌入式 web 组件 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:6",
+      "id": "guide/extras/ways-of-using-rue:8",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#embedded-web-components",
@@ -36887,7 +36964,7 @@
       "searchText": "使用 rue 的方式 嵌入式 web 组件 你可以使用 rue 来构建标准 web 组件，这些组件可以嵌入到任何 html 页面中，无论它们是如何渲染的。这个选项允许你以完全与使用者无关的方式利用 rue：生成的 web 组件可以嵌入到遗留应用程序、静态 html 中，甚至使用其他框架构建的应用程序中。 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:7",
+      "id": "guide/extras/ways-of-using-rue:9",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#single-page-application-spa",
@@ -36898,7 +36975,7 @@
       "searchText": "使用 rue 的方式 单页应用（spa） 单页应用（spa） guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:8",
+      "id": "guide/extras/ways-of-using-rue:10",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#single-page-application-spa",
@@ -36909,7 +36986,18 @@
       "searchText": "使用 rue 的方式 单页应用（spa） 一些应用程序需要丰富的前端交互性、深度会话和非平凡的状态逻辑。构建此类应用程序的最佳方式是使用 rue 不仅控制整个页面，而且处理数据更新和导航而无需重新加载页面的架构。这种类型的应用程序通常被称为单页应用（spa）。 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:9",
+      "id": "guide/extras/ways-of-using-rue:11",
+      "docId": "guide/extras/ways-of-using-rue",
+      "route": "/guide/guide/extras/ways-of-using-rue",
+      "href": "/guide/guide/extras/ways-of-using-rue#single-page-application-spa",
+      "title": "使用 Rue 的方式",
+      "sectionTitle": "单页应用（SPA）",
+      "type": "paragraph",
+      "text": "SPA 通常会使用组件、路由、全局状态与异步边界，因此应预期按需包含 Vapor 兼容能力；“静态 JSX 可零 Rue 值运行时”不等于完整 SPA 零运行时。性能评估应以生产构建的实际模块图和压缩体积为准。",
+      "searchText": "使用 rue 的方式 单页应用（spa） spa 通常会使用组件、路由、全局状态与异步边界，因此应预期按需包含 vapor 兼容能力；“静态 jsx 可零 rue 值运行时”不等于完整 spa 零运行时。性能评估应以生产构建的实际模块图和压缩体积为准。 guide/extras/ways-of-using-rue"
+    },
+    {
+      "id": "guide/extras/ways-of-using-rue:12",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#single-page-application-spa",
@@ -36920,7 +37008,7 @@
       "searchText": "使用 rue 的方式 单页应用（spa） rue 提供了核心库和全面的工具支持，为构建现代 spa 提供令人惊叹的开发者体验，包括： guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:10",
+      "id": "guide/extras/ways-of-using-rue:13",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#single-page-application-spa",
@@ -36931,7 +37019,7 @@
       "searchText": "使用 rue 的方式 单页应用（spa） 客户端路由器 极速的构建工具链 ide 支持 浏览器开发者工具 typescript 集成 测试工具 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:11",
+      "id": "guide/extras/ways-of-using-rue:14",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#single-page-application-spa",
@@ -36942,7 +37030,7 @@
       "searchText": "使用 rue 的方式 单页应用（spa） spa 通常需要后端暴露 api 端点——但你也可以将 rue 与 inertia.js 等解决方案配对，在保留以服务器为中心的开发模型的同时获得 spa 的好处。 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:12",
+      "id": "guide/extras/ways-of-using-rue:15",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#beyond-the-web",
@@ -36953,7 +37041,7 @@
       "searchText": "使用 rue 的方式 超越网络 超越网络 guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:13",
+      "id": "guide/extras/ways-of-using-rue:16",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#beyond-the-web",
@@ -36964,7 +37052,7 @@
       "searchText": "使用 rue 的方式 超越网络 虽然 rue 主要是为构建 web 应用程序而设计的，但它绝不仅限于浏览器。你可以： guide/extras/ways-of-using-rue"
     },
     {
-      "id": "guide/extras/ways-of-using-rue:14",
+      "id": "guide/extras/ways-of-using-rue:17",
       "docId": "guide/extras/ways-of-using-rue",
       "route": "/guide/guide/extras/ways-of-using-rue",
       "href": "/guide/guide/extras/ways-of-using-rue#beyond-the-web",
@@ -44275,8 +44363,8 @@
       "title": "Rue 介绍",
       "sectionTitle": "Rue 介绍",
       "type": "list",
-      "text": "轻量、直观：简洁的 API 设计，快速上手 细粒度响应式默认渲染：编译产物优先走 Renderable / Block 路径，运行时围绕真实 DOM 做最小更新 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 API，支持 ref、reactive、computed，并贯穿组件与渲染更新 JSX/TSX 支持：使用 JSX 语法编写组件，无需学习模板语法",
-      "searchText": "rue 介绍 rue 介绍 轻量、直观：简洁的 api 设计，快速上手 细粒度响应式默认渲染：编译产物优先走 renderable / block 路径，运行时围绕真实 dom 做最小更新 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 api，支持 ref、reactive、computed，并贯穿组件与渲染更新 jsx/tsx 支持：使用 jsx 语法编写组件，无需学习模板语法 intro"
+      "text": "轻量、直观：简洁的 API 设计，快速上手 编译驱动的原生 DOM 渲染：静态 JSX 可直接生成 DOM 操作，不引入 Rue 值运行时 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 API，支持 ref、reactive、computed，并贯穿组件与渲染更新 JSX/TSX 支持：使用 JSX 语法编写组件，无需学习模板语法",
+      "searchText": "rue 介绍 rue 介绍 轻量、直观：简洁的 api 设计，快速上手 编译驱动的原生 dom 渲染：静态 jsx 可直接生成 dom 操作，不引入 rue 值运行时 易用的路由与组件：内置路由系统，灵活的组件机制 响应式系统：直观的响应式 api，支持 ref、reactive、computed，并贯穿组件与渲染更新 jsx/tsx 支持：使用 jsx 语法编写组件，无需学习模板语法 intro"
     },
     {
       "id": "intro:3",
@@ -44286,11 +44374,22 @@
       "title": "Rue 介绍",
       "sectionTitle": "Rue 介绍",
       "type": "paragraph",
-      "text": "对于绝大多数应用代码，你只需要写模板或普通 JSX。Rue 会把组件、响应式状态与渲染更新串成一条直观的开发路径。",
-      "searchText": "rue 介绍 rue 介绍 对于绝大多数应用代码，你只需要写模板或普通 jsx。rue 会把组件、响应式状态与渲染更新串成一条直观的开发路径。 intro"
+      "text": "对于绝大多数应用代码，你只需要从 @rue-js/rue 导入 API 并编写普通 JSX。构建插件会根据代码实际使用的能力选择三层输出：纯静态 JSX 直接生成 DOM、Signal 交互只加载 compiled core，组件边界和复杂结构则按需回退到 Vapor 兼容层。",
+      "searchText": "rue 介绍 rue 介绍 对于绝大多数应用代码，你只需要从 @rue-js/rue 导入 api 并编写普通 jsx。构建插件会根据代码实际使用的能力选择三层输出：纯静态 jsx 直接生成 dom、signal 交互只加载 compiled core，组件边界和复杂结构则按需回退到 vapor 兼容层。 intro"
     },
     {
       "id": "intro:4",
+      "docId": "intro",
+      "route": "/page/intro",
+      "href": "/page/intro#-rue-介绍",
+      "title": "Rue 介绍",
+      "sectionTitle": "Rue 介绍",
+      "type": "paragraph",
+      "text": "这意味着静态页面可以没有 Rue 值运行时，常见交互也不必携带完整运行时；它不意味着所有 Rue 应用都绝对零运行时。使用组件、路由、Hydration、Teleport、Transition、异步 renderable 或其他复杂能力时，相应的兼容实现仍会进入产物。",
+      "searchText": "rue 介绍 rue 介绍 这意味着静态页面可以没有 rue 值运行时，常见交互也不必携带完整运行时；它不意味着所有 rue 应用都绝对零运行时。使用组件、路由、hydration、teleport、transition、异步 renderable 或其他复杂能力时，相应的兼容实现仍会进入产物。 intro"
+    },
+    {
+      "id": "intro:5",
       "docId": "intro",
       "route": "/page/intro",
       "href": "/page/intro#-rue-介绍",
@@ -44301,7 +44400,7 @@
       "searchText": "rue 介绍 rue 介绍 // 一个最简单的组件示例 import { type fc } from '@rue-js/rue' const hello: fc = () => <div>hello rue</div> export default hello intro"
     },
     {
-      "id": "intro:5",
+      "id": "intro:6",
       "docId": "intro",
       "route": "/page/intro",
       "href": "/page/intro#-rue-介绍",

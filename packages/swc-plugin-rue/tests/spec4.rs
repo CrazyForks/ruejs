@@ -17,13 +17,39 @@ export default C;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, vapor, _$createElement, _$createTextNode, _$appendChild } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { _$template } from "@rue-js/rue/compiled";
+import { ref } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
-const C: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        _$appendChild(_root, _$createTextNode("ok"));
-        return _root;
-    });
+const _$getTemplate1 = _$template("<div>ok</div>");
+const C: FC = ()=>(()=>{
+        let _root;
+        let _disposed = false;
+        const _dispose = ()=>{
+            if (_disposed) return;
+            _disposed = true;
+            if (_root && _root.parentNode) {
+                _root.parentNode.removeChild(_root);
+            }
+        };
+        return {
+            __rue_cleanup_bucket: [
+                _dispose
+            ],
+            __rue_vapor_setup: (__rue_parent_context)=>{
+                if (_disposed) {
+                    throw new Error("Cannot mount a disposed static root");
+                }
+                if (_root) {
+                    throw new Error("A static root can only be mounted once");
+                }
+                const _fragment = _$getTemplate1().content.cloneNode(true);
+                _root = _fragment.firstChild;
+                return _root;
+            },
+            dispose: _dispose
+        };
+    })();
 export default C;
 "##;
 

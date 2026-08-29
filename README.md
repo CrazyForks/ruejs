@@ -157,6 +157,31 @@ cd packages/runtime-vapor
 npm test
 ```
 
+### Run js-framework-benchmark with the Local Development Build
+
+When the current Rue version has not been published to npm yet, install the local workspace packages temporarily into the `rue-signal` implementation of `js-framework-benchmark`:
+
+```sh
+pnpm benchmark:js-framework:install-local -- \
+  ../js-framework-benchmark/frameworks/keyed/rue-signal
+```
+
+You can also pass an absolute path to `rue-signal/package.json`. The command builds the Rue runtime, Wasm runtime, and SWC plugin, packs the related `@rue-js/*` workspace packages, installs them without changing `package.json` or `package-lock.json`, and runs `npm run build-prod`.
+
+After installation, start the server from the `js-framework-benchmark` root:
+
+```sh
+npm start
+```
+
+Run the single-framework benchmark in another terminal:
+
+```sh
+npm run bench keyed/rue-signal
+```
+
+The published npm version can remain in `rue-signal/package.json`. Running `npm ci` in that directory replaces the local packages with the published version, so rerun the local installation command afterward.
+
 ## Contributing
 
 Issues and pull requests are welcome. Before submitting changes, we recommend running at least the following checks:

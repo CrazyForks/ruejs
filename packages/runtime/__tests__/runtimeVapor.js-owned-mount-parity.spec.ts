@@ -3,8 +3,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as rustEntry from '@rue-js/runtime-vapor'
-import { createRue as createJsRue } from '../../runtime-vapor/js-runtime/create-rue.js'
-import type { OwnedMountHandle, OwnedMountSlotId } from '../../runtime-vapor/js-runtime/types.js'
+import { createRue as createJsRue } from '../../runtime-vapor/dist/js-runtime/create-rue.js'
+import type {
+  OwnedMountHandle,
+  OwnedMountSlotId,
+} from '../../runtime-vapor/dist/js-runtime/types.js'
 import { setReactiveScheduling } from '../src'
 import { vaporKeyedList } from '../src/vapor-helpers'
 

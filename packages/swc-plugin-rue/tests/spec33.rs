@@ -308,15 +308,14 @@ export default HelloWorld;
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec33.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
-    assert!(normalized.contains("_$vaporKeyedList"));
-    assert!(normalized.contains("directRoot: true"));
-    assert!(normalized.contains("_$setValue(_el1, name)"));
+    assert!(normalized.contains("_$reconcileKeyed"));
+    assert!(!normalized.contains(concat!("direct", "Root:")));
+    assert!(normalized.contains("_el1.value = name == null ? \"\" : String(name)"));
     assert!(
         normalized.contains(
             "const _$rowBindingNext0 = labels[name] ? `${labels[name]} (${name})` : name"
         )
     );
-    assert!(normalized.contains("_$settextContent(_el1, _$rowBindingNext0)"));
-    assert!(normalized.contains("_$insertBefore(parent, _root, start)"));
+    assert!(normalized.contains("_el1.textContent = _$rowBindingNext0"));
     assert!(normalized.contains("_$createComponent(ThemePicker"));
 }

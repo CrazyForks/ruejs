@@ -1,11 +1,7 @@
-# Source
+# Handwritten and development files
 src/
+scripts/
 tests/
-target/
-
-# Rust specific
-Cargo.lock
-Cargo.toml
 
 # Dev files
 .git/

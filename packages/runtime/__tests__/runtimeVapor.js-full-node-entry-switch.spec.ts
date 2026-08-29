@@ -6,10 +6,9 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { build, type Rollup } from 'vite'
-import wasm from 'vite-plugin-wasm'
 
-import * as fullNodeEntry from '../../runtime-vapor/index.node.js'
-import * as vaporNodeEntry from '../../runtime-vapor/vapor.node.js'
+import * as fullNodeEntry from '../../runtime-vapor/dist/index.node.js'
+import * as vaporNodeEntry from '../../runtime-vapor/dist/vapor.node.js'
 import '../src/dom'
 
 type BackendMarker = {
@@ -24,7 +23,7 @@ type TestGlobal = typeof globalThis & {
   __rue_runtime_vapor_shared_bridge?: unknown
 }
 
-const fullBrowserEntry = path.resolve(process.cwd(), 'packages/runtime-vapor/index.js')
+const fullBrowserEntry = path.resolve(process.cwd(), 'packages/runtime-vapor/dist/index.js')
 
 const buildTestEntry = async () => {
   const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-full-entry-switch-'))
@@ -45,7 +44,6 @@ const buildTestEntry = async () => {
       appType: 'custom',
       logLevel: 'silent',
       define: { __TEST__: 'true' },
-      plugins: [wasm()],
       build: {
         target: 'es2020',
         minify: false,
@@ -81,7 +79,7 @@ afterEach(() => {
 })
 
 describe('runtime-vapor JavaScript full browser and Node production entries', () => {
-  it('constructs the JS shells over the real full browser kernel', async () => {
+  it('constructs the JS shells over the shared TypeScript browser kernel', async () => {
     delete (globalThis as TestGlobal).__rue_runtime_vapor_shared_bridge
     const code = await buildTestEntry()
     const entry = await import(
@@ -96,7 +94,7 @@ describe('runtime-vapor JavaScript full browser and Node production entries', ()
     try {
       expect(Object.getPrototypeOf(runtime)).toBe(Object.prototype)
       expect(markers).toEqual([
-        { entry: 'browser:full', hooks: 'js', kernel: 'pkg-vapor', runtime: 'js' },
+        { entry: 'browser:full', hooks: 'js', kernel: 'typescript', runtime: 'js' },
       ])
       expect(entry.entryExports).not.toContain('__rueRuntimeBackend')
     } finally {
@@ -104,17 +102,17 @@ describe('runtime-vapor JavaScript full browser and Node production entries', ()
     }
   })
 
-  it('constructs both Node conditions from one JS facade over pkg-node', () => {
+  it('constructs both Node conditions from one shared TypeScript facade', () => {
     const full = observeCreate(fullNodeEntry)
     const vapor = observeCreate(vaporNodeEntry)
     try {
       expect(Object.getPrototypeOf(full.runtime)).toBe(Object.prototype)
       expect(Object.getPrototypeOf(vapor.runtime)).toBe(Object.prototype)
       expect(full.markers).toEqual([
-        { entry: 'node:full', hooks: 'js', kernel: 'pkg-node', runtime: 'js' },
+        { entry: 'node:full', hooks: 'js', kernel: 'typescript', runtime: 'js' },
       ])
       expect(vapor.markers).toEqual([
-        { entry: 'node:vapor', hooks: 'js', kernel: 'pkg-node', runtime: 'js' },
+        { entry: 'node:vapor', hooks: 'js', kernel: 'typescript', runtime: 'js' },
       ])
       expect(fullNodeEntry.SignalHandle).toBe(vaporNodeEntry.SignalHandle)
       expect(Object.keys(fullNodeEntry)).not.toContain('__rueRuntimeBackend')

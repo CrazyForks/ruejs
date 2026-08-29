@@ -1,4 +1,4 @@
-import type { ComponentInstance, ComponentProps, RenderableInput } from './rue'
+import type { ComponentInstance, ComponentProps, RenderableInput } from './runtime-types'
 
 export const RUE_ISLAND_ELEMENT = 'rue-island'
 export const RUE_ISLAND_PROPS_SCRIPT_TYPE = 'application/json'

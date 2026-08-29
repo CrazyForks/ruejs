@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { installSharedBridge } from '../../runtime-vapor/vapor-bridge.js'
+import { installSharedBridge } from '../../runtime-vapor/dist/vapor-bridge.js'
 
 const RUE_CONTEXT_OWNER_PARENT_KEY = '__rue_context_owner_parent__'
 

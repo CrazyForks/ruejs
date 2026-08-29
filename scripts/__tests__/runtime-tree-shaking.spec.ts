@@ -4,7 +4,6 @@ import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { build, type Rollup } from 'vite'
-import wasm from 'vite-plugin-wasm'
 import { afterAll, describe, expect, it } from 'vitest'
 
 import { KeepAlive, Suspense, Transition, TransitionGroup } from '../../packages/runtime/src/index'
@@ -72,7 +71,6 @@ const buildPublishedConsumer = async (
     appType: 'custom',
     logLevel: 'silent',
     mode: 'production',
-    plugins: [wasm()],
     resolve: {
       conditions: ['module', 'browser', 'production'],
     },
@@ -109,11 +107,17 @@ describe('published runtime built-in tree-shaking', () => {
   })
 
   it('removes every optional built-in from the vapor core bundle', async () => {
-    const { code } = await buildPublishedConsumer('vapor-core', [
+    const { code, moduleIds } = await buildPublishedConsumer('vapor-core', [
       { entry: '@rue-js/rue/vapor', imports: ['vapor'] },
     ])
 
     expect(componentImplementationHits(code)).toEqual({})
+    expect(
+      moduleIds.filter(id => /runtime-vapor\/(?:dist\/)?reactive-kernel\/[^/]+\.js$/.test(id))
+        .length,
+    ).toBeGreaterThan(0)
+    expect(moduleIds.filter(id => /\.wasm$|\/pkg-(?:vapor|node)\//.test(id))).toEqual([])
+    expect(code).not.toContain('__vite-plugin-wasm-helper')
   })
 
   it('keeps the vapor app on the vapor runtime without the default runtime', async () => {

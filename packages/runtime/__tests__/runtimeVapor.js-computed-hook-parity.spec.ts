@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module'
-
 import { describe, expect, it } from 'vitest'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
+import { createReactiveKernel } from '../../runtime-vapor/dist/reactive-kernel/index.js'
 
-const require = createRequire(import.meta.url)
-const rustRuntime = require('../../runtime-vapor/pkg-node/rue_runtime_vapor.js')
+const reactiveKernel = createReactiveKernel()
 
 type HookHost = {
   __hooks?: {
@@ -40,7 +38,7 @@ type ComputedBackend = {
 }
 
 const createJsBackend = (): ComputedBackend => {
-  const facade = createReactiveFacade(rustRuntime)
+  const facade = createReactiveFacade(reactiveKernel)
   const hooks = facade.hooks as typeof facade.hooks & {
     renderHooks<T>(host: HookHost, render: () => T): T
   }
@@ -49,7 +47,7 @@ const createJsBackend = (): ComputedBackend => {
     module: {
       computed: facade.computed,
       getCurrentInstance: hooks.getCurrentInstance as ComputedModule['getCurrentInstance'],
-      setReactiveScheduling: rustRuntime.setReactiveScheduling,
+      setReactiveScheduling: reactiveKernel.setReactiveScheduling,
       signal: facade.signal,
     },
     renderHooks: hooks.renderHooks,
@@ -110,7 +108,7 @@ const exerciseChainsDynamicDependenciesAndErrors = (backend: ComputedBackend) =>
   let errorRuns = 0
   backend.module.setReactiveScheduling('sync')
 
-  const { selected, chained, recoverable } = backend.renderHooks(host, () => {
+  const { chained, recoverable } = backend.renderHooks(host, () => {
     const selected = backend.module.computed(() => {
       selectedRuns += 1
       return useLeft.get() ? left.get() : right.get()

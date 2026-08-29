@@ -6,6 +6,7 @@
 - 工具函数导出：对适配器方法进行薄封装，便于以函数式调用和 tree-shaking。
 */
 import { CUSTOM_ELEMENT_SYNC_PROPS_KEY } from './custom-elements.shared'
+import { resolveActiveRuntime, runWithRuntime } from './runtime-context'
 
 /** Rue DOMAdapter 使用的最小节点形态。 */
 export interface DomNodeLike {
@@ -294,14 +295,8 @@ const getActiveRuntimeContainer = (): DomElementLike | null => {
   const globalRecord = globalThis as typeof globalThis & {
     __rue_active?: { getCurrentContainer?: () => DomElementLike | null | undefined }
     __rue?: { getCurrentContainer?: () => DomElementLike | null | undefined }
-    __rue_vapor_preferred?: { getCurrentContainer?: () => DomElementLike | null | undefined }
-    __rue_vapor?: { getCurrentContainer?: () => DomElementLike | null | undefined }
   }
-  const runtime =
-    globalRecord.__rue_active ??
-    globalRecord.__rue ??
-    globalRecord.__rue_vapor_preferred ??
-    globalRecord.__rue_vapor
+  const runtime = resolveActiveRuntime(() => globalRecord.__rue)
 
   if (!runtime || typeof runtime.getCurrentContainer !== 'function') {
     return null
@@ -315,6 +310,7 @@ const resolveCreateElementParent = (parent?: DomElementLike | null) =>
   parent === undefined ? getActiveRuntimeContainer() : (parent ?? null)
 
 const RUE_PENDING_SELECT_VALUE = Symbol('rue.pendingSelectValue')
+const RUE_CONTROLLED_TEXT_VALUE = Symbol('rue.controlledTextValue')
 const RUE_TEXT_CONTROL_COMPOSING_KEY = '__rue_is_composing__'
 const NON_TEXT_INPUT_TYPES = new Set([
   'button',
@@ -599,6 +595,23 @@ export const hasActiveTextControlWithin = (parent: DomNodeLike | null | undefine
   }
 
   return contains.call(parent, tracked)
+}
+
+/** 判断目标子树内正在编辑的文本控件是否没有受 `value` prop 控制。 */
+export const hasActiveUncontrolledTextControlWithin = (parent: DomNodeLike | null | undefined) => {
+  if (!hasActiveTextControlWithin(parent) || !parent) return false
+  const contains = (parent as { contains?: (node: unknown) => boolean }).contains
+  if (typeof contains !== 'function') return false
+
+  const active = globalThis.document?.activeElement
+  const candidate =
+    isTextControlElement(active) && contains.call(parent, active)
+      ? active
+      : resolveTrackedTextControlWithin(parent)
+  return (
+    isTextControlElement(candidate) &&
+    (candidate as Record<PropertyKey, unknown>)[RUE_CONTROLLED_TEXT_VALUE] !== true
+  )
 }
 
 /** 尝试在目标子树内恢复最近跟踪的文本控件焦点。 */
@@ -1403,6 +1416,9 @@ export class BrowserDOMAdapter implements DOMAdapter {
       return
     }
     if (anyEl.value !== undefined) {
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        anyEl[RUE_CONTROLLED_TEXT_VALUE] = true
+      }
       const nextValue = value == null ? '' : value
       if (String(anyEl.value ?? '') !== String(nextValue)) {
         anyEl.value = nextValue
@@ -1489,6 +1505,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
 const RUE_DOM_ADAPTER_GLOBAL_KEY = '__rue_dom_adapter__'
 const RUE_DEFAULT_BROWSER_DOM_ADAPTER_GLOBAL_KEY = '__rue_default_browser_dom_adapter__'
 const RUE_DOM_BRIDGE_CONSUMERS_GLOBAL_KEY = '__rue_dom_bridge_consumers__'
+const RUE_COMPILED_DOM_OPERATION_ADAPTER_GLOBAL_KEY = '__rue_compiled_dom_operation_adapter__'
 
 type DOMBridgeConsumer = object & {
   setDOMAdapter?: (bridge: GlobalDOMBridge) => void
@@ -1498,6 +1515,7 @@ type RueDOMGlobalRecord = typeof globalThis & {
   [RUE_DOM_ADAPTER_GLOBAL_KEY]?: DOMAdapter
   [RUE_DEFAULT_BROWSER_DOM_ADAPTER_GLOBAL_KEY]?: DOMAdapter
   [RUE_DOM_BRIDGE_CONSUMERS_GLOBAL_KEY]?: Set<WeakRef<DOMBridgeConsumer>>
+  [RUE_COMPILED_DOM_OPERATION_ADAPTER_GLOBAL_KEY]?: DOMAdapter | null
 }
 
 const domGlobal = globalThis as RueDOMGlobalRecord
@@ -1518,10 +1536,13 @@ type DOMHostOperationContext = {
   freshBrowser: boolean
 }
 let activeDOMHostOperationContext: DOMHostOperationContext | undefined
+const domHostOperationContexts = new WeakMap<object, DOMHostOperationContext>()
 let domAdapterGeneration = 0
 
 const getDOMAdapterForOperation = () =>
-  activeDOMHostOperationContext?.adapter ?? getCurrentDOMAdapter()
+  domGlobal[RUE_COMPILED_DOM_OPERATION_ADAPTER_GLOBAL_KEY] ??
+  activeDOMHostOperationContext?.adapter ??
+  getCurrentDOMAdapter()
 
 const isHydrationHostBoundary = (parent: DomNodeLike | null | undefined) => {
   if (!parent) return false
@@ -1548,10 +1569,14 @@ export const withDOMHostOperations = <T>(
 ): T => {
   if (activeDOMHostOperationContext) return run()
 
-  const adapter = getCurrentDOMAdapter()
+  const inheritedContext =
+    parent != null && typeof parent === 'object'
+      ? domHostOperationContexts.get(parent as object)
+      : undefined
+  const adapter = inheritedContext?.adapter ?? getCurrentDOMAdapter()
   const generation = domAdapterGeneration
   const previous = activeDOMHostOperationContext
-  activeDOMHostOperationContext = {
+  activeDOMHostOperationContext = inheritedContext ?? {
     adapter,
     freshBrowser: adapter === DEFAULT_BROWSER_DOM_ADAPTER && !isHydrationHostBoundary(parent),
   }
@@ -1578,6 +1603,8 @@ type GlobalDOMBridge = {
   createDocumentFragment: () => DomFragmentLike
   isFragment: (node: DomNodeLike) => boolean
   collectFragmentChildren: (node: DomNodeLike) => DomNodeLike[]
+  hasActiveTextControlWithin?: (node: DomNodeLike) => boolean
+  hasActiveUncontrolledTextControlWithin?: (node: DomNodeLike) => boolean
   setTextContent: (el: DomNodeLike, val: any) => void
   appendChild: (parent: DomNodeLike, child: DomNodeLike) => void
   insertBefore: (parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) => void
@@ -1643,6 +1670,9 @@ const createGlobalDOMBridge = (): GlobalDOMBridge => {
     createDocumentFragment: () => adapter.createDocumentFragment(),
     isFragment: (node: DomNodeLike) => adapter.isFragment(node),
     collectFragmentChildren: (node: DomNodeLike) => adapter.collectFragmentChildren(node),
+    hasActiveTextControlWithin: (node: DomNodeLike) => hasActiveTextControlWithin(node),
+    hasActiveUncontrolledTextControlWithin: (node: DomNodeLike) =>
+      hasActiveUncontrolledTextControlWithin(node),
     setTextContent: (el: DomNodeLike, val: any) => adapter.settextContent(el, val),
     appendChild: (parent: DomNodeLike, child: DomNodeLike) => adapter.appendChild(parent, child),
     insertBefore: (parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) =>
@@ -1717,13 +1747,18 @@ export const createTextNode = (data: string) =>
 export const createElement = (tag: string, parent?: DomElementLike | null) => {
   const resolvedParent = resolveCreateElementParent(parent)
   if (!activeDOMHostOperationContext?.freshBrowser) {
-    return getDOMAdapterForOperation().createElement(tag, resolvedParent)
+    const element = getDOMAdapterForOperation().createElement(tag, resolvedParent)
+    if (activeDOMHostOperationContext && element != null && typeof element === 'object') {
+      domHostOperationContexts.set(element as object, activeDOMHostOperationContext)
+    }
+    return element
   }
   const element =
     SVG_TAGS.has(tag) || (SVG_CONTEXTUAL_TAGS.has(tag) && isSVGNamespaceParent(resolvedParent))
       ? document.createElementNS(SVG_NS, tag)
       : document.createElement(tag)
   freshDomParents.add(element)
+  domHostOperationContexts.set(element, activeDOMHostOperationContext)
   return element as any
 }
 /** 创建文本包装元素（便捷函数）
@@ -1749,10 +1784,15 @@ export const settextContent = (el: DomNodeLike, val: any) => {
 /** 创建文档片段（便捷函数） */
 export const createDocumentFragment = () => {
   if (!activeDOMHostOperationContext?.freshBrowser) {
-    return getDOMAdapterForOperation().createDocumentFragment()
+    const fragment = getDOMAdapterForOperation().createDocumentFragment()
+    if (activeDOMHostOperationContext && fragment != null && typeof fragment === 'object') {
+      domHostOperationContexts.set(fragment as object, activeDOMHostOperationContext)
+    }
+    return fragment
   }
   const fragment = document.createDocumentFragment()
   freshDomParents.add(fragment)
+  domHostOperationContexts.set(fragment, activeDOMHostOperationContext)
   return fragment as any
 }
 /** 追加子节点（便捷函数） */
@@ -2218,15 +2258,8 @@ const getActiveRuntimeForDOMEvent = () => {
   const globalRecord = globalThis as typeof globalThis & {
     __rue?: unknown
     __rue_active?: unknown
-    __rue_vapor?: unknown
-    __rue_vapor_preferred?: unknown
   }
-  return (
-    globalRecord.__rue_active ||
-    globalRecord.__rue_vapor_preferred ||
-    globalRecord.__rue ||
-    globalRecord.__rue_vapor
-  )
+  return resolveActiveRuntime(() => globalRecord.__rue)
 }
 
 const runWithCapturedRuntime = <T>(runtime: unknown, runner: () => T): T => {
@@ -2234,22 +2267,7 @@ const runWithCapturedRuntime = <T>(runtime: unknown, runner: () => T): T => {
     return runner()
   }
 
-  const globalRecord = globalThis as typeof globalThis & {
-    __rue_active?: unknown
-  }
-  const hadActiveRuntime = Object.prototype.hasOwnProperty.call(globalRecord, '__rue_active')
-  const previousRuntime = globalRecord.__rue_active
-
-  globalRecord.__rue_active = runtime
-  try {
-    return runner()
-  } finally {
-    if (hadActiveRuntime) {
-      globalRecord.__rue_active = previousRuntime
-    } else {
-      delete globalRecord.__rue_active
-    }
-  }
+  return runWithRuntime(runtime, runner)
 }
 
 const bindEventHandlerToCurrentRuntime = (listener: DOMEventHandler): DOMEventHandler => {

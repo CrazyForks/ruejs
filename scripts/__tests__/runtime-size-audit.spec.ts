@@ -19,6 +19,15 @@ describe('runtime size audit', () => {
   it('generates every preset with stable fields and core-relative built-in deltas', () => {
     expect(RUNTIME_SIZE_PRESETS.map(({ name, input }) => ({ name, input }))).toEqual([
       {
+        name: 'compiled-core',
+        input: [
+          {
+            entry: '@rue-js/rue/compiled',
+            imports: ['signal', 'effect', 'createSelector'],
+          },
+        ],
+      },
+      {
         name: 'vapor-core',
         input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor'] }],
       },
@@ -67,18 +76,21 @@ describe('runtime size audit', () => {
       brotli: 400 + index * 40,
       sources: {
         defaultRuntime: preset.name === 'vapor-app',
-        vaporRuntime: true,
+        vaporRuntime: preset.name !== 'compiled-core',
+        compiledRuntime: preset.name === 'compiled-core',
         both: preset.name === 'vapor-app',
         modules: [],
         ssrRenderer: false,
         ssrModules: [],
-        wasm: {
-          instanceCount: 1,
-          full: preset.name === 'full-core',
-          vapor: preset.name !== 'full-core',
-          both: false,
-          artifacts: [],
+        reactiveKernel: {
+          moduleCount: 2,
+          renderedBytes: 120,
+          modules: [
+            'packages/runtime-vapor/dist/reactive-kernel/index.js',
+            'packages/runtime-vapor/dist/reactive-kernel/signal.js',
+          ],
         },
+        wasmModules: [],
       },
     }))
 
@@ -86,7 +98,7 @@ describe('runtime size audit', () => {
 
     expect(Object.keys(report)).toEqual(['schemaVersion', 'build', 'presets'])
     expect(report).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       build: {
         mode: 'production',
         target: 'es2020',
@@ -198,20 +210,12 @@ describe('runtime size audit', () => {
             builtins: [],
             ssrRenderer: false,
             ssrModules: [],
-            wasm: {
-              instanceCount: 2,
-              full: true,
-              vapor: true,
-              both: true,
-              artifacts: [
-                { kind: 'full', module: 'packages/runtime-vapor/pkg/a.wasm', sha256: 'full' },
-                {
-                  kind: 'vapor',
-                  module: 'packages/runtime-vapor/pkg-vapor/a.wasm',
-                  sha256: 'vapor',
-                },
-              ],
+            reactiveKernel: {
+              moduleCount: 0,
+              renderedBytes: 0,
+              modules: [],
             },
+            wasmModules: ['packages/runtime-vapor/legacy-a.wasm'],
           },
         },
       },
@@ -221,9 +225,8 @@ describe('runtime size audit', () => {
         'vapor-core': {
           measurement: 'absolute',
           max: { min: 1000, gzip: 500 },
-          requiredWasm: 'vapor',
-          maxWasmInstances: 1,
-          forbidFullWasm: true,
+          requireReactiveKernel: true,
+          forbidWasm: true,
         },
       },
     }
@@ -245,14 +248,14 @@ describe('runtime size audit', () => {
           }),
           expect.objectContaining({
             preset: 'vapor-core',
-            dimension: 'sources.wasm.instanceCount',
-            actual: 2,
-            limit: 1,
+            dimension: 'sources.reactiveKernel.required',
+            actual: 0,
+            limit: 'required',
           }),
           expect.objectContaining({
             preset: 'vapor-core',
-            dimension: 'sources.wasm.full',
-            actual: 'full+vapor',
+            dimension: 'sources.wasmModules',
+            actual: 'packages/runtime-vapor/legacy-a.wasm',
             limit: 'forbidden',
           }),
         ],
@@ -311,12 +314,114 @@ describe('runtime size audit', () => {
     )
   })
 
-  it('builds both Wasm artifacts for release reporting without enforcing the size budget', () => {
+  it('defines the compiled-core absolute size and module graph budget without raising it', () => {
+    const budget = JSON.parse(
+      readFileSync(path.resolve('scripts/runtime-size-budget.json'), 'utf8'),
+    )
+
+    expect(budget.presets['compiled-core']).toEqual({
+      measurement: 'absolute',
+      max: { min: 45000, brotli: 13000 },
+      requireReactiveKernel: true,
+      requireCompiledRuntime: true,
+      forbidDefaultRuntime: true,
+      forbidVaporRuntime: true,
+      forbidWasm: true,
+      forbidSSRRenderer: true,
+      forbidModules: {
+        fullFacade: [
+          'packages/runtime-vapor/dist/index.js',
+          'packages/runtime-vapor/dist/vapor.js',
+          'packages/runtime-vapor/dist/js-reactive/facade.js',
+        ],
+        jsRuntime: ['packages/runtime-vapor/dist/js-runtime/'],
+        watch: ['packages/runtime-vapor/dist/reactive-kernel/watch.js'],
+        resource: ['packages/runtime-vapor/dist/reactive-kernel/resource.js'],
+        reactive: [
+          'packages/runtime-vapor/dist/reactive.js',
+          'packages/runtime-vapor/dist/reactive.browser.js',
+          'packages/runtime-vapor/dist/reactive.vapor.js',
+          'packages/runtime-vapor/dist/reactive.shared.js',
+          'packages/runtime-vapor/dist/reactive-kernel/reactive.js',
+        ],
+        computed: [
+          'packages/runtime-vapor/dist/reactive-kernel/computed.js',
+          'packages/runtime-vapor/dist/js-reactive/hooks/computed.js',
+        ],
+        vaporHelpers: ['packages/runtime/src/vapor-helpers.ts'],
+      },
+    })
+  })
+
+  it('reports every forbidden compiled-core module group with its matching module ids', () => {
+    const report = {
+      presets: {
+        'compiled-core': {
+          min: 45000,
+          brotli: 13000,
+          sources: {
+            defaultRuntime: false,
+            vaporRuntime: true,
+            compiledRuntime: false,
+            allModules: [
+              'packages/runtime-vapor/dist/js-reactive/facade.js',
+              'packages/runtime-vapor/dist/js-runtime/app.js',
+            ],
+            reactiveKernel: { moduleCount: 1 },
+            wasmModules: [],
+            ssrRenderer: false,
+          },
+        },
+      },
+    }
+    const budget = {
+      presets: {
+        'compiled-core': {
+          measurement: 'absolute',
+          max: { min: 45000, brotli: 13000 },
+          requireReactiveKernel: true,
+          requireCompiledRuntime: true,
+          forbidVaporRuntime: true,
+          forbidModules: {
+            fullFacade: ['packages/runtime-vapor/dist/js-reactive/facade.js'],
+            jsRuntime: ['packages/runtime-vapor/dist/js-runtime/'],
+          },
+        },
+      },
+    }
+
+    expect(() => checkRuntimeSizeBudget(report, budget)).toThrowError(
+      expect.objectContaining({
+        failures: [
+          expect.objectContaining({
+            preset: 'compiled-core',
+            dimension: 'sources.compiledRuntime.required',
+          }),
+          expect.objectContaining({
+            preset: 'compiled-core',
+            dimension: 'sources.vaporRuntime',
+          }),
+          expect.objectContaining({
+            preset: 'compiled-core',
+            dimension: 'sources.forbiddenModules.fullFacade',
+            actual: 'packages/runtime-vapor/dist/js-reactive/facade.js',
+          }),
+          expect.objectContaining({
+            preset: 'compiled-core',
+            dimension: 'sources.forbiddenModules.jsRuntime',
+            actual: 'packages/runtime-vapor/dist/js-runtime/app.js',
+          }),
+        ],
+      }),
+    )
+  })
+
+  it('builds TypeScript artifacts for release reporting without enforcing the size budget', () => {
     const packageJson = JSON.parse(readFileSync(path.resolve('package.json'), 'utf8'))
     const releaseSource = readFileSync(path.resolve('scripts/release.js'), 'utf8')
 
     expect(packageJson.scripts['size-runtime']).toBe(
-      'pnpm --filter @rue-js/runtime-vapor run build && pnpm --filter @rue-js/runtime-vapor run build-vapor && node scripts/runtime-size-audit.js',
+      'pnpm --filter @rue-js/runtime-vapor run build-ts && node scripts/runtime-size-audit.js',
     )
     expect(releaseSource).toContain("await run('pnpm', ['run', 'size-runtime'])")
     expect(releaseSource).not.toContain("['run', 'size-runtime', '--', '--check']")

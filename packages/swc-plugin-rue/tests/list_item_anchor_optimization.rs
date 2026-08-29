@@ -20,9 +20,10 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("singleRoot: true")));
-    assert!(out.contains(&utils::normalize("directRoot: true")));
-    assert!(out.contains(&utils::normalize("_$insertBefore(parent, _root, start)")));
+    assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
+    assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"li\", null)")), "{out}");
+    assert!(!out.contains(&utils::normalize("singleRoot:")));
+    assert!(!out.contains(&utils::normalize(concat!("direct", "Root:"))));
     assert!(!out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
     assert!(!out.contains(&utils::normalize("renderBetween(__slot, parent, start, end)")));
 }
@@ -123,8 +124,9 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("singleRoot: true")));
-    assert!(out.contains(&utils::normalize("trackIndex: false")));
+    assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
+    assert!(!out.contains(&utils::normalize("singleRoot:")));
+    assert!(!out.contains(&utils::normalize("trackIndex:")));
 }
 
 #[test]
@@ -152,9 +154,9 @@ const Page: FC<{ todos: Array<{ id: number; text: string; completed: boolean }>;
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
     println!("{}", out);
 
-    assert!(out.contains(&utils::normalize("singleRoot: true")));
-    assert!(out.contains(&utils::normalize("trackIndex: false")));
-    assert!(out.contains(&utils::normalize("directRoot: true")));
-    assert!(out.contains(&utils::normalize("_$insertBefore(parent, _root, start)")));
-    assert!(!out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
+    assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
+    assert!(out.contains(&utils::normalize(".addEventListener(")));
+    assert!(out.contains(&utils::normalize(".removeEventListener(")));
+    assert!(out.contains(&utils::normalize("disposeOwner(")));
+    assert!(!out.contains(&utils::normalize("_$vaporKeyedList")));
 }

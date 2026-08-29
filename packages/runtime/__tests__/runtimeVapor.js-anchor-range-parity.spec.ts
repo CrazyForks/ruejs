@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as rustEntry from '@rue-js/runtime-vapor'
-import { createRue as createJsRue } from '../../runtime-vapor/js-runtime/create-rue.js'
+import { createRue as createJsRue } from '../../runtime-vapor/dist/js-runtime/create-rue.js'
 
 import '../src/dom'
 
@@ -220,6 +220,74 @@ afterEach(() => {
 })
 
 describe('runtime-vapor JavaScript anchor, range, and static parity', () => {
+  it('keeps portable fragment order stable through repeated range, anchor, and static renders', async () => {
+    const results = []
+    for (const backend of createBackends()) {
+      const runtime = backend.create()
+      const portableFragment = (...labels: string[]) =>
+        runtime.vapor(() => {
+          const root = document.createDocumentFragment()
+          for (const label of labels) {
+            const node = document.createElement('span')
+            node.textContent = label
+            root.append(node)
+          }
+          return root
+        })
+      try {
+        const rangeParent = document.createElement('main')
+        const rangeStart = document.createComment('range:start')
+        const rangeEnd = document.createComment('range:end')
+        rangeParent.append(rangeStart, rangeEnd)
+        runtime.renderBetween(
+          portableFragment('range:first:a', 'range:first:b'),
+          rangeParent,
+          rangeStart,
+          rangeEnd,
+        )
+        runtime.renderBetween(portableFragment('range:second'), rangeParent, rangeStart, rangeEnd)
+
+        const anchorParent = document.createElement('main')
+        const anchor = document.createComment('anchor')
+        anchorParent.append(anchor)
+        runtime.renderAnchor(
+          portableFragment('anchor:first:a', 'anchor:first:b'),
+          anchorParent,
+          anchor,
+        )
+        runtime.renderAnchor(portableFragment('anchor:second'), anchorParent, anchor)
+
+        const staticParent = document.createElement('main') as HTMLElement & {
+          __rue_frag_nodes_ref?: Node[]
+        }
+        staticParent.__rue_frag_nodes_ref = []
+        const staticAnchor = document.createComment('static')
+        staticParent.append(staticAnchor)
+        runtime.renderStatic(portableFragment('static:a', 'static:b'), staticParent, staticAnchor)
+        await settleRuntime()
+
+        results.push({
+          label: backend.label,
+          range: betweenSequence(rangeStart, rangeEnd),
+          anchor: childSequence(anchorParent),
+          static: childSequence(staticParent),
+          staticAnchorRemoved: staticAnchor.parentNode === null,
+        })
+      } finally {
+        runtime.free()
+      }
+    }
+
+    expect(results[1]).toEqual({ ...results[0], label: 'js' })
+    expect(results[0]).toEqual({
+      label: 'rust',
+      range: ['<span>range:second</span>'],
+      anchor: ['<span>anchor:second</span>', '<!--anchor-->'],
+      static: ['<span>static:a</span>', '<span>static:b</span>'],
+      staticAnchorRemoved: true,
+    })
+  })
+
   it('matches empty, single, multi-node, adjacent, and nested range boundaries', async () => {
     const results = []
     for (const backend of createBackends()) {

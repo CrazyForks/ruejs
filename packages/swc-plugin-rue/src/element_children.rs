@@ -1,4 +1,6 @@
+use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
+use swc_core::ecma::visit::{Visit, VisitWith};
 
 use crate::log;
 use crate::vapor::VaporTransform;
@@ -54,6 +56,255 @@ pub fn emit_element_children(
             JSXElementChild::JSXSpreadChild(_) => {}
         }
     }
+}
+
+fn compiled_tag_name(element: &JSXElement) -> Option<String> {
+    let JSXElementName::Ident(name) = &element.opening.name else {
+        return None;
+    };
+    let tag = name.sym.to_string();
+    (crate::vapor::template::is_native_html_tag(&tag)
+        && !crate::custom_element::is_custom_element_tag(&tag))
+    .then_some(tag)
+}
+
+fn compiled_child_is_safe(
+    vt: &VaporTransform,
+    child: &JSXElementChild,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    match child {
+        JSXElementChild::JSXText(_) => true,
+        JSXElementChild::JSXFragment(fragment) => {
+            fragment.children.iter().all(|child| compiled_child_is_safe(vt, child, shadowed_names))
+        }
+        JSXElementChild::JSXExprContainer(container) => match &container.expr {
+            JSXExpr::JSXEmptyExpr(_) => true,
+            JSXExpr::Expr(expr) => match crate::utils::unwrap_expr(expr.as_ref()) {
+                Expr::Call(call) if compiled_list_call_is_safe(vt, call) => true,
+                // A generic `.get()` has no return-type proof and may yield a Vapor renderable.
+                Expr::Call(call) if crate::element_expr::is_accessor_get_call_expr(call) => false,
+                expr => crate::vapor::is_compiled_scalar_expr_with_shadows(expr, shadowed_names),
+            },
+        },
+        JSXElementChild::JSXElement(element) => {
+            compiled_scalar_element_is_safe(vt, element, shadowed_names)
+        }
+        JSXElementChild::JSXSpreadChild(_) => false,
+    }
+}
+
+/// A closed capability check for the task-7 tier. Any structural/renderable
+/// capability causes the whole root to stay on the existing Vapor path.
+fn compiled_scalar_element_is_safe(
+    vt: &VaporTransform,
+    element: &JSXElement,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    if crate::vapor::template::marked_static_template(element).is_some() {
+        return true;
+    }
+    compiled_tag_name(element).is_some()
+        && crate::attrs::attrs_support_compiled_scalar(&element.opening, shadowed_names)
+        && element.children.iter().all(|child| compiled_child_is_safe(vt, child, shadowed_names))
+}
+
+#[derive(Default)]
+struct VaporCapabilityDetector {
+    found: bool,
+}
+
+impl Visit for VaporCapabilityDetector {
+    fn visit_expr(&mut self, expr: &Expr) {
+        if let Expr::Ident(ident) = expr
+            && crate::compiled_capabilities::runtime_tier_for_helper(ident.sym.as_ref())
+                == Some(crate::compiled_capabilities::RuntimeTier::Vapor)
+        {
+            self.found = true;
+            return;
+        }
+        expr.visit_children_with(self);
+    }
+}
+
+fn compiled_list_call_is_safe(vt: &VaporTransform, call: &CallExpr) -> bool {
+    let mut probe = vt.clone();
+    let mut stmts = Vec::new();
+    if !crate::element_list::try_build_list_from_map(
+        &mut probe,
+        &crate::emit::ident("_$compiledListProbe"),
+        call,
+        &mut stmts,
+    ) {
+        return false;
+    }
+    let block = BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts };
+    let mut detector = VaporCapabilityDetector::default();
+    block.visit_with(&mut detector);
+    !detector.found
+}
+
+fn compiled_child_has_binding(
+    vt: &VaporTransform,
+    child: &JSXElementChild,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    match child {
+        JSXElementChild::JSXExprContainer(container) => match &container.expr {
+            JSXExpr::Expr(expr) => match crate::utils::unwrap_expr(expr.as_ref()) {
+                Expr::Call(call) if compiled_list_call_is_safe(vt, call) => true,
+                expr => {
+                    !crate::utils::is_static_empty_like(expr)
+                        && crate::utils::get_static_text_literal_expr(expr).is_none()
+                        && crate::vapor::is_compiled_scalar_expr_with_shadows(expr, shadowed_names)
+                }
+            },
+            JSXExpr::JSXEmptyExpr(_) => false,
+        },
+        JSXElementChild::JSXElement(element) => {
+            compiled_element_has_binding(vt, element, shadowed_names)
+        }
+        JSXElementChild::JSXFragment(fragment) => fragment
+            .children
+            .iter()
+            .any(|child| compiled_child_has_binding(vt, child, shadowed_names)),
+        JSXElementChild::JSXText(_) | JSXElementChild::JSXSpreadChild(_) => false,
+    }
+}
+
+fn compiled_element_has_binding(
+    vt: &VaporTransform,
+    element: &JSXElement,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    crate::attrs::attrs_have_compiled_scalar(&element.opening, shadowed_names)
+        || element
+            .children
+            .iter()
+            .any(|child| compiled_child_has_binding(vt, child, shadowed_names))
+}
+
+pub(crate) fn is_compiled_scalar_element(vt: &VaporTransform, element: &JSXElement) -> bool {
+    let shadowed_names = vt.current_scalar_constructor_shadows();
+    compiled_scalar_element_is_safe(vt, element, &shadowed_names)
+        && compiled_element_has_binding(vt, element, &shadowed_names)
+}
+
+fn append_direct(parent: &Ident, child: Expr, stmts: &mut Vec<Stmt>) {
+    stmts.push(Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(crate::emit::call_ident(
+            "_$compiledAppendChild",
+            vec![Expr::Ident(parent.clone()), child],
+        )),
+    }));
+}
+
+fn create_text_node(value: Expr) -> Expr {
+    crate::emit::call_ident("_$compiledCreateTextNode", vec![value])
+}
+
+fn emit_compiled_static_expr_child(
+    parent: &Ident,
+    expression: &Expr,
+    stmts: &mut Vec<Stmt>,
+) -> bool {
+    if crate::utils::is_static_empty_like(expression) {
+        append_direct(parent, create_text_node(crate::emit::string_expr("")), stmts);
+        return true;
+    }
+    if let Some(value) = crate::utils::get_static_text_literal_expr(expression) {
+        append_direct(parent, create_text_node(value), stmts);
+        return true;
+    }
+    false
+}
+
+fn emit_compiled_children(
+    vt: &mut VaporTransform,
+    parent: &Ident,
+    children: &[JSXElementChild],
+    stmts: &mut Vec<Stmt>,
+) {
+    for (index, child) in children.iter().enumerate() {
+        match child {
+            JSXElementChild::JSXText(text) => {
+                let normalized = crate::text::normalize_text(&text.value);
+                if let Some(content) =
+                    crate::text::compute_jsx_text_content(children, index, &normalized)
+                {
+                    append_direct(
+                        parent,
+                        create_text_node(crate::emit::string_expr(&content)),
+                        stmts,
+                    );
+                }
+            }
+            JSXElementChild::JSXFragment(fragment) => {
+                emit_compiled_children(vt, parent, &fragment.children, stmts)
+            }
+            JSXElementChild::JSXExprContainer(container) => {
+                if let JSXExpr::Expr(expr) = &container.expr
+                    && let Expr::Call(call) = crate::utils::unwrap_expr(expr.as_ref())
+                    && crate::element_list::try_build_list_from_map(vt, parent, call, stmts)
+                {
+                    continue;
+                }
+                if let JSXExpr::Expr(expr) = &container.expr
+                    && emit_compiled_static_expr_child(parent, expr.as_ref(), stmts)
+                {
+                    continue;
+                }
+                let _ = crate::vapor::emit_compiled_text_binding(vt, parent, container, stmts);
+            }
+            JSXElementChild::JSXElement(element) => {
+                emit_compiled_element(vt, element, parent, stmts)
+            }
+            JSXElementChild::JSXSpreadChild(_) => {}
+        }
+    }
+}
+
+fn emit_compiled_element(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+    parent: &Ident,
+    stmts: &mut Vec<Stmt>,
+) {
+    if crate::vapor::template::emit_marked_template_child(vt, element, parent, stmts) {
+        return;
+    }
+    let tag = compiled_tag_name(element).expect("compiled element must have a native HTML tag");
+    let target = vt.next_el_ident();
+    let create = crate::emit::call_ident(
+        "_$compiledCreateElement",
+        vec![crate::emit::string_expr(&tag), Expr::Ident(parent.clone())],
+    );
+    stmts.push(crate::emit::const_decl(target.clone(), create));
+    append_direct(parent, Expr::Ident(target.clone()), stmts);
+    crate::attrs::emit_compiled_attrs_for(vt, stmts, &target, &element.opening);
+    emit_compiled_children(vt, &target, &element.children, stmts);
+}
+
+/// Build the setup body consumed by `_$compiledRoot`.
+pub(crate) fn compiled_scalar_element_to_block(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+) -> BlockStmt {
+    let root = crate::emit::ident("_root");
+    let tag = compiled_tag_name(element).expect("compiled root must have a native HTML tag");
+    let create = crate::emit::call_ident(
+        "_$compiledCreateElement",
+        vec![
+            crate::emit::string_expr(&tag),
+            Expr::Ident(crate::emit::ident("__rue_parent_context")),
+        ],
+    );
+    let mut stmts = vec![crate::emit::const_decl(root.clone(), create)];
+    crate::attrs::emit_compiled_attrs_for(vt, &mut stmts, &root, &element.opening);
+    emit_compiled_children(vt, &root, &element.children, &mut stmts);
+    stmts.push(crate::emit::return_root(root));
+    BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts }
 }
 
 #[cfg(test)]

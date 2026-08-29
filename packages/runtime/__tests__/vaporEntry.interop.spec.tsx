@@ -1,12 +1,23 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { h, ref, render, setReactiveScheduling, useState, type FC } from '../src'
+import {
+  getCurrentContainer as getDefaultCurrentContainer,
+  h,
+  ref,
+  render,
+  setReactiveScheduling,
+  useApp as useDefaultApp,
+  useState,
+  type FC,
+} from '../src'
 import {
   _$createComponent,
   _$vaporKeyedList,
   computed,
+  getCurrentContainer as getVaporCurrentContainer,
   reactive,
   renderAnchor,
+  useApp as useVaporApp,
   vapor,
   watchEffect,
 } from '../src/vapor'
@@ -62,6 +73,60 @@ const VaporEntryApp = () => {
 }
 
 describe('vapor entry interop', () => {
+  it('shares the default client runtime identity across default and vapor app entries', () => {
+    const defaultContainer = document.createElement('div')
+    const vaporContainer = document.createElement('div')
+    let defaultRuntime: unknown
+    let vaporRuntime: unknown
+    const defaultApp = useDefaultApp(() => {
+      defaultRuntime = (globalThis as any).__rue_active
+      return <main>default</main>
+    })
+    const vaporApp = useVaporApp(() => {
+      vaporRuntime = (globalThis as any).__rue_active
+      return vapor(() => document.createElement('main') as any)
+    })
+    document.body.append(defaultContainer, vaporContainer)
+
+    defaultApp.mount(defaultContainer)
+    vaporApp.mount(vaporContainer)
+
+    expect(defaultRuntime).toBeTruthy()
+    expect(vaporRuntime).toBe(defaultRuntime)
+
+    vaporApp.unmount()
+    defaultApp.unmount()
+  })
+
+  it('restores the outer current container after a nested cross-entry mount', () => {
+    const outerContainer = document.createElement('div')
+    const innerContainer = document.createElement('div')
+    const observations: Array<[phase: string, defaultContainer: unknown, vaporContainer: unknown]> =
+      []
+    const innerApp = useVaporApp(() => {
+      observations.push(['inner', getDefaultCurrentContainer(), getVaporCurrentContainer()])
+      return vapor(() => document.createElement('aside') as any)
+    })
+    const outerApp = useDefaultApp(() => {
+      observations.push(['outer', getDefaultCurrentContainer(), getVaporCurrentContainer()])
+      innerApp.mount(innerContainer)
+      observations.push(['restored', getDefaultCurrentContainer(), getVaporCurrentContainer()])
+      return <main>outer</main>
+    })
+    document.body.append(outerContainer, innerContainer)
+
+    outerApp.mount(outerContainer)
+
+    expect(observations).toEqual([
+      ['outer', outerContainer, outerContainer],
+      ['inner', innerContainer, innerContainer],
+      ['restored', outerContainer, outerContainer],
+    ])
+
+    innerApp.unmount()
+    outerApp.unmount()
+  })
+
   it('mounts vapor-entry portable handles through the default runtime', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)

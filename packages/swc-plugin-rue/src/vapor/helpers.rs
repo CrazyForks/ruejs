@@ -40,6 +40,16 @@ impl VaporTransform {
         self.next_child += 1;
         ident(&format!("__child{}", self.next_child))
     }
+    /// 生成 compiled 原生事件监听器标识符：`__eventX`。
+    pub(crate) fn next_event_ident(&mut self) -> Ident {
+        self.next_child += 1;
+        ident(&format!("__event{}", self.next_child))
+    }
+    /// 生成 compiled DOM ref 快照标识符：`__refX`。
+    pub(crate) fn next_ref_ident(&mut self) -> Ident {
+        self.next_child += 1;
+        ident(&format!("__ref{}", self.next_child))
+    }
     /// 生成下一个 slot 标识符：`__slotX`（复用计数器保证唯一性）
     /// - 用途：表达式容器/列表项渲染时的临时插槽值保存
     pub(crate) fn next_slot_ident(&mut self) -> Ident {

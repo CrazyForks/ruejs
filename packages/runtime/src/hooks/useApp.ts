@@ -6,12 +6,11 @@
 - 容器规范化：支持字符串选择器与元素容器，统一转为 DomElementLike。
 - 生命周期：提供 use/mount/unmount 三个方法管理应用，链式调用更便捷。
 */
-import { createRue } from '../rue'
 import type { FC, ComponentInstance, RenderableOutput, Rue } from '../rue'
 import { registerRuntimeComponent } from '../component-registry'
 import type { DomElementLike } from '../dom'
 import { querySelector, settextContent, setAttribute } from '../dom'
-import { ensureRuntimeDOMBridge, runWithRuntime } from '../runtime-context'
+import { ensureRuntimeDOMBridge, getClientRuntime, runWithClientRuntime } from '../client-runtime'
 import {
   confirmAppContainer,
   releaseAppContainer,
@@ -38,7 +37,7 @@ export function useApp(
   let containerRef: DomElementLike | null = null
   let pendingContainerRef: DomElementLike | null = null
   const containerOwner = {}
-  const appRue = (runtime as any) || createRue()
+  const appRue = (runtime as any) || getClientRuntime()
   ensureRuntimeDOMBridge(appRue)
 
   // 统一包装 App 为 FC
@@ -73,7 +72,7 @@ export function useApp(
     /** 安装插件到应用，并返回 app 以支持链式调用。 */
     use(plugin: any, ...options: any[]) {
       // 透传到 Rue.use，支持多插件链式安装
-      runWithRuntime(appRue, () => {
+      runWithClientRuntime(appRue, () => {
         appRue.use(plugin, ...options)
       })
       return this
@@ -106,9 +105,13 @@ export function useApp(
         }
         // 执行挂载：将 App 渲染到容器
         runtimeMountStarted = true
-        runWithRuntime(appRue, () => {
-          appRue.mount(App, el)
-        })
+        runWithClientRuntime(
+          appRue,
+          () => {
+            appRue.mount(App, el)
+          },
+          el,
+        )
         // 为容器打标记，便于调试或样式定位
         if ((el as any).nodeType === 1) setAttribute(el, 'data-rue-app', '')
         confirmAppContainer(reservation)
@@ -116,9 +119,13 @@ export function useApp(
       } catch (error) {
         if (runtimeMountStarted) {
           try {
-            runWithRuntime(appRue, () => {
-              appRue.unmount(el)
-            })
+            runWithClientRuntime(
+              appRue,
+              () => {
+                appRue.unmount(el)
+              },
+              el,
+            )
           } catch {}
         }
         rollbackAppContainer(reservation)
@@ -134,9 +141,13 @@ export function useApp(
         containerRef = null
         try {
           // 执行卸载，释放容器引用
-          runWithRuntime(appRue, () => {
-            appRue.unmount(mountedContainer)
-          })
+          runWithClientRuntime(
+            appRue,
+            () => {
+              appRue.unmount(mountedContainer)
+            },
+            mountedContainer,
+          )
         } finally {
           releaseAppContainer(mountedContainer, containerOwner)
         }

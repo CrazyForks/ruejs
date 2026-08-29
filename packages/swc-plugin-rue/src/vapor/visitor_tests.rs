@@ -14,6 +14,7 @@ fn new_vt() -> VaporTransform {
         next_child: 0,
         once_depth: 0,
         did_transform: false,
+        static_templates: true,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
         plain_local_scopes: Vec::new(),
@@ -48,13 +49,14 @@ fn compact(src: &str) -> String {
 }
 
 #[test]
-fn transforms_arrow_expr_body_and_injects_runtime_imports() {
+fn transforms_static_arrow_expr_body_with_shared_template_helper() {
     let out = compact(&transform_module("const View = () => <div className=\"a\" />;"));
 
-    assert!(out.contains("from\"@rue-js/rue/vapor\""));
-    assert!(out.contains("constView=()=>vapor((__rue_parent_context)=>{"));
-    assert!(out.contains("_$createElement(\"div\",__rue_parent_context)"));
-    assert!(out.contains("_$setClassName(_root,\"a\")"));
+    assert!(out.contains("import{_$template}from\"@rue-js/rue/compiled\""));
+    assert!(out.contains("const_$getTemplate1=_$template('<divclass=\"a\"></div>')"));
+    assert!(out.contains("constView=()=>(()=>{"));
+    assert!(out.contains("__rue_vapor_setup:(__rue_parent_context)=>{"));
+    assert!(out.contains("_$getTemplate1().content.cloneNode(true)"));
 }
 
 #[test]
@@ -66,8 +68,10 @@ fn transforms_arrow_fragment_expr_body_and_ignores_bare_returns() {
     assert!(out.contains("from\"@rue-js/rue/vapor\""));
     assert!(out.contains("constFrag=()=>vapor((__rue_parent_context)=>{"));
     assert!(out.contains("_$createDocumentFragment()"));
-    assert!(out.contains("_$createElement(\"i\",_root)"));
-    assert!(out.contains("_$createElement(\"b\",_root)"));
+    assert!(out.contains("const_$getTemplate1=_$template(\"<i>A</i>\")"));
+    assert!(out.contains("const_$getTemplate2=_$template(\"<b>B</b>\")"));
+    assert!(out.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
+    assert!(out.contains("_root.appendChild(_$getTemplate2().content.cloneNode(true))"));
     assert!(out.contains("functionnoop(){return;}"));
 }
 
@@ -79,9 +83,11 @@ fn transforms_block_returns_fragments_and_nested_arrow_returns() {
 
     assert!(out.contains("returnvapor((__rue_parent_context)=>{"));
     assert!(out.contains("_$createDocumentFragment()"));
-    assert!(out.contains("_$createElement(\"span\",_root)"));
-    assert!(out.contains("()=>vapor((__rue_parent_context)=>{"));
-    assert!(out.contains("_$createElement(\"em\",__rue_parent_context)"));
+    assert!(out.contains("const_$getTemplate1=_$template(\"<span>A</span>\")"));
+    assert!(out.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
+    assert!(out.contains("const_$getTemplate2=_$template(\"<em>B</em>\")"));
+    assert!(out.contains("()=>()=>(()=>{"), "{out}");
+    assert!(out.contains("__rue_vapor_setup:(__rue_parent_context)=>{"));
 }
 
 #[test]

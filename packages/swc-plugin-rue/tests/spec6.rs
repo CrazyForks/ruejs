@@ -29,33 +29,29 @@ export default Comp;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
+const _$getTemplate1 = _$template('<p id="empty">empty</p>');
+const _$getTemplate2 = _$template("<ul><li>ok</li></ul>");
 const count = _$vaporWithHookId("ref:1:0", ()=>ref(22));
-const Comp: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
+const Comp: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
         watchEffect(()=>{
             const __slot = count.value === 0 ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el1 = _$createElement("p");
-                _$appendChild(_root, _el1);
-                _$setAttribute(_el1, "id", "empty");
-                _$appendChild(_el1, _$createTextNode("empty"));
+                _root.appendChild(_$getTemplate1().content.cloneNode(true));
                 return _root;
             }) : vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el2 = _$createElement("ul");
-                _$appendChild(_root, _el2);
-                const _el3 = _$createElement("li");
-                _$appendChild(_el2, _el3);
-                _$appendChild(_el3, _$createTextNode("ok"));
+                _root.appendChild(_$getTemplate2().content.cloneNode(true));
                 return _root;
             });
             untrack(()=>renderAnchor(__slot, _root, _list1));
         });
-        const _el4 = _$createElement("span");
+        const _el4 = _$createElement("span", _root);
         _$appendChild(_root, _el4);
         _$setAttribute(_el4, "id", "n");
         const _el5 = _$createTextWrapper(_el4);

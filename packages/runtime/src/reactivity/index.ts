@@ -47,7 +47,7 @@ import {
 import type { SignalHandle } from '@rue-js/runtime-vapor/reactive'
 
 import { getParentNode } from '../dom'
-import { getCurrentContainer } from '../rue'
+import { getCurrentContainer } from '../runtime-context'
 import {
   getCurrentSuspenseBoundary,
   RUE_SUSPENSE_BOUNDARY_KEY,

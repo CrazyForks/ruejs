@@ -15,6 +15,7 @@ import {
   render,
   renderAnchor,
   renderBetween,
+  renderStatic,
   setReactiveScheduling,
   signal,
   useComponent,
@@ -25,11 +26,8 @@ import {
   type SignalHandle,
 } from '../src'
 import { vaporKeyedList as defaultVaporKeyedList } from '../src/vapor-helpers'
-import { vaporKeyedList as wasmVaporKeyedList } from '../src/vapor-helpers-vapor'
-import {
-  renderAnchor as renderVaporAnchor,
-  renderBetween as renderVaporBetween,
-} from '../src/vapor-runtime'
+import { vaporKeyedList as wasmVaporKeyedList } from '../src/vapor-helpers'
+import { renderAnchor as renderVaporAnchor, renderBetween as renderVaporBetween } from '../src/rue'
 
 setReactiveScheduling('sync')
 
@@ -123,6 +121,114 @@ const createUnmountTrackedComponent = (
 }
 
 describe('renderable block lifecycle owner', () => {
+  it('characterizes direct Renderable order and one-shot Block cleanup across every target', async () => {
+    const createTrackedBlock = (label: string) => {
+      const cleanup = vi.fn()
+      const unmount = vi.fn()
+      return {
+        block: createCleanupBlock(label, cleanup, unmount),
+        cleanup,
+        unmount,
+      }
+    }
+
+    const container = document.createElement('div')
+    container.append(document.createElement('mark'))
+    const containerFirst = createTrackedBlock('container:block:first')
+    const containerSecond = createTrackedBlock('container:block:second')
+    const containerNode = document.createElement('strong')
+    containerNode.textContent = 'container:node:first'
+    render(['container:text:first', containerNode, containerFirst.block] as any, container as any)
+    expect(container.textContent).toBe(
+      'container:text:firstcontainer:node:firstcontainer:block:first',
+    )
+    render(
+      [document.createTextNode('container:text:second'), containerSecond.block] as any,
+      container,
+    )
+    expect(container.textContent).toBe('container:text:secondcontainer:block:second')
+    expect(containerFirst.cleanup).toHaveBeenCalledTimes(1)
+    expect(containerFirst.unmount).toHaveBeenCalledTimes(1)
+    render(null as any, container)
+    expect(container.textContent).toBe('')
+    expect(containerSecond.cleanup).toHaveBeenCalledTimes(1)
+    expect(containerSecond.unmount).toHaveBeenCalledTimes(1)
+
+    const rangeParent = document.createElement('div')
+    const rangePrefix = document.createTextNode('range:prefix|')
+    const rangeStart = document.createComment('range:start')
+    const rangeEnd = document.createComment('range:end')
+    const rangeSuffix = document.createTextNode('|range:suffix')
+    rangeParent.append(rangePrefix, rangeStart, rangeEnd, rangeSuffix)
+    const rangeFirst = createTrackedBlock('range:block:first')
+    const rangeSecond = createTrackedBlock('range:block:second')
+    renderBetween(['range:text:first', rangeFirst.block] as any, rangeParent, rangeStart, rangeEnd)
+    expect(rangeParent.textContent).toBe(
+      'range:prefix|range:text:firstrange:block:first|range:suffix',
+    )
+    renderBetween(
+      [rangeSecond.block, 'range:text:second'] as any,
+      rangeParent,
+      rangeStart,
+      rangeEnd,
+    )
+    expect(rangeParent.textContent).toBe(
+      'range:prefix|range:block:secondrange:text:second|range:suffix',
+    )
+    expect(rangeFirst.cleanup).toHaveBeenCalledTimes(1)
+    expect(rangeFirst.unmount).toHaveBeenCalledTimes(1)
+    renderBetween(null as any, rangeParent, rangeStart, rangeEnd)
+    expect(rangeSecond.cleanup).toHaveBeenCalledTimes(1)
+    expect(rangeSecond.unmount).toHaveBeenCalledTimes(1)
+    expect(Array.from(rangeParent.childNodes)).toEqual([
+      rangePrefix,
+      rangeStart,
+      rangeEnd,
+      rangeSuffix,
+    ])
+
+    const anchorParent = document.createElement('div')
+    const anchorPrefix = document.createTextNode('anchor:prefix|')
+    const anchor = document.createComment('anchor')
+    const anchorSuffix = document.createTextNode('|anchor:suffix')
+    anchorParent.append(anchorPrefix, anchor, anchorSuffix)
+    const anchorFirst = createTrackedBlock('anchor:block:first')
+    const anchorSecond = createTrackedBlock('anchor:block:second')
+    renderAnchor(['anchor:text:first', anchorFirst.block] as any, anchorParent, anchor)
+    expect(anchorParent.textContent).toBe(
+      'anchor:prefix|anchor:text:firstanchor:block:first|anchor:suffix',
+    )
+    renderAnchor([anchorSecond.block, 'anchor:text:second'] as any, anchorParent, anchor)
+    expect(anchorParent.textContent).toBe(
+      'anchor:prefix|anchor:block:secondanchor:text:second|anchor:suffix',
+    )
+    expect(anchorFirst.cleanup).toHaveBeenCalledTimes(1)
+    expect(anchorFirst.unmount).toHaveBeenCalledTimes(1)
+    renderAnchor(null as any, anchorParent, anchor)
+    expect(anchorSecond.cleanup).toHaveBeenCalledTimes(1)
+    expect(anchorSecond.unmount).toHaveBeenCalledTimes(1)
+    expect(Array.from(anchorParent.childNodes)).toEqual([anchorPrefix, anchor, anchorSuffix])
+
+    const staticParent = document.createElement('div')
+    const staticPrefix = document.createTextNode('static:prefix|')
+    const staticAnchor = document.createComment('static')
+    const staticSuffix = document.createTextNode('|static:suffix')
+    const staticNode = document.createElement('strong')
+    staticNode.textContent = 'static:node'
+    staticParent.append(staticPrefix, staticAnchor, staticSuffix)
+    renderStatic(['static:text', staticNode] as any, staticParent, staticAnchor)
+    expect(staticParent.textContent).toBe('static:prefix|static:textstatic:node|static:suffix')
+    expect(Array.from(staticParent.childNodes)).toEqual([
+      staticPrefix,
+      expect.any(Text),
+      staticNode,
+      staticSuffix,
+    ])
+    expect(staticAnchor.parentNode).toBeNull()
+
+    await flushEffects()
+  })
+
   it('synchronous opaque rows are row-owned without global lookup', async () => {
     const exercise = async (list: typeof defaultVaporKeyedList, between: typeof renderBetween) => {
       const globalRecord = globalThis as typeof globalThis & Record<string, any>
@@ -383,6 +489,22 @@ describe('renderable block lifecycle owner', () => {
     expect(siblingCleanup).toHaveBeenCalledTimes(1)
     expect(siblingUnmount).toHaveBeenCalledTimes(1)
     expect(container.textContent).toBe('done')
+  })
+
+  it('still unmounts a Block once when its cleanup throws', async () => {
+    const container = document.createElement('div')
+    const cleanup = vi.fn(() => {
+      throw new Error('expected block cleanup failure')
+    })
+    const unmount = vi.fn()
+
+    render(createCleanupBlock('throwing-block', cleanup, unmount) as any, container)
+    expect(container.textContent).toBe('throwing-block')
+
+    expect(() => render('replacement', container)).not.toThrow()
+    expect(container.textContent).toBe('replacement')
+    expect(cleanup).toHaveBeenCalledTimes(1)
+    expect(unmount).toHaveBeenCalledTimes(1)
   })
 
   it('runs block cleanup when renderAnchor replaces the previous owner on the same anchor', async () => {

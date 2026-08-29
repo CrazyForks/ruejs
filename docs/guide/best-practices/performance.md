@@ -32,11 +32,13 @@ Rue 旨在在大多数常见用例中具有良好的性能，无需太多手动�
 
 ## 全链路性能预算 (End-to-End Performance Budgets) {#end-to-end-performance-budgets}
 
-Rue 将列表结构、CPU、内存、生产体积和首屏采样分成两层手动预算验证。结构与产物来源先由确定性测试和 size audit 检查；随后才在同一台机器、同一个 Chromium 版本上，将多轮中位数与仓库保存的基线比较。机器计时不能跨机器直接比较，Vue 结果用于同场景对照，也不是替换 Rue 历史基线的预算来源。发布流程只输出 runtime size 报告，不执行 `--check` 或浏览器性能预算，预算失败不会阻止发布。
+Rue 将列表结构、CPU、内存、生产体积和首屏采样分成两层预算验证。结构与产物来源先由确定性测试和 size audit 检查；随后在同一台机器、同一个 Chromium 版本和同一轮运行窗口中，将 Rue 与 Vue 对照实现一起采样。机器计时不能跨机器直接比较，历史基线用于发现漂移，同轮 Vue 用于发布门禁；两者不能互相替代。
 
-标准 keyed 列表行只有在编译器能证明它是同步、原生、单根 DOM 行，并且 class、文本和属性绑定可生成局部 patch 时，才进入 compiled-row 快路径。该路径由一个列表 effect 批量扫描，行记录保存 DOM、原始 item、patch 和 dispose；相等值不会重复写 DOM，简单行也不创建逐行 signal、proxy、scope 或注释锚点。
+体积报告区分静态零 Rue 值依赖、compiled core 和完整 Vapor 入口。compiled core 的预算不是应用包大小承诺：真实应用还包含业务代码、第三方依赖和所用复杂能力；同样，“静态零运行时”也不适用于包含 Signal、组件、路由或 Hydration 的页面。
 
-组件行、多根行、异步或不透明 renderable、结构指令、需要逐行 ref/生命周期所有权的内容，以及 hydration 无法安全采用的形状，会保留 range/owner fallback。fallback 以语义完整性为优先，不应为了命中性能预算而改写成手工 DOM benchmark 特例。应用代码若把外部依赖隐藏在普通成员调用中，编译器同样会选择 fallback；可证明安全的直接 `selected.value` 或 `selected.get()` 读取才能进入 compiled-row patch。
+标准 keyed 列表行只有在编译器能证明它是同步、原生、单根 DOM 行，并且 class、文本和属性绑定可生成局部 patch 时，才进入 compiled keyed core。相等值不会重复写 DOM，简单行也不会带入通用 Vapor 列表 helper。
+
+组件行、多根行、异步或不透明 renderable、结构指令、需要逐行 ref/生命周期所有权的内容，以及 Hydration 无法安全采用的形状，会保留 range/owner fallback。fallback 以语义完整性为优先，不应为了命中性能预算而改写成手工 DOM benchmark 特例。应用代码若把外部依赖隐藏在普通成员调用中，编译器同样会选择 fallback；可证明安全的直接 Signal 读取才能进入 compiled binding 或 keyed reconcile。
 
 从仓库根目录复现完整检查：
 
@@ -46,9 +48,9 @@ pnpm run size-runtime -- --check
 pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-baseline.json --budget scripts/js-framework-performance-budget.json --output temp/performance/final.json
 ```
 
-浏览器命令会先重建 workspace 的 Rue 产物和 Vapor 专用 Wasm，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行 1 轮预热和 5 轮有效采样。报告中的 `results.rue`、`results.rue-signal` 和 `results.vue` 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；`budget.entries` 给出 Rue 相对 0.8.13 基线的 CPU、select/swap、create-clear heap、Brotli 与 first-paint 比率。`validSamples` 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。
+浏览器命令会先重建 workspace 的 Rue 与 runtime-vapor TypeScript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 `results.rue`、`results.rue-signal` 和 `results.vue` 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；`budget.entries` 给出尺寸、CPU、select/swap、heap 与 first-paint 比率。`validSamples` 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。
 
-`pnpm run size-runtime -- --check` 单独审计发布入口的模块图。Vapor preset 必须只加载一个 `pkg-vapor` Wasm，不能同时保留完整 Wasm、默认 runtime、SSR renderer 或未使用的内置组件；完整 runtime preset 则必须只加载完整 Wasm。`scripts/runtime-size-baseline.json` 是可审查的当前产物记录，真正判定超限的是独立的 `scripts/runtime-size-budget.json`，因此更新 baseline 不会自动放宽预算。
+`pnpm run size-runtime -- --check` 单独审计发布入口的模块图和 JavaScript 压缩体积。静态 preset 不得出现 Rue 值模块；compiled preset 只允许最小响应式、owner、selector、DOM 和键控列表核心，不得包含 facade、`js-runtime`、默认 runtime、SSR renderer 或通用 Vapor helper。`scripts/runtime-size-baseline.json` 是可审查的当前产物记录，真正判定超限的是独立的 `scripts/runtime-size-budget.json`，因此更新 baseline 不会自动放宽预算。
 
 ## 页面加载优化 (Page Load Optimizations) {#page-load-optimizations}
 
@@ -61,6 +63,9 @@ pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-ba
 提高页面加载性能的最有效方法之一是提供更小的 JavaScript 包。以下是使用 Rue 时减小包大小的一些方法：
 
 - 如果可能，请使用构建步骤。
+  - 构建插件会自动选择静态 DOM、compiled core 或 Vapor fallback。应用代码继续从 `@rue-js/rue` 导入；除非在开发编译器或底层集成，不要手工依赖生成 helper。
+
+  - 纯静态 JSX 可以不包含 Rue 值运行时；Signal 页面只加载它实际使用的 compiled core。组件、路由、Hydration、Transition 等复杂能力会按需增加对应代码。
   - 如果通过现代构建工具打包，Rue 的许多 API 都是 "可 tree-shake 的"。例如，如果您不使用内置的 `<Transition>` 组件，它不会包含在最终的生产包中。Tree-shaking 还可以移除源代码中未使用的其他模块。
 
   - 使用构建步骤时，模板会被预编译，因此我们不需要将 Rue 编译器发送到浏览器。这节省了 **14kb** min+gzipped 的 JavaScript 并避免了运行时编译成本。

@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { useApp as useDefaultApp, type FC } from '../src'
+import { createRue, useApp as useDefaultApp, type FC } from '../src'
 import { resolveRuntimeComponent } from '../src/component-registry'
 import { onMounted, onUnmounted, useApp, vapor } from '../src/vapor'
 
@@ -159,7 +159,7 @@ describe('Vapor useApp', () => {
     nextApp.unmount()
   })
 
-  it('uses an isolated Vapor runtime for plugins, registration, mount, and unmount', async () => {
+  it('uses an explicitly supplied isolated runtime for plugins, registration, mount, and unmount', async () => {
     const host = document.createElement('div')
     const install = vi.fn()
     let renderRuntime: unknown
@@ -177,13 +177,14 @@ describe('Vapor useApp', () => {
     }
     const App = Registered
 
-    const app = useApp(App).use({ install }).component('Registered', Registered)
+    const isolatedRuntime = createRue()
+    const app = useApp(App, isolatedRuntime).use({ install }).component('Registered', Registered)
 
     app.mount(host)
     await flushRender()
 
     expect(install).toHaveBeenCalledTimes(1)
-    expect(renderRuntime).not.toBe((globalThis as any).__rue_vapor)
+    expect(renderRuntime).toBe(isolatedRuntime)
     expect(renderRuntime).not.toBe((globalThis as any).__rue)
     expect(resolveRuntimeComponent(renderRuntime, 'Registered')).toBe(Registered)
     expect(host.hasAttribute('data-rue-app')).toBe(true)
@@ -228,7 +229,7 @@ describe('Vapor useApp', () => {
     app.unmount()
   })
 
-  it('does not share the root runtime between app instances', async () => {
+  it('shares the default client runtime between app instances', async () => {
     const firstHost = document.createElement('div')
     const secondHost = document.createElement('div')
     const renderRuntimes: unknown[] = []
@@ -252,7 +253,8 @@ describe('Vapor useApp', () => {
     await flushRender()
 
     expect(renderRuntimes).toHaveLength(2)
-    expect(renderRuntimes[0]).not.toBe(renderRuntimes[1])
+    expect(renderRuntimes[0]).toBe(renderRuntimes[1])
+    expect(renderRuntimes[0]).toBe((globalThis as any).__rue)
     expect(firstHost.textContent).toBe('first')
     expect(secondHost.textContent).toBe('second')
 

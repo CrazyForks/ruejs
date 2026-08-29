@@ -1,7 +1,7 @@
 import swc from '@swc/core'
 import { parentPort, workerData } from 'node:worker_threads'
 
-const createSwcTransformOptions = ({ pluginPath, isProduction }) => ({
+const createSwcTransformOptions = ({ pluginPath, isProduction, staticTemplates = false }) => ({
   filename: 'rue.tsx',
   jsc: {
     parser: { syntax: 'typescript', tsx: true },
@@ -15,7 +15,7 @@ const createSwcTransformOptions = ({ pluginPath, isProduction }) => ({
       },
     },
     experimental: {
-      plugins: [[pluginPath, {}]],
+      plugins: [[pluginPath, { staticTemplates }]],
     },
   },
   minify: isProduction,
@@ -28,8 +28,11 @@ const serializeError = error => ({
 })
 
 try {
-  const { code, pluginPath, isProduction } = workerData
-  const out = swc.transformSync(code, createSwcTransformOptions({ pluginPath, isProduction }))
+  const { code, pluginPath, isProduction, staticTemplates } = workerData
+  const out = swc.transformSync(
+    code,
+    createSwcTransformOptions({ pluginPath, isProduction, staticTemplates }),
+  )
   parentPort?.postMessage({ code: out.code })
 } catch (error) {
   parentPort?.postMessage({ error: serializeError(error) })

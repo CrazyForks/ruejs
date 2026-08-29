@@ -1209,7 +1209,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
+    expect(code).toContain('_$reconcileKeyed')
     expect(code).toContain('preview: ItemsPreview')
     expect(code).toContain('preview: LinePreview')
     expect(code).toContain('_$createComponent(PreviewComponent')

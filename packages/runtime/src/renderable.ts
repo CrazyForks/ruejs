@@ -3,7 +3,7 @@ import type { DomElementLike, DomNodeLike } from './dom'
 /*
 Renderable 类型模型概述
 - RenderTarget 描述运行时可写入 DOM 的四种位置：整容器、双锚点区间、尾锚点和静态锚点。
-- BlockInstance / BlockFactory 是默认运行时可直接挂载的块协议，用于 RouterView、native events 等非 Wasm 子树。
+- BlockInstance / BlockFactory 是框架层适配为 mount handle 的块协议，用于 RouterView、native events 等 DOM 子树。
 - NormalizedRenderable 是完成规范化后的安全渲染值，只包含 DOM 节点、块或嵌套数组。
 - Renderable 是用户侧和组件侧可返回的默认渲染值，会由 normalizeRenderable 转成 NormalizedRenderable。
 */

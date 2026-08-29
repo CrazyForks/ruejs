@@ -1,13 +1,9 @@
 import assert from 'node:assert/strict'
-import { createRequire } from 'node:module'
-
-const require = createRequire(import.meta.url)
-const reactiveRuntime = require('../pkg-node/rue_runtime_vapor.js')
-const signalPrototype = reactiveRuntime.SignalHandle.prototype
-const originalGet = signalPrototype.get
-const originalGetPath = signalPrototype.getPath
 
 const reactiveFacade = await import('../reactive.node.js')
+const signalPrototype = reactiveFacade.SignalHandle.prototype
+const originalGet = signalPrototype.get
+const originalGetPath = signalPrototype.getPath
 
 assert.equal(
   signalPrototype.get,

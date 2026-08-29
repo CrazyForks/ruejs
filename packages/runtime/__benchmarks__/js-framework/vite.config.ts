@@ -3,8 +3,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 import VitePluginRue from '@rue-js/vite-plugin-rue'
-import { defineConfig } from 'vite'
-import wasm from 'vite-plugin-wasm'
+import { defineConfig, type Plugin } from 'vite'
 
 const benchmarkDir = path.dirname(fileURLToPath(import.meta.url))
 const workspaceRoot = path.resolve(benchmarkDir, '../../../..')
@@ -14,15 +13,41 @@ const workspaceVersion = createRequire(import.meta.url)(
 
 const workspaceArtifact = (...parts: string[]) => path.resolve(workspaceRoot, ...parts)
 
+const benchmarkModuleManifest = (): Plugin => ({
+  name: 'rue-benchmark-module-manifest',
+  generateBundle(_options, bundle) {
+    const chunks = Object.values(bundle)
+      .filter(output => output.type === 'chunk')
+      .map(chunk => ({
+        fileName: chunk.fileName,
+        facadeModuleId: chunk.facadeModuleId,
+        imports: chunk.imports,
+        isEntry: chunk.isEntry,
+        moduleIds: chunk.moduleIds.slice().sort(),
+        name: chunk.name,
+      }))
+      .sort((left, right) => left.fileName.localeCompare(right.fileName))
+    this.emitFile({
+      type: 'asset',
+      fileName: 'benchmark-modules.json',
+      source: `${JSON.stringify({ schemaVersion: 1, chunks }, null, 2)}\n`,
+    })
+  },
+})
+
 export default defineConfig({
   root: benchmarkDir,
   base: './',
-  plugins: [wasm(), VitePluginRue({ transformTimeoutMs: 60_000 })],
+  plugins: [VitePluginRue({ transformTimeoutMs: 60_000 }), benchmarkModuleManifest()],
   resolve: {
     alias: [
       {
         find: /^@rue-js\/rue\/vapor$/,
         replacement: workspaceArtifact('packages/rue/dist/rue.vapor.esm-bundler.js'),
+      },
+      {
+        find: /^@rue-js\/rue\/compiled$/,
+        replacement: workspaceArtifact('packages/rue/dist/rue.compiled.esm-bundler.js'),
       },
       {
         find: /^@rue-js\/rue$/,
@@ -33,12 +58,20 @@ export default defineConfig({
         replacement: workspaceArtifact('packages/runtime/dist/runtime.vapor.esm-bundler.js'),
       },
       {
+        find: /^@rue-js\/runtime\/compiled$/,
+        replacement: workspaceArtifact('packages/runtime/dist/runtime.compiled.esm-bundler.js'),
+      },
+      {
+        find: /^@rue-js\/runtime-vapor\/compiled$/,
+        replacement: workspaceArtifact('packages/runtime-vapor/dist/compiled.js'),
+      },
+      {
         find: /^@rue-js\/runtime$/,
         replacement: workspaceArtifact('packages/runtime/dist/runtime.esm-bundler.js'),
       },
       {
         find: /^@rue-js\/runtime-vapor$/,
-        replacement: workspaceArtifact('packages/runtime-vapor/index.js'),
+        replacement: workspaceArtifact('packages/runtime-vapor/dist/index.js'),
       },
       {
         find: /^@rue-js\/shared$/,
@@ -59,13 +92,32 @@ export default defineConfig({
   },
   build: {
     emptyOutDir: true,
+    manifest: true,
     minify: true,
     outDir: workspaceArtifact('temp/js-framework-performance/dist'),
     target: 'es2022',
     rollupOptions: {
       input: {
         rue: path.resolve(benchmarkDir, 'index.html'),
+        'rue-signal': path.resolve(benchmarkDir, 'rue-signal.html'),
         vue: path.resolve(benchmarkDir, 'vue.html'),
+      },
+      output: {
+        manualChunks(id) {
+          const normalized = id.split(path.sep).join('/')
+          if (normalized.endsWith('/packages/runtime-vapor/dist/compiled.js')) {
+            return 'rue-compiled-core'
+          }
+          if (normalized.includes('/packages/runtime/dist/runtime.vapor.esm-bundler.js')) {
+            return 'rue-vapor-runtime'
+          }
+          if (
+            normalized.includes('/packages/runtime-vapor/dist/') &&
+            !normalized.endsWith('/packages/runtime-vapor/dist/compiled.js')
+          ) {
+            return 'rue-vapor-runtime'
+          }
+        },
       },
     },
   },

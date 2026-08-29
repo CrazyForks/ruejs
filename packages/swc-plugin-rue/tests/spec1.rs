@@ -28,15 +28,15 @@ export default VaporJSXDemo;
     // - 事件：onClick → addEventListener('click', handler)
     // - 受控文本：span 内使用 _$createTextWrapper + _$settextContent + watch 显示 count.value
     // - hook：ref(0) 被 _$vaporWithHookId 包裹，生成稳定作用域与索引
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { ref, _$vaporWithHookId, vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
+const _$getTemplate1 = _$template("<h2>Vapor JSX Demo</h2>");
 const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-    const VaporJSXDemo: FC = ()=>vapor((__rue_parent_context)=>{
+const VaporJSXDemo: FC = ()=>vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "container");
-        const _el1 = _$createElement("h2", _root);
-        _$appendChild(_root, _el1);
-        _$appendChild(_el1, _$createTextNode("Vapor JSX Demo"));
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
         const _el2 = _$createElement("button", _root);
         _$appendChild(_root, _el2);
         _$addEventListener(_el2, "click", (()=>count.value++));

@@ -1,13 +1,10 @@
 // @ts-check
-import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import pico from 'picocolors'
 import { build } from 'vite'
-import wasm from 'vite-plugin-wasm'
 import { formatBytes } from './format-bytes.js'
 import { measureBundleCode, measureCodeSizes } from './usage-size.js'
 
@@ -26,6 +23,11 @@ const builtinSignatures = Object.freeze({
 const vaporInput = Object.freeze({
   entry: '@rue-js/rue/vapor',
   imports: Object.freeze(['vapor']),
+})
+
+const compiledInput = Object.freeze({
+  entry: '@rue-js/rue/compiled',
+  imports: Object.freeze(['signal', 'effect', 'createSelector']),
 })
 
 const vaporAppInput = Object.freeze({
@@ -49,6 +51,11 @@ const rootInput = imports =>
 
 /** @type {ReadonlyArray<{name: string, input: ReadonlyArray<{entry: string, imports: ReadonlyArray<string>}>, builtin: boolean}>} */
 export const RUNTIME_SIZE_PRESETS = Object.freeze([
+  Object.freeze({
+    name: 'compiled-core',
+    input: Object.freeze([compiledInput]),
+    builtin: false,
+  }),
   Object.freeze({ name: 'vapor-core', input: Object.freeze([vaporInput]), builtin: false }),
   Object.freeze({
     name: 'vapor-app',
@@ -185,40 +192,28 @@ export function checkRuntimeSizeBudget(report, budget) {
       }
     }
 
-    const wasm = preset.sources?.wasm
-    if (presetBudget.requiredWasm && !wasm?.[presetBudget.requiredWasm]) {
+    const reactiveKernel = preset.sources?.reactiveKernel
+    if (presetBudget.requireReactiveKernel && !(reactiveKernel?.moduleCount > 0)) {
       failures.push({
         preset: presetName,
-        dimension: 'sources.wasm.required',
-        actual: wasm?.instanceCount ?? 'missing',
-        limit: presetBudget.requiredWasm,
+        dimension: 'sources.reactiveKernel.required',
+        actual: reactiveKernel?.moduleCount ?? 'missing',
+        limit: 'required',
       })
     }
-    if (
-      typeof presetBudget.maxWasmInstances === 'number' &&
-      (typeof wasm?.instanceCount !== 'number' ||
-        wasm.instanceCount > presetBudget.maxWasmInstances)
-    ) {
+    if (presetBudget.requireCompiledRuntime && !preset.sources?.compiledRuntime) {
       failures.push({
         preset: presetName,
-        dimension: 'sources.wasm.instanceCount',
-        actual: wasm?.instanceCount ?? 'missing',
-        limit: presetBudget.maxWasmInstances,
+        dimension: 'sources.compiledRuntime.required',
+        actual: preset.sources?.compiledRuntime ?? 'missing',
+        limit: 'required',
       })
     }
-    if (presetBudget.forbidFullWasm && wasm?.full) {
+    if (presetBudget.forbidWasm && (preset.sources?.wasmModules?.length ?? 0) > 0) {
       failures.push({
         preset: presetName,
-        dimension: 'sources.wasm.full',
-        actual: wasm.both ? 'full+vapor' : 'full',
-        limit: 'forbidden',
-      })
-    }
-    if (presetBudget.forbidVaporWasm && wasm?.vapor) {
-      failures.push({
-        preset: presetName,
-        dimension: 'sources.wasm.vapor',
-        actual: wasm.both ? 'full+vapor' : 'vapor',
+        dimension: 'sources.wasmModules',
+        actual: preset.sources.wasmModules.join(', '),
         limit: 'forbidden',
       })
     }
@@ -228,6 +223,15 @@ export function checkRuntimeSizeBudget(report, budget) {
         preset: presetName,
         dimension: 'sources.defaultRuntime',
         actual: preset.sources.modules?.join(', ') || 'detected',
+        limit: 'forbidden',
+      })
+    }
+
+    if (presetBudget.forbidVaporRuntime && preset.sources?.vaporRuntime) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.vaporRuntime',
+        actual: preset.sources?.vaporModules?.join(', ') || 'detected',
         limit: 'forbidden',
       })
     }
@@ -254,6 +258,24 @@ export function checkRuntimeSizeBudget(report, budget) {
         limit: 'forbidden',
       })
     }
+
+    /** @type {string[]} */
+    const allModules = preset.sources?.allModules ?? []
+    for (const [ruleName, patterns] of /** @type {[string, string[]][]} */ (
+      Object.entries(presetBudget.forbidModules ?? {})
+    )) {
+      const matches = allModules.filter(moduleId =>
+        patterns.some(pattern => moduleId.includes(pattern)),
+      )
+      if (matches.length > 0) {
+        failures.push({
+          preset: presetName,
+          dimension: `sources.forbiddenModules.${ruleName}`,
+          actual: matches.join(', '),
+          limit: 'forbidden',
+        })
+      }
+    }
   }
 
   if (failures.length > 0) {
@@ -275,6 +297,7 @@ export { measureCodeSizes }
  *   sources: {
  *     defaultRuntime: boolean,
  *     vaporRuntime: boolean,
+ *     compiledRuntime: boolean,
  *     both: boolean,
  *     modules: string[],
  *     allModules?: string[],
@@ -282,13 +305,8 @@ export { measureCodeSizes }
  *     builtins?: string[],
  *     ssrRenderer: boolean,
  *     ssrModules: string[],
- *     wasm?: {
- *       instanceCount: number,
- *       full: boolean,
- *       vapor: boolean,
- *       both: boolean,
- *       artifacts: Array<{kind: string, module: string, sha256: string}>
- *     }
+ *     reactiveKernel: {moduleCount: number, renderedBytes: number, modules: string[]},
+ *     wasmModules: string[]
  *   }
  * }>} measurements
  */
@@ -326,7 +344,7 @@ export function createAuditReport(measurements) {
   )
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     build: {
       mode: 'production',
       target: 'es2020',
@@ -375,28 +393,37 @@ function detectRuntimeSources(moduleIds, code, renderedModules) {
     /(?:^|\/)packages\/(?:rue\/dist\/rue\.runtime|runtime\/(?:dist\/runtime\.esm-bundler|src\/rue))\.(?:js|ts)$/
   const vaporPattern =
     /(?:^|\/)packages\/(?:rue\/dist\/rue\.vapor|runtime\/(?:dist\/runtime\.vapor(?:-core)?\.esm-bundler|src\/vapor(?:-runtime|-core)))\.(?:js|ts)$/
+  const compiledPattern =
+    /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.compiled\.esm-bundler\.js|src\/compiled\.ts)|runtime\/(?:dist\/runtime\.compiled\.esm-bundler\.js|src\/compiled\.ts)|runtime-vapor\/dist\/compiled\.js)$/
   const ssrRendererPattern =
     /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.server-renderer\.esm-bundler\.js|src\/server-renderer\.ts)|runtime\/(?:dist\/runtime\.server\.esm-bundler\.js|src\/server\.ts)|server-renderer\/(?:dist\/server-renderer\.esm-bundler\.js|src\/index\.ts))$/
-  const modules = normalized.filter(id => defaultPattern.test(id) || vaporPattern.test(id))
+  const modules = normalized.filter(
+    id => defaultPattern.test(id) || vaporPattern.test(id) || compiledPattern.test(id),
+  )
   const defaultRuntime = modules.some(id => defaultPattern.test(id))
   const vaporRuntime = modules.some(id => vaporPattern.test(id))
+  const compiledModules = modules.filter(id => compiledPattern.test(id))
+  const vaporModules = modules.filter(id => vaporPattern.test(id))
   const ssrModules = normalized.filter(id => ssrRendererPattern.test(id))
-  const wasmModules = normalized.filter(id =>
-    /(?:^|\/)packages\/runtime-vapor\/pkg(?:-vapor)?\/rue_runtime_vapor_bg\.wasm$/.test(id),
+  const reactiveKernelModules = normalized.filter(
+    id =>
+      /(?:^|\/)packages\/runtime-vapor\/dist\/reactive-kernel\/[^/]+\.js$/.test(id) ||
+      /(?:^|\/)packages\/runtime-vapor\/dist\/compiled\.js$/.test(id),
   )
-  const wasmArtifacts = wasmModules.map(module => ({
-    kind: module.includes('/pkg-vapor/') ? 'vapor' : 'full',
-    module,
-    sha256: createHash('sha256')
-      .update(readFileSync(path.resolve(projectRoot, module)))
-      .digest('hex'),
-  }))
-  const fullWasm = wasmArtifacts.some(artifact => artifact.kind === 'full')
-  const vaporWasm = wasmArtifacts.some(artifact => artifact.kind === 'vapor')
+  const wasmModules = normalized.filter(id => id.endsWith('.wasm'))
+  const renderedSizeByModule = new Map(
+    Object.entries(renderedModules).map(([id, info]) => [
+      normalizeModuleId(id),
+      info.renderedLength,
+    ]),
+  )
 
   return {
     defaultRuntime,
     vaporRuntime,
+    compiledRuntime: compiledModules.length > 0,
+    compiledModules,
+    vaporModules,
     both: defaultRuntime && vaporRuntime,
     modules,
     allModules: normalized,
@@ -407,13 +434,15 @@ function detectRuntimeSources(moduleIds, code, renderedModules) {
     ),
     ssrRenderer: ssrModules.length > 0,
     ssrModules,
-    wasm: {
-      instanceCount: wasmArtifacts.length,
-      full: fullWasm,
-      vapor: vaporWasm,
-      both: fullWasm && vaporWasm,
-      artifacts: wasmArtifacts,
+    reactiveKernel: {
+      moduleCount: reactiveKernelModules.length,
+      renderedBytes: reactiveKernelModules.reduce(
+        (total, module) => total + (renderedSizeByModule.get(module) ?? 0),
+        0,
+      ),
+      modules: reactiveKernelModules,
     },
+    wasmModules,
     builtins: Object.entries(builtinSignatures)
       .filter(([, signatures]) => signatures.some(signature => code.includes(signature)))
       .map(([name]) => name),
@@ -437,7 +466,18 @@ async function buildPreset(preset) {
       appType: 'custom',
       logLevel: 'silent',
       mode: 'production',
-      plugins: [wasm()],
+      resolve: {
+        alias: [
+          {
+            find: /^@rue-js\/rue\/compiled$/,
+            replacement: path.resolve(projectRoot, 'packages/rue/src/compiled.ts'),
+          },
+          {
+            find: /^@rue-js\/runtime\/compiled$/,
+            replacement: path.resolve(projectRoot, 'packages/runtime/src/compiled.ts'),
+          },
+        ],
+      },
       define: {
         'process.env.NODE_ENV': '"production"',
       },
@@ -539,22 +579,23 @@ async function main(options) {
 
   console.log(`\nRuntime size audit: ${path.relative(projectRoot, options.output)}`)
   for (const result of Object.values(report.presets)) {
-    const sourceLabel = result.sources.both
-      ? 'default+vapor'
-      : result.sources.defaultRuntime
-        ? 'default'
-        : result.sources.vaporRuntime
-          ? 'vapor'
-          : 'unknown'
-    const wasmArtifacts = result.sources.wasm?.artifacts ?? []
-    const wasmLabel = wasmArtifacts
-      .map(artifact => `${artifact.kind}:${artifact.sha256.slice(0, 12)}`)
-      .join(',')
+    const sourceLabel = result.sources.compiledRuntime
+      ? result.sources.defaultRuntime || result.sources.vaporRuntime
+        ? 'compiled+other'
+        : 'compiled'
+      : result.sources.both
+        ? 'default+vapor'
+        : result.sources.defaultRuntime
+          ? 'default'
+          : result.sources.vaporRuntime
+            ? 'vapor'
+            : 'unknown'
     console.log(
       `${pico.green(pico.bold(result.name))} - ` +
         `raw:${formatBytes(result.raw)} / min:${formatBytes(result.min)} / ` +
         `gzip:${formatBytes(result.gzip)} / brotli:${formatBytes(result.brotli)} / ` +
-        `sources:${sourceLabel} / wasm:${result.sources.wasm?.instanceCount ?? 0}[${wasmLabel}]`,
+        `sources:${sourceLabel} / kernel:${result.sources.reactiveKernel.moduleCount} modules ` +
+        `(${formatBytes(result.sources.reactiveKernel.renderedBytes)} rendered)`,
     )
   }
 }

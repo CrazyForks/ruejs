@@ -1,22 +1,15 @@
 /*
 共享 runtime 上下文概述
 - 默认与 Vapor 入口共用活动 runtime 切换，保证嵌套调用结束后恢复先前上下文。
-- 统一记录 runtime 已绑定的 DOM bridge，避免重复调用 Wasm setDOMAdapter。
-- 维护 Vapor helper 使用的 preferred runtime，但不反向依赖默认 rue.ts。
+- 本模块不依赖 DOM/runtime 创建模块，因此 DOM 事件也能复用同一激活原语。
 */
-
-import { BrowserDOMAdapter, registerDOMBridgeConsumer, setDOMAdapter } from './dom'
-
-const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
-const registeredDOMBridgeConsumers = new WeakSet<object>()
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
 
 type RuntimeContextGlobal = typeof globalThis & {
   __rue_active?: unknown
-  __rue_dom?: unknown
-  __rue_vapor_preferred?: unknown
+  __rue?: unknown
 }
 
 const runtimeGlobal = globalThis as RuntimeContextGlobal
@@ -27,47 +20,12 @@ export const resolveActiveRuntime = <T>(fallback: () => T): T => {
   return canTrackRuntime(activeRuntime) ? (activeRuntime as T) : fallback()
 }
 
-/** 设置 Vapor helper 在活动调用之外优先使用的 runtime。 */
-export const setPreferredRuntime = (runtime: unknown) => {
-  if (canTrackRuntime(runtime)) {
-    runtimeGlobal.__rue_vapor_preferred = runtime
-  }
-}
-
-/** 读取指定 runtime 已绑定的 DOM bridge。 */
-export const getMarkedRuntimeDOMBridge = (runtime: unknown) => {
-  if (!canTrackRuntime(runtime)) {
-    return undefined
-  }
-  return runtimeDOMBridgeByInstance.get(runtime)
-}
-
-/** 标记指定 runtime 已同步到某个 DOM bridge。 */
-export const markRuntimeDOMBridge = (runtime: unknown, bridge: unknown) => {
-  if (canTrackRuntime(runtime)) {
-    runtimeDOMBridgeByInstance.set(runtime, bridge)
-    if (!registeredDOMBridgeConsumers.has(runtime)) {
-      registeredDOMBridgeConsumers.add(runtime)
-      registerDOMBridgeConsumer(runtime)
-    }
-  }
-}
-
-/** 确保 runtime 使用当前 DOM bridge。 */
-export const ensureRuntimeDOMBridge = (runtime: unknown) => {
-  const runtimeWithDOM = runtime as { setDOMAdapter?: (bridge: unknown) => void } | null | undefined
-  if (typeof runtimeWithDOM?.setDOMAdapter !== 'function') {
-    return
-  }
-  if (!runtimeGlobal.__rue_dom) {
-    setDOMAdapter(new BrowserDOMAdapter())
-  }
-  const bridge = runtimeGlobal.__rue_dom
-  if (getMarkedRuntimeDOMBridge(runtime) === bridge) {
-    return
-  }
-  runtimeWithDOM.setDOMAdapter(bridge)
-  markRuntimeDOMBridge(runtime, bridge)
+/** 从当前活动 runtime（或默认 runtime）读取挂载容器，不依赖 runtime 总入口。 */
+export const getCurrentContainer = () => {
+  const runtime = resolveActiveRuntime(() => runtimeGlobal.__rue) as {
+    getCurrentContainer?: () => unknown
+  } | null
+  return typeof runtime?.getCurrentContainer === 'function' ? runtime.getCurrentContainer() : null
 }
 
 /** 临时切换当前激活 runtime，并在 runner 结束后恢复。 */

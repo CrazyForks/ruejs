@@ -32,25 +32,23 @@ export default ListsAndKeys;
     // - 列表锚点：rue:list:start/end 注释创建与插入
     // - 持久 Map：_mapX_elements 保存 key→片段 映射
     // - _$vaporKeyedList：传入 items/getKey/elements/parent/before/start/renderItem
-    // - renderItem：直接批量构建并插入，同时保留 index watcher
+    // - renderItem：通过兼容 anchor 渲染，同时保留 index watcher
     // - 更新：watch 中对 elements 引用进行复用更新
     let expected_fragment = r##"
-import { vapor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, _$insertBefore, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">列表渲染与 key</h3>');
 const list = [
     'Apple',
     'Banana',
     'Cherry'
 ];
 const ListsAndKeys: FC = ()=>vapor((__rue_parent_context)=>{
-    const _root = _$createElement("div", __rue_parent_context);
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-    const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold");
-        _$appendChild(_el1, _$createTextNode("列表渲染与 key"));
-    const _el2 = _$createElement("ul", _root);
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
+        const _el2 = _$createElement("ul", _root);
         _$appendChild(_root, _el2);
         _$setClassName(_el2, "list-disc pl-6");
         const _list1 = _$createComment("rue:list:start");
@@ -71,24 +69,26 @@ const ListsAndKeys: FC = ()=>vapor((__rue_parent_context)=>{
                 parent: _el2,
                 before: _list2,
                 singleRoot: true,
-                directRoot: true,
                 start: _list1,
                 renderItem: (item, parent, start, end, idx)=>{
-                    const _root = _$createDocumentFragment();
-                    const _el3 = _$createElement("li", _root);
-                    _$appendChild(_root, _el3);
-                    const _el4 = _$createTextWrapper(_el3);
-                    _$appendChild(_el3, _el4);
-                    watchEffect(()=>{
-                        _$settextContent(_el4, idx + 1);
+                    const __slot = vapor(()=>{
+                        const _root = _$createDocumentFragment();
+                        const _el3 = _$createElement("li");
+                        _$appendChild(_root, _el3);
+                        const _el4 = _$createTextWrapper(_el3);
+                        _$appendChild(_el3, _el4);
+                        watchEffect(()=>{
+                            _$settextContent(_el4, idx + 1);
+                        });
+                        _$appendChild(_el3, _$createTextNode(". "));
+                        const _el5 = _$createTextWrapper(_el3);
+                        _$appendChild(_el3, _el5);
+                        watchEffect(()=>{
+                            _$settextContent(_el5, item);
+                        });
+                        return _root;
                     });
-                    _$appendChild(_el3, _$createTextNode(". "));
-                    const _el5 = _$createTextWrapper(_el3);
-                    _$appendChild(_el3, _el5);
-                    watchEffect(()=>{
-                        _$settextContent(_el5, item);
-                    });
-                    _$insertBefore(parent, _root, start);
+                    renderAnchor(__slot, parent, start);
                 }
             });
             _map1_elements = _map1_newElements;

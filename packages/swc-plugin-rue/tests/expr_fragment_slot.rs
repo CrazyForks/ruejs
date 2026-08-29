@@ -44,7 +44,12 @@ const Demo: FC<{ ok: boolean; label: string }> = props => (
 
     assert!(out.contains(&utils::normalize("const __slot = props.ok ? vapor(()=>{")));
     assert!(out.contains(&utils::normalize("_$createElement(\"span\", _root)")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"em\", _root)")));
+    assert!(
+        out.contains(&utils::normalize("const _$getTemplate1 = _$template(\"<em>fallback</em>\")"))
+    );
+    assert!(out.contains(&utils::normalize(
+        "_root.appendChild(_$getTemplate1().content.cloneNode(true))"
+    )));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
 }
 
@@ -140,7 +145,14 @@ const Demo: FC = () => {
     assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
     assert!(out.contains(&utils::normalize("renderItem: (item, parent, start, end, idx)=>{")));
     assert!(out.contains(&utils::normalize("_$createElement(\"button\", _root)")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"span\", _root)")));
+    assert!(
+        out.contains(&utils::normalize(
+            "const _$getTemplate1 = _$template(\"<span>empty</span>\")"
+        ))
+    );
+    assert!(out.contains(&utils::normalize(
+        "_root.appendChild(_$getTemplate1().content.cloneNode(true))"
+    )));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
     assert!(!out.contains("_jsxDEV("));
 }

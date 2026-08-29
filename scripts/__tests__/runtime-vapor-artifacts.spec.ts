@@ -1,22 +1,24 @@
 // @vitest-environment jsdom
 
-import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { brotliCompressSync } from 'node:zlib'
 
 import { describe, expect, it } from 'vitest'
 import { build, type Rollup } from 'vite'
-import wasm from 'vite-plugin-wasm'
 
 const projectRoot = process.cwd()
 const runtimeVaporDir = path.resolve(projectRoot, 'packages/runtime-vapor')
-const fullEntry = path.resolve(runtimeVaporDir, 'index.js')
-const vaporEntry = path.resolve(runtimeVaporDir, 'vapor.js')
-const vaporReactiveEntry = path.resolve(runtimeVaporDir, 'reactive.vapor.js')
+const runtimeVaporDist = path.resolve(runtimeVaporDir, 'dist')
+const runtimeDir = path.resolve(projectRoot, 'packages/runtime')
+const rueDir = path.resolve(projectRoot, 'packages/rue')
+const compiledEntry = path.resolve(runtimeVaporDist, 'compiled.js')
+const publishedCompiledEntry = path.resolve(rueDir, 'dist/rue.compiled.esm-bundler.js')
+const fullEntry = path.resolve(runtimeVaporDist, 'index.js')
+const vaporEntry = path.resolve(runtimeVaporDist, 'vapor.js')
+const vaporReactiveEntry = path.resolve(runtimeVaporDist, 'reactive.vapor.js')
 
 const normalizeModuleId = (id: string) => id.split('?', 1)[0].split(path.sep).join('/')
 
@@ -31,7 +33,6 @@ const buildRuntimeBundle = async (name: string, source: string) => {
       publicDir: false,
       appType: 'custom',
       logLevel: 'silent',
-      plugins: [wasm()],
       build: {
         target: 'es2020',
         minify: false,
@@ -50,18 +51,19 @@ const buildRuntimeBundle = async (name: string, source: string) => {
     if (!chunk) throw new Error(`missing runtime artifact entry chunk for ${name}`)
 
     const modules = [...new Set(chunk.moduleIds.map(normalizeModuleId))].sort()
-    const wasmModules = modules.filter(id =>
-      /packages\/runtime-vapor\/pkg(?:-vapor)?\/rue_runtime_vapor_bg\.wasm$/.test(id),
+    const kernelModules = modules.filter(id =>
+      /packages\/runtime-vapor\/dist\/reactive-kernel\/[^/]+\.js$/.test(id),
     )
-    const wasmArtifacts = wasmModules.map(filePath => ({
-      kind: filePath.includes('/pkg-vapor/')
-        ? ('canonical-browser' as const)
-        : ('legacy-full-browser' as const),
-      module: path.relative(projectRoot, filePath).split(path.sep).join('/'),
-      sha256: createHash('sha256').update(readFileSync(filePath)).digest('hex'),
-    }))
+    const forbiddenModules = modules.filter(id =>
+      /\.wasm$|\/pkg-(?:vapor|node)\/|__vite-plugin-wasm-helper/.test(id),
+    )
+    const compiledForbiddenModules = modules.filter(id =>
+      /\.wasm$|\/pkg-(?:vapor|node)\/|__vite-plugin-wasm-helper|\/runtime-vapor\/dist\/(?:index|vapor|reactive(?:\.[^/]+)?)\.js$|\/runtime-vapor\/dist\/js-reactive\/(?:facade|hooks\/computed)\.js$|\/runtime-vapor\/dist\/js-runtime\/|\/runtime-vapor\/dist\/reactive-kernel\/(?:watch|resource|reactive|computed)\.js$|\/runtime\/src\/vapor-helpers\.ts$/.test(
+        id,
+      ),
+    )
 
-    return { code: chunk.code, modules, wasmArtifacts }
+    return { code: chunk.code, modules, kernelModules, forbiddenModules, compiledForbiddenModules }
   } finally {
     await rm(fixtureDir, { recursive: true, force: true })
   }
@@ -73,116 +75,11 @@ const importBundle = async (code: string) => {
   return import(url)
 }
 
-const canonicalGraphFunctionExports = [
-  '__rueActivateEffectOwnerTracking',
-  '__rueActivateRenderTriggered',
-  '__rueBeginRenderDebugOwner',
-  '__rueCreateDetachedEffectScope',
-  '__rueCurrentEffectId',
-  '__rueDisposeEffectScope',
-  '__rueEndRenderDebugOwner',
-  '__rueGetCurrentEffectScope',
-  '__ruePopEffectScope',
-  '__ruePushEffectScope',
-  'batch',
-  'createComputed',
-  'createCustomRef',
-  'createEffect',
-  'createReactive',
-  'createRef',
-  'createResource',
-  'createSignal',
-  'nextTick',
-  'onCleanup',
-  'onScopeDispose',
-  'onWatcherCleanup',
-  'setReactiveScheduling',
-  'toValue',
-  'untrack',
-  'watch',
-  'watchDeepSignal',
-  'watchEffect',
-  'watchFn',
-  'watchPath',
-  'watchSignal',
-].sort()
-
-const completeRuntimeMethodExports = [
-  'wasmrue___rtd',
-  'wasmrue___rueActivateRange',
-  'wasmrue___rueDeactivateRange',
-  'wasmrue_abortOwnedMount',
-  'wasmrue_buildOwnedMount',
-  'wasmrue_commitMounted',
-  'wasmrue_componentInstanceCount',
-  'wasmrue_componentWrapperCount',
-  'wasmrue_createComponent',
-  'wasmrue_createElement',
-  'wasmrue_currentOwnedMountToken',
-  'wasmrue_disposeOwnedMount',
-  'wasmrue_effectScopeCount',
-  'wasmrue_emitted',
-  'wasmrue_flushMounted',
-  'wasmrue_getCurrentContainer',
-  'wasmrue_globalAnchorMountCount',
-  'wasmrue_globalRangeMountCount',
-  'wasmrue_onActivated',
-  'wasmrue_onBeforeCreate',
-  'wasmrue_onBeforeMount',
-  'wasmrue_onBeforeUnmount',
-  'wasmrue_onBeforeUpdate',
-  'wasmrue_onCreated',
-  'wasmrue_onDeactivated',
-  'wasmrue_onError',
-  'wasmrue_onMounted',
-  'wasmrue_onRenderTriggered',
-  'wasmrue_onServerPrefetch',
-  'wasmrue_onUnmounted',
-  'wasmrue_onUpdated',
-  'wasmrue_ownedMountCollecting',
-  'wasmrue_ownedMountCount',
-  'wasmrue_ownedMountEntryCount',
-  'wasmrue_pendingComponentMountedCount',
-  'wasmrue_render',
-  'wasmrue_renderAnchor',
-  'wasmrue_renderBetween',
-  'wasmrue_renderStatic',
-  'wasmrue_runServerPrefetch',
-  'wasmrue_setDOMAdapter',
-  'wasmrue_unmount',
-  'wasmrue_updateOwnedMount',
-  'wasmrue_use',
-]
-
-const readWasm = (artifactDir: 'pkg-vapor') => {
-  const filePath = path.resolve(runtimeVaporDir, artifactDir, 'rue_runtime_vapor_bg.wasm')
-  const bytes = readFileSync(filePath)
-  const module = new WebAssembly.Module(bytes)
-  return { bytes, module }
-}
-
-const instantiateWithRealImportShape = (module: WebAssembly.Module) => {
-  const imports: WebAssembly.Imports = {}
-  for (const descriptor of WebAssembly.Module.imports(module)) {
-    const namespace = (imports[descriptor.module] ??= {}) as Record<string, WebAssembly.ImportValue>
-    if (descriptor.kind === 'function') {
-      namespace[descriptor.name] = () => undefined
-    } else if (descriptor.kind === 'memory') {
-      namespace[descriptor.name] = new WebAssembly.Memory({ initial: 1 })
-    } else if (descriptor.kind === 'table') {
-      namespace[descriptor.name] = new WebAssembly.Table({ initial: 1, element: 'anyfunc' })
-    } else {
-      namespace[descriptor.name] = 0
-    }
-  }
-  return new WebAssembly.Instance(module, imports)
-}
-
 describe('@rue-js/runtime-vapor build artifacts', () => {
   it('imports every generated Node condition entry with matching public exports', async () => {
     const [full, reactive, vapor] = await Promise.all(
       ['index.node.js', 'reactive.node.js', 'vapor.node.js'].map(
-        file => import(pathToFileURL(path.resolve(runtimeVaporDir, file)).href),
+        file => import(pathToFileURL(path.resolve(runtimeVaporDist, file)).href),
       ),
     )
 
@@ -193,53 +90,101 @@ describe('@rue-js/runtime-vapor build artifacts', () => {
     expect(vapor.signal).toBe(reactive.signal)
   })
 
-  it('builds one canonical browser graph kernel without Rust Runtime or Hook exports', () => {
-    const cargoManifest = readFileSync(path.resolve(runtimeVaporDir, 'Cargo.toml'), 'utf8')
+  it('publishes only generated TypeScript runtime artifacts', () => {
     const packageManifest = JSON.parse(
       readFileSync(path.resolve(runtimeVaporDir, 'package.json'), 'utf8'),
     )
-    const releaseBuildScript = readFileSync(path.resolve(projectRoot, 'scripts/build.js'), 'utf8')
-    expect(cargoManifest).toMatch(/^default = \[\]$/m)
-    expect(cargoManifest).not.toMatch(/^runtime = /m)
-    expect(cargoManifest).not.toMatch(/^vapor = /m)
-    expect(packageManifest.files).not.toContain('pkg')
-    expect(packageManifest.scripts.build).toContain('--out-dir pkg-vapor')
-    expect(releaseBuildScript).not.toContain('packages/runtime-vapor/pkg/rue_runtime_vapor.js')
-    expect(releaseBuildScript).toContain("label: 'canonical browser package'")
+    const workspaceManifest = readFileSync(path.resolve(projectRoot, 'package.json'), 'utf8')
+    const buildScript = readFileSync(path.resolve(projectRoot, 'scripts/build.js'), 'utf8')
+    const ensureScript = readFileSync(
+      path.resolve(projectRoot, 'scripts/ensure-runtime-vapor-build.js'),
+      'utf8',
+    )
 
-    const vapor = readWasm('pkg-vapor')
-    const instance = instantiateWithRealImportShape(vapor.module)
-    const vaporExportNames = WebAssembly.Module.exports(vapor.module).map(({ name }) => name)
-    const vaporFunctionExports = vaporExportNames
-      .filter(
-        name =>
-          name !== 'memory' &&
-          !name.startsWith('__wbg_') &&
-          !name.startsWith('__wbindgen_') &&
-          !name.startsWith('__wasm_bindgen_') &&
-          !name.startsWith('effecthandle_') &&
-          !name.startsWith('signalhandle_') &&
-          !name.startsWith('wasmrue_'),
-      )
-      .sort()
-    const vaporRuntimeMethods = vaporExportNames.filter(name => name.startsWith('wasmrue_')).sort()
-    const vaporSizes = {
-      raw: vapor.bytes.byteLength,
-      brotli: brotliCompressSync(vapor.bytes).byteLength,
-    }
-    console.info('[runtime-vapor artifact] vapor', {
-      exports: vaporExportNames,
-      ...vaporSizes,
+    expect(existsSync(path.resolve(runtimeVaporDir, 'Cargo.toml'))).toBe(false)
+    expect(packageManifest.files).toEqual(['dist'])
+    expect(packageManifest.exports['./compiled']).toEqual({
+      types: './dist/compiled.d.ts',
+      import: './dist/compiled.js',
+      default: './dist/compiled.js',
     })
-
-    expect(Object.keys(instance.exports)).toEqual(vaporExportNames)
-    expect(vaporFunctionExports).toEqual(canonicalGraphFunctionExports)
-    expect(vaporRuntimeMethods).toEqual([])
-    expect(vaporExportNames.filter(name => completeRuntimeMethodExports.includes(name))).toEqual([])
-    expect(vaporExportNames.some(name => name.includes('wasmrue'))).toBe(false)
+    expect(packageManifest.files).not.toEqual(
+      expect.arrayContaining(['pkg', 'pkg-vapor', 'pkg-node']),
+    )
+    expect(packageManifest.scripts.build).toBe('npm run build-ts')
+    expect(`${workspaceManifest}\n${buildScript}\n${ensureScript}`).not.toMatch(
+      /pkg-vapor|pkg-node|rue_runtime_vapor_bg|wasm-pack|runtime-vapor-addr2line/,
+    )
   })
 
-  it('uses the same canonical browser Wasm artifact for full, vapor, and mixed bundles', async () => {
+  it('keeps the compiled entry on the minimal reactive module graph', async () => {
+    const compiled = await buildRuntimeBundle(
+      'compiled-entry',
+      `export { batch, createOwner, createSelector, disposeOwner, effect, onCleanup, runWithOwner, signal, untrack } from ${JSON.stringify(compiledEntry)}`,
+    )
+    const relativeKernelModules = compiled.kernelModules.map(module =>
+      path.relative(projectRoot, module).split(path.sep).join('/'),
+    )
+
+    console.info('[runtime-vapor graph] compiled', compiled.modules)
+
+    expect(relativeKernelModules).toEqual([])
+    expect(compiled.modules).not.toEqual(
+      expect.arrayContaining([
+        path.resolve(runtimeVaporDist, 'reactive-kernel/index.js').split(path.sep).join('/'),
+        path.resolve(runtimeVaporDist, 'reactive.shared.js').split(path.sep).join('/'),
+        path.resolve(runtimeVaporDist, 'js-reactive/facade.js').split(path.sep).join('/'),
+      ]),
+    )
+    expect(compiled.forbiddenModules).toEqual([])
+    expect(compiled.compiledForbiddenModules).toEqual([])
+  })
+
+  it('publishes the compiled subpath through runtime and rue on the minimal graph', async () => {
+    const runtimeManifest = JSON.parse(
+      readFileSync(path.resolve(runtimeDir, 'package.json'), 'utf8'),
+    )
+    const rueManifest = JSON.parse(readFileSync(path.resolve(rueDir, 'package.json'), 'utf8'))
+
+    expect(runtimeManifest.exports['./compiled']).toMatchObject({
+      types: './src/compiled.ts',
+      development: './src/compiled.ts',
+      import: './dist/runtime.compiled.esm-bundler.js',
+    })
+    expect(runtimeManifest.buildOptions.subEntries).toContainEqual({
+      entry: 'src/compiled.ts',
+      filename: 'runtime.compiled',
+      formats: ['esm-bundler', 'cjs'],
+    })
+    expect(rueManifest.exports['./compiled']).toMatchObject({
+      types: './src/compiled.ts',
+      development: './src/compiled.ts',
+      import: './dist/rue.compiled.esm-bundler.js',
+    })
+    expect(rueManifest.buildOptions.subEntries).toContainEqual({
+      entry: 'src/compiled.ts',
+      filename: 'rue.compiled',
+      formats: ['esm-bundler', 'cjs'],
+    })
+
+    const compiled = await buildRuntimeBundle(
+      'published-compiled-entry',
+      `export { signal, effect, createSelector } from ${JSON.stringify(publishedCompiledEntry)}`,
+    )
+
+    console.info('[runtime-vapor graph] published compiled', compiled.modules)
+
+    expect(existsSync(path.resolve(rueDir, 'dist/rue.compiled.esm-bundler.js'))).toBe(true)
+    expect(existsSync(path.resolve(runtimeDir, 'dist/runtime.compiled.esm-bundler.js'))).toBe(true)
+    expect(compiled.modules).toContain(
+      normalizeModuleId(path.resolve(runtimeVaporDist, 'compiled.js')),
+    )
+    expect(compiled.kernelModules).toEqual([])
+    expect(compiled.forbiddenModules).toEqual([])
+    expect(compiled.compiledForbiddenModules).toEqual([])
+  })
+
+  it('uses one TypeScript reactive kernel for full, vapor, and mixed bundles', async () => {
     const full = await buildRuntimeBundle(
       'full-entry',
       `export { createRue, signal } from ${JSON.stringify(fullEntry)}`,
@@ -254,37 +199,19 @@ describe('@rue-js/runtime-vapor build artifacts', () => {
         `export { createRue as createVaporRue } from ${JSON.stringify(vaporEntry)}`,
     )
 
-    console.info('[runtime-vapor graph] full', {
-      modules: full.modules,
-      wasmArtifacts: full.wasmArtifacts,
-    })
-    console.info('[runtime-vapor graph] vapor', {
-      modules: vapor.modules,
-      wasmArtifacts: vapor.wasmArtifacts,
-    })
-    console.info('[runtime-vapor graph] mixed', {
-      modules: mixed.modules,
-      wasmArtifacts: mixed.wasmArtifacts,
-    })
+    console.info('[runtime-vapor graph] full', full.modules)
+    console.info('[runtime-vapor graph] vapor', vapor.modules)
+    console.info('[runtime-vapor graph] mixed', mixed.modules)
 
-    expect(full.wasmArtifacts).toEqual([
-      expect.objectContaining({
-        kind: 'canonical-browser',
-        module: expect.stringContaining('/pkg-vapor/'),
-      }),
-    ])
-    expect(vapor.wasmArtifacts).toEqual([
-      expect.objectContaining({
-        kind: 'canonical-browser',
-        module: expect.stringContaining('/pkg-vapor/'),
-      }),
-    ])
-    expect(mixed.wasmArtifacts).toHaveLength(1)
-    expect(mixed.wasmArtifacts[0]).toEqual(full.wasmArtifacts[0])
-    expect(mixed.wasmArtifacts[0]).toEqual(vapor.wasmArtifacts[0])
+    expect(full.kernelModules.length).toBeGreaterThan(0)
+    expect(vapor.kernelModules).toEqual(full.kernelModules)
+    expect(mixed.kernelModules).toEqual(full.kernelModules)
+    expect(full.forbiddenModules).toEqual([])
+    expect(vapor.forbiddenModules).toEqual([])
+    expect(mixed.forbiddenModules).toEqual([])
   })
 
-  it('uses a JavaScript createRue shell with the vapor Wasm reactive kernel', async () => {
+  it('uses a JavaScript createRue shell with the TypeScript reactive kernel', async () => {
     const bundle = await buildRuntimeBundle(
       'vapor-instance',
       `import { createRue } from ${JSON.stringify(vaporEntry)}\n` +

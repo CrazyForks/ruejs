@@ -38,9 +38,11 @@ export default ControlledInputs;
     // 期望输出要点对照：
     // - 受控 input：value 走 watch；onInput 绑定更新 state
     // - 文本回显：_$createTextWrapper + _$settextContent + watch
-    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { useState, _$vaporWithHookId, useSetup, vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">受控输入</h3>');
 const ControlledInputs: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const [text, setText] = _$vaporWithHookId("useState:1:0", ()=>useState(''));
@@ -53,10 +55,7 @@ const ControlledInputs: FC = ()=>{
     return vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold");
-        _$appendChild(_el1, _$createTextNode("受控输入"));
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
         const _el2 = _$createElement("input", _root);
         _$appendChild(_root, _el2);
         _$setClassName(_el2, "border rounded-md px-2 py-1");

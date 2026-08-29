@@ -3035,7 +3035,7 @@ const deserializeWorkerError = rawError => {
 }
 
 /** 创建 Rue SWC wasm 插件使用的 @swc/core 转换配置。 */
-const createSwcTransformOptions = ({ pluginPath, isProduction }) => ({
+const createSwcTransformOptions = ({ pluginPath, isProduction, staticTemplates = false }) => ({
   filename: 'rue.tsx',
   jsc: {
     parser: { syntax: 'typescript', tsx: true },
@@ -3049,19 +3049,20 @@ const createSwcTransformOptions = ({ pluginPath, isProduction }) => ({
       },
     },
     experimental: {
-      plugins: [[pluginPath, {}]],
+      plugins: [[pluginPath, { staticTemplates }]],
     },
   },
   minify: isProduction,
 })
 
 /** 在当前线程内直接执行 SWC 转换，主要用于 build 阶段减少 worker 开销。 */
-const runSwcTransformInline = async ({ code, pluginPath, isProduction }) => {
+const runSwcTransformInline = async ({ code, pluginPath, isProduction, staticTemplates }) => {
   const out = await swc.transform(
     code,
     createSwcTransformOptions({
       pluginPath,
       isProduction: isProduction ?? process.env.NODE_ENV === 'production',
+      staticTemplates,
     }),
   )
   return String(out?.code ?? '')
@@ -3086,6 +3087,7 @@ const preprocessRueSource = (code, id = '') => {
  * @param {string} [options.pluginPath] Rue SWC wasm 插件路径。
  * @param {boolean} [options.production] 是否按生产模式编译。
  * @param {boolean} [options.includeHeader] 是否附加 Rue 转换头，默认 true。
+ * @param {boolean} [options.staticTemplates] 是否启用仅适用于浏览器 DOM 的静态模板快路径，默认 false。
  * @returns {Promise<string>} 编译后的 JavaScript 源码。
  */
 export async function compileRueStatic(code, options = {}) {
@@ -3094,6 +3096,7 @@ export async function compileRueStatic(code, options = {}) {
     pluginPath = requireFromHere.resolve('@rue-js/swc-plugin-rue'),
     production = process.env.NODE_ENV === 'production',
     includeHeader = true,
+    staticTemplates = false,
   } = options
 
   let loweredModel
@@ -3115,6 +3118,7 @@ export async function compileRueStatic(code, options = {}) {
       code: loweredModel,
       pluginPath,
       isProduction: production,
+      staticTemplates,
     })
     const normalizedOut = preserveRscDirectivePrologue(code, out)
     if (!includeHeader) {
@@ -3242,7 +3246,14 @@ export function customElement(options = {}) {
 }
 
 /** 在 worker 线程内执行 SWC 转换，开发阶段可通过超时终止异常转换。 */
-const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs, isProduction }) =>
+const runSwcTransformInWorker = ({
+  code,
+  id,
+  pluginPath,
+  timeoutMs,
+  isProduction,
+  staticTemplates,
+}) =>
   new Promise((resolve, reject) => {
     let settled = false
     let timer = null
@@ -3267,6 +3278,7 @@ const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs, isProduction
           code,
           pluginPath,
           isProduction: isProduction ?? process.env.NODE_ENV === 'production',
+          staticTemplates,
         },
       })
     } catch (error) {
@@ -3324,7 +3336,7 @@ const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs, isProduction
  * @param {boolean} [options.debug] 是否输出转换调试日志。
  * @param {number} [options.transformTimeoutMs] SWC 转换超时时间，单位为毫秒。
  * @param {number} [options.transformConcurrency] 同时执行的 SWC 转换数，默认 8。
- * @param {(payload: { code: string, id: string, pluginPath: string, timeoutMs: number }) => Promise<string> | string} [options.transformExecutor] 自定义转换执行器，主要用于测试。
+ * @param {(payload: { code: string, id: string, pluginPath: string, timeoutMs: number, staticTemplates: boolean }) => Promise<string> | string} [options.transformExecutor] 自定义转换执行器，主要用于测试。
  * @returns {import('vite').Plugin} Vite 插件对象。
  */
 export default function VitePluginRue(options = {}) {
@@ -3542,6 +3554,7 @@ export const startRueIslands = (options = {}) => startRueIslandLoader({
             pluginPath,
             timeoutMs: transformTimeoutMs,
             isProduction: isProductionTransform,
+            staticTemplates: isProductionTransform && !serverGraph,
           }),
           { id, timeoutMs: transformTimeoutMs },
         ),

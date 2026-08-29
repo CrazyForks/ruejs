@@ -30,6 +30,7 @@ import {
 import type { DomElementLike, DomNodeLike } from '../dom'
 import { signal, watchEffect } from '../reactivity'
 import { useSetup } from '@rue-js/runtime-vapor/reactive'
+import { RUE_KEEP_ALIVE_HOOK_TARGET_KEY, RUE_MOUNT_ID_KEY } from '@rue-js/runtime-vapor/protocol'
 import { registerKeepAliveDisposer, registerKeepAlivePropsUpdater } from './keepAlivePropsBridge'
 import { markBuiltinComponent } from './builtinMarkers'
 
@@ -73,9 +74,7 @@ type ChildDescriptor = {
 
 const DEFAULT_CACHE_KEY = Symbol('rue-keep-alive-default')
 // onActivated/onDeactivated 注册时通过全局临时槽找到正在 render 的 KeepAlive entry。
-const RUE_KEEP_ALIVE_HOOK_TARGET_KEY = '__rue_keep_alive_hook_target__'
 const RUE_KEEP_ALIVE_RANGE_KEY = '__rue_keep_alive_range__'
-const RUE_MOUNT_ID_KEY = '__rue_mount_id'
 
 const markKeepAliveHookTarget = (value: unknown, entry: CacheEntry) => {
   if (Array.isArray(value)) {

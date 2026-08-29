@@ -3,11 +3,16 @@ Context 运行时架构
 - Provider 的真实上下文边界不是 JSX 调用点，而是运行时里“当前正在渲染的 owner”。
 - createContext 会拆成两层：外层 ProviderImpl 只负责捕获 value；内层 ProviderBoundary 在真正的 currentInstance 上挂 store。
 - useContext 查找祖先时优先走 runtime owner 链（owner parent / linked instance），只有缺失时才回退到 props 上的 parent-instance 兼容字段。
-- rue.ts / vapor-runtime.ts 的 replay 逻辑必须把 Provider 的 value 和 parent-instance 当成“按引用保留”的结构；一旦深拷贝，就会把 ref / action / owner 链复制坏，既可能让交互失活，也会把示例页切换拖进慢路径。
+- 共享 client runtime 的 replay 逻辑必须把 Provider 的 value 和 parent-instance 当成“按引用保留”的结构；一旦深拷贝，就会把 ref / action / owner 链复制坏，既可能让交互失活，也会把示例页切换拖进慢路径。
 */
 
 import { getCurrentInstance } from './reactivity'
-import { h, type ComponentProps } from './rue'
+import { h } from './jsx'
+import type { ComponentProps } from './runtime-types'
+import {
+  RUE_PORTABLE_COMPONENT_TYPE_KEY,
+  RUE_REPEATABLE_MOUNT_FACTORY_KEY,
+} from '@rue-js/runtime-vapor/protocol'
 
 const RUE_CONTEXT_VALUE_STORE_PROP = '__rue_context_value_store__'
 const RUE_CONTEXT_LINKED_INSTANCE_PROP = '__rue_context_linked_instance__'
@@ -17,17 +22,15 @@ const RUE_CONTEXT_PRESERVE_PARENT_INSTANCE_PROP = '__rue_context_preserve_parent
 const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
 const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const RUE_CONTEXT_PROVIDER_PROPS_MARKER = '__rue_context_provider_props__'
-const RUE_PORTABLE_COMPONENT_TYPE_PROP = '__rue_component_type'
 const RUE_PORTABLE_PROPS_PROP = 'props'
-const RUE_REPEATABLE_MOUNT_FACTORY_PROP = '__rue_repeatable_mount_factory__'
 const TEXT_CONTEXT_VALUE_STACK_KEY = Symbol.for('text.contextValueStack')
 
 type ContextualComponent = (props: Record<string, unknown>) => unknown
 
 type PortableComponentHandle = {
-  [RUE_PORTABLE_COMPONENT_TYPE_PROP]?: string | ContextualComponent
+  [RUE_PORTABLE_COMPONENT_TYPE_KEY]?: string | ContextualComponent
   [RUE_PORTABLE_PROPS_PROP]?: Record<string, unknown> | null
-  [RUE_REPEATABLE_MOUNT_FACTORY_PROP]?: () => unknown
+  [RUE_REPEATABLE_MOUNT_FACTORY_KEY]?: () => unknown
 }
 
 type ContextCarrier = {
@@ -278,7 +281,7 @@ export const withParentContextProps = <T extends Record<string, unknown> | null>
 }
 
 const refreshPortableComponentHandleReplayFactory = (handle: PortableComponentHandle) => {
-  Object.defineProperty(handle, RUE_REPEATABLE_MOUNT_FACTORY_PROP, {
+  Object.defineProperty(handle, RUE_REPEATABLE_MOUNT_FACTORY_KEY, {
     configurable: true,
     enumerable: false,
     value: () => {
@@ -307,12 +310,12 @@ const bindProviderChildrenToCurrentInstance = (children: unknown): unknown => {
   // 但它返回的 children 可能是提前构造好的 portable component handle，handle 里仍然记着“外层调用者”的 parent-instance。
   // 如果不在这里把这些顶层 handle 重新绑到当前 boundary owner，上下文查找会从错误的祖先开始，嵌套 Consumer 就会越过当前 Provider。
   const handle = asContextCarrier(children) as PortableComponentHandle | null
-  if (!handle || !(RUE_PORTABLE_COMPONENT_TYPE_PROP in handle)) {
+  if (!handle || !(RUE_PORTABLE_COMPONENT_TYPE_KEY in handle)) {
     return children
   }
 
   const nextProps = withParentContextProps(
-    handle[RUE_PORTABLE_COMPONENT_TYPE_PROP] as string | ContextualComponent,
+    handle[RUE_PORTABLE_COMPONENT_TYPE_KEY] as string | ContextualComponent,
     (handle[RUE_PORTABLE_PROPS_PROP] as Record<string, unknown> | null) ?? null,
   )
   handle[RUE_PORTABLE_PROPS_PROP] = nextProps

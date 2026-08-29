@@ -61,3 +61,7 @@ export const normalizeRenderable = (value: unknown): NormalizeRenderableResult =
   }
   return { kind: 'unsupported-object', value }
 }
+
+/** Empty normalized arrays map to the backend's explicit clear input. */
+export const isEmptyNormalizedRenderable = (value: NormalizedRenderable): boolean =>
+  Array.isArray(value) && value.length === 0

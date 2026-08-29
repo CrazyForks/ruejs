@@ -1,12 +1,22 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
-import { createRue } from '../../runtime-vapor/js-runtime/create-rue.js'
+import {
+  RUE_CLEANUP_BUCKET_KEY,
+  RUE_EFFECT_SCOPE_ID_KEY,
+  RUE_KEEP_ALIVE_HOOK_TARGET_KEY,
+  RUE_MOUNT_ID_KEY,
+  RUE_PORTABLE_COMPONENT_ID_KEY,
+  RUE_PORTABLE_COMPONENT_TYPE_KEY,
+  RUE_PORTABLE_VAPOR_SETUP_KEY,
+  RUE_REPEATABLE_MOUNT_FACTORY_KEY,
+} from '@rue-js/runtime-vapor/protocol'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
+import { createRue } from '../../runtime-vapor/dist/js-runtime/create-rue.js'
 import {
   PORTABLE_COMPONENT_TYPE_KEY,
   PORTABLE_VAPOR_SETUP_KEY,
   REPEATABLE_MOUNT_FACTORY_KEY,
-} from '../../runtime-vapor/js-runtime/types.js'
+} from '../../runtime-vapor/dist/js-runtime/types.js'
 import { vapor as createVaporSetupHandle } from '../src/vapor-core'
 
 const createRecorder = () => {
@@ -21,6 +31,52 @@ const createRecorder = () => {
 }
 
 describe('runtime-vapor JavaScript MountInput protocol', () => {
+  it('consumes component, vapor, and repeatable handles built from the public protocol', () => {
+    const { calls, kernel } = createRecorder()
+    const runtime = createRue(undefined, kernel)
+    const Component = () => null
+    const setup = vi.fn()
+    const cleanup = [vi.fn()]
+    const keepAliveTarget = { id: 'keep-alive' }
+
+    runtime.render(
+      {
+        [RUE_PORTABLE_COMPONENT_TYPE_KEY]: Component,
+        [RUE_PORTABLE_COMPONENT_ID_KEY]: 'public-component',
+        [RUE_CLEANUP_BUCKET_KEY]: cleanup,
+        [RUE_EFFECT_SCOPE_ID_KEY]: 17,
+        [RUE_KEEP_ALIVE_HOOK_TARGET_KEY]: keepAliveTarget,
+        props: { label: 'public' },
+      },
+      {},
+    )
+    runtime.render({ [RUE_PORTABLE_VAPOR_SETUP_KEY]: setup }, {})
+
+    const storedHandle = runtime.createElement('article')
+    const repeatableFactory = vi.fn(() => runtime.createElement('article'))
+    const repeatableHandle = {
+      [RUE_MOUNT_ID_KEY]: storedHandle[RUE_MOUNT_ID_KEY],
+      [RUE_REPEATABLE_MOUNT_FACTORY_KEY]: repeatableFactory,
+    }
+    runtime.render(repeatableHandle, {})
+    runtime.render(repeatableHandle, {})
+
+    expect(calls.map(call => (call[2] as any)?.type)).toEqual([
+      { kind: 'component', component: Component },
+      { kind: 'vapor', setup },
+      { kind: 'element', tag: 'article' },
+      { kind: 'element', tag: 'article' },
+    ])
+    const componentMountInput = calls[0]?.[2] as any
+    expect(componentMountInput.portable).toMatchObject({
+      [RUE_PORTABLE_COMPONENT_ID_KEY]: 'public-component',
+      [RUE_KEEP_ALIVE_HOOK_TARGET_KEY]: keepAliveTarget,
+    })
+    expect(componentMountInput.mountCleanupBucket).toBe(cleanup)
+    expect(componentMountInput.mountEffectScopeId).toBe(17)
+    expect(repeatableFactory).toHaveBeenCalledTimes(1)
+  })
+
   it('normalizes tagged element handles without touching the DOM adapter', () => {
     const adapterAccess = vi.fn()
     const adapter = new Proxy(

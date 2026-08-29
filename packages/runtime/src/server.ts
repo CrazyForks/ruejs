@@ -1,4 +1,9 @@
 import { nextTick } from '@rue-js/runtime-vapor/reactive'
+import {
+  RUE_PORTABLE_COMPONENT_TYPE_KEY,
+  RUE_PORTABLE_VAPOR_SETUP_KEY,
+  RUE_REPEATABLE_MOUNT_FACTORY_KEY,
+} from '@rue-js/runtime-vapor/protocol'
 
 import {
   getDOMAdapter,
@@ -51,10 +56,7 @@ const SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
 const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__'
 const SERVER_RENDERING_BASE_ADAPTER_KEY = '__rue_server_rendering_base_adapter__'
 const SERVER_RENDERING_ADAPTER_STACK_KEY = '__rue_server_rendering_adapter_stack__'
-const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
-const RUE_PORTABLE_VAPOR_SETUP_KEY = '__rue_vapor_setup'
 const RUE_PORTABLE_PROPS_KEY = 'props'
-const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
 const SERVER_PROTOCOL_ELEMENT_SYMBOLS = new Set([
   Symbol.for('rue.transitional.element'),
   Symbol.for('rue.element'),
@@ -150,6 +152,18 @@ export class ServerElementNode extends ServerNode implements DomElementLike {
   removeAttribute(name: string) {
     this.attributes.delete(name)
   }
+
+  get className() {
+    return this.attributes.get('class') ?? ''
+  }
+
+  set className(value: any) {
+    this.attributes.set('class', value == null ? '' : String(value))
+  }
+
+  addEventListener() {}
+
+  removeEventListener() {}
 }
 
 export class ServerFragmentNode extends ServerNode implements DomFragmentLike {
@@ -517,7 +531,7 @@ function resolveClientReferenceComponentType(type: unknown): unknown {
 }
 
 function isRuePortableComponentHandle(value: unknown): value is {
-  __rue_component_type: unknown
+  [RUE_PORTABLE_COMPONENT_TYPE_KEY]: unknown
   props?: Record<string, unknown> | null
 } {
   return (
@@ -528,7 +542,7 @@ function isRuePortableComponentHandle(value: unknown): value is {
 }
 
 function isRuePortableVaporHandle(value: unknown): value is {
-  __rue_vapor_setup: (parentContext?: DomElementLike | null) => unknown
+  [RUE_PORTABLE_VAPOR_SETUP_KEY]: (parentContext?: DomElementLike | null) => unknown
 } {
   return (
     typeof value === 'object' &&

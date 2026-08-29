@@ -221,6 +221,685 @@ fn try_emit_static_expr_attr(
     false
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum DomBindingClass {
+    Static,
+    CompiledScalar,
+    CompiledEvent,
+    CompiledRef,
+    Vapor,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct CompiledEventSpec {
+    name: String,
+    capture: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum CompiledDomBinding {
+    ClassName,
+    Style,
+    Value,
+    BooleanProperty(String),
+    Attribute(String),
+}
+
+fn compiled_member(object: Expr, property: &str) -> Expr {
+    Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(object),
+        prop: MemberProp::Ident(ident_name(property)),
+    })
+}
+
+fn compiled_call(callee: Expr, args: Vec<Expr>) -> Expr {
+    Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(callee)),
+        args: args
+            .into_iter()
+            .map(|expr| ExprOrSpread { spread: None, expr: Box::new(expr) })
+            .collect(),
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
+fn compiled_call_member(object: Expr, property: &str, args: Vec<Expr>) -> Expr {
+    compiled_call(compiled_member(object, property), args)
+}
+
+fn compiled_let_decl(name: Ident) -> Stmt {
+    Stmt::Decl(Decl::Var(Box::new(VarDecl {
+        span: DUMMY_SP,
+        ctxt: SyntaxContext::empty(),
+        kind: VarDeclKind::Let,
+        declare: false,
+        decls: vec![VarDeclarator {
+            span: DUMMY_SP,
+            name: Pat::Ident(BindingIdent { id: name, type_ann: None }),
+            init: None,
+            definite: false,
+        }],
+    })))
+}
+
+fn compiled_assign_ident(name: Ident, value: Expr) -> Stmt {
+    push_assignment(
+        AssignTarget::Simple(SimpleAssignTarget::Ident(BindingIdent { id: name, type_ann: None })),
+        value,
+    )
+}
+
+fn push_assignment(left: AssignTarget, value: Expr) -> Stmt {
+    Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(Expr::Assign(AssignExpr {
+            span: DUMMY_SP,
+            op: AssignOp::Assign,
+            left,
+            right: Box::new(value),
+        })),
+    })
+}
+
+fn compiled_assign_member(object: Expr, property: &str, value: Expr) -> Stmt {
+    push_assignment(
+        AssignTarget::Simple(SimpleAssignTarget::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(object),
+            prop: MemberProp::Ident(ident_name(property)),
+        })),
+        value,
+    )
+}
+
+fn is_nullish(value: Expr) -> Expr {
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::EqEq,
+        left: Box::new(value),
+        right: Box::new(Expr::Lit(Lit::Null(Null { span: DUMMY_SP }))),
+    })
+}
+
+fn normalized_string(value: Expr) -> Expr {
+    Expr::Cond(CondExpr {
+        span: DUMMY_SP,
+        test: Box::new(is_nullish(value.clone())),
+        cons: Box::new(string_expr("")),
+        alt: Box::new(call_ident("String", vec![value])),
+    })
+}
+
+fn normalized_boolean(value: Expr) -> Expr {
+    call_ident("Boolean", vec![value])
+}
+
+fn attr_binding_kind(name: &str) -> CompiledDomBinding {
+    match name {
+        "className" => CompiledDomBinding::ClassName,
+        "style" => CompiledDomBinding::Style,
+        "value" => CompiledDomBinding::Value,
+        "checked" | "disabled" | "multiple" => {
+            CompiledDomBinding::BooleanProperty(name.to_string())
+        }
+        _ => CompiledDomBinding::Attribute(name.to_string()),
+    }
+}
+
+fn compiled_event_spec(name: &str) -> Option<CompiledEventSpec> {
+    let suffix = name.strip_prefix("on")?;
+    if !suffix.chars().next().is_some_and(|character| character.is_uppercase()) {
+        return None;
+    }
+
+    // `onXCapture` is a compile-time-known listener option. Pointer-capture event names
+    // themselves keep their full browser event name.
+    let capture = suffix.ends_with("Capture")
+        && !matches!(suffix, "GotPointerCapture" | "LostPointerCapture");
+    let event = if capture { suffix.strip_suffix("Capture")? } else { suffix };
+    (!event.is_empty()).then(|| CompiledEventSpec { name: event.to_ascii_lowercase(), capture })
+}
+
+fn is_compiled_event_handler_expr(expr: &Expr) -> bool {
+    matches!(unwrap_expr(expr), Expr::Ident(_) | Expr::Member(_) | Expr::Arrow(_) | Expr::Fn(_))
+}
+
+fn is_compiled_ref_expr(expr: &Expr) -> bool {
+    matches!(unwrap_expr(expr), Expr::Ident(_) | Expr::Member(_) | Expr::Arrow(_) | Expr::Fn(_))
+}
+
+fn classify_dom_attr_with_shadows(
+    attr: &JSXAttr,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> DomBindingClass {
+    let JSXAttrName::Ident(name) = &attr.name else {
+        return DomBindingClass::Vapor;
+    };
+    let name = name.sym.as_ref();
+    if name == "key" || name == "__rue_static_template_id__" {
+        return DomBindingClass::Static;
+    }
+    if name == "dangerouslySetInnerHTML" || name.starts_with("__rue_") {
+        return DomBindingClass::Vapor;
+    }
+
+    if name == "ref" {
+        return match &attr.value {
+            Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                expr: JSXExpr::Expr(expr),
+                ..
+            })) if is_compiled_ref_expr(expr.as_ref()) => DomBindingClass::CompiledRef,
+            _ => DomBindingClass::Vapor,
+        };
+    }
+
+    if compiled_event_spec(name).is_some() {
+        return match &attr.value {
+            Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                expr: JSXExpr::Expr(expr),
+                ..
+            })) if is_compiled_event_handler_expr(expr.as_ref()) => DomBindingClass::CompiledEvent,
+            _ => DomBindingClass::Vapor,
+        };
+    }
+
+    match &attr.value {
+        Some(JSXAttrValue::Str(_)) | None => DomBindingClass::Static,
+        Some(JSXAttrValue::JSXExprContainer(container)) => {
+            let JSXExpr::Expr(expr) = &container.expr else {
+                return DomBindingClass::Static;
+            };
+            let inner = unwrap_expr(expr.as_ref());
+            let is_static = if name == "style" {
+                get_static_style_expr(inner).is_some()
+            } else if name == "disabled" || name == "checked" || name == "multiple" {
+                get_static_truthy_bool(inner).is_some()
+            } else if name == "value" {
+                get_static_literal_value_expr(inner).is_some()
+            } else {
+                get_static_stringified_expr(inner).is_some()
+            };
+            if is_static {
+                DomBindingClass::Static
+            } else if crate::vapor::is_compiled_scalar_expr_with_shadows(inner, shadowed_names) {
+                DomBindingClass::CompiledScalar
+            } else {
+                DomBindingClass::Vapor
+            }
+        }
+        _ => DomBindingClass::Vapor,
+    }
+}
+
+pub(crate) fn attrs_support_compiled_scalar(
+    opening: &JSXOpeningElement,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    opening.attrs.iter().all(|attr| match attr {
+        JSXAttrOrSpread::JSXAttr(attr) => {
+            classify_dom_attr_with_shadows(attr, shadowed_names) != DomBindingClass::Vapor
+        }
+        JSXAttrOrSpread::SpreadElement(_) => false,
+    })
+}
+
+pub(crate) fn attrs_have_compiled_scalar(
+    opening: &JSXOpeningElement,
+    shadowed_names: &std::collections::HashSet<String>,
+) -> bool {
+    opening.attrs.iter().any(|attr| match attr {
+        JSXAttrOrSpread::JSXAttr(attr) => {
+            matches!(
+                classify_dom_attr_with_shadows(attr, shadowed_names),
+                DomBindingClass::CompiledScalar
+                    | DomBindingClass::CompiledEvent
+                    | DomBindingClass::CompiledRef
+            )
+        }
+        JSXAttrOrSpread::SpreadElement(_) => false,
+    })
+}
+
+fn compiled_arrow(params: Vec<Pat>, body: BlockStmtOrExpr) -> Expr {
+    Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params,
+        body: Box::new(body),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
+fn emit_compiled_event(
+    vt: &mut crate::vapor::VaporTransform,
+    stmts: &mut Vec<Stmt>,
+    target: &Ident,
+    attr_name: &str,
+    handler: &Expr,
+) {
+    let spec = compiled_event_spec(attr_name).expect("compiled event must have a static name");
+    let listener = vt.next_event_ident();
+    let event = ident("$event");
+    let invoke = compiled_call(handler.clone(), vec![Expr::Ident(event.clone())]);
+    stmts.push(const_decl(
+        listener.clone(),
+        compiled_arrow(
+            vec![Pat::Ident(BindingIdent { id: event, type_ann: None })],
+            BlockStmtOrExpr::Expr(Box::new(invoke)),
+        ),
+    ));
+
+    let options = spec.capture.then(|| {
+        let options = ident(&format!("{}_options", listener.sym));
+        stmts.push(const_decl(
+            options.clone(),
+            Expr::Object(ObjectLit {
+                span: DUMMY_SP,
+                props: vec![PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("capture")),
+                    value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+                })))],
+            }),
+        ));
+        options
+    });
+
+    let listener_args = || {
+        let mut args = vec![string_expr(&spec.name), Expr::Ident(listener.clone())];
+        if let Some(options) = &options {
+            args.push(Expr::Ident(options.clone()));
+        }
+        args
+    };
+    push_expr_stmt(
+        stmts,
+        compiled_call_member(Expr::Ident(target.clone()), "addEventListener", listener_args()),
+    );
+    let remove =
+        compiled_call_member(Expr::Ident(target.clone()), "removeEventListener", listener_args());
+    push_expr_stmt(
+        stmts,
+        call_ident(
+            "onCleanup",
+            vec![compiled_arrow(vec![], BlockStmtOrExpr::Expr(Box::new(remove)))],
+        ),
+    );
+}
+
+fn compiled_typeof_is(value: &Ident, kind: &str) -> Expr {
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::EqEqEq,
+        left: Box::new(Expr::Unary(UnaryExpr {
+            span: DUMMY_SP,
+            op: UnaryOp::TypeOf,
+            arg: Box::new(Expr::Ident(value.clone())),
+        })),
+        right: Box::new(string_expr(kind)),
+    })
+}
+
+fn compiled_object_ref_test(value: &Ident) -> Expr {
+    let exists_and_object = Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalAnd,
+        left: Box::new(Expr::Ident(value.clone())),
+        right: Box::new(compiled_typeof_is(value, "object")),
+    });
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalAnd,
+        left: Box::new(exists_and_object),
+        right: Box::new(Expr::Bin(BinExpr {
+            span: DUMMY_SP,
+            op: BinaryOp::In,
+            left: Box::new(string_expr("current")),
+            right: Box::new(Expr::Ident(value.clone())),
+        })),
+    })
+}
+
+fn compiled_ref_apply(value: &Ident, assigned: Expr) -> Stmt {
+    let call_function = Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(compiled_call(Expr::Ident(value.clone()), vec![assigned.clone()])),
+    });
+    let assign_object = compiled_assign_member(Expr::Ident(value.clone()), "current", assigned);
+    Stmt::If(IfStmt {
+        span: DUMMY_SP,
+        test: Box::new(compiled_typeof_is(value, "function")),
+        cons: Box::new(call_function),
+        alt: Some(Box::new(Stmt::If(IfStmt {
+            span: DUMMY_SP,
+            test: Box::new(compiled_object_ref_test(value)),
+            cons: Box::new(assign_object),
+            alt: None,
+        }))),
+    })
+}
+
+fn emit_compiled_ref(
+    vt: &mut crate::vapor::VaporTransform,
+    stmts: &mut Vec<Stmt>,
+    target: &Ident,
+    value: &Expr,
+) {
+    let reference = vt.next_ref_ident();
+    stmts.push(const_decl(reference.clone(), value.clone()));
+    stmts.push(compiled_ref_apply(&reference, Expr::Ident(target.clone())));
+    let cleanup = compiled_ref_apply(&reference, Expr::Lit(Lit::Null(Null { span: DUMMY_SP })));
+    push_expr_stmt(
+        stmts,
+        call_ident(
+            "onCleanup",
+            vec![compiled_arrow(
+                vec![],
+                BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    ctxt: SyntaxContext::empty(),
+                    stmts: vec![cleanup],
+                }),
+            )],
+        ),
+    );
+}
+
+fn emit_direct_attribute(stmts: &mut Vec<Stmt>, target: &Ident, name: &str, value: Expr) {
+    push_expr_stmt(
+        stmts,
+        compiled_call_member(
+            Expr::Ident(target.clone()),
+            "setAttribute",
+            vec![string_expr(name), value],
+        ),
+    );
+}
+
+fn emit_direct_static_attr(
+    stmts: &mut Vec<Stmt>,
+    target: &Ident,
+    name: &str,
+    value: Option<&JSXAttrValue>,
+) {
+    match value {
+        Some(JSXAttrValue::Str(value)) => match name {
+            "className" => stmts.push(compiled_assign_member(
+                Expr::Ident(target.clone()),
+                "className",
+                Expr::Lit(Lit::Str(value.clone())),
+            )),
+            "style" => stmts.push(compiled_assign_member(
+                compiled_member(Expr::Ident(target.clone()), "style"),
+                "cssText",
+                Expr::Lit(Lit::Str(value.clone())),
+            )),
+            "value" => stmts.push(compiled_assign_member(
+                Expr::Ident(target.clone()),
+                "value",
+                Expr::Lit(Lit::Str(value.clone())),
+            )),
+            "checked" | "disabled" | "multiple" => stmts.push(compiled_assign_member(
+                Expr::Ident(target.clone()),
+                name,
+                Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+            )),
+            _ => emit_direct_attribute(stmts, target, name, Expr::Lit(Lit::Str(value.clone()))),
+        },
+        Some(JSXAttrValue::JSXExprContainer(container)) => {
+            let JSXExpr::Expr(expr) = &container.expr else {
+                return;
+            };
+            let inner = unwrap_expr(expr.as_ref());
+            match name {
+                "style" => {
+                    let Some(style) = get_static_style_expr(inner) else {
+                        return;
+                    };
+                    if matches!(style, Expr::Object(_)) {
+                        push_expr_stmt(
+                            stmts,
+                            compiled_call_member(
+                                Expr::Ident(ident("Object")),
+                                "assign",
+                                vec![compiled_member(Expr::Ident(target.clone()), "style"), style],
+                            ),
+                        );
+                    } else {
+                        stmts.push(compiled_assign_member(
+                            compiled_member(Expr::Ident(target.clone()), "style"),
+                            "cssText",
+                            normalized_string(style),
+                        ));
+                    }
+                }
+                "className" => {
+                    if let Some(value) = get_static_stringified_expr(inner) {
+                        stmts.push(compiled_assign_member(
+                            Expr::Ident(target.clone()),
+                            "className",
+                            value,
+                        ));
+                    }
+                }
+                "value" => {
+                    if let Some(value) = get_static_literal_value_expr(inner) {
+                        stmts.push(compiled_assign_member(
+                            Expr::Ident(target.clone()),
+                            "value",
+                            normalized_string(value),
+                        ));
+                    }
+                }
+                "checked" | "disabled" | "multiple" => {
+                    if let Some(value) = get_static_truthy_bool(inner) {
+                        stmts.push(compiled_assign_member(
+                            Expr::Ident(target.clone()),
+                            name,
+                            Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value })),
+                        ));
+                    }
+                }
+                _ => {
+                    if let Some(value) = get_static_stringified_expr(inner) {
+                        emit_direct_attribute(stmts, target, name, value);
+                    }
+                }
+            }
+        }
+        None => match name {
+            "checked" | "disabled" | "multiple" => stmts.push(compiled_assign_member(
+                Expr::Ident(target.clone()),
+                name,
+                Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+            )),
+            name if is_string_boolean_attr(name) => {
+                emit_direct_attribute(stmts, target, name, string_expr("true"));
+            }
+            _ => {}
+        },
+        _ => {}
+    }
+}
+
+fn emit_compiled_binding_effect(
+    vt: &mut crate::vapor::VaporTransform,
+    stmts: &mut Vec<Stmt>,
+    target: &Ident,
+    inner: &Expr,
+    binding_kind: CompiledDomBinding,
+) {
+    let binding = vt.next_child_ident();
+    let raw = ident(&format!("{}_raw", binding.sym));
+    let next = ident(&format!("{}_next", binding.sym));
+    stmts.push(compiled_let_decl(binding.clone()));
+
+    let next_expr = match &binding_kind {
+        CompiledDomBinding::ClassName | CompiledDomBinding::Style | CompiledDomBinding::Value => {
+            normalized_string(Expr::Ident(raw.clone()))
+        }
+        CompiledDomBinding::BooleanProperty(_) => normalized_boolean(Expr::Ident(raw.clone())),
+        CompiledDomBinding::Attribute(_) => Expr::Ident(raw.clone()),
+    };
+    let changed = Expr::Unary(UnaryExpr {
+        span: DUMMY_SP,
+        op: UnaryOp::Bang,
+        arg: Box::new(compiled_call_member(
+            Expr::Ident(ident("Object")),
+            "is",
+            vec![Expr::Ident(binding.clone()), Expr::Ident(next.clone())],
+        )),
+    });
+
+    let write = match &binding_kind {
+        CompiledDomBinding::ClassName => compiled_assign_member(
+            Expr::Ident(target.clone()),
+            "className",
+            Expr::Ident(next.clone()),
+        ),
+        CompiledDomBinding::Style => compiled_assign_member(
+            compiled_member(Expr::Ident(target.clone()), "style"),
+            "cssText",
+            Expr::Ident(next.clone()),
+        ),
+        CompiledDomBinding::Value => {
+            compiled_assign_member(Expr::Ident(target.clone()), "value", Expr::Ident(next.clone()))
+        }
+        CompiledDomBinding::BooleanProperty(name) => {
+            compiled_assign_member(Expr::Ident(target.clone()), name, Expr::Ident(next.clone()))
+        }
+        CompiledDomBinding::Attribute(name) => {
+            let remove = Stmt::Expr(ExprStmt {
+                span: DUMMY_SP,
+                expr: Box::new(compiled_call_member(
+                    Expr::Ident(target.clone()),
+                    "removeAttribute",
+                    vec![string_expr(name)],
+                )),
+            });
+            let set = Stmt::Expr(ExprStmt {
+                span: DUMMY_SP,
+                expr: Box::new(compiled_call_member(
+                    Expr::Ident(target.clone()),
+                    "setAttribute",
+                    vec![string_expr(name), call_ident("String", vec![Expr::Ident(next.clone())])],
+                )),
+            });
+            let false_value = Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::EqEqEq,
+                left: Box::new(Expr::Ident(next.clone())),
+                right: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false }))),
+            });
+            Stmt::If(IfStmt {
+                span: DUMMY_SP,
+                test: Box::new(Expr::Bin(BinExpr {
+                    span: DUMMY_SP,
+                    op: BinaryOp::LogicalOr,
+                    left: Box::new(is_nullish(Expr::Ident(next.clone()))),
+                    right: Box::new(false_value),
+                })),
+                cons: Box::new(remove),
+                alt: Some(Box::new(set)),
+            })
+        }
+    };
+
+    let arrow = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: vec![
+                const_decl(raw, inner.clone()),
+                const_decl(next.clone(), next_expr),
+                Stmt::If(IfStmt {
+                    span: DUMMY_SP,
+                    test: Box::new(changed),
+                    cons: Box::new(Stmt::Block(BlockStmt {
+                        span: DUMMY_SP,
+                        ctxt: SyntaxContext::empty(),
+                        stmts: vec![compiled_assign_ident(binding, Expr::Ident(next)), write],
+                    })),
+                    alt: None,
+                }),
+            ],
+        })),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    push_expr_stmt(stmts, call_ident("effect", vec![arrow]));
+}
+
+pub(crate) fn emit_compiled_attrs_for(
+    vt: &mut crate::vapor::VaporTransform,
+    stmts: &mut Vec<Stmt>,
+    target: &Ident,
+    opening: &JSXOpeningElement,
+) {
+    let shadowed_names = vt.current_scalar_constructor_shadows();
+    for attr in &opening.attrs {
+        let JSXAttrOrSpread::JSXAttr(attr) = attr else {
+            continue;
+        };
+        let JSXAttrName::Ident(name) = &attr.name else {
+            continue;
+        };
+        let name = name.sym.as_ref();
+        if name == "key" || name == "__rue_static_template_id__" {
+            continue;
+        }
+        match classify_dom_attr_with_shadows(attr, &shadowed_names) {
+            DomBindingClass::Static => {
+                emit_direct_static_attr(stmts, target, name, attr.value.as_ref())
+            }
+            DomBindingClass::CompiledScalar => {
+                let Some(JSXAttrValue::JSXExprContainer(container)) = &attr.value else {
+                    continue;
+                };
+                let JSXExpr::Expr(expr) = &container.expr else {
+                    continue;
+                };
+                emit_compiled_binding_effect(
+                    vt,
+                    stmts,
+                    target,
+                    unwrap_expr(expr.as_ref()),
+                    attr_binding_kind(name),
+                );
+            }
+            DomBindingClass::CompiledEvent => {
+                let Some(JSXAttrValue::JSXExprContainer(container)) = &attr.value else {
+                    continue;
+                };
+                let JSXExpr::Expr(expr) = &container.expr else {
+                    continue;
+                };
+                emit_compiled_event(vt, stmts, target, name, unwrap_expr(expr.as_ref()));
+            }
+            DomBindingClass::CompiledRef => {
+                let Some(JSXAttrValue::JSXExprContainer(container)) = &attr.value else {
+                    continue;
+                };
+                let JSXExpr::Expr(expr) = &container.expr else {
+                    continue;
+                };
+                emit_compiled_ref(vt, stmts, target, unwrap_expr(expr.as_ref()));
+            }
+            DomBindingClass::Vapor => {}
+        }
+    }
+}
+
 /*
 属性与事件编译设计：
 - 目标：将 JSX 开标签上的属性转化为稳定的原生 DOM 更新语句，动态值用 `watchEffect` 包裹，实现响应式更新。

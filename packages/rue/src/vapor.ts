@@ -2,11 +2,10 @@
 Rue Vapor 入口概述
 - 面向编译后的 Vapor 渲染产物，直接导出轻量 DOM 操作、生命周期、响应式和内置组件。
 - 带 _$ 前缀的符号是编译器生成代码使用的运行时 helper，手写应用代码通常不需要直接调用。
-- 本模块只做 @rue-js/runtime/vapor 的门面转发，保持 Vapor 专用构建只引用 pkg-vapor 单实例运行时。
+- 本模块只做 @rue-js/runtime/vapor 的门面转发，完整入口与 Vapor 入口共享同一个 TypeScript 响应式内核实例。
 */
-export { vapor } from '@rue-js/runtime/vapor-core'
-
 export {
+  vapor,
   /** 注册组件创建前生命周期回调。 */
   onBeforeCreate,
   /** 注册组件创建后生命周期回调。 */
@@ -63,8 +62,26 @@ export {
   _$createDocumentFragment,
   /** 编译器 helper：向父节点追加子节点。 */
   _$appendChild,
+  _$compiledCreateElement,
+  _$compiledCreateTextNode,
+  _$compiledCreateComment,
+  _$compiledAppendChild,
+  /** 编译器 helper：为静态 HTML 创建懒初始化且可复用的 template getter。 */
+  _$template,
   /** 编译器 helper：在指定锚点前插入子节点或片段。 */
   _$insertBefore,
+  /** 编译器 helper：在 Vapor effect scope 中拥有直接编译根。 */
+  _$compiledRoot,
+  /** 编译器 helper：复用编译期已证明安全的键控列表。 */
+  _$reconcileKeyed,
+  /** 编译器 helper：为 mixed Vapor 模块创建行级 owner。 */
+  createOwner,
+  /** 编译器 helper：在指定 mixed-module owner 中执行。 */
+  runWithOwner,
+  /** 编译器 helper：销毁 mixed-module owner。 */
+  disposeOwner,
+  /** 编译器 helper：创建键选择器订阅。 */
+  createSelector,
   /** 响应式信号句柄。 */
   type SignalHandle,
   /** watcher 刷新时机。 */
@@ -183,6 +200,7 @@ export {
   _$vaporWithNativeEvents,
   /** 编译器 helper：在指定 Hook id 下执行渲染逻辑。 */
   _$vaporWithHookId,
+  _$vaporMarkComponentRenderReactive,
   /** 编译器 helper：设置或移除元素属性。 */
   _$setAttribute,
   /** 渲染命名插槽或默认插槽的内置组件。 */
@@ -245,6 +263,10 @@ export {
   Suspense,
   /** Suspense 组件属性，包含默认内容与 fallback 等异步占位配置。 */
   type SuspenseProps,
+  /** 把 children 渲染到指定外部容器的内置组件。 */
+  Teleport,
+  /** Teleport 组件属性。 */
+  type TeleportProps,
   /** 透传 children 的模板组件，不引入额外包装节点。 */
   Template,
   /** Template 组件属性，用于声明不额外包裹 DOM 的模板内容。 */

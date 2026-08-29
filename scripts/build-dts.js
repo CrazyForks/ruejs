@@ -153,6 +153,9 @@ function rewriteRuntimeVaporImports(code) {
       /(['"])(?:\.\.\/)+runtime-vapor\/pkg\/rue_runtime_vapor\.js\1/g,
       `'@rue-js/runtime-vapor'`,
     )
-    .replace(/(['"])(?:\.\.\/)+runtime-vapor\/reactive\.js\1/g, `'@rue-js/runtime-vapor/reactive'`)
-    .replace(/(['"])(?:\.\.\/)+runtime-vapor\/vapor\.js\1/g, `'@rue-js/runtime-vapor/vapor'`)
+    .replace(
+      /(['"])(?:\.\.\/)+runtime-vapor\/dist\/reactive\.js\1/g,
+      `'@rue-js/runtime-vapor/reactive'`,
+    )
+    .replace(/(['"])(?:\.\.\/)+runtime-vapor\/dist\/vapor\.js\1/g, `'@rue-js/runtime-vapor/vapor'`)
 }

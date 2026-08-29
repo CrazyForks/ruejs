@@ -63,6 +63,21 @@ describe('Rue Design package contract', () => {
       'package.json',
       JSON.stringify({ name: 'rue-design-package-consumer', private: true, type: 'module' }),
     )
+    await writeFixtureFile(
+      consumerDir,
+      'node_modules/@rue-js/rue/package.json',
+      JSON.stringify({
+        name: '@rue-js/rue',
+        version: '0.0.0-test',
+        types: './index.d.ts',
+        exports: { '.': { types: './index.d.ts' } },
+      }),
+    )
+    await writeFixtureFile(
+      consumerDir,
+      'node_modules/@rue-js/rue/index.d.ts',
+      `export type FC<Props = Record<string, unknown>> = (props: Props) => unknown\n`,
+    )
   }, packageSetupTimeout)
 
   afterAll(async () => {
@@ -120,7 +135,7 @@ describe('Rue Design package contract', () => {
           emptyOutDir: true,
           rollupOptions: {
             input: entryFile,
-            external: ['@rue-js/router', '@rue-js/rue', '@rue-js/shared'],
+            external: ['@rue-js/router', '@rue-js/rue', '@rue-js/rue/vapor', '@rue-js/shared'],
           },
         },
       }),

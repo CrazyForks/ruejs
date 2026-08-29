@@ -15,13 +15,6 @@ type NormalizedErrorDetails = {
   stack: string
 }
 
-type ErrorShape = {
-  message?: unknown
-  stack?: unknown
-  name?: unknown
-  cause?: unknown
-}
-
 type BrowserResourceTarget = EventTarget & {
   tagName?: string
   src?: string
@@ -46,119 +39,35 @@ const escapeHtml = (value: string) =>
     .split("'")
     .join('&#39;')
 
-const getErrorShape = (error: unknown): ErrorShape | null =>
-  error && typeof error === 'object' ? (error as ErrorShape) : null
-
-const getErrorName = (error: unknown) => {
-  if (error instanceof Error && error.name) {
-    return error.name
-  }
-
-  const shape = getErrorShape(error)
-  return typeof shape?.name === 'string' ? shape.name : ''
-}
-
-const getErrorMessage = (error: unknown) => {
-  if (error instanceof Error && typeof error.message === 'string') {
-    return error.message
-  }
-
-  if (typeof error === 'string') {
-    return error
-  }
-
-  const shape = getErrorShape(error)
-  if (typeof shape?.message === 'string') {
-    return shape.message
-  }
-
-  return String(error)
-}
-
-const getErrorStack = (error: unknown) => {
-  if (error instanceof Error && typeof error.stack === 'string') {
-    return error.stack
-  }
-
-  const shape = getErrorShape(error)
-  return typeof shape?.stack === 'string' ? shape.stack : ''
-}
-
-const isRueWasmTrapDiagnostic = (error: unknown) => getErrorName(error) === 'RueWasmTrapError'
-
-const isProbablyWasmUnreachableTrap = (error: unknown) => {
-  if (isRueWasmTrapDiagnostic(error)) {
-    return false
-  }
-
-  const name = getErrorName(error)
-  const message = getErrorMessage(error)
-  if (!/unreachable/i.test(message)) {
-    return false
-  }
-
-  return (
-    name === 'RuntimeError' ||
-    name === 'WebAssembly.RuntimeError' ||
-    /RuntimeError:\s*unreachable/i.test(message) ||
-    /^unreachable$/i.test(message.trim())
-  )
-}
-
-const createRueWasmTrapDiagnostic = (error: unknown) => {
-  const originalName = getErrorName(error)
-  const originalMessage = getErrorMessage(error)
-  const originalStack = getErrorStack(error)
-  const originalTrap = [originalName, originalMessage].filter(Boolean).join(': ')
-  const diagnostic = new Error(
-    'Rue Vapor/Wasm trapped with "unreachable". This usually means compiled render code mutated a props-derived or computed object during render. Fix the component by assembling a fresh object instead of deleting or rewriting fields on an object built from props + ...rest. If this came from pretransformed rue-design source, add /* RUE_VAPOR_TRANSFORMED */ at the top of the component file so Vite does not Vapor-transform it again.' +
-      (originalTrap ? ` Original trap: ${originalTrap}.` : ''),
-  )
-
-  diagnostic.name = 'RueWasmTrapError'
-
-  if (originalStack) {
-    diagnostic.stack = `${diagnostic.name}: ${diagnostic.message}\nCaused by: ${originalStack}`
-  }
-
-  ;(diagnostic as Error & { cause?: unknown }).cause = error
-  return diagnostic
-}
-
-const normalizeRueReportableError = (error: unknown) =>
-  isProbablyWasmUnreachableTrap(error) ? createRueWasmTrapDiagnostic(error) : error
-
 const normalizeErrorDetails = (error: unknown): NormalizedErrorDetails => {
-  const normalizedError = normalizeRueReportableError(error)
-
-  if (normalizedError instanceof Error) {
+  if (error instanceof Error) {
     return {
-      message: normalizedError.message || normalizedError.name || 'Unknown error',
-      stack: normalizedError.stack || '',
+      message: error.message || error.name || 'Unknown error',
+      stack: error.stack || '',
     }
   }
 
-  if (typeof normalizedError === 'string') {
+  if (typeof error === 'string') {
     return {
-      message: normalizedError,
+      message: error,
       stack: '',
     }
   }
 
-  if (normalizedError && typeof normalizedError === 'object') {
-    const candidate = normalizedError as { message?: unknown; stack?: unknown; name?: unknown }
+  if (error && typeof error === 'object') {
+    const candidate = error as { message?: unknown; stack?: unknown; name?: unknown }
     const message =
       typeof candidate.message === 'string'
         ? candidate.message
         : typeof candidate.name === 'string'
           ? candidate.name
-          : String(normalizedError)
+          : String(error)
     const stack = typeof candidate.stack === 'string' ? candidate.stack : ''
     return { message, stack }
   }
 
   return {
-    message: String(normalizedError),
+    message: String(error),
     stack: '',
   }
 }
@@ -232,8 +141,6 @@ const normalizeBrowserError = (event: Event | PromiseRejectionEvent): unknown | 
 }
 
 const reportBrowserError = (error: unknown) => {
-  const normalizedError = normalizeRueReportableError(error)
-
   if (error && typeof error === 'object') {
     if (bridgedBrowserErrors.has(error)) {
       return
@@ -241,14 +148,7 @@ const reportBrowserError = (error: unknown) => {
     bridgedBrowserErrors.add(error)
   }
 
-  if (normalizedError && typeof normalizedError === 'object' && normalizedError !== error) {
-    if (bridgedBrowserErrors.has(normalizedError)) {
-      return
-    }
-    bridgedBrowserErrors.add(normalizedError)
-  }
-
-  ;(rue as any).handleError(normalizedError, null)
+  ;(rue as any).handleError(error, null)
 }
 
 const installBrowserBridge = () => {

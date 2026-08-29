@@ -14,6 +14,7 @@ fn new_vt() -> VaporTransform {
         next_child: 0,
         once_depth: 0,
         did_transform: false,
+        static_templates: true,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
         plain_local_scopes: Vec::new(),
@@ -209,4 +210,17 @@ fn treats_non_string_expression_neighbors_as_non_space_neighbors() {
 
     let out = compact(&emit_stmts(stmts));
     assert!(out.contains("_$appendChild(root,_$createTextNode(\"padded\"));"));
+}
+
+#[test]
+fn classifies_only_synchronous_scalar_children_for_direct_binding() {
+    let scalar = parse_expr("String(count.get())", false);
+    let conditional = parse_expr("ready.get() ? label.get() : 'idle'", false);
+    let renderable = parse_expr("renderRow()", false);
+    let object = parse_expr("({ label: count.get() })", false);
+
+    assert!(crate::vapor::is_compiled_scalar_expr(&scalar));
+    assert!(crate::vapor::is_compiled_scalar_expr(&conditional));
+    assert!(!crate::vapor::is_compiled_scalar_expr(&renderable));
+    assert!(!crate::vapor::is_compiled_scalar_expr(&object));
 }

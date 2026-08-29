@@ -429,14 +429,14 @@ const SiteHome: FC = () => {
                   </span>
                 </span>
                 <span className="text-[44px] md:text-[95px] font-extrabold tracking-tight bg-linear-to-r from-sky-500 via-cyan-400 to-emerald-300 bg-clip-text text-transparent">
-                  he Wasm
+                  he Compiler
                 </span>
               </div>
               <div className="mt-2 text-[44px] md:text-[62px] font-extrabold tracking-tight bg-linear-to-r from-sky-400 via-cyan-300 to-teal-200 bg-clip-text text-transparent">
                 Framework For Native DOM
               </div>
               <p className="mt-6 text-lg md:text-xl text-base-content/70">
-                Rust 运行时，Rust 响应式系统，Rust 原生 DOM 编译器
+                静态零 Rue 值依赖，Signal 最小核心，复杂能力按需加载
               </p>
             </figure>
             <div></div>
@@ -531,7 +531,7 @@ const SiteHome: FC = () => {
         />
         <FeatureCard
           title="编译驱动的原生 DOM 渲染"
-          desc="围绕真实 DOM 做最小更新，并可结合 Rust / Wasm 运行时扩展与原生 DOM 编译能力。"
+          desc="静态 JSX 直接生成 DOM；Signal 交互加载 compiled core，复杂组件与结构按需回退 Vapor。"
           icon="🦀"
         />
         <FeatureCard
@@ -674,8 +674,8 @@ export default HelloWorld`}
           Rue 的组件、状态和渲染路径都建立在细粒度响应式系统之上，依赖变化后只接管受影响的更新边界。
         </p>
         <p className="text-gray-600">
-          结合 Rust 实现的响应式系统、Rust / Wasm 运行时与原生 DOM 编译能力，JSX
-          会被转换为更贴近真实 DOM 的产物。
+          编译器会把 JSX 路由为静态 DOM、Signal compiled core 或 Vapor
+          fallback，只加载保持当前语义所需的最小能力。
         </p>
         <div className="mt-6 grid md:grid-cols-2 gap-6 items-start">
           {/* 左栏：原始 JSX */}
@@ -854,8 +854,9 @@ export default HelloWorld;`}
         </div>
         <div className="mt-6 space-y-3 text-gray-700">
           <p>
-            Vapor 渲染路径直接面向原生
-            DOM，减少额外协调开销；配合细粒度响应式更新，在复杂界面中能保持更稳的性能与内存表现。
+            纯静态 JSX 可以没有 Rue 值运行时；Signal 页面使用最小 compiled
+            core。组件、Hydration、Teleport、Transition 等复杂能力仍会按需进入
+            Vapor，因此这不是“所有应用绝对零运行时”的承诺。
           </p>
         </div>
       </section>

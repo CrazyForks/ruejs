@@ -12,8 +12,6 @@ const sharedArgs = [
   '!packages/**/dist/**',
   '-g',
   '!packages/**/pkg/**',
-  '-g',
-  '!packages/**/pkg-node/**',
 ]
 
 const checks = [

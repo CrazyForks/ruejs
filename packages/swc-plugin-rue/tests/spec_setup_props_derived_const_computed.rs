@@ -168,6 +168,7 @@ fn preserves_hygiene_for_nested_props_derived_computed_reads() {
     )));
 
     assert!(normalized.contains(&utils::normalize(r#"const __slot = meterWidth.get();"#,)));
+    assert!(normalized.contains(&utils::normalize(r#"renderAnchor(__slot, _root, _list1)"#,)));
 }
 
 #[test]

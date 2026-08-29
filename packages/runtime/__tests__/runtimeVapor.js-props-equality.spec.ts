@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module'
-
 import { describe, expect, it } from 'vitest'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
+import { createReactiveKernel } from '../../runtime-vapor/dist/reactive-kernel/index.js'
 
-const require = createRequire(import.meta.url)
-const rustRuntime = require('../../runtime-vapor/pkg-node/rue_runtime_vapor.js')
+const reactiveKernel = createReactiveKernel()
 
 type PropsModule = {
   propsReactive<T>(initial: T, forceGlobal?: boolean): T
@@ -116,7 +114,7 @@ const equalityCases: EqualityCase[] = [
 ]
 
 const exercisePropsEquality = (module: PropsModule) => {
-  rustRuntime.setReactiveScheduling('sync')
+  reactiveKernel.setReactiveScheduling('sync')
   return equalityCases.map(testCase => {
     const [previous, next] = testCase.createPair()
     const props = module.propsReactive(previous, true) as {
@@ -127,7 +125,7 @@ const exercisePropsEquality = (module: PropsModule) => {
     }
     const signal = props.__signal__
     let runs = 0
-    const effect = rustRuntime.createEffect(() => {
+    const effect = reactiveKernel.createEffect(() => {
       signal.get()
       runs += 1
     })
@@ -148,8 +146,19 @@ const expectedMatrix = equalityCases.map(({ label, equal }) => ({
 }))
 
 describe('runtime-vapor JS props equality parity', () => {
+  it('preserves callback identity and metadata for shallow reactive props', () => {
+    const hooks = createReactiveFacade(reactiveKernel).hooks as PropsModule
+    const callback = Object.assign(() => 'preview', {
+      __rue_component_render_reactive_factory__: true,
+    })
+    const props = hooks.propsReactive({ callback }, true) as { callback: typeof callback }
+
+    expect(props.callback).toBe(callback)
+    expect(props.callback.__rue_component_render_reactive_factory__).toBe(true)
+  })
+
   it('preserves the mapped Object.is and renderable identity matrix in the JS Hook layer', () => {
-    const hooks = createReactiveFacade(rustRuntime).hooks as PropsModule
+    const hooks = createReactiveFacade(reactiveKernel).hooks as PropsModule
     const matrix = exercisePropsEquality(hooks)
     console.info('[runtime-vapor props equality] shared JS Hook backend', matrix)
     expect(matrix).toEqual(expectedMatrix)

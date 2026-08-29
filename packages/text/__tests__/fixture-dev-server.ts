@@ -21,11 +21,13 @@ const SERVER_RENDERER_REQUIRED_FILES = [
   'dist/server-renderer.cjs.js',
   'dist/server-renderer.cjs.prod.js',
 ] as const
-const RUNTIME_VAPOR_PACKAGE_DIRS = ['pkg-vapor', 'pkg-node']
+const RUNTIME_VAPOR_PACKAGE_ENTRIES = ['package.json', 'dist'] as const
 const RUNTIME_VAPOR_REQUIRED_FILES = [
   'package.json',
-  'rue_runtime_vapor.js',
-  'rue_runtime_vapor_bg.wasm',
+  'dist/index.node.js',
+  'dist/reactive.node.js',
+  'dist/vapor.node.js',
+  'dist/reactive-kernel/index.js',
 ] as const
 
 export type FixtureDevServer = {
@@ -228,20 +230,20 @@ async function ensureTextRuntimeVaporArtifacts(): Promise<void> {
     await fsp.rm(tempRoot, { force: true, recursive: true })
     await fsp.mkdir(tempRoot, { recursive: true })
 
-    for (const dir of RUNTIME_VAPOR_PACKAGE_DIRS) {
-      const sourceDir = path.join(runtimeVaporRoot, dir)
+    for (const entry of RUNTIME_VAPOR_PACKAGE_ENTRIES) {
+      const source = path.join(runtimeVaporRoot, entry)
       try {
-        await fsp.access(sourceDir)
+        await fsp.access(source)
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
           throw new Error(
-            `Missing runtime-vapor artifact "${sourceDir}". Build runtime-vapor before starting fixture dev servers that need Vapor artifacts.`,
+            `Missing runtime-vapor artifact "${source}". Build runtime-vapor before starting fixture dev servers that need Vapor artifacts.`,
           )
         }
         throw error
       }
 
-      await fsp.cp(sourceDir, path.join(tempRoot, dir), {
+      await fsp.cp(source, path.join(tempRoot, entry), {
         force: true,
         recursive: true,
       })
@@ -263,9 +265,7 @@ async function hasRuntimeVaporArtifacts(
   try {
     await fsp.access(completeMarker)
     await Promise.all(
-      RUNTIME_VAPOR_PACKAGE_DIRS.flatMap(dir =>
-        RUNTIME_VAPOR_REQUIRED_FILES.map(file => fsp.access(path.join(outputRoot, dir, file))),
-      ),
+      RUNTIME_VAPOR_REQUIRED_FILES.map(file => fsp.access(path.join(outputRoot, file))),
     )
     return true
   } catch (error) {

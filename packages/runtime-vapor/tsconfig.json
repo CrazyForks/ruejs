@@ -16,11 +16,6 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": [
-    "./*.ts",
-    "./js-reactive/**/*.ts",
-    "./js-runtime/**/*.ts",
-    "./runtime-vapor-env.d.ts"
-  ],
-  "exclude": ["./pkg-*", "./scripts", "./src", "./tests"]
+  "include": ["./src/**/*.ts", "./src/global.d.ts"],
+  "exclude": ["./dist", "./pkg-*", "./scripts", "./tests"]
 }

@@ -63,6 +63,18 @@
       "import": "./dist/runtime.vapor.esm-bundler.js",
       "require": "./dist/runtime.vapor.cjs.js"
     },
+    "./compiled": {
+      "types": "./src/compiled.ts",
+      "node": {
+        "production": "./dist/runtime.compiled.cjs.prod.js",
+        "development": "./dist/runtime.compiled.cjs.js",
+        "default": "./dist/runtime.compiled.cjs.js"
+      },
+      "development": "./src/compiled.ts",
+      "module": "./dist/runtime.compiled.esm-bundler.js",
+      "import": "./dist/runtime.compiled.esm-bundler.js",
+      "require": "./dist/runtime.compiled.cjs.js"
+    },
     "./vapor-core": {
       "types": "./src/vapor-core.ts",
       "node": {
@@ -136,6 +148,14 @@
       {
         "entry": "src/vapor.ts",
         "filename": "runtime.vapor",
+        "formats": [
+          "esm-bundler",
+          "cjs"
+        ]
+      },
+      {
+        "entry": "src/compiled.ts",
+        "filename": "runtime.compiled",
         "formats": [
           "esm-bundler",
           "cjs"

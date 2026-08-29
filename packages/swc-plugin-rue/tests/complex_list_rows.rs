@@ -10,7 +10,7 @@ mod utils;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RowMountShape {
-    DirectLeaf,
+    CompatibilityRenderAnchor,
     RenderAnchor,
     OwnedRenderBetween,
     OwnedOpaqueRenderBetween,
@@ -45,19 +45,19 @@ fn transform_source(source: &str) -> String {
     utils::normalize(&utils::strip_marker(&utils::emit(apply(program), cm)))
 }
 
-fn assert_direct_leaf(name: &str, row: &str) {
+fn assert_reactive_anchor(name: &str, row: &str) {
     let output = transform(row);
     assert!(
-        output.contains("directRoot: true"),
-        "{name} must enter the direct-root capability: {output}"
+        output.contains("renderAnchor(__slot, parent, start)"),
+        "{name} must preserve its reactive anchor fallback: {output}"
     );
     assert!(
-        output.contains("_$insertBefore(parent, _root, start)"),
-        "{name} must build the row directly before its owner anchor: {output}"
+        output.contains("singleRoot: true"),
+        "{name} must retain its single-root range: {output}"
     );
     assert!(
-        output.matches("watchEffect").count() >= 2,
-        "{name} must preserve its row watcher in addition to the list watcher: {output}"
+        output.contains("_$vaporKeyedList"),
+        "{name} must remain on the generic compatibility helper: {output}"
     );
 }
 
@@ -79,19 +79,17 @@ fn assert_shape(name: &str, row: &str, expected: RowMountShape) {
         "{name} must preserve the explicit structural key: {output}"
     );
     match expected {
-        RowMountShape::DirectLeaf => {
+        RowMountShape::CompatibilityRenderAnchor => {
+            assert!(output.contains("singleRoot: true"), "{name}: {output}");
             assert!(
-                output.contains("directRoot: true"),
-                "{name} must advertise its direct-root capability: {output}"
+                output.contains("renderAnchor(__slot, parent, start)"),
+                "{name} must use the generic reactive anchor fallback: {output}"
             );
-            assert!(
-                output.contains("_$insertBefore(parent, _root, start)"),
-                "{name} must mount its built fragment directly: {output}"
-            );
+            assert!(!output.contains("_$reconcileKeyed"), "{name}: {output}");
         }
         RowMountShape::RenderAnchor => {
             assert!(
-                !output.contains("directRoot: true"),
+                !output.contains(concat!("direct", "Root: true")),
                 "{name} is structural and must not enter the direct-root path: {output}"
             );
             assert!(
@@ -113,7 +111,7 @@ fn assert_shape(name: &str, row: &str, expected: RowMountShape) {
         }
         RowMountShape::OwnedRenderBetween => {
             assert!(
-                !output.contains("directRoot: true"),
+                !output.contains(concat!("direct", "Root: true")),
                 "{name} is structural and must not enter the direct-root path: {output}"
             );
             assert!(
@@ -126,7 +124,7 @@ fn assert_shape(name: &str, row: &str, expected: RowMountShape) {
             );
         }
         RowMountShape::OwnedOpaqueRenderBetween => {
-            assert!(!output.contains("directRoot: true"), "{output}");
+            assert!(!output.contains(concat!("direct", "Root: true")), "{output}");
             assert!(output.contains("ownedMount: true"), "{output}");
             assert!(output.contains("opaqueRenderable: true"), "{output}");
             assert_eq!(
@@ -144,29 +142,25 @@ fn assert_shape(name: &str, row: &str, expected: RowMountShape) {
 }
 
 #[test]
-fn spread_row_uses_direct_leaf_mount() {
+fn spread_row_uses_reactive_anchor_fallback() {
     assert_shape(
         "spread",
         "<li key={row.id} {...row.attrs} data-row-id={row.id}>{row.label}</li>",
-        RowMountShape::DirectLeaf,
+        RowMountShape::CompatibilityRenderAnchor,
     );
 }
 
 #[test]
-fn leaf_spread_and_unshadowed_scalar_calls_direct_mount() {
-    assert_direct_leaf(
-        "spread",
-        "<li key={row.id} {...row.attrs} data-row-id={row.id}>{row.label}</li>",
-    );
-    assert_direct_leaf(
+fn unshadowed_scalar_calls_use_reactive_anchor_fallback() {
+    assert_reactive_anchor(
         "global String",
         "<li key={row.id} data-row-id={row.id}>{String(row.label)}</li>",
     );
-    assert_direct_leaf(
+    assert_reactive_anchor(
         "global Number",
         "<li key={row.id} data-row-id={row.id}>{Number(row.id)}</li>",
     );
-    assert_direct_leaf(
+    assert_reactive_anchor(
         "global Boolean",
         "<li key={row.id} data-row-id={row.id}>{Boolean(row.active)}</li>",
     );
@@ -184,7 +178,7 @@ const App: FC = () => <ul>{rows.value.map((row, String) => (
 ))}</ul>;
 "##,
     );
-    assert!(!parameter_shadow.contains("directRoot: true"), "{parameter_shadow}");
+    assert!(!parameter_shadow.contains(concat!("direct", "Root: true")), "{parameter_shadow}");
 
     let local_shadow = transform_source(
         r##"
@@ -198,7 +192,7 @@ const App: FC = () => <ul>{rows.value.map(row => {
 })}</ul>;
 "##,
     );
-    assert!(!local_shadow.contains("directRoot: true"), "{local_shadow}");
+    assert!(!local_shadow.contains(concat!("direct", "Root: true")), "{local_shadow}");
 
     let import_shadow = transform_source(
         r##"
@@ -211,7 +205,7 @@ const App: FC = () => <ul>{rows.value.map(row => (
 ))}</ul>;
 "##,
     );
-    assert!(!import_shadow.contains("directRoot: true"), "{import_shadow}");
+    assert!(!import_shadow.contains(concat!("direct", "Root: true")), "{import_shadow}");
 }
 
 #[test]
@@ -226,7 +220,8 @@ const App: FC = () => <ul>{rows.value.map((row, index) => (
 ))}</ul>;
 "##,
     );
-    assert!(unused.contains("trackIndex: false"), "{unused}");
+    assert!(unused.contains("_$reconcileKeyed"), "{unused}");
+    assert!(!unused.contains("trackIndex:"), "{unused}");
 
     let alias_use = transform_source(
         r##"
@@ -255,11 +250,11 @@ const App: FC = () => <ul>{rows.value.map((row, index) => (
 }
 
 #[test]
-fn ref_row_uses_direct_leaf_owner_cleanup() {
+fn ref_row_uses_compatibility_owner_cleanup() {
     assert_shape(
         "ref",
         "<li key={row.id} ref={node => rowRef(row.id, node)} data-row-id={row.id}>{row.label}</li>",
-        RowMountShape::DirectLeaf,
+        RowMountShape::CompatibilityRenderAnchor,
     );
     let output = transform(
         "<li key={row.id} ref={node => rowRef(row.id, node)} data-row-id={row.id}>{row.label}</li>",
@@ -282,7 +277,7 @@ fn structural_and_component_refs_remain_conservative() {
     );
     let component =
         transform("<ChildRow key={row.id} ref={node => rowRef(row.id, node)} row={row} />");
-    assert!(!component.contains("directRoot: true"), "{component}");
+    assert!(!component.contains(concat!("direct", "Root: true")), "{component}");
     assert!(component.contains("renderBetween(__slot, parent, start, end)"), "{component}");
 }
 
@@ -362,11 +357,15 @@ fn async_and_external_row_boundaries_use_explicit_owned_strategy() {
 #[test]
 fn final_linear_gate_keeps_main_paths_on_explicit_mount_capabilities() {
     let cases = [
-        ("spread", "<li key={row.id} {...row.attrs}>{row.label}</li>", "directRoot: true"),
+        (
+            "spread",
+            "<li key={row.id} {...row.attrs}>{row.label}</li>",
+            "renderAnchor(__slot, parent, start)",
+        ),
         (
             "ref",
             "<li key={row.id} ref={node => rowRef(row.id, node)}>{row.label}</li>",
-            "directRoot: true",
+            "renderAnchor(__slot, parent, start)",
         ),
         (
             "native structural",
@@ -403,8 +402,8 @@ const App: FC = () => <section>
     let (program, cm) = utils::parse(source, "multiple-complex-list-rows.tsx");
     let output = utils::normalize(&utils::strip_marker(&utils::emit(apply(program), cm)));
 
-    assert!(output.contains("const _map1_state = { elements: _map1_elements }"), "{output}");
-    assert!(output.contains("state: _map1_state"), "{output}");
-    assert!(output.contains("const _map2_state = { elements: _map2_elements }"), "{output}");
-    assert!(output.contains("state: _map2_state"), "{output}");
+    assert!(output.contains("let _map1_elements = []"), "{output}");
+    assert!(output.contains("let _map2_elements = []"), "{output}");
+    assert!(output.contains("_map1_elements = _$reconcileKeyed"), "{output}");
+    assert!(output.contains("_map2_elements = _$reconcileKeyed"), "{output}");
 }

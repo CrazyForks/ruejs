@@ -49,7 +49,11 @@ fn jsx_element_to_slot_value_expr(this: &mut VaporTransform, jsx_el: &JSXElement
     // 返回统一的可挂载槽值
     child_body.push(return_root(child_root.clone()));
     // vapor 包裹以形成可执行块体
-    make_vapor_slot_expr(child_body)
+    let vapor_expr = make_vapor_slot_expr(child_body);
+    match crate::element_expr::extract_reactive_jsx_key_expr(jsx_el) {
+        Some(key_expr) => call_ident("_$vaporWithKey", vec![vapor_expr, key_expr]),
+        None => vapor_expr,
+    }
 }
 
 fn jsx_fragment_to_slot_value_expr(this: &mut VaporTransform, frag: &JSXFragment) -> Expr {

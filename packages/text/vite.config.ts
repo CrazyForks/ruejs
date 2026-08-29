@@ -82,16 +82,20 @@ export default defineConfig({
         replacement: path.resolve(import.meta.dirname, 'src/shims/jsx-dev-runtime-compat.ts'),
       },
       {
+        find: '@rue-js/runtime-vapor/protocol',
+        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/src/protocol.ts'),
+      },
+      {
         find: '@rue-js/runtime-vapor/reactive',
-        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/reactive.node.js'),
+        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/dist/reactive.node.js'),
       },
       {
         find: '@rue-js/runtime-vapor/vapor',
-        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/vapor.node.js'),
+        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/dist/vapor.node.js'),
       },
       {
         find: '@rue-js/runtime-vapor',
-        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/index.node.js'),
+        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/dist/index.node.js'),
       },
       { find: '@rue-js/rue', replacement: path.resolve(import.meta.dirname, '../rue/src') },
       { find: '@rue-js/runtime', replacement: path.resolve(import.meta.dirname, '../runtime/src') },

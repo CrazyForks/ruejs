@@ -9,7 +9,6 @@ import { promisify } from 'node:util'
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { build, type Rollup } from 'vite'
-import wasm from 'vite-plugin-wasm'
 
 import { createStaticRouteHtml } from '@rue-js/server-renderer/static'
 import { startRueIslandLoader, type RueIslandClientModule } from '@rue-js/runtime/island'
@@ -34,7 +33,6 @@ const buildFixture = async (outDir: string, input: string, ssr = false) => {
     root: fixtureRoot,
     logLevel: 'silent',
     plugins: [
-      wasm(),
       VitePluginRue({
         include: [fixtureRoot],
         transformTimeoutMs: 60_000,
@@ -43,20 +41,24 @@ const buildFixture = async (outDir: string, input: string, ssr = false) => {
     resolve: {
       conditions: ['development', 'browser'],
       alias: {
+        '@rue-js/runtime-vapor/protocol': path.join(
+          repoRoot,
+          'packages/runtime-vapor/src/protocol.ts',
+        ),
         '@rue-js/runtime-vapor/vapor': path.join(
           repoRoot,
-          `packages/runtime-vapor/vapor${ssr ? '.node' : ''}.js`,
+          `packages/runtime-vapor/dist/vapor${ssr ? '.node' : ''}.js`,
         ),
         '@rue-js/runtime-vapor/reactive': path.join(
           repoRoot,
-          `packages/runtime-vapor/reactive${ssr ? '.node' : ''}.js`,
+          `packages/runtime-vapor/dist/reactive${ssr ? '.node' : ''}.js`,
         ),
         '@rue-js/rue': path.join(repoRoot, 'packages/rue/src'),
         '@rue-js/runtime': path.join(repoRoot, 'packages/runtime/src'),
         '@rue-js/server-renderer': path.join(repoRoot, 'packages/server-renderer/src'),
         '@rue-js/runtime-vapor': path.join(
           repoRoot,
-          `packages/runtime-vapor/index${ssr ? '.node' : ''}.js`,
+          `packages/runtime-vapor/dist/index${ssr ? '.node' : ''}.js`,
         ),
       },
     },
@@ -131,13 +133,6 @@ describe('Rue island real build contract', () => {
 
     const clientBuild = await buildFixture(clientOutDir, clientEntry)
     const serverBuild = await buildFixture(serverOutDir, serverEntry, true)
-    await fs.cp(
-      path.resolve('packages/runtime-vapor/pkg-node'),
-      path.join(serverOutDir, 'pkg-node'),
-      {
-        recursive: true,
-      },
-    )
 
     const bundle = Object.fromEntries(clientBuild.output.map(output => [output.fileName, output]))
     const entryChunk = clientBuild.output.find(
@@ -157,6 +152,12 @@ describe('Rue island real build contract', () => {
     )
     const builtModuleIds = clientBuild.output.flatMap(output =>
       output.type === 'chunk' ? output.moduleIds : [],
+    )
+    const serverModuleIds = serverBuild.output.flatMap(output =>
+      output.type === 'chunk' ? output.moduleIds : [],
+    )
+    expect([...builtModuleIds, ...serverModuleIds]).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/\.wasm$|\/pkg-(?:vapor|node)\//)]),
     )
     expect(counterChunk, `client modules: ${builtModuleIds.join(', ')}`).toBeTruthy()
     expect(onlyChunk, `client modules: ${builtModuleIds.join(', ')}`).toBeTruthy()

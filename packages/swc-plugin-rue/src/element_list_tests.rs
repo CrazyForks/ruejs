@@ -26,6 +26,7 @@ fn new_vt() -> VaporTransform {
         next_child: 0,
         once_depth: 0,
         did_transform: false,
+        static_templates: true,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
         plain_local_scopes: Vec::new(),
@@ -311,7 +312,7 @@ fn extracts_key_exprs_from_wrapped_renders_and_native_fragments() {
 }
 
 #[test]
-fn builds_keyed_list_for_expression_body_with_direct_mount_and_index_watcher() {
+fn builds_keyed_list_for_expression_body_with_reactive_fallback_and_index_watcher() {
     let mut vt = new_vt();
     let call =
         parse_call("items.map((item, idx) => <li key={item.id}>{idx}:{item.name}</li>)", true);
@@ -327,11 +328,12 @@ fn builds_keyed_list_for_expression_body_with_direct_mount_and_index_watcher() {
     assert!(out.contains("items:_map1_current"));
     assert!(out.contains("getKey:(item,idx)=>item.id"));
     assert!(out.contains("renderItem:(item,parent,start,end,idx)=>{"));
-    assert!(out.contains("directRoot:true"));
+    assert!(!out.contains(concat!("direct", "Root:true")));
+    assert!(!out.contains(concat!("compiled", "RowPatch:true")));
     assert!(out.contains("_$createElement(\"li\",_root)"));
-    assert!(out.contains("_$insertBefore(parent,_root,start);"));
+    assert!(!out.contains("_$insertBefore(parent,_root,start);"));
     assert!(out.contains("watchEffect(()=>{"));
-    assert!(!out.contains("renderAnchor(__slot,parent,start);"));
+    assert!(out.contains("renderAnchor(__slot,parent,start);"));
     assert!(!out.contains("renderBetween(__slot,parent,start,end);"));
 }
 
@@ -597,18 +599,19 @@ fn inlines_external_reactive_prefixes_for_direct_list_items() {
     assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
 
     let out = compact(&emit_stmts(stmts));
-    assert!(out.contains("getKey:(item,idx)=>external.value+item.id"));
-    assert!(out.contains("directRoot:true"), "{out}");
-    assert!(out.contains("compiledRowPatch:true"), "{out}");
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert!(out.contains("(item,idx)=>external.value+item.id,(item,idx)=>"), "{out}");
+    assert!(!out.contains(concat!("direct", "Root:true")), "{out}");
+    assert!(!out.contains(concat!("compiled", "RowPatch:true")), "{out}");
     assert_eq!(
-        out.matches("watchEffect(").count(),
+        out.matches("effect(").count(),
         1,
         "safe external accessor reads should run through the list-level patch effect: {out}"
     );
     assert!(!out.contains("renderAnchor("), "{out}");
     assert!(!out.contains(",\"key\","));
     assert!(out.contains("const_$rowBindingNext0=(external.value+item.id)+suffix.get()"), "{out}");
-    assert!(out.contains("_$settextContent(_el1,_$rowBindingNext0)"), "{out}");
+    assert!(out.contains("_el1.textContent=_$rowBindingNext0"), "{out}");
     assert!(
         !out.contains("constrowKey=external.value+item.id;constlabel=rowKey+suffix.get();const_el")
     );
@@ -910,9 +913,10 @@ fn covers_list_render_key_wrappers_rest_params_and_root_parent() {
     assert!(try_build_list_from_map(&mut root_vt, &ident("_root"), &root_call, &mut root_stmts));
     let root_out = compact(&emit_stmts(root_stmts));
     assert!(root_out.contains("parent:_list1.parentNode"));
-    assert!(root_out.contains("directRoot:true"));
-    assert!(root_out.contains("_$insertBefore(parent,_root,start);"));
-    assert!(!root_out.contains("renderAnchor(__slot,parent,start);"));
+    assert!(!root_out.contains(concat!("direct", "Root:true")));
+    assert!(!root_out.contains(concat!("compiled", "RowPatch:true")));
+    assert!(!root_out.contains("_$insertBefore(parent,_root,start);"));
+    assert!(root_out.contains("renderAnchor(__slot,parent,start);"));
 
     let mut rest_vt = new_vt();
     let rest_call = parse_call("rows.map((...rest) => <li>{rest.length}</li>)", true);
@@ -1155,10 +1159,8 @@ fn avoids_internal_param_collisions_for_destructured_items() {
     assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
 
     let out = compact(&emit_stmts(stmts));
-    assert!(out.contains("getKey:(__rue_item1,__rue_idx1)=>__rue_item1.item"));
-    assert!(
-        out.contains("renderItem:(__rue_item1,__rue_parent1,__rue_start1,__rue_end1,__rue_idx1)=>")
-    );
+    assert!(out.contains("(__rue_item1,__rue_idx1)=>__rue_item1.item"));
+    assert!(out.contains("(__rue_item1,__rue_idx1)=>{"));
     assert!(out.contains("__rue_item1.idx"));
     assert!(out.contains("__rue_item1.parent"));
     assert!(out.contains("__rue_item1.start"));
@@ -1207,9 +1209,10 @@ fn hardens_direct_native_key_scan_and_wrapper_key_misses() {
     assert!(try_build_list_from_map(&mut vt, &ident("root"), &keyed_call, &mut stmts));
 
     let keyed_out = compact(&emit_stmts(stmts));
-    assert!(keyed_out.contains("getKey:(item,idx)=>item.id"));
-    assert!(keyed_out.contains("singleRoot:true"));
-    assert!(keyed_out.contains("trackIndex:false"));
+    assert!(keyed_out.contains("(item,idx)=>item.id,(item,idx)=>"));
+    assert!(keyed_out.contains("_$reconcileKeyed("));
+    assert!(!keyed_out.contains("singleRoot:true"));
+    assert!(!keyed_out.contains("trackIndex:false"));
 
     let mut malformed_effects = parse_module_stmts(
         "watch.effect(() => { _root.setAttribute('key', item.id); });\nwatchEffect(() => _root.setAttribute('key', item.id));",
@@ -1638,7 +1641,7 @@ fn hardens_array_destructured_list_aliases_and_index_key_fallbacks() {
     assert!(out.contains("getKey:(item,index)=>item[0]"), "{out}");
     assert!(out.contains("consttext=item[1].toUpperCase();"), "{out}");
     assert!(!out.contains(",\"key\","), "{out}");
-    assert!(!out.contains("directRoot:true"), "{out}");
+    assert!(!out.contains(concat!("direct", "Root:true")), "{out}");
     assert!(out.contains("renderAnchor(__slot,parent,start);"), "{out}");
 
     let mut nested_fragment_vt = new_vt();
@@ -1788,10 +1791,11 @@ fn hardens_keyed_list_computed_alias_keys_and_external_prefix_blocks() {
     assert!(out.contains("getKey:(item,index)=>item[kind]??external.value"), "{out}");
     assert!(!out.contains(",\"key\","), "{out}");
     assert!(out.contains("item.title||String(index)"), "{out}");
-    assert!(out.contains("directRoot:true"), "{out}");
-    assert!(out.contains("_$insertBefore(parent,_root,start);"), "{out}");
+    assert!(!out.contains(concat!("direct", "Root:true")), "{out}");
+    assert!(!out.contains(concat!("compiled", "RowPatch:true")), "{out}");
+    assert!(!out.contains("_$insertBefore(parent,_root,start);"), "{out}");
     assert!(out.contains("watchEffect(()=>{"), "{out}");
-    assert!(!out.contains("renderAnchor(__slot,parent,start);"), "{out}");
+    assert!(out.contains("renderAnchor(__slot,parent,start);"), "{out}");
 
     let non_alias_prefix = parse_arrow_block(
         "() => { const rowKey = compute(item); sideEffect(rowKey); return rowKey; }",
@@ -2068,6 +2072,7 @@ fn hardens_defaulted_destructured_params_native_key_scan_and_empty_block_slots()
     ));
     let native_out = compact(&emit_stmts(native_stmts));
 
+    assert!(native_out.contains("_$vaporKeyedList"), "{native_out}");
     assert!(native_out.contains("getKey:(row,idx)=>row.id"), "{native_out}");
     assert!(native_out.contains("constlabel=row.label;"), "{native_out}");
     assert!(native_out.contains("_$createDocumentFragment"), "{native_out}");
@@ -2344,7 +2349,7 @@ fn native_key_is_structural_metadata_only() {
         &mut native_stmts,
     ));
     let native_out = compact(&emit_stmts(native_stmts));
-    assert!(native_out.contains("getKey:(row,idx)=>row.id"), "{native_out}");
+    assert!(native_out.contains("(row,idx)=>row.id,(row,idx)=>"), "{native_out}");
     assert!(!native_out.contains(",\"key\","), "{native_out}");
 
     let mut component_vt = new_vt();
@@ -2388,50 +2393,49 @@ fn coalesces_safe_native_row_bindings() {
     assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
     let out = compact(&emit_stmts(stmts));
 
-    assert!(out.contains("singleRoot:true"), "{out}");
-    assert!(out.contains("directRoot:true"), "{out}");
-    assert!(out.contains("compiledRowPatch:true"), "{out}");
+    assert!(out.contains("_$reconcileKeyed("), "{out}");
+    assert!(!out.contains("singleRoot:true"), "{out}");
+    assert!(!out.contains(concat!("direct", "Root:true")), "{out}");
+    assert!(!out.contains(concat!("compiled", "RowPatch:true")), "{out}");
     assert_eq!(
-        out.matches("watchEffect(").count(),
-        1,
-        "safe row should emit only the list effect: {out}"
+        out.matches("effect(").count(),
+        2,
+        "safe selected row should emit one list effect and one row selector effect: {out}"
     );
-    assert!(out.contains("return{patch:"), "safe row must return a patch record: {out}");
     assert!(
-        out.contains("_$setClassName(")
+        out.contains("return{node:_el1,patch:_$rowPatch,dispose:()=>disposeOwner(_$rowOwner)}"),
+        "safe row must return the compact row record: {out}"
+    );
+    assert!(
+        out.contains(".className=")
             && out.contains("selected.value")
             && out.contains("row.id")
             && out.contains("row.label"),
-        "merged effect must retain external and item-local reads: {out}"
+        "selector effect and row patch must retain their respective reads: {out}"
     );
-    assert!(
-        out.contains("_$settextContent("),
-        "item-local text should use direct text writes: {out}"
-    );
+    assert!(out.contains(".textContent="), "item-local text should use direct text writes: {out}");
     assert_eq!(
         out.matches("Object.is(").count(),
-        3,
-        "class and both direct-text setters need independent equality guards: {out}"
+        2,
+        "both item-local direct-text setters need independent equality guards: {out}"
     );
     assert_eq!(
         out.matches("let_$rowBindingInitialized").count(),
-        3,
+        2,
         "each guarded binding needs row-local initialization state: {out}"
     );
     assert_eq!(
         out.matches("let_$rowBindingValue").count(),
-        3,
+        2,
         "each guarded binding needs its own row-local cached value: {out}"
     );
     assert_eq!(
         out.matches("_$rowBindingInitialized").count(),
-        9,
+        6,
         "each guard must read, initialize, and persist its own initialization flag: {out}"
     );
-    assert!(
-        out.contains("_$insertBefore(parent,_root,start)"),
-        "safe row should mount its prepared fragment directly into the list range: {out}"
-    );
+    assert!(!out.contains("_$createDocumentFragment"), "{out}");
+    assert!(out.contains("_$compiledCreateElement(\"tr\""), "{out}");
     assert_eq!(
         out.matches("renderAnchor(").count(),
         0,
@@ -2451,14 +2455,18 @@ fn coalesces_safe_native_row_signal_get_bindings() {
     assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
     let out = compact(&emit_stmts(stmts));
 
-    assert!(out.contains("directRoot:true"), "{out}");
-    assert!(out.contains("compiledRowPatch:true"), "{out}");
+    assert!(out.contains("_$reconcileKeyed("), "{out}");
+    assert!(!out.contains(concat!("direct", "Root:true")), "{out}");
+    assert!(!out.contains(concat!("compiled", "RowPatch:true")), "{out}");
     assert_eq!(
-        out.matches("watchEffect(").count(),
-        1,
-        "signal getter row should emit only the list effect: {out}"
+        out.matches("effect(").count(),
+        2,
+        "signal getter row should emit one list effect and one row selector effect: {out}"
     );
-    assert!(out.contains("return{patch:"), "signal row must return a patch record: {out}");
+    assert!(
+        out.contains("return{node:_el1,patch:_$rowPatch,dispose:()=>disposeOwner(_$rowOwner)}"),
+        "{out}"
+    );
     assert!(out.contains("selected.get()"), "{out}");
     assert!(!out.contains("_$createTextWrapper("), "{out}");
     assert!(!out.contains("renderAnchor("), "{out}");
@@ -2476,11 +2484,11 @@ fn preserves_text_wrappers_for_mixed_row_content() {
     assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
     let out = compact(&emit_stmts(stmts));
 
-    assert!(out.contains("directRoot:true"), "safe row should retain the direct-root path: {out}");
+    assert!(out.contains("_$reconcileKeyed("), "safe row should use compiled reconcile: {out}");
     assert_eq!(
-        out.matches("_$createTextWrapper(").count(),
+        out.matches("_$compiledCreateTextNode(\"\")").count(),
         3,
-        "mixed or adjacent text bindings need wrappers so textContent updates preserve siblings: {out}"
+        "mixed or adjacent text bindings need direct text nodes so updates preserve siblings: {out}"
     );
 }
 
@@ -2534,12 +2542,225 @@ fn keeps_unsafe_list_row_bindings_on_conservative_paths() {
 
         assert!(out.contains(expected), "{name} fallback lost expected code: {out}");
         assert!(
-            !out.contains("compiledRowPatch:true"),
+            !out.contains(concat!("compiled", "RowPatch:true")),
             "{name} fallback must not opt into compiled row records: {out}"
         );
         assert!(
             out.matches("watchEffect(").count() >= 2,
             "{name} fallback must retain its independent watcher(s): {out}"
         );
+    }
+}
+
+#[test]
+fn routes_only_compiler_proven_direct_leaf_rows_to_compiled_reconcile() {
+    let mut direct_vt = new_vt();
+    let direct_call = parse_call(
+        "rows.get().map(row => <tr key={row.id} className={row.active ? 'active' : ''}><td>{row.label}</td></tr>)",
+        true,
+    );
+    let mut direct_stmts = Vec::new();
+
+    assert!(try_build_list_from_map(
+        &mut direct_vt,
+        &ident("root"),
+        &direct_call,
+        &mut direct_stmts,
+    ));
+    let direct_out = compact(&emit_stmts(direct_stmts));
+
+    assert!(direct_out.contains("effect(()=>{"), "{direct_out}");
+    assert!(direct_out.contains("_$reconcileKeyed("), "{direct_out}");
+    assert!(direct_out.contains("node:_el"), "{direct_out}");
+    assert!(direct_out.contains("patch:_$rowPatch"), "{direct_out}");
+    assert!(direct_out.contains("dispose:()=>{}"), "{direct_out}");
+    assert!(direct_out.contains("_$compiledCreateElement(\"tr\""), "{direct_out}");
+    assert!(!direct_out.contains("watchEffect"), "{direct_out}");
+    assert!(!direct_out.contains("_$vaporKeyedList"), "{direct_out}");
+    assert!(!direct_out.contains(concat!("direct", "Root")), "{direct_out}");
+    assert!(!direct_out.contains(concat!("compiled", "RowPatch")), "{direct_out}");
+    assert!(!direct_out.contains("ownedMount"), "{direct_out}");
+    assert!(!direct_out.contains("_$createDocumentFragment"), "{direct_out}");
+}
+
+#[test]
+fn keeps_unstable_or_capability_bearing_rows_on_vapor_keyed_list() {
+    let cases = [
+        ("missing-key", "rows.map(row => <tr><td>{row.label}</td></tr>)"),
+        (
+            "index-use",
+            "rows.map((row, index) => <tr key={row.id} data-index={index}><td>{row.label}</td></tr>)",
+        ),
+        (
+            "structural-row",
+            "rows.map(row => <tr key={row.id}>{row.visible ? <td>{row.label}</td> : null}</tr>)",
+        ),
+        ("component-row", "rows.map(row => <Row key={row.id} row={row} />)"),
+        ("async-row", "rows.map(async row => <tr key={row.id}><td>{row.label}</td></tr>)"),
+        ("ref-row", "rows.map(row => <tr key={row.id} ref={row.ref}><td>{row.label}</td></tr>)"),
+    ];
+
+    for (name, source) in cases {
+        let mut vt = new_vt();
+        let call = parse_call(source, true);
+        let mut stmts = Vec::new();
+
+        assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+        let out = compact(&emit_stmts(stmts));
+
+        assert!(out.contains("watchEffect(()=>{"), "{name}: {out}");
+        assert!(out.contains("_$vaporKeyedList({"), "{name}: {out}");
+        assert!(!out.contains("_$reconcileKeyed("), "{name}: {out}");
+    }
+}
+
+#[test]
+fn lowers_stable_event_rows_to_owned_compiled_listeners() {
+    let mut vt = new_vt();
+    let call = parse_call(
+        "rows.map(row => <tr key={row.id} onClick={() => select(row)}><td>{row.label}</td></tr>)",
+        true,
+    );
+    let mut stmts = Vec::new();
+
+    assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("_$reconcileKeyed("), "{out}");
+    assert!(out.contains(".addEventListener(\"click\""), "{out}");
+    assert!(out.contains("onCleanup(()=>"), "{out}");
+    assert!(out.contains(".removeEventListener(\"click\""), "{out}");
+    assert!(out.contains("dispose:()=>disposeOwner("), "{out}");
+    assert!(!out.contains("_$addEventListener"), "{out}");
+    assert!(!out.contains("_$vaporKeyedList"), "{out}");
+}
+
+#[test]
+fn shares_one_owner_for_compiled_row_events_and_selector() {
+    let mut vt = new_vt();
+    let call = parse_call(
+        "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''} onClick={() => select(row)} onMouseOver={() => preview(row)}><td>{row.label}</td></tr>)",
+        true,
+    );
+    let mut stmts = Vec::new();
+
+    assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("_$reconcileKeyed("), "{out}");
+    assert_eq!(out.matches("createOwner()").count(), 1, "{out}");
+    assert_eq!(out.matches("disposeOwner(").count(), 1, "{out}");
+    assert_eq!(out.matches(".addEventListener(").count(), 2, "{out}");
+    assert_eq!(out.matches(".removeEventListener(").count(), 2, "{out}");
+    assert_eq!(out.matches("runWithOwner(").count(), 3, "{out}");
+    assert!(out.contains("effect(()=>"), "{out}");
+
+    for (name, source, expected_owner_count) in [
+        (
+            "event-only",
+            "rows.get().map(row => <tr key={row.id} onClick={() => select(row)}>{row.label}</tr>)",
+            1,
+        ),
+        (
+            "selector-only",
+            "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''}>{row.label}</tr>)",
+            1,
+        ),
+        ("owner-free", "rows.get().map(row => <tr key={row.id}>{row.label}</tr>)", 0),
+    ] {
+        let mut vt = new_vt();
+        let call = parse_call(source, true);
+        let mut stmts = Vec::new();
+
+        assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+        let out = compact(&emit_stmts(stmts));
+        assert_eq!(out.matches("createOwner()").count(), expected_owner_count, "{name}: {out}");
+        assert_eq!(out.matches("disposeOwner(").count(), expected_owner_count, "{name}: {out}");
+    }
+
+    let mut fallback_vt = new_vt();
+    let fallback_call = parse_call(
+        "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''} onClick={() => select(row)}><Row row={row} /></tr>)",
+        true,
+    );
+    let mut fallback_stmts = Vec::new();
+
+    assert!(try_build_list_from_map(
+        &mut fallback_vt,
+        &ident("root"),
+        &fallback_call,
+        &mut fallback_stmts,
+    ));
+    let fallback_out = compact(&emit_stmts(fallback_stmts));
+    assert!(fallback_out.contains("_$vaporKeyedList({"), "{fallback_out}");
+    assert!(!fallback_out.contains("_$reconcileKeyed("), "{fallback_out}");
+    assert!(fallback_out.contains("_$addEventListener("), "{fallback_out}");
+}
+
+#[test]
+fn lowers_stable_row_key_equality_to_one_external_selector() {
+    for source in [
+        "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''}><td>{row.label}</td></tr>)",
+        "rows.get().map(row => <tr key={row.id} className={selected.value === row.id ? 'danger' : ''}><td>{row.label}</td></tr>)",
+    ] {
+        let mut vt = new_vt();
+        let call = parse_call(source, true);
+        let mut stmts = Vec::new();
+
+        assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+        let out = compact(&emit_stmts(stmts));
+
+        assert_eq!(out.matches("createSelector(").count(), 1, "{out}");
+        assert!(
+            out.contains("createSelector(()=>selected.get())")
+                || out.contains("createSelector(()=>selected.value)"),
+            "{out}"
+        );
+        assert!(out.contains("runWithOwner("), "{out}");
+        assert!(out.contains("createOwner()"), "{out}");
+        assert!(out.contains("disposeOwner("), "{out}");
+        assert!(out.contains("effect(()=>"), "{out}");
+        assert!(out.contains("_$reconcileKeyed("), "{out}");
+        assert!(out.contains(".textContent="), "item label must remain in row patch: {out}");
+
+        let list_effect = out.rfind("effect(()=>{").expect("compiled list effect");
+        assert!(
+            out.find("createSelector(").is_some_and(|selector| selector < list_effect),
+            "selector source must be read outside list reconcile: {out}"
+        );
+    }
+}
+
+#[test]
+fn keeps_unsafe_or_multi_external_row_comparisons_unoptimized() {
+    let cases = [
+        (
+            "complex-row-key",
+            "rows.get().map(row => <tr key={row.id} className={normalize(row.id) === selected.get() ? 'danger' : ''}>{row.label}</tr>)",
+        ),
+        (
+            "function-source",
+            "rows.get().map(row => <tr key={row.id} className={row.id === getSelected() ? 'danger' : ''}>{row.label}</tr>)",
+        ),
+        (
+            "multiple-external-reads",
+            "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() && enabled.get() ? 'danger' : ''}>{row.label}</tr>)",
+        ),
+        (
+            "non-key-field",
+            "rows.get().map(row => <tr key={row.id} className={row.group === selected.get() ? 'danger' : ''}>{row.label}</tr>)",
+        ),
+    ];
+
+    for (name, source) in cases {
+        let mut vt = new_vt();
+        let call = parse_call(source, true);
+        let mut stmts = Vec::new();
+
+        assert!(try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
+        let out = compact(&emit_stmts(stmts));
+
+        assert!(!out.contains("createSelector("), "{name}: {out}");
+        assert!(!out.contains("runWithOwner("), "{name}: {out}");
     }
 }

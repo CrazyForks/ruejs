@@ -35,36 +35,36 @@ export default Goods;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
+const _$getTemplate1 = _$template("<h1>Rue 响应式框架示例</h1>");
 const Hello: FC = (props)=>{
-    return vapor(()=>{
-        const _root = _$createElement("div");
+    return vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
         _$appendChild(_root, _$createTextNode("1 "));
-        const _el1 = _$createElement("span");
+        const _el1 = _$createElement("span", _root);
         _$appendChild(_root, _el1);
         const _list1 = _$createComment("rue:children:anchor");
         _$appendChild(_el1, _list1);
         watchEffect(()=>{
             const __slot = (props.children);
-          untrack(()=>renderAnchor(__slot, _el1, _list1));
+            untrack(()=>renderAnchor(__slot, _el1, _list1));
         });
         return _root;
     });
 };
-const Goods: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        const _el2 = _$createElement("h1");
-        _$appendChild(_root, _el2);
-        _$appendChild(_el2, _$createTextNode("Rue 响应式框架示例"));
+const Goods: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
         const _list2 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list2);
         const __child1 = vapor(()=>{
             const _root = _$createDocumentFragment();
-            const _el3 = _$createElement("p");
+            const _el3 = _$createElement("p", _root);
             _$appendChild(_root, _el3);
             _$appendChild(_el3, _$createTextNode("这是子内容 A"));
-            const _el4 = _$createElement("p");
+            const _el4 = _$createElement("p", _root);
             _$appendChild(_root, _el4);
             _$appendChild(_el4, _$createTextNode("这是子内容 B"));
             return _root;

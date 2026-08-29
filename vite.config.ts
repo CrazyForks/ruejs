@@ -7,7 +7,6 @@ import daisyUICalendarStyles from 'daisyui/components/calendar/object.js'
 import VitePluginRue from '@rue-js/vite-plugin-rue'
 import { mdxToJs, type MdxCompileOptions } from 'satteri'
 import type { Plugin } from 'vite'
-import wasm from 'vite-plugin-wasm'
 // import { DevTools } from '@vitejs/devtools'
 
 const rootDir = import.meta.dirname
@@ -180,7 +179,6 @@ export default defineConfig(({ command, isSsrBuild }) => {
     base: command === 'build' ? './' : '/',
     plugins: [
       // !isVitest && DevTools(),
-      wasm(),
       fixDaisyUICallyCss(),
       tailwindcss() as any,
       createSatteriMdxPlugin({ development: command === 'serve' && !isVitest }),
@@ -297,12 +295,20 @@ export default defineConfig(({ command, isSsrBuild }) => {
     resolve: {
       conditions: ['development', 'browser'],
       alias: {
+        '@rue-js/runtime-vapor/compiled': path.resolve(
+          rootDir,
+          'packages/runtime-vapor/dist/compiled.js',
+        ),
+        '@rue-js/runtime-vapor/protocol': path.resolve(
+          rootDir,
+          'packages/runtime-vapor/src/protocol.ts',
+        ),
         '@rue-js/runtime-vapor/vapor': process.env.VITEST
-          ? path.resolve(rootDir, 'packages/runtime-vapor/vapor.node.js')
-          : path.resolve(rootDir, 'packages/runtime-vapor/vapor.js'),
+          ? path.resolve(rootDir, 'packages/runtime-vapor/dist/vapor.node.js')
+          : path.resolve(rootDir, 'packages/runtime-vapor/src/vapor.ts'),
         '@rue-js/runtime-vapor/reactive': process.env.VITEST
-          ? path.resolve(rootDir, 'packages/runtime-vapor/reactive.node.js')
-          : path.resolve(rootDir, 'packages/runtime-vapor/reactive.js'),
+          ? path.resolve(rootDir, 'packages/runtime-vapor/dist/reactive.node.js')
+          : path.resolve(rootDir, 'packages/runtime-vapor/src/reactive.ts'),
         '@rue-js/rue': path.resolve(rootDir, 'packages/rue/src'),
         '@rue-js/router': path.resolve(rootDir, 'packages/router/src'),
         '@rue-js/store': path.resolve(rootDir, 'packages/store/src'),
@@ -315,8 +321,8 @@ export default defineConfig(({ command, isSsrBuild }) => {
         '@rue-js/shared': path.resolve(rootDir, 'packages/shared/src'),
         '@rue-js/design': path.resolve(rootDir, 'packages/rue-design/src'),
         '@rue-js/runtime-vapor': process.env.VITEST
-          ? path.resolve(rootDir, 'packages/runtime-vapor/index.node.js')
-          : path.resolve(rootDir, 'packages/runtime-vapor/index.js'),
+          ? path.resolve(rootDir, 'packages/runtime-vapor/dist/index.node.js')
+          : path.resolve(rootDir, 'packages/runtime-vapor/src/index.ts'),
       },
     },
   }

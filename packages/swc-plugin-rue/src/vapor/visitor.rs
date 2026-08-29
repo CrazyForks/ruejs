@@ -141,6 +141,7 @@ impl VisitMut for VaporTransform {
     /// - `return _root`
     fn visit_mut_arrow_expr(&mut self, arrow: &mut ArrowExpr) {
         log::debug("rue-swc: visit arrow_expr");
+        self.push_function_scope(arrow.is_async);
         let mut scalar_scope = std::collections::HashSet::new();
         for param in &arrow.params {
             collect_scalar_names_from_pat(param, &mut scalar_scope);
@@ -152,20 +153,49 @@ impl VisitMut for VaporTransform {
                 match inner {
                     Expr::JSXElement(el) => {
                         log::debug("rue-swc: arrow JSXElement");
-                        // 将 JSXElement 编译为块体，并用 vapor(() => {block}) 包裹
-                        let block = self.jsx_to_block(el.as_ref());
-                        let func = Expr::Arrow(ArrowExpr {
-                            span: DUMMY_SP,
-                            params: vec![vapor_parent_param()],
-                            body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
-                            is_async: false,
-                            is_generator: false,
-                            type_params: None,
-                            return_type: None,
-                            ctxt: SyntaxContext::empty(),
-                        });
-                        let call = call_ident("vapor", vec![func]);
-                        **expr = call;
+                        if self.static_templates
+                            && !self.current_function_is_async()
+                            && let Some((handle, reserved_elements)) =
+                                super::template::static_root_handle_expr(el.as_ref())
+                        {
+                            self.next_el += reserved_elements;
+                            **expr = handle;
+                        } else if !self.current_function_is_async()
+                            && crate::element_children::is_compiled_scalar_element(
+                                self,
+                                el.as_ref(),
+                            )
+                        {
+                            let block = crate::element_children::compiled_scalar_element_to_block(
+                                self,
+                                el.as_ref(),
+                            );
+                            let setup = Expr::Arrow(ArrowExpr {
+                                span: DUMMY_SP,
+                                params: vec![vapor_parent_param()],
+                                body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
+                                is_async: false,
+                                is_generator: false,
+                                type_params: None,
+                                return_type: None,
+                                ctxt: SyntaxContext::empty(),
+                            });
+                            **expr = call_ident("_$compiledRoot", vec![setup]);
+                        } else {
+                            // 将 JSXElement 编译为块体，并用 vapor(() => {block}) 包裹
+                            let block = self.jsx_to_block(el.as_ref());
+                            let func = Expr::Arrow(ArrowExpr {
+                                span: DUMMY_SP,
+                                params: vec![vapor_parent_param()],
+                                body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
+                                is_async: false,
+                                is_generator: false,
+                                type_params: None,
+                                return_type: None,
+                                ctxt: SyntaxContext::empty(),
+                            });
+                            **expr = call_ident("vapor", vec![func]);
+                        }
                         // 标记已进行 Vapor 转换，用于模块级导入注入
                         self.did_transform = true;
                     }
@@ -201,9 +231,11 @@ impl VisitMut for VaporTransform {
             }
         }
         self.pop_plain_local_scope();
+        self.pop_function_scope();
     }
 
     fn visit_mut_function(&mut self, function: &mut Function) {
+        self.push_function_scope(function.is_async);
         let mut scalar_scope = std::collections::HashSet::new();
         for param in &function.params {
             collect_scalar_names_from_pat(&param.pat, &mut scalar_scope);
@@ -211,6 +243,7 @@ impl VisitMut for VaporTransform {
         self.push_plain_local_scope(scalar_scope);
         function.visit_mut_children_with(self);
         self.pop_plain_local_scope();
+        self.pop_function_scope();
     }
 
     /// 将任意函数体中的 `return <JSX/>` / `return <>...</>` 转成 `return vapor(() => { ... })`
@@ -220,20 +253,46 @@ impl VisitMut for VaporTransform {
             match inner {
                 Expr::JSXElement(el) => {
                     log::debug("rue-swc: nested return JSXElement");
-                    // 将返回的 JSX 编译为块体，并用 vapor 包裹替换原返回值
-                    let body_block = self.jsx_to_block(el.as_ref());
-                    let func = Expr::Arrow(ArrowExpr {
-                        span: DUMMY_SP,
-                        params: vec![vapor_parent_param()],
-                        body: Box::new(BlockStmtOrExpr::BlockStmt(body_block)),
-                        is_async: false,
-                        is_generator: false,
-                        type_params: None,
-                        return_type: None,
-                        ctxt: SyntaxContext::empty(),
-                    });
-                    let call = call_ident("vapor", vec![func]);
-                    **expr = call;
+                    if self.static_templates
+                        && !self.current_function_is_async()
+                        && let Some((handle, reserved_elements)) =
+                            super::template::static_root_handle_expr(el.as_ref())
+                    {
+                        self.next_el += reserved_elements;
+                        **expr = handle;
+                    } else if !self.current_function_is_async()
+                        && crate::element_children::is_compiled_scalar_element(self, el.as_ref())
+                    {
+                        let block = crate::element_children::compiled_scalar_element_to_block(
+                            self,
+                            el.as_ref(),
+                        );
+                        let setup = Expr::Arrow(ArrowExpr {
+                            span: DUMMY_SP,
+                            params: vec![vapor_parent_param()],
+                            body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
+                            is_async: false,
+                            is_generator: false,
+                            type_params: None,
+                            return_type: None,
+                            ctxt: SyntaxContext::empty(),
+                        });
+                        **expr = call_ident("_$compiledRoot", vec![setup]);
+                    } else {
+                        // 将返回的 JSX 编译为块体，并用 vapor 包裹替换原返回值
+                        let body_block = self.jsx_to_block(el.as_ref());
+                        let func = Expr::Arrow(ArrowExpr {
+                            span: DUMMY_SP,
+                            params: vec![vapor_parent_param()],
+                            body: Box::new(BlockStmtOrExpr::BlockStmt(body_block)),
+                            is_async: false,
+                            is_generator: false,
+                            type_params: None,
+                            return_type: None,
+                            ctxt: SyntaxContext::empty(),
+                        });
+                        **expr = call_ident("vapor", vec![func]);
+                    }
                     self.did_transform = true;
                 }
                 Expr::JSXFragment(frag) => {
@@ -262,6 +321,11 @@ impl VisitMut for VaporTransform {
     /// 模块级处理：在发生 Vapor 转换后，按需注入 `@rue-js/rue` 运行时 import
     fn visit_mut_module(&mut self, m: &mut Module) {
         log::debug("rue-swc: visit module");
+        let mut hoisted_templates = if self.static_templates {
+            super::template::collect_hoisted_templates(m)
+        } else {
+            Vec::new()
+        };
         let visible_renderable_locals = self.current_renderable_local_names();
         let scope = crate::element_expr::collect_renderable_local_alias_names(
             m.body.iter().filter_map(|item| match item {
@@ -277,6 +341,8 @@ impl VisitMut for VaporTransform {
         m.visit_mut_children_with(self);
         self.pop_plain_local_scope();
         self.pop_renderable_local_scope();
+        super::template::strip_template_markers(m);
+        super::template::retain_used_hoisted_templates(m, &mut hoisted_templates);
         if !self.did_transform {
             return;
         }
@@ -287,6 +353,7 @@ impl VisitMut for VaporTransform {
         // - import 源：固定为 '@rue-js/rue'
         // - 类型导入优先插入（如 FC），值导入按稳定序列排序，保证快照稳定
         // - 采用 DUMMY_SP 与 SyntaxContext::empty() 构造 importdecl/specifier，避免位置信息干扰
+        super::template::inject_hoisted_templates(m, &hoisted_templates);
         ensure_runtime_imports(m);
     }
 }

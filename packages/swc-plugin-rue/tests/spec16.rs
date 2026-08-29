@@ -122,8 +122,10 @@ export default ListTransitionExample
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$vaporWithKey, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC, TransitionGroup } from '@rue-js/rue';
+    let expected_fragment = r##"
+import { ref, _$vaporWithHookId, useSetup, TransitionGroup, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$vaporWithKey, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { type FC } from '@rue-js/rue';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold mb-3">带过渡动效的列表（移植自 Vue）</h3>');
 const ListTransitionExample: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const items = _$vaporWithHookId("ref:1:0", ()=>ref<number[]>([
@@ -174,13 +176,10 @@ const ListTransitionExample: FC = ()=>{
             };
         }));
     const { items: items, nextId: nextId, insert: insert, reset: reset, shuffle: shuffle, remove: remove } = _$useSetup;
-    return vapor(()=>{
+    return vapor((__rue_parent_context)=>{
         const _root = _$createDocumentFragment();
-        const _el1 = _$createElement("h3");
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold mb-3");
-        _$appendChild(_el1, _$createTextNode("带过渡动效的列表（移植自 Vue）"));
-        const _el2 = _$createElement("style");
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
+        const _el2 = _$createElement("style", _root);
         _$appendChild(_root, _el2);
         watchEffect(()=>{
             _$settextContent(_el2, `
@@ -220,28 +219,28 @@ const ListTransitionExample: FC = ()=>{
 }
       `);
         });
-        const _el3 = _$createElement("div");
+        const _el3 = _$createElement("div", _root);
         _$appendChild(_root, _el3);
         _$setClassName(_el3, "mt-4 grid md:grid-cols-1 gap-6 items-start");
-        const _el4 = _$createElement("div");
+        const _el4 = _$createElement("div", _el3);
         _$appendChild(_el3, _el4);
         _$setClassName(_el4, "flex gap-3");
-        const _el5 = _$createElement("button");
+        const _el5 = _$createElement("button", _el4);
         _$appendChild(_el4, _el5);
         _$setClassName(_el5, "btn btn-primary");
         _$addEventListener(_el5, "click", (insert));
         _$appendChild(_el5, _$createTextNode("Insert at random index"));
-        const _el6 = _$createElement("button");
+        const _el6 = _$createElement("button", _el4);
         _$appendChild(_el4, _el6);
         _$setClassName(_el6, "btn");
         _$addEventListener(_el6, "click", (reset));
         _$appendChild(_el6, _$createTextNode("Reset"));
-        const _el7 = _$createElement("button");
+        const _el7 = _$createElement("button", _el4);
         _$appendChild(_el4, _el7);
         _$setClassName(_el7, "btn");
         _$addEventListener(_el7, "click", (shuffle));
         _$appendChild(_el7, _$createTextNode("Shuffle"));
-        const _el8 = _$createElement("ul");
+        const _el8 = _$createElement("ul", _el3);
         _$appendChild(_el3, _el8);
         _$setClassName(_el8, "container space-y-3 rounded-xl border border-base-200 bg-base-100 p-3");
         const _list1 = _$createComment("rue:component:anchor");
@@ -250,25 +249,25 @@ const ListTransitionExample: FC = ()=>{
             const __slot2 = _$createComponent(TransitionGroup, {
                 name: "fade",
                 children: items.value.map((item)=>_$vaporWithKey(vapor(()=>{
-                const _root = _$createDocumentFragment();
-                const _el9 = _$createElement("li");
-                _$appendChild(_root, _el9);
-                _$setClassName(_el9, "item px-3 py-2 rounded-md border border-base-200 bg-base-100 shadow-sm");
-                const _el10 = _$createElement("span");
-                _$appendChild(_el9, _el10);
-                _$setClassName(_el10, "text-base-content");
-                const _el11 = _$createTextWrapper(_el10);
-                _$appendChild(_el10, _el11);
-                watchEffect(()=>{
-                    _$settextContent(_el11, item);
-                });
-                const _el12 = _$createElement("button");
-                _$appendChild(_el9, _el12);
-                _$setClassName(_el12, "btn btn-sm");
-                _$addEventListener(_el12, "click", (()=>remove(item)));
-                _$appendChild(_el12, _$createTextNode("x"));
-                return _root;
-            }), item))
+                        const _root = _$createDocumentFragment();
+                        const _el9 = _$createElement("li", _root);
+                        _$appendChild(_root, _el9);
+                        _$setClassName(_el9, "item px-3 py-2 rounded-md border border-base-200 bg-base-100 shadow-sm");
+                        const _el10 = _$createElement("span", _el9);
+                        _$appendChild(_el9, _el10);
+                        _$setClassName(_el10, "text-base-content");
+                        const _el11 = _$createTextWrapper(_el10);
+                        _$appendChild(_el10, _el11);
+                        watchEffect(()=>{
+                            _$settextContent(_el11, item);
+                        });
+                        const _el12 = _$createElement("button", _el9);
+                        _$appendChild(_el9, _el12);
+                        _$setClassName(_el12, "btn btn-sm");
+                        _$addEventListener(_el12, "click", (()=>remove(item)));
+                        _$appendChild(_el12, _$createTextNode("x"));
+                        return _root;
+                    }), item))
             });
             untrack(()=>renderAnchor(__slot2, _el8, _list1));
         });

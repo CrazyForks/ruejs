@@ -2,6 +2,7 @@
 
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -11,23 +12,40 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const projectRoot = process.cwd()
 const runtimeVaporDir = path.resolve(projectRoot, 'packages/runtime-vapor')
+const runtimeVaporSourceDir = path.resolve(runtimeVaporDir, 'src')
+const runtimeVaporDistDir = path.resolve(runtimeVaporDir, 'dist')
 const generatorPath = path.resolve(runtimeVaporDir, 'scripts/emit-typescript-runtime.mjs')
-const legacyCommentsCheckerPath = path.resolve(
-  runtimeVaporDir,
-  'scripts/check-legacy-rust-comments.mjs',
-)
-const legacyCommentsCatalogPath = path.resolve(runtimeVaporDir, 'legacy-rust-comments.json')
 
 const rootTargets = [
+  'compiled.js',
   'index.js',
   'index.node.js',
+  'protocol.js',
+  'reactive.browser.js',
   'reactive.js',
   'reactive.node.js',
+  'reactive.shared.js',
   'reactive.vapor.js',
+  'runtime-entry.js',
   'runtime-entry-wrap.js',
   'vapor-bridge.js',
   'vapor.js',
   'vapor.node.js',
+]
+
+const kernelTargets = [
+  'reactive-kernel/computed.js',
+  'reactive-kernel/effect.js',
+  'reactive-kernel/graph.js',
+  'reactive-kernel/index.js',
+  'reactive-kernel/log.js',
+  'reactive-kernel/reactive.js',
+  'reactive-kernel/resource.js',
+  'reactive-kernel/runtime-state.js',
+  'reactive-kernel/scheduler.js',
+  'reactive-kernel/scope.js',
+  'reactive-kernel/signal.js',
+  'reactive-kernel/watch.js',
 ]
 
 const reactiveTargets = [
@@ -67,7 +85,12 @@ const runtimeTargets = [
   'js-runtime/types.js',
 ]
 
-const expectedTargets = [...rootTargets, ...reactiveTargets, ...runtimeTargets].sort()
+const expectedTargets = [
+  ...rootTargets,
+  ...reactiveTargets,
+  ...runtimeTargets,
+  ...kernelTargets,
+].sort()
 const fixtureDirs: string[] = []
 
 interface RuntimeTypeScriptTool {
@@ -89,30 +112,8 @@ interface RuntimeTypeScriptTool {
   }): Promise<{ outputFiles: string[] }>
 }
 
-interface LegacyRustCommentsTool {
-  auditLegacyRustComments(options: { projectRoot: string; catalogPath: string }): Promise<{
-    sourceCommit: string
-    scannedFileCount: number
-    commentedFileCount: number
-    sourceChineseLineCount: number
-    sourceBlockCount: number
-    catalogBlockCount: number
-    sourceHash: string
-    catalogHash: string
-    missingBlocks: string[]
-    extraBlocks: string[]
-    missingTargets: string[]
-    invalidEntries: string[]
-  }>
-}
-
 const loadTool = async (): Promise<RuntimeTypeScriptTool> =>
   (await import(`${pathToFileURL(generatorPath).href}?test=${Date.now()}`)) as RuntimeTypeScriptTool
-
-const loadLegacyCommentsTool = async (): Promise<LegacyRustCommentsTool> =>
-  (await import(
-    `${pathToFileURL(legacyCommentsCheckerPath).href}?test=${Date.now()}`
-  )) as LegacyRustCommentsTool
 
 const writeFixture = async (root: string, relativePath: string, contents: string) => {
   const filePath = path.resolve(root, relativePath)
@@ -134,77 +135,53 @@ afterEach(async () => {
 })
 
 describe('runtime-vapor TypeScript build guardrails', () => {
-  it('keeps the legacy Rust Chinese comment catalog aligned with the baseline Git object', async () => {
-    const tool = await loadLegacyCommentsTool()
-    const audit = await tool.auditLegacyRustComments({
-      projectRoot,
-      catalogPath: legacyCommentsCatalogPath,
-    })
-
-    expect(audit).toMatchObject({
-      sourceCommit: '41552d14bcc6d992eee25dc40e0887e1cc5213e6',
-      scannedFileCount: 82,
-      commentedFileCount: 81,
-      sourceChineseLineCount: 1317,
-      sourceBlockCount: 578,
-      catalogBlockCount: 578,
-      missingBlocks: [],
-      extraBlocks: [],
-      missingTargets: [],
-      invalidEntries: [],
-    })
-    expect(audit.sourceBlockCount).toBe(audit.catalogBlockCount)
-    expect(audit.sourceHash).toBe(audit.catalogHash)
-    console.info(
-      `[runtime-vapor legacy comments] ${audit.sourceBlockCount} blocks / ${audit.sourceChineseLineCount} Chinese lines / ${audit.sourceHash}`,
-    )
-  })
-
-  it('identifies the exact legacy comment entries missing a source, target, or body', async () => {
-    const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-legacy-comments-'))
-    fixtureDirs.push(fixtureDir)
-    const malformedCatalog = JSON.parse(await readFile(legacyCommentsCatalogPath, 'utf8')) as {
-      sourceFiles: Array<{
-        sourcePath: string
-        blocks: Array<{ id: string; target?: string; text?: string }>
-      }>
-    }
-    const removedSource = malformedCatalog.sourceFiles.shift()!
-    const targetlessBlock = malformedCatalog.sourceFiles[0]!.blocks[0]!
-    const bodylessBlock = malformedCatalog.sourceFiles[1]!.blocks[0]!
-    delete targetlessBlock.target
-    bodylessBlock.text = ''
-    const malformedCatalogPath = path.resolve(fixtureDir, 'legacy-rust-comments.json')
-    await writeFile(malformedCatalogPath, `${JSON.stringify(malformedCatalog)}\n`, 'utf8')
-
-    const tool = await loadLegacyCommentsTool()
-    const audit = await tool.auditLegacyRustComments({
-      projectRoot,
-      catalogPath: malformedCatalogPath,
-    })
-
-    expect(audit.invalidEntries).toContain(`${removedSource.sourcePath}: missing source entry`)
-    expect(audit.missingBlocks).toEqual(
-      expect.arrayContaining(removedSource.blocks.map(block => block.id)),
-    )
-    expect(audit.missingTargets).toContain(targetlessBlock.id)
-    expect(audit.invalidEntries).toContain(`${bodylessBlock.id}: missing text`)
-  })
-
-  it('defines the exact 40 handwritten runtime targets', async () => {
+  it('defines the exact 57 handwritten runtime targets', async () => {
     const tool = await loadTool()
 
-    expect(expectedTargets).toHaveLength(40)
+    expect(expectedTargets).toHaveLength(57)
     expect([...tool.RUNTIME_TYPESCRIPT_TARGETS].sort()).toEqual(expectedTargets)
     expect(tool.RUNTIME_TYPESCRIPT_TARGETS).not.toContain('vitest-shim.cjs')
     expect(tool.RUNTIME_TYPESCRIPT_TARGETS.some(file => file.startsWith('pkg-'))).toBe(false)
     expect(tool.RUNTIME_TYPESCRIPT_TARGETS.some(file => file.startsWith('scripts/'))).toBe(false)
+    expect(tool.targetsForPlatform('node')).toEqual(
+      expectedTargets.filter(
+        target =>
+          ![
+            'compiled.js',
+            'index.js',
+            'reactive.browser.js',
+            'reactive.js',
+            'reactive.vapor.js',
+            'vapor.js',
+          ].includes(target),
+      ),
+    )
+    expect(tool.targetsForPlatform('browser')).toEqual(
+      expectedTargets.filter(
+        target => !['index.node.js', 'reactive.node.js', 'vapor.node.js'].includes(target),
+      ),
+    )
 
     const audit = await tool.auditTypeScriptRuntime({ runtimeDir: runtimeVaporDir })
-    expect(audit).toMatchObject({ targetCount: 40, migratedCount: 40, violations: [] })
+    expect(audit).toMatchObject({ targetCount: 57, migratedCount: 57, violations: [] })
     console.info(
       `[runtime-vapor TypeScript] ${audit.migratedCount}/${audit.targetCount} migrated targets`,
     )
+  })
+
+  it('uses Node-loadable ESM specifiers inside the generated kernel graph', async () => {
+    for (const target of kernelTargets) {
+      const source = await readFile(
+        path.resolve(runtimeVaporSourceDir, target.replace(/\.js$/, '.ts')),
+        'utf8',
+      )
+      const relativeSpecifiers = [...source.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map(
+        match => match[1],
+      )
+      for (const specifier of relativeSpecifiers) {
+        expect(specifier, target).toMatch(/\.js$/)
+      }
+    }
   })
 
   it('closes JavaScript compatibility after all handwritten runtime sources migrate', async () => {
@@ -224,50 +201,102 @@ describe('runtime-vapor TypeScript build guardrails', () => {
       useUnknownInCatchVariables: true,
       noEmit: true,
     })
-    expect(tsconfig.include).toEqual(
-      expect.arrayContaining([
-        './*.ts',
-        './js-reactive/**/*.ts',
-        './js-runtime/**/*.ts',
-        './runtime-vapor-env.d.ts',
-      ]),
-    )
+    expect(tsconfig.include).toEqual(expect.arrayContaining(['./src/**/*.ts', './src/global.d.ts']))
     expect(tsconfig.include.some(pattern => pattern.endsWith('.js'))).toBe(false)
     expect(tsconfig.exclude).toEqual(
-      expect.arrayContaining(['./pkg-*', './scripts', './src', './tests']),
+      expect.arrayContaining(['./dist', './pkg-*', './scripts', './tests']),
     )
     expect(packageJson.scripts['check-ts']).toContain('tsc -p tsconfig.json --noEmit')
     expect(packageJson.scripts['check-ts']).toContain('emit-typescript-runtime.mjs --check')
     expect(packageJson.scripts['build-ts']).toBe('node ./scripts/emit-typescript-runtime.mjs')
 
-    expect(packageJson.scripts.build).toMatch(/^npm run build-ts && /)
-    expect(packageJson.scripts['build-vapor']).toMatch(/^npm run build-ts && /)
-    expect(packageJson.scripts['build-node']).toMatch(/^npm run build-ts && /)
-    expect(packageJson.scripts.prepack).toBe(
-      'npm run check-ts && npm run build && npm run build-node',
+    expect(packageJson.scripts.build).toBe('npm run build-ts')
+    expect(packageJson.scripts['build-vapor']).toBe('npm run build-ts -- --platform browser')
+    expect(packageJson.scripts['build-node']).toBe('npm run build-ts -- --platform node')
+    expect(packageJson.scripts.prepack).toBe('npm run check-ts && npm run build')
+    expect(packageJson.scripts.prepublishOnly).toBe('npm run check-ts && npm run build')
+    expect(packageJson.files).toEqual(['dist'])
+  })
+
+  it('tracks only the handwritten ambient declaration and resolves public paths to TypeScript', async () => {
+    const rootTsconfig = JSON.parse(
+      await readFile(path.resolve(projectRoot, 'tsconfig.json'), 'utf8'),
+    ) as {
+      compilerOptions: { paths: Record<string, string[]> }
+      include: string[]
+    }
+    const runtimeTsconfig = JSON.parse(
+      await readFile(path.resolve(runtimeVaporDir, 'tsconfig.json'), 'utf8'),
+    ) as { include: string[] }
+    const trackedDeclarations = execFileSync(
+      'git',
+      [
+        'ls-files',
+        '--cached',
+        '--others',
+        '--exclude-standard',
+        'packages/runtime-vapor/**/*.d.ts',
+        'packages/runtime-vapor/*.d.ts',
+      ],
+      { cwd: projectRoot, encoding: 'utf8' },
     )
-    expect(packageJson.scripts.prepublishOnly).toBe(
-      'npm run check-ts && npm run build && npm run build-node',
-    )
-    expect(packageJson.files).toEqual(
-      expect.arrayContaining([
-        'global.d.ts',
-        'js-reactive/**/*.js',
-        'js-reactive/**/*.d.ts',
-        'js-runtime/**/*.js',
-        'js-runtime/**/*.d.ts',
-      ]),
-    )
-    expect(packageJson.files).not.toContain('js-reactive')
-    expect(packageJson.files).not.toContain('js-runtime')
+      .trim()
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .filter(file => existsSync(path.resolve(projectRoot, file)))
+      .sort()
+
+    expect.soft(rootTsconfig.compilerOptions.paths).toMatchObject({
+      '@rue-js/runtime-vapor': ['./packages/runtime-vapor/src/index.ts'],
+      '@rue-js/runtime-vapor/protocol': ['./packages/runtime-vapor/src/protocol.ts'],
+      '@rue-js/runtime-vapor/reactive': ['./packages/runtime-vapor/src/reactive.ts'],
+      '@rue-js/runtime-vapor/vapor': ['./packages/runtime-vapor/src/vapor.ts'],
+    })
+    expect.soft(rootTsconfig.include).toContain('packages/runtime-vapor/src/global.d.ts')
+    expect.soft(rootTsconfig.include).not.toContain('packages/runtime-vapor/runtime-vapor-env.d.ts')
+    expect.soft(runtimeTsconfig.include).toContain('./src/global.d.ts')
+    expect.soft(runtimeTsconfig.include).not.toContain('./runtime-vapor-env.d.ts')
+    expect.soft(trackedDeclarations).toEqual(['packages/runtime-vapor/src/global.d.ts'])
   })
 
   it('emits the type-only declaration dependency used by public entry declarations', async () => {
     const tool = await loadTool()
+    const typesDeclaration = await readFile(
+      path.resolve(runtimeVaporDistDir, 'js-reactive/types.d.ts'),
+      'utf8',
+    )
     expect(tool.RUNTIME_TYPESCRIPT_AUXILIARY_DECLARATIONS).toEqual(['js-reactive/types.d.ts'])
-    expect(
-      await readFile(path.resolve(runtimeVaporDir, 'js-reactive/types.d.ts'), 'utf8'),
-    ).toContain('export type ObjectLike')
+    expect(typesDeclaration).toContain('export type ObjectLike')
+    expect(typesDeclaration).toContain('/// <reference lib="esnext.disposable" preserve="true" />')
+    expect(typesDeclaration).not.toMatch(/pkg-(?:node|vapor)/)
+  })
+
+  it('publishes the generated portable protocol entry and declaration', async () => {
+    const packageJson = JSON.parse(
+      await readFile(path.resolve(runtimeVaporDir, 'package.json'), 'utf8'),
+    ) as {
+      exports: Record<string, { types?: string; import?: string; default?: string }>
+      files: string[]
+    }
+
+    expect(packageJson.exports['./protocol']).toEqual({
+      types: './dist/protocol.d.ts',
+      import: './dist/protocol.js',
+      default: './dist/protocol.js',
+    })
+    expect(packageJson.files).toEqual(['dist'])
+
+    const tool = await loadTool()
+    const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-runtime-vapor-protocol-'))
+    fixtureDirs.push(fixtureDir)
+    await writeFixture(
+      fixtureDir,
+      'src/protocol.ts',
+      `export const FIELD = '__fixture'\nexport interface Handle { [FIELD]: number }\n`,
+    )
+    await expect(
+      tool.emitTypeScriptRuntime({ runtimeDir: fixtureDir, targets: ['protocol.js'] }),
+    ).resolves.toMatchObject({ outputFiles: ['dist/protocol.d.ts', 'dist/protocol.js'] })
   })
 
   it('keeps every generated JavaScript target out of the tracked handwritten source set', () => {
@@ -285,7 +314,7 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     expect(trackedJavaScript.trim()).toBe('')
   })
 
-  it('runs TypeScript generation before Wasm consumers in ensure, app-dev, and release flows', async () => {
+  it('builds only TypeScript artifacts in ensure, app-dev, and release flows', async () => {
     const [ensureBuild, preAppDev, release] = await Promise.all(
       ['scripts/ensure-runtime-vapor-build.js', 'scripts/pre-app-dev.js', 'scripts/release.js'].map(
         file => readFile(path.resolve(projectRoot, file), 'utf8'),
@@ -293,33 +322,32 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     )
 
     expect(ensureBuild).toContain("run', 'build-ts'")
-    expect(preAppDev).toContain("script: 'build-ts'")
+    expect(ensureBuild).not.toMatch(/pkg-(?:vapor|node)|wasm-pack|\.wasm/)
+    expect(preAppDev).toContain("script: shouldBuildNodeRuntime ? 'build-ts' : 'build-ts:browser'")
+    expect(preAppDev).not.toMatch(/pkg-(?:vapor|node)|wasm-pack|\.wasm/)
     expect(release).toContain("run', 'check-ts'")
     expect(release).toContain("run', 'build-ts'")
+    expect(release).not.toMatch(/pkg-(?:vapor|node)|wasm-pack|\.wasm/)
   })
 
-  it('uses exact generated-JavaScript ignore rules instead of directory-wide ignores', async () => {
+  it('ignores the generated dist directory without ignoring handwritten sources', async () => {
     const gitignore = (await readFile(path.resolve(projectRoot, '.gitignore'), 'utf8')).split(
       /\r?\n/,
     )
-    const exactRules = new Set(
-      gitignore.filter(line => line.startsWith('/packages/runtime-vapor/')),
-    )
-
-    for (const target of expectedTargets) {
-      expect(exactRules).toContain(`/packages/runtime-vapor/${target}`)
-    }
-    expect(gitignore).not.toContain('/packages/runtime-vapor/*.js')
-    expect(gitignore).not.toContain('/packages/runtime-vapor/js-runtime/')
-    expect(gitignore).not.toContain('/packages/runtime-vapor/js-reactive/')
+    expect(gitignore).toContain('/packages/runtime-vapor/dist/')
+    expect(gitignore).not.toContain('/packages/runtime-vapor/src/')
   })
 
   it('emits deterministic ESM JavaScript and declarations only for registered TS sources', async () => {
     const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-runtime-vapor-ts-'))
     fixtureDirs.push(fixtureDir)
-    await writeFixture(fixtureDir, 'js-runtime/app.ts', `export { answer } from './types.js'\n`)
-    await writeFixture(fixtureDir, 'js-runtime/types.ts', `export const answer: number = 42\n`)
-    await writeFixture(fixtureDir, 'js-runtime/unregistered.ts', `export const ignored = true\n`)
+    await writeFixture(fixtureDir, 'src/js-runtime/app.ts', `export { answer } from './types.js'\n`)
+    await writeFixture(fixtureDir, 'src/js-runtime/types.ts', `export const answer: number = 42\n`)
+    await writeFixture(
+      fixtureDir,
+      'src/js-runtime/unregistered.ts',
+      `export const ignored = true\n`,
+    )
 
     const tool = await loadTool()
     const targets = ['js-runtime/app.js', 'js-runtime/types.js']
@@ -329,23 +357,46 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     const secondHash = await hashFiles(fixtureDir, second.outputFiles)
 
     expect(first.outputFiles).toEqual([
-      'js-runtime/app.d.ts',
-      'js-runtime/app.js',
-      'js-runtime/types.d.ts',
-      'js-runtime/types.js',
+      'dist/js-runtime/app.d.ts',
+      'dist/js-runtime/app.js',
+      'dist/js-runtime/types.d.ts',
+      'dist/js-runtime/types.js',
     ])
-    expect(await readFile(path.resolve(fixtureDir, 'js-runtime/app.js'), 'utf8')).toContain(
+    expect(await readFile(path.resolve(fixtureDir, 'dist/js-runtime/app.js'), 'utf8')).toContain(
       `from './types.js'`,
     )
-    expect(await readFile(path.resolve(fixtureDir, 'js-runtime/app.d.ts'), 'utf8')).toContain(
+    expect(await readFile(path.resolve(fixtureDir, 'dist/js-runtime/app.d.ts'), 'utf8')).toContain(
       `from './types.js'`,
     )
     await expect(
-      readFile(path.resolve(fixtureDir, 'js-runtime/unregistered.js'), 'utf8'),
+      readFile(path.resolve(fixtureDir, 'dist/js-runtime/unregistered.js'), 'utf8'),
     ).rejects.toThrow()
     expect(second.outputFiles).toEqual(first.outputFiles)
     expect(secondHash).toBe(firstHash)
     console.info(`[runtime-vapor TypeScript] fixture sha256 ${firstHash}`)
+  })
+
+  it('uses the handwritten global ambient declaration during TypeScript emit', async () => {
+    const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-runtime-vapor-global-types-'))
+    fixtureDirs.push(fixtureDir)
+    await writeFixture(
+      fixtureDir,
+      'src/global.d.ts',
+      `export {}\ndeclare global { const __RUE_RUNTIME_VAPOR_FIXTURE__: number }\n`,
+    )
+    await writeFixture(
+      fixtureDir,
+      'src/js-runtime/app.ts',
+      `export const answer = __RUE_RUNTIME_VAPOR_FIXTURE__\n`,
+    )
+
+    const tool = await loadTool()
+
+    await expect(
+      tool.emitTypeScriptRuntime({ runtimeDir: fixtureDir, targets: ['js-runtime/app.js'] }),
+    ).resolves.toMatchObject({
+      outputFiles: ['dist/global.d.ts', 'dist/js-runtime/app.d.ts', 'dist/js-runtime/app.js'],
+    })
   })
 
   it('rebuilds clean entry JavaScript and public declarations from TypeScript alone', async () => {
@@ -353,17 +404,17 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     fixtureDirs.push(fixtureDir)
     await writeFixture(
       fixtureDir,
-      'reactive.ts',
+      'src/reactive.ts',
       `export interface Signal<T> { get(): T }\nexport const signal = <T>(value: T): Signal<T> => ({ get: () => value })\n`,
     )
     await writeFixture(
       fixtureDir,
-      'index.ts',
+      'src/index.ts',
       `export type { Signal } from './reactive.js'\nexport { signal } from './reactive.js'\n`,
     )
     await writeFixture(
       fixtureDir,
-      'vapor.ts',
+      'src/vapor.ts',
       `export * from './reactive.js'\nexport const createRue = (adapter: unknown) => ({ adapter })\n`,
     )
 
@@ -375,18 +426,18 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     const second = await tool.emitTypeScriptRuntime({ runtimeDir: fixtureDir, targets })
 
     expect(second.outputFiles).toEqual([
-      'index.d.ts',
-      'index.js',
-      'reactive.d.ts',
-      'reactive.js',
-      'vapor.d.ts',
-      'vapor.js',
+      'dist/index.d.ts',
+      'dist/index.js',
+      'dist/reactive.d.ts',
+      'dist/reactive.js',
+      'dist/vapor.d.ts',
+      'dist/vapor.js',
     ])
     expect(await hashFiles(fixtureDir, second.outputFiles)).toBe(firstHash)
-    expect(await readFile(path.resolve(fixtureDir, 'index.d.ts'), 'utf8')).toContain(
+    expect(await readFile(path.resolve(fixtureDir, 'dist/index.d.ts'), 'utf8')).toContain(
       `export type { Signal } from './reactive.js'`,
     )
-    expect(await readFile(path.resolve(fixtureDir, 'vapor.d.ts'), 'utf8')).toContain(
+    expect(await readFile(path.resolve(fixtureDir, 'dist/vapor.d.ts'), 'utf8')).toContain(
       `export * from './reactive.js'`,
     )
   })
@@ -398,7 +449,7 @@ describe('runtime-vapor TypeScript build guardrails', () => {
   ])('rejects unapproved %s in migrated sources', async (rule, source) => {
     const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-runtime-vapor-audit-'))
     fixtureDirs.push(fixtureDir)
-    await writeFixture(fixtureDir, 'js-runtime/app.ts', source)
+    await writeFixture(fixtureDir, 'src/js-runtime/app.ts', source)
 
     const tool = await loadTool()
     const audit = await tool.auditTypeScriptRuntime({
@@ -417,7 +468,7 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     fixtureDirs.push(fixtureDir)
     await writeFixture(
       fixtureDir,
-      'js-runtime/app.ts',
+      'src/js-runtime/app.ts',
       `export const identity = (value: any) => value\n`,
     )
 
@@ -425,7 +476,7 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     const audit = await tool.auditTypeScriptRuntime({
       runtimeDir: fixtureDir,
       targets: ['js-runtime/app.js'],
-      explicitAnyAllowlist: ['js-runtime/app.ts:1'],
+      explicitAnyAllowlist: ['src/js-runtime/app.ts:1'],
     })
 
     expect(audit.violations).toEqual([])
@@ -433,10 +484,10 @@ describe('runtime-vapor TypeScript build guardrails', () => {
       tool.emitTypeScriptRuntime({
         runtimeDir: fixtureDir,
         targets: ['js-runtime/app.js'],
-        explicitAnyAllowlist: ['js-runtime/app.ts:1'],
+        explicitAnyAllowlist: ['src/js-runtime/app.ts:1'],
       }),
     ).resolves.toMatchObject({
-      outputFiles: ['js-runtime/app.d.ts', 'js-runtime/app.js'],
+      outputFiles: ['dist/js-runtime/app.d.ts', 'dist/js-runtime/app.js'],
     })
   })
 })

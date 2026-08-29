@@ -1,21 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  effectScope,
   ref,
   render,
   setReactiveScheduling,
   shallowRef,
   signal,
   triggerRef,
-  watchEffect,
   type FC,
   type SignalHandle,
 } from '../src'
-import { vaporKeyedList as defaultVaporKeyedList } from '../src/vapor-helpers'
-import { vaporKeyedList as vaporVaporKeyedList } from '../src/vapor-helpers-vapor'
 import { getDOMAdapter, type DOMAdapter } from '../src/dom'
 import { click, mountContainer } from './page-test-utils'
+import {
+  createOwner as createCompiledOwner,
+  createSelector as createCompiledSelector,
+  disposeOwner as disposeCompiledOwner,
+  effect as compiledEffect,
+  runWithOwner as runWithCompiledOwner,
+  signal as compiledSignal,
+} from '../../runtime-vapor/dist/compiled.js'
 
 setReactiveScheduling('sync')
 
@@ -355,6 +359,16 @@ const trackDOMAdapterResolutionReads = () => {
   }
 }
 
+const flushCompiledSelectorEffects = async (): Promise<void> => {
+  const tick = (): Promise<void> =>
+    typeof requestAnimationFrame === 'function'
+      ? new Promise(resolveFrame => requestAnimationFrame(() => resolveFrame()))
+      : Promise.resolve()
+  await tick()
+  await tick()
+  await tick()
+}
+
 beforeEach(() => {
   nextId = 1
 })
@@ -381,6 +395,7 @@ describe.each(variants)('$name js-framework-benchmark list', ({ name, App, keyed
     expect(rowLabel(rows[10])).toBe('big blue house !!!')
 
     await click(rows[0].querySelector('[data-action="select"]'))
+    await flushCompiledSelectorEffects()
     expect(rowElements(container)[0]?.className).toBe('danger')
 
     await click(rows[0].querySelector('[data-action="remove"]'))
@@ -429,6 +444,55 @@ describe.each(variants)('$name js-framework-benchmark list', ({ name, App, keyed
 })
 
 describe('keyed js-framework-benchmark DOM writes', () => {
+  it('selector subscriptions bound 1k selection writes to the old and new keys', async () => {
+    const selected = compiledSignal<number | undefined>(undefined)
+    const owner = createCompiledOwner()
+    const rows = Array.from({ length: 1_000 }, (_, index) => {
+      const row = document.createElement('tr')
+      row.dataset.id = String(index + 1)
+      return row
+    })
+    const runs = Array.from({ length: rows.length }, () => 0)
+    const mutations: MutationRecord[] = []
+    const parent = document.createElement('tbody')
+    parent.append(...rows)
+    document.body.appendChild(parent)
+
+    runWithCompiledOwner(owner, () => {
+      const isSelected = createCompiledSelector(() => selected.get())
+      rows.forEach((row, index) => {
+        compiledEffect(() => {
+          runs[index] += 1
+          row.className = isSelected(index + 1) ? 'danger' : ''
+        })
+      })
+    })
+    runs.fill(0)
+
+    const observer = new MutationObserver(records => mutations.push(...records))
+    observer.observe(parent, { attributes: true, subtree: true })
+    selected.set(125)
+    await flushCompiledSelectorEffects()
+    mutations.push(...observer.takeRecords())
+    expect({
+      runs: runs.reduce((sum, count) => sum + count, 0),
+      mutations: mutations.length,
+    }).toEqual({ runs: 1, mutations: 1 })
+
+    runs.fill(0)
+    mutations.length = 0
+    selected.set(875)
+    await flushCompiledSelectorEffects()
+    mutations.push(...observer.takeRecords())
+    expect({
+      runs: runs.reduce((sum, count) => sum + count, 0),
+      mutations: mutations.length,
+    }).toEqual({ runs: 2, mutations: 2 })
+
+    observer.disconnect()
+    disposeCompiledOwner(owner)
+  })
+
   it('binds fresh browser host operations once per mount for 1k create', async () => {
     const container = mountContainer()
     render(<KeyedBenchmark />, container)
@@ -438,227 +502,11 @@ describe('keyed js-framework-benchmark DOM writes', () => {
       await click(container.querySelector('#run'))
 
       expect(rowElements(container)).toHaveLength(1_000)
-      // 一次来自事件入口，一次来自列表 reconcile；行内 31k 次查询已被消除。
-      expect(tracker.reads()).toBe(2)
+      // compiled DOM 与 keyed reconcile 都不经过通用宿主适配器。
+      expect(tracker.reads()).toBe(0)
     } finally {
       tracker.restore()
     }
-  })
-
-  it.each([
-    ['default helper', defaultVaporKeyedList],
-    ['vapor helper', vaporVaporKeyedList],
-  ])('%s compiled row records patch without per-row reactive owners', (_name, vaporKeyedList) => {
-    const parent = document.createElement('tbody')
-    const listStart = document.createComment('rue:list:start')
-    const listEnd = document.createComment('rue:list:end')
-    const state: { elements: Map<unknown, any>; dispose?: () => void } = {
-      elements: new Map(),
-    }
-    const rows = signal<Row[]>(buildData(4))
-    const selected = signal<number | undefined>(undefined)
-    const disposed: number[] = []
-    parent.append(listStart, listEnd)
-    document.body.appendChild(parent)
-
-    const renderRows = () => {
-      state.elements = vaporKeyedList<Row>({
-        items: rows.get(),
-        getKey: item => item.id,
-        elements: state.elements,
-        state,
-        parent,
-        before: listEnd,
-        start: listStart,
-        singleRoot: true,
-        trackIndex: false,
-        directRoot: true,
-        compiledRowPatch: true,
-        renderItem: (item, listParent, start, _end, index) => {
-          const row = document.createElement('tr')
-          let previousItem: Row | undefined
-          let previousIndex = -1
-          let previousSelected: number | undefined
-          const patch = (nextItem: Row, nextIndex: number) => {
-            const nextSelected = selected.get()
-            if (previousItem?.id !== nextItem.id) row.dataset.id = String(nextItem.id)
-            if (previousItem?.label !== nextItem.label) row.textContent = nextItem.label
-            if (previousSelected !== nextSelected || previousItem?.id !== nextItem.id) {
-              row.className = nextSelected === nextItem.id ? 'danger' : ''
-            }
-            if (previousIndex !== nextIndex) row.dataset.index = String(nextIndex)
-            previousItem = nextItem
-            previousIndex = nextIndex
-            previousSelected = nextSelected
-          }
-          patch(item, index)
-          ;(listParent as Node).insertBefore(row, (start as Node | null) ?? null)
-          return {
-            patch,
-            dispose: () => disposed.push(item.id),
-          }
-        },
-      })
-    }
-
-    const runtime = (globalThis as any).__rue_active
-    const scopeBaseline = runtime.effectScopeCount()
-    const owner = effectScope(true)
-    owner.run(() => watchEffect(renderRows, { scheduler: run => run() }))
-
-    const mountedRanges = Array.from(state.elements.values())
-    expect({
-      currentSignals: mountedRanges.filter(range => range.current).length,
-      renderSignals: mountedRanges.filter(range => range.renderState).length,
-      stableProxies: mountedRanges.filter(range => range.stableItem).length,
-      detachedScopes: mountedRanges.filter(range => range.scope).length,
-      rowStops: mountedRanges.filter(range => range.stop).length,
-      compiledRecords: mountedRanges.filter(range => range.compiledRowPatch).length,
-      activeScopes: runtime.effectScopeCount() - scopeBaseline,
-    }).toEqual({
-      currentSignals: 0,
-      renderSignals: 0,
-      stableProxies: 0,
-      detachedScopes: 0,
-      rowStops: 0,
-      compiledRecords: 4,
-      activeScopes: 1,
-    })
-
-    const replacement = rows
-      .get()
-      .map((item: Row, index: number) =>
-        index === 1 ? { ...item, label: `${item.label} updated` } : item,
-      )
-    rows.set(replacement)
-    expect(parent.querySelectorAll('tr')[1].textContent).toBe(replacement[1].label)
-
-    selected.set(replacement[2].id)
-    expect(Array.from(parent.querySelectorAll('tr')).map(row => row.className)).toEqual([
-      '',
-      '',
-      'danger',
-      '',
-    ])
-
-    const swapped = [replacement[0], replacement[2], replacement[1], replacement[3]]
-    rows.set(swapped)
-    expect(Array.from(parent.querySelectorAll('tr')).map(row => Number(row.dataset.id))).toEqual(
-      swapped.map(item => item.id),
-    )
-    expect(Array.from(parent.querySelectorAll('tr')).map(row => Number(row.dataset.index))).toEqual(
-      [0, 1, 2, 3],
-    )
-
-    const removed = swapped[2]
-    rows.set(swapped.filter(item => item !== removed))
-    expect(disposed).toEqual([removed.id])
-    expect(state.elements).toHaveLength(3)
-
-    rows.set([])
-    expect(state.elements).toHaveLength(0)
-    expect(parent.querySelectorAll('tr')).toHaveLength(0)
-    expect(disposed.slice().sort((left, right) => left - right)).toEqual(
-      swapped.map(item => item.id).sort((left, right) => left - right),
-    )
-
-    owner.stop()
-    state.dispose?.()
-    expect(runtime.effectScopeCount()).toBe(scopeBaseline)
-  })
-
-  it.each([
-    ['default helper', defaultVaporKeyedList],
-    ['vapor helper', vaporVaporKeyedList],
-  ])('%s direct-root rows avoid per-row anchors and fragments', (_name, vaporKeyedList) => {
-    const parent = document.createElement('tbody')
-    const listStart = document.createComment('rue:list:start')
-    const listEnd = document.createComment('rue:list:end')
-    const state: { elements: Map<unknown, any> } = { elements: new Map() }
-    const rows = buildData(1_000)
-    parent.append(listStart, listEnd)
-    document.body.appendChild(parent)
-
-    const createComment = vi.spyOn(document, 'createComment')
-    const createDocumentFragment = vi.spyOn(document, 'createDocumentFragment')
-    createComment.mockClear()
-    createDocumentFragment.mockClear()
-    const renderRows = (items: Row[]) => {
-      state.elements = vaporKeyedList({
-        items,
-        getKey: item => item.id,
-        elements: state.elements,
-        state,
-        parent,
-        before: listEnd,
-        start: listStart,
-        singleRoot: true,
-        trackIndex: false,
-        directRoot: true,
-        renderItem: (item, listParent, start) => {
-          const row = document.createElement('tr')
-          row.dataset.id = String(item.id)
-          row.textContent = item.label
-          ;(listParent as Node).insertBefore(row, (start as Node | null) ?? null)
-        },
-      })
-    }
-
-    renderRows(rows)
-
-    expect({
-      comments: createComment.mock.calls.length,
-      fragments: createDocumentFragment.mock.calls.length,
-    }).toEqual({ comments: 0, fragments: 1 })
-    expect(
-      Array.from(parent.childNodes).filter(node => node.nodeType === Node.COMMENT_NODE),
-    ).toEqual([listStart, listEnd])
-
-    const initialRows = new Map(
-      Array.from(parent.querySelectorAll<HTMLTableRowElement>('tr')).map(row => [
-        Number(row.dataset.id),
-        row,
-      ]),
-    )
-    for (const item of rows) {
-      const range = state.elements.get(item.id)
-      expect(range.start).toBe(initialRows.get(item.id))
-      expect(range.end).toBe(initialRows.get(item.id))
-    }
-
-    const mutations: MutationRecord[] = []
-    const observer = new MutationObserver(records => mutations.push(...records))
-    observer.observe(parent, { childList: true })
-    const swapped = rows.slice()
-    ;[swapped[1], swapped[998]] = [swapped[998], swapped[1]]
-    renderRows(swapped)
-    mutations.push(...observer.takeRecords())
-    observer.disconnect()
-
-    expect(Array.from(parent.querySelectorAll('tr')).map(row => Number(row.dataset.id))).toEqual(
-      swapped.map(row => row.id),
-    )
-    for (const item of swapped) {
-      expect(parent.querySelector(`[data-id="${item.id}"]`)).toBe(initialRows.get(item.id))
-    }
-    expect(
-      Array.from(
-        new Set(
-          mutations.flatMap(record =>
-            Array.from(record.removedNodes)
-              .filter((node): node is HTMLTableRowElement => node instanceof HTMLTableRowElement)
-              .map(node => Number(node.dataset.id)),
-          ),
-        ),
-      ).sort((left, right) => left - right),
-    ).toEqual([rows[1].id, rows[998].id].sort((left, right) => left - right))
-
-    const removed = swapped[500]
-    renderRows(swapped.filter(item => item !== removed))
-    expect(parent.querySelector(`[data-id="${removed.id}"]`)).toBeNull()
-    expect(parent.querySelector(`[data-id="${swapped[499].id}"]`)).toBe(
-      initialRows.get(swapped[499].id),
-    )
   })
 
   it('swap only moves unstable keyed ranges', async () => {
@@ -737,6 +585,7 @@ describe('keyed js-framework-benchmark DOM writes', () => {
 
     const rows = rowElements(container)
     await click(rows[0].querySelector('[data-action="select"]'))
+    await flushCompiledSelectorEffects()
 
     expect(mutations).toHaveLength(1)
     expect(mutations[0]).toMatchObject({ type: 'attributes', attributeName: 'class' })
@@ -744,6 +593,7 @@ describe('keyed js-framework-benchmark DOM writes', () => {
 
     mutations.length = 0
     await click(rows[1].querySelector('[data-action="select"]'))
+    await flushCompiledSelectorEffects()
 
     expect(mutations).toHaveLength(2)
     expect(
@@ -781,6 +631,7 @@ describe.each(signalVariants)(
       expect(rowLabel(rows[1])).toBe('large yellow chair')
 
       await click(rows[0].querySelector('[data-action="select"]'))
+      await flushCompiledSelectorEffects()
       expect(rowElements(container)[0]?.className).toBe('danger')
 
       await click(rows[0].querySelector('[data-action="remove"]'))

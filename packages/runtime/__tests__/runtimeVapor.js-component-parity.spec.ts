@@ -3,9 +3,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as rustEntry from '@rue-js/runtime-vapor'
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
-import { createRue as createJsRue } from '../../runtime-vapor/js-runtime/create-rue.js'
-import { REPEATABLE_MOUNT_FACTORY_KEY } from '../../runtime-vapor/js-runtime/types.js'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
+import { createRue as createJsRue } from '../../runtime-vapor/dist/js-runtime/create-rue.js'
+import { REPEATABLE_MOUNT_FACTORY_KEY } from '../../runtime-vapor/dist/js-runtime/types.js'
 import { h as createHighLevelElement, renderAnchor, vapor } from '../src/rue'
 
 import '../src/dom'

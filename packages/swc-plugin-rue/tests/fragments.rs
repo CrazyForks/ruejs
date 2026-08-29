@@ -35,23 +35,19 @@ export default Fragments;
     // - 片段：<>...</> 被展开为两个 span 节点顺序插入
     // - 组件：RouterLink 被快速路径重写为原生 <a> 元素
     let expected = r##"
-import { vapor, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createElement, _$template, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold mb-2">Fragments</h3>');
+const _$getTemplate2 = _$template("<span>片段 1</span>");
+const _$getTemplate3 = _$template("<span>片段 2</span>");
 const Fragments: FC = ()=>vapor((__rue_parent_context)=>{
-  const _root = _$createElement("div", __rue_parent_context);
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-  const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold mb-2");
-        _$appendChild(_el1, _$createTextNode("Fragments"));
-  const _el2 = _$createElement("span", _root);
-        _$appendChild(_root, _el2);
-        _$appendChild(_el2, _$createTextNode("片段 1"));
-  const _el3 = _$createElement("span", _root);
-        _$appendChild(_root, _el3);
-        _$appendChild(_el3, _$createTextNode("片段 2"));
-  const _el4 = _$createElement("a", _root);
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
+        _root.appendChild(_$getTemplate3().content.cloneNode(true));
+        const _el4 = _$createElement("a", _root);
         _$appendChild(_root, _el4);
         watchEffect(()=>{
             _$setAttribute(_el4, "href", String(RouterLink.__rueHref("/jsx")));

@@ -157,6 +157,35 @@ cd packages/runtime-vapor
 npm test
 ```
 
+### 使用本地开发版运行 js-framework-benchmark
+
+当当前 Rue 版本尚未发布到 npm 时，可以把 workspace 中的本地包临时安装到
+`js-framework-benchmark` 的 `rue-signal` 实现中：
+
+```sh
+pnpm benchmark:js-framework:install-local -- \
+  ../js-framework-benchmark/frameworks/keyed/rue-signal
+```
+
+也可以传入 `rue-signal/package.json` 的绝对路径。该命令会构建 Rue Runtime、Wasm
+运行时和 SWC 插件，打包相关的 `@rue-js/*` workspace 包，以不写入
+`package.json` 和 `package-lock.json` 的方式安装它们，并执行 `npm run build-prod`。
+
+安装完成后，在 `js-framework-benchmark` 根目录启动服务器并运行单框架测试：
+
+```sh
+npm start
+```
+
+在另一个终端中运行：
+
+```sh
+npm run bench keyed/rue-signal
+```
+
+`rue-signal/package.json` 可以继续保留 npm 上已发布的版本。如果在该目录重新执行
+`npm ci`，本地包会被正式版本替换，需要再次运行上述本地安装命令。
+
 ## 贡献
 
 欢迎通过 Issue 和 Pull Request 参与 Rue 的开发。提交改动前，建议至少运行以下检查：

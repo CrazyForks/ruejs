@@ -101,6 +101,173 @@ const View: FC = () => {
 }
 
 #[test]
+fn apply_escalates_signal_with_component_render_marker_to_vapor() {
+    let src = r#"
+import { type FC, signal, vapor } from '@rue-js/rue';
+
+const View: FC = (props) => {
+  const count = signal(0);
+  return vapor(() => props.ready ? count.get() : 0);
+};
+"#;
+    let (program, cm) = parse_program(src);
+    let out = normalize(&emit(apply_pre(program), cm));
+
+    assert!(out.contains(&normalize("@rue-js/rue/vapor")), "{out}");
+    assert!(!out.contains(&normalize("@rue-js/rue/compiled")), "{out}");
+    assert!(out.contains("signal"), "{out}");
+    assert!(out.contains("_$vaporMarkComponentRenderReactive"), "{out}");
+}
+
+#[test]
+fn apply_pre_marks_nested_jsx_render_closures_without_marking_component_root() {
+    let src = r#"
+import { type FC, ref } from '@rue-js/rue';
+
+const View: FC = () => {
+  const active = ref(false);
+  return <Panel preview={() => <button>{active.value ? 'on' : 'off'}</button>} />;
+};
+"#;
+    let (program, cm) = parse_program(src);
+    let out = normalize(&emit(apply_pre(program), cm));
+
+    assert_eq!(out.matches("_$vaporMarkComponentRenderReactive(()").count(), 1, "{out}");
+    assert!(out.contains("preview={_$vaporMarkComponentRenderReactive(()=><button>"), "{out}");
+}
+
+#[test]
+fn apply_closes_compiled_and_vapor_capability_boundaries() {
+    let vapor_cases = [
+        ("component", "export const View = () => <Child value=\"x\" />;"),
+        ("fragment", "export const View = () => <><i>A</i><b>B</b></>;"),
+        (
+            "conditional renderable",
+            "export const View = (props) => <div>{props.ready ? <i>A</i> : null}</div>;",
+        ),
+        (
+            "slot",
+            "export const View = () => <Panel><Template slot=\"head\"><b>H</b></Template></Panel>;",
+        ),
+        ("spread", "export const View = (props) => <div {...props}>x</div>;"),
+        (
+            "dynamic event bag",
+            "export const View = (eventProps) => <button {...eventProps}>x</button>;",
+        ),
+        ("svg", "export const View = () => <svg><circle cx=\"1\" /></svg>;"),
+        ("mathml", "export const View = () => <math><mi>x</mi></math>;"),
+        ("custom element", "export const View = (props) => <x-box value={props.value} />;"),
+        (
+            "teleport",
+            "import { Teleport } from '@rue-js/rue'; export const View = () => <Teleport to=\"#target\"><b>x</b></Teleport>;",
+        ),
+        (
+            "transition",
+            "import { Transition } from '@rue-js/rue'; export const View = () => <Transition><b>x</b></Transition>;",
+        ),
+        (
+            "keep-alive",
+            "import { KeepAlive } from '@rue-js/rue'; export const View = () => <KeepAlive><Child /></KeepAlive>;",
+        ),
+        (
+            "suspense",
+            "import { Suspense } from '@rue-js/rue'; export const View = () => <Suspense><Child /></Suspense>;",
+        ),
+        (
+            "hydration",
+            "import { Hydration } from '@rue-js/rue'; export const View = () => <Hydration><b>x</b></Hydration>;",
+        ),
+        ("async boundary", "export const View = async () => <div>x</div>;"),
+    ];
+
+    for (name, src) in vapor_cases {
+        let (program, cm) = parse_program(src);
+        let out = emit(apply(program), cm);
+        assert!(
+            out.contains("@rue-js/rue/vapor"),
+            "{name} must route through the Vapor boundary: {out}",
+        );
+    }
+
+    let unproven_src = "export const View = () => <div>{state.get()}</div>;";
+    let (unproven_program, unproven_cm) = parse_program(unproven_src);
+    let unproven_out = emit(apply(unproven_program), unproven_cm);
+    assert!(unproven_out.contains("@rue-js/rue/vapor"), "{unproven_out}");
+    assert!(!unproven_out.contains("@rue-js/rue/compiled"), "{unproven_out}");
+
+    let safe_src = "export const View = () => <div>{String(state.get())}</div>;";
+    let (safe_program, safe_cm) = parse_program(safe_src);
+    let safe_out = emit(apply(safe_program), safe_cm);
+    assert!(safe_out.contains("@rue-js/rue/compiled"), "{safe_out}");
+    assert!(!safe_out.contains("@rue-js/rue/vapor"), "{safe_out}");
+    assert!(safe_out.contains("_$compiledRoot"), "{safe_out}");
+    assert!(!safe_out.contains("_$createComponent"), "{safe_out}");
+}
+
+#[test]
+fn apply_keeps_compiled_native_shell_and_keyed_list_off_the_vapor_graph() {
+    let src = r#"
+import { signal } from '@rue-js/rue/compiled';
+
+const rows = signal([{ id: 1, label: 'A' }]);
+const selected = signal(1);
+const clear = () => rows.set([]);
+
+export const View = () => <main>
+  <button onClick={clear}>Clear</button>
+  <table><tbody>
+    {rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''}>
+      <td>{row.id}</td><td>{row.label}</td>
+      <td><a data-action="remove"><span className="icon" /></a></td><td />
+    </tr>)}
+  </tbody></table>
+</main>;
+"#;
+    let (program, cm) = parse_program(src);
+    let out = emit(apply(program), cm);
+
+    assert!(out.contains("@rue-js/rue/compiled"), "{out}");
+    assert!(!out.contains("@rue-js/rue/vapor"), "{out}");
+    assert!(!out.contains("_$vaporWithHookId"), "{out}");
+    assert!(out.contains("_$compiledRoot"), "{out}");
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert!(out.contains("_$template"), "{out}");
+    assert!(!out.contains("document.createElement(\"template\")"), "{out}");
+    assert!(out.contains(".appendChild"), "{out}");
+    assert!(out.contains(".addEventListener"), "{out}");
+    assert!(!out.contains("_$createElement"), "{out}");
+    assert!(!out.contains("_$appendChild"), "{out}");
+    assert!(!out.contains("_$addEventListener"), "{out}");
+}
+
+#[test]
+fn apply_keeps_mixed_keyed_list_helpers_on_the_vapor_graph() {
+    let src = r#"
+import { signal } from '@rue-js/rue';
+
+const rows = signal([{ id: 1, label: 'A' }]);
+const Child = () => <span>fallback</span>;
+
+export const View = () => <>
+  <ul>{rows.get().map(row => <li key={row.id}>{row.label}</li>)}</ul>
+  <Child />
+</>;
+"#;
+    let (program, cm) = parse_program(src);
+    let out = emit(apply(program), cm);
+    let vapor_import = out
+        .lines()
+        .find(|line| line.contains("@rue-js/rue/vapor"))
+        .unwrap_or_else(|| panic!("missing Vapor import: {out}"));
+
+    assert!(vapor_import.contains("signal"), "{out}");
+    assert!(vapor_import.contains("effect"), "{out}");
+    assert!(vapor_import.contains("_$reconcileKeyed"), "{out}");
+    assert!(vapor_import.contains("_$createComponent"), "{out}");
+    assert!(!out.contains("@rue-js/rue/compiled"), "{out}");
+}
+
+#[test]
 fn apply_pre_dedupes_duplicate_use_setup_ids_across_components() {
     let src = r#"
 import { ref } from '@rue-js/rue';
@@ -137,7 +304,7 @@ const View = () => {
 };
 "#;
     let (program, cm) = parse_program(src);
-    let out = normalize(&emit(run_full_transform(program), cm));
+    let out = normalize(&emit(run_full_transform(program, true), cm));
 
     assert!(out.contains(&normalize("@rue-js/rue/vapor")));
     assert!(out.contains(&normalize(r#"const count = _$vaporWithHookId("ref:"#)));
@@ -299,10 +466,10 @@ function View(props) {
     assert!(out.contains(&normalize("_$createComponent(Panel")));
     assert!(out.contains("__rue_slots"));
     assert!(out.contains("footer"));
-    assert!(out.contains("_$vaporKeyedList"));
+    assert!(out.contains("_$reconcileKeyed"));
     assert!(out.contains("_$vaporShowStyle"));
     assert!(out.contains("props.visible"));
-    assert!(out.contains(&normalize("_$createElement(\"article\"")));
+    assert!(out.contains(&normalize("_$compiledCreateElement(\"article\"")));
 }
 
 #[test]

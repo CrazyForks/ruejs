@@ -1,6 +1,41 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "presets": {
+    "compiled-core": {
+      "measurement": "absolute",
+      "max": {
+        "min": 45000,
+        "brotli": 13000
+      },
+      "requireReactiveKernel": true,
+      "requireCompiledRuntime": true,
+      "forbidDefaultRuntime": true,
+      "forbidVaporRuntime": true,
+      "forbidWasm": true,
+      "forbidSSRRenderer": true,
+      "forbidModules": {
+        "fullFacade": [
+          "packages/runtime-vapor/dist/index.js",
+          "packages/runtime-vapor/dist/vapor.js",
+          "packages/runtime-vapor/dist/js-reactive/facade.js"
+        ],
+        "jsRuntime": ["packages/runtime-vapor/dist/js-runtime/"],
+        "watch": ["packages/runtime-vapor/dist/reactive-kernel/watch.js"],
+        "resource": ["packages/runtime-vapor/dist/reactive-kernel/resource.js"],
+        "reactive": [
+          "packages/runtime-vapor/dist/reactive.js",
+          "packages/runtime-vapor/dist/reactive.browser.js",
+          "packages/runtime-vapor/dist/reactive.vapor.js",
+          "packages/runtime-vapor/dist/reactive.shared.js",
+          "packages/runtime-vapor/dist/reactive-kernel/reactive.js"
+        ],
+        "computed": [
+          "packages/runtime-vapor/dist/reactive-kernel/computed.js",
+          "packages/runtime-vapor/dist/js-reactive/hooks/computed.js"
+        ],
+        "vaporHelpers": ["packages/runtime/src/vapor-helpers.ts"]
+      }
+    },
     "vapor-core": {
       "measurement": "absolute",
       "max": {
@@ -8,9 +43,8 @@
         "gzip": 206557,
         "brotli": 85242
       },
-      "requiredWasm": "vapor",
-      "maxWasmInstances": 1,
-      "forbidFullWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidDefaultRuntime": true,
       "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
       "forbidSSRRenderer": true
@@ -21,9 +55,8 @@
         "min": 517480,
         "gzip": 206953
       },
-      "requiredWasm": "vapor",
-      "maxWasmInstances": 1,
-      "forbidFullWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidDefaultRuntime": true,
       "forbidSSRRenderer": true
     },
@@ -34,9 +67,8 @@
         "gzip": 206557,
         "brotli": 170485
       },
-      "requiredWasm": "full",
-      "maxWasmInstances": 1,
-      "forbidVaporWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidSSRRenderer": true
     },
     "keep-alive": {
@@ -45,9 +77,8 @@
         "min": 53620,
         "gzip": 14505
       },
-      "requiredWasm": "vapor",
-      "maxWasmInstances": 1,
-      "forbidFullWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidSSRRenderer": true
     },
     "suspense": {
@@ -56,9 +87,8 @@
         "min": 53154,
         "gzip": 14213
       },
-      "requiredWasm": "vapor",
-      "maxWasmInstances": 1,
-      "forbidFullWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidSSRRenderer": true
     },
     "transition": {
@@ -67,9 +97,8 @@
         "min": 54958,
         "gzip": 15047
       },
-      "requiredWasm": "vapor",
-      "maxWasmInstances": 1,
-      "forbidFullWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidSSRRenderer": true
     },
     "transition-group": {
@@ -78,9 +107,8 @@
         "min": 51219,
         "gzip": 13783
       },
-      "requiredWasm": "vapor",
-      "maxWasmInstances": 1,
-      "forbidFullWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidSSRRenderer": true
     },
     "all-builtins": {
@@ -89,9 +117,8 @@
         "min": 67382,
         "gzip": 18659
       },
-      "requiredWasm": "vapor",
-      "maxWasmInstances": 1,
-      "forbidFullWasm": true,
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
       "forbidSSRRenderer": true
     }
   }

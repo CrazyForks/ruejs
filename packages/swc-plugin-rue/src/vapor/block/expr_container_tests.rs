@@ -14,6 +14,7 @@ fn new_vt() -> VaporTransform {
         next_child: 0,
         once_depth: 0,
         did_transform: false,
+        static_templates: true,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
         plain_local_scopes: Vec::new(),
@@ -112,6 +113,45 @@ fn emits_watch_anchor_for_dynamic_text_exprs() {
 }
 
 #[test]
+fn emits_cached_direct_text_effect_for_proven_scalars() {
+    let mut vt = new_vt();
+    let root = crate::emit::ident("_root");
+    let mut stmts = Vec::new();
+
+    emit_compiled_text_binding(
+        &mut vt,
+        &root,
+        &parse_expr_container("String(message.get())"),
+        &mut stmts,
+    )
+    .expect("compiled scalar text binding");
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("_$compiledCreateTextNode(\"\")"), "{out}");
+    assert!(out.contains("_$compiledAppendChild(_root,_el1)"), "{out}");
+    assert!(!out.contains("document.createTextNode"), "{out}");
+    assert!(!out.contains(".appendChild("), "{out}");
+    assert!(out.contains("effect(()=>"), "{out}");
+    assert!(out.contains("Object.is("), "{out}");
+    assert!(out.contains(".textContent="), "{out}");
+    assert!(!out.contains("watchEffect"), "{out}");
+    assert!(!out.contains("_$settextContent"), "{out}");
+    assert!(!out.contains("renderAnchor"), "{out}");
+
+    let mut fallback = Vec::new();
+    assert!(
+        emit_compiled_text_binding(
+            &mut vt,
+            &root,
+            &parse_expr_container("renderValue()"),
+            &mut fallback,
+        )
+        .is_none()
+    );
+    assert!(fallback.is_empty());
+}
+
+#[test]
 fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
     let root = crate::emit::ident("_root");
 
@@ -132,10 +172,10 @@ fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
         &mut map_stmts,
     );
     let map_out = compact(&emit_stmts(map_stmts));
-    assert!(map_out.contains("_$vaporKeyedList("));
-    assert!(map_out.contains("renderItem:(item,parent,start,end,idx)=>{"));
-    assert!(map_out.contains("directRoot:true"));
-    assert!(map_out.contains("_$insertBefore(parent,_root,start);"));
+    assert!(map_out.contains("_$reconcileKeyed("));
+    assert!(map_out.contains("(item,idx)=>{"));
+    assert!(!map_out.contains(concat!("direct", "Root:true")));
+    assert!(!map_out.contains("_$createDocumentFragment"));
     assert!(!map_out.contains("renderAnchor(__slot,parent,start);"));
 }
 

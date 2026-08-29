@@ -36,8 +36,12 @@ export default Hello
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createElement, _$createTextNode, _$setStyle, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { ref, _$vaporWithHookId, useSetup, vapor, _$createElement, _$template, _$createTextNode, _$setStyle, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
+const _$getTemplate1 = _$template('<div style="color:blue;">hello world</div>');
+const _$getTemplate2 = _$template('<div style="">hello world</div>');
+const _$getTemplate3 = _$template('<div style=" ">hello world</div>');
 const Hello: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const color = _$vaporWithHookId("ref:1:0", ()=>ref("blue"));
@@ -46,9 +50,9 @@ const Hello: FC = ()=>{
             };
         }));
     const { color: color } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
-        const _el1 = _$createElement("div");
+    return vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
+        const _el1 = _$createElement("div", _root);
         _$appendChild(_root, _el1);
         _$setStyle(_el1, {
             fontWeight: 'bold',
@@ -56,54 +60,42 @@ const Hello: FC = ()=>{
             display: ""
         });
         _$appendChild(_el1, _$createTextNode("hello world"));
-        const _el2 = _$createElement("div");
-        _$appendChild(_root, _el2);
-        _$setStyle(_el2, "color:blue;");
-        _$appendChild(_el2, _$createTextNode("hello world"));
-        const _el3 = _$createElement("div");
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
+        const _el3 = _$createElement("div", _root);
         _$appendChild(_root, _el3);
         watchEffect(()=>{
             const _el3_style = ("color:" + color.value + ";");
             _$setStyle(_el3, _el3_style);
         });
         _$appendChild(_el3, _$createTextNode("hello world"));
-        const _el4 = _$createElement("div");
+        const _el4 = _$createElement("div", _root);
         _$appendChild(_root, _el4);
         _$setStyle(_el4, {
             display: ""
         });
         _$appendChild(_el4, _$createTextNode("hello world"));
-        const _el5 = _$createElement("div");
+        const _el5 = _$createElement("div", _root);
         _$appendChild(_root, _el5);
         _$setStyle(_el5, {
             display: ""
         });
         _$appendChild(_el5, _$createTextNode("hello world"));
-        const _el6 = _$createElement("div");
+        const _el6 = _$createElement("div", _root);
         _$appendChild(_root, _el6);
         _$setStyle(_el6, {
             display: ""
         });
         _$appendChild(_el6, _$createTextNode("hello world"));
-        const _el7 = _$createElement("div");
+        const _el7 = _$createElement("div", _root);
         _$appendChild(_root, _el7);
         _$setStyle(_el7, {
             display: ""
         });
         _$appendChild(_el7, _$createTextNode("hello world"));
-        const _el8 = _$createElement("div");
-        _$appendChild(_root, _el8);
-        _$setStyle(_el8, "");
-        _$appendChild(_el8, _$createTextNode("hello world"));
-        const _el9 = _$createElement("div");
-        _$appendChild(_root, _el9);
-        _$setStyle(_el9, " ");
-        _$appendChild(_el9, _$createTextNode("hello world"));
-        const _el10 = _$createElement("div");
-        _$appendChild(_root, _el10);
-        _$setStyle(_el10, "");
-        _$appendChild(_el10, _$createTextNode("hello world"));
-        const _el11 = _$createElement("div");
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
+        _root.appendChild(_$getTemplate3().content.cloneNode(true));
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
+        const _el11 = _$createElement("div", _root);
         _$appendChild(_root, _el11);
         _$setStyle(_el11, {
             display: ""

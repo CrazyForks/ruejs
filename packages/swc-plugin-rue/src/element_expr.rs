@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 // SWC ECMAScript AST 节点类型集合（JSXExprContainer/CondExpr/BinExpr/ArrowExpr 等）
 use swc_core::ecma::ast::*;
+use swc_core::ecma::visit::{Visit, VisitWith};
 
 use crate::emit::*;
 use crate::log;
@@ -55,6 +56,58 @@ fn make_vapor_expr_from_child_body(child_body: Vec<Stmt>) -> Expr {
     call_ident("vapor", vec![arrow])
 }
 
+struct ReactiveKeyDetector {
+    found: bool,
+}
+
+impl Visit for ReactiveKeyDetector {
+    fn visit_member_expr(&mut self, member: &MemberExpr) {
+        if let MemberProp::Ident(prop) = &member.prop
+            && prop.sym.as_ref() == "value"
+        {
+            self.found = true;
+            return;
+        }
+        member.visit_children_with(self);
+    }
+
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        if call.args.is_empty()
+            && let Callee::Expr(callee) = &call.callee
+            && let Expr::Member(member) = crate::utils::unwrap_expr(callee.as_ref())
+            && let MemberProp::Ident(prop) = &member.prop
+            && prop.sym.as_ref() == "get"
+        {
+            self.found = true;
+            return;
+        }
+        call.visit_children_with(self);
+    }
+}
+
+pub(crate) fn extract_reactive_jsx_key_expr(jsx_el: &JSXElement) -> Option<Expr> {
+    jsx_el.opening.attrs.iter().find_map(|attr| {
+        let JSXAttrOrSpread::JSXAttr(attr) = attr else {
+            return None;
+        };
+        let JSXAttrName::Ident(name) = &attr.name else {
+            return None;
+        };
+        if name.sym.as_ref() != "key" {
+            return None;
+        }
+        let Some(JSXAttrValue::JSXExprContainer(container)) = &attr.value else {
+            return None;
+        };
+        let JSXExpr::Expr(expr) = &container.expr else {
+            return None;
+        };
+        let mut detector = ReactiveKeyDetector { found: false };
+        expr.visit_with(&mut detector);
+        detector.found.then(|| crate::utils::unwrap_expr(expr.as_ref()).clone())
+    })
+}
+
 fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Expr {
     let child_root = ident("_root");
     let mut child_body: Vec<Stmt> =
@@ -64,7 +117,11 @@ fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Exp
         crate::vapor::flatten_once_watch_effects(&mut child_body);
     }
     child_body.push(return_root(child_root.clone()));
-    make_vapor_expr_from_child_body(child_body)
+    let vapor_expr = make_vapor_expr_from_child_body(child_body);
+    match extract_reactive_jsx_key_expr(jsx_el) {
+        Some(key_expr) => call_ident("_$vaporWithKey", vec![vapor_expr, key_expr]),
+        None => vapor_expr,
+    }
 }
 
 fn jsx_fragment_to_slot_expr(vt: &mut VaporTransform, frag: &JSXFragment) -> Expr {

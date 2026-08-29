@@ -1,20 +1,15 @@
 // @vitest-environment jsdom
 
-import { createRequire } from 'node:module'
-
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
-import { createRue as createJsRue } from '../../runtime-vapor/js-runtime/create-rue.js'
+import { createRue as createJsRue } from '../../runtime-vapor/dist/js-runtime/create-rue.js'
 import {
   JS_RUNTIME_CONTROL_METHOD_NAMES,
   JS_RUNTIME_METHOD_NAMES,
-} from '../../runtime-vapor/js-runtime/types.js'
+} from '../../runtime-vapor/dist/js-runtime/types.js'
+import runtimeWithJsHooks from '../../runtime-vapor/dist/reactive.shared.js'
 
 import '../src/dom'
-
-const require = createRequire(import.meta.url)
-const graphKernel = require('../../runtime-vapor/pkg-node/rue_runtime_vapor.js')
 
 type RuntimeLike = {
   createElement(type: unknown, props?: unknown, children?: unknown): unknown
@@ -36,11 +31,10 @@ const getDOMBridge = () =>
     .__rue_dom
 
 const createBackends = () => {
-  const jsFacade = createReactiveFacade(graphKernel)
   return [
     {
       label: 'js',
-      create: () => createJsRue(getDOMBridge(), jsFacade) as unknown as RuntimeLike,
+      create: () => createJsRue(getDOMBridge(), runtimeWithJsHooks) as unknown as RuntimeLike,
     },
   ]
 }

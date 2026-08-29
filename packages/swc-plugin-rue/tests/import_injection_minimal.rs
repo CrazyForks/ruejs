@@ -94,7 +94,7 @@ useApp(App).mount('#app');
 }
 
 #[test]
-fn keeps_unsafe_root_values_and_moves_safe_values() {
+fn routes_component_and_reactive_values_to_vapor() {
     let src = r##"
 import { type FC, TransitionGroup, ref } from '@rue-js/rue';
 
@@ -108,15 +108,12 @@ const Demo: FC = () => {
     let program = apply(program);
     let out = utils::strip_marker(&utils::emit(program, cm));
     let normalized = utils::normalize(&out);
+    let first_line = out.lines().next().unwrap_or_default();
 
-    assert!(
-        normalized.contains(&utils::normalize("import { ref, _$vaporWithHookId, useSetup, vapor",))
-    );
-    assert!(
-        normalized.contains(&utils::normalize(
-            "import { type FC, TransitionGroup } from '@rue-js/rue';",
-        ))
-    );
+    assert!(first_line.contains("from \"@rue-js/rue/vapor\""));
+    assert!(first_line.contains("ref"));
+    assert!(first_line.contains("TransitionGroup"));
+    assert!(normalized.contains(&utils::normalize("import { type FC } from '@rue-js/rue';")));
     assert!(!normalized.contains(&utils::normalize(
         "import { type FC, TransitionGroup, ref } from '@rue-js/rue';",
     )));

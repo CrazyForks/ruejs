@@ -7,8 +7,6 @@ use swc_plugin_rue::apply;
 
 mod utils;
 
-const MAX_RENDER_ITEM_EFFECTS: usize = 0;
-
 fn transform_benchmark_row() -> String {
     let source = r##"
 import { type FC, ref, shallowRef, triggerRef } from '@rue-js/rue';
@@ -125,7 +123,7 @@ fn benchmark_key_is_structural_only() {
     let key_attribute_writes = output.matches(", \"key\",").count();
 
     assert!(
-        output.contains("getKey: (row, idx)=>row.id"),
+        output.contains("(row, idx)=>row.id"),
         "benchmark key must remain available to the list reconciler"
     );
     assert_eq!(
@@ -137,29 +135,27 @@ fn benchmark_key_is_structural_only() {
 #[test]
 fn benchmark_row_codegen_stays_within_effect_budget() {
     let output = transform_benchmark_row();
-    let total_effects = output.matches("watchEffect(").count();
-    let render_item_effects = total_effects
-        .checked_sub(1)
-        .expect("benchmark output must contain the list entry watchEffect");
 
     assert!(
-        output.contains("singleRoot: true"),
-        "benchmark row must keep the single-root list fast-path marker"
+        output.contains("_$reconcileKeyed"),
+        "benchmark row must use the compiled keyed core: {output}"
     );
     assert!(
-        output.contains("directRoot: true"),
-        "benchmark row must mount through the direct-root list path without per-text wrapper elements: {output}"
+        !output.contains("_$vaporKeyedList"),
+        "benchmark row must not retain the generic list helper: {output}"
     );
     assert!(
-        output.contains("compiledRowPatch: true"),
-        "benchmark row must opt into the runtime compiled-row protocol: {output}"
+        output.contains("return { node:")
+            && output.contains("patch:")
+            && output.contains("dispose:"),
+        "benchmark mount must return the compiled node/patch/dispose record: {output}"
     );
     assert!(
-        output.contains("return { patch:"),
-        "benchmark renderItem must return a compiled patch record: {output}"
+        output.contains(".addEventListener(") && output.contains(".removeEventListener("),
+        "benchmark events must be direct and row-owned: {output}"
     );
     assert!(
-        output.contains("_$settextContent("),
+        output.contains(".textContent ="),
         "benchmark row-local text must use direct text writes instead of renderAnchor wrappers: {output}"
     );
     assert!(
@@ -167,12 +163,12 @@ fn benchmark_row_codegen_stays_within_effect_budget() {
         "benchmark row-local text must not leave HTML wrapper elements in the table row: {output}"
     );
     assert!(
-        !output.contains("_$renderAnchor("),
+        !output.contains("renderAnchor("),
         "benchmark row must not emit per-row or per-text renderAnchor mounts: {output}"
     );
     assert!(
-        render_item_effects <= MAX_RENDER_ITEM_EFFECTS,
-        "benchmark renderItem emitted {render_item_effects} watchEffect calls; expected at most {MAX_RENDER_ITEM_EFFECTS} (total including the list entry effect: {total_effects})"
+        !output.contains("watchEffect("),
+        "benchmark compiled path must not emit Vapor watchers: {output}"
     );
     assert!(
         output.contains("Object.is("),
@@ -183,22 +179,16 @@ fn benchmark_row_codegen_stays_within_effect_budget() {
 #[test]
 fn signal_benchmark_row_uses_the_same_direct_root_budget() {
     let output = transform_signal_benchmark_row();
-    let total_effects = output.matches("watchEffect(").count();
-    let render_item_effects = total_effects
-        .checked_sub(1)
-        .expect("signal benchmark output must contain the list entry watchEffect");
 
     assert!(
-        output.contains("directRoot: true"),
-        "signal.get() bindings must retain the direct-root list path: {output}"
+        output.contains("_$reconcileKeyed"),
+        "signal.get() bindings must use the compiled keyed core: {output}"
     );
     assert!(
-        output.contains("compiledRowPatch: true"),
-        "signal.get() rows must opt into the compiled-row protocol: {output}"
-    );
-    assert!(
-        output.contains("return { patch:"),
-        "signal.get() renderItem must return a compiled patch record: {output}"
+        output.contains("return { node:")
+            && output.contains("patch:")
+            && output.contains("dispose:"),
+        "signal.get() mount must return node/patch/dispose: {output}"
     );
     assert!(
         output.contains("selected.get()"),
@@ -209,12 +199,12 @@ fn signal_benchmark_row_uses_the_same_direct_root_budget() {
         "signal benchmark row-local text must not create wrapper elements: {output}"
     );
     assert!(
-        !output.contains("_$renderAnchor("),
+        !output.contains("renderAnchor("),
         "signal benchmark rows must not register per-row anchors: {output}"
     );
     assert!(
-        render_item_effects <= MAX_RENDER_ITEM_EFFECTS,
-        "signal benchmark renderItem emitted {render_item_effects} watchEffect calls; expected at most {MAX_RENDER_ITEM_EFFECTS} (total: {total_effects})"
+        !output.contains("watchEffect(") && !output.contains("_$vaporKeyedList"),
+        "signal benchmark must stay off the Vapor list path: {output}"
     );
 }
 

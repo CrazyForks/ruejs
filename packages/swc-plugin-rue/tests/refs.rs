@@ -34,9 +34,11 @@ export default Refs;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { _$vaporWithHookId, useSetup, useRef, vapor, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$vaporBindUseRef, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { _$vaporWithHookId, useSetup, useRef, vapor, _$createElement, _$template, _$createTextNode, _$appendChild, watchEffect, _$vaporBindUseRef, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">Refs 基础</h3>');
 const Refs: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const inputRef = _$vaporWithHookId("useRef:1:0", ()=>useRef<HTMLInputElement>());
@@ -53,10 +55,7 @@ const Refs: FC = ()=>{
     return vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold");
-        _$appendChild(_el1, _$createTextNode("Refs 基础"));
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
         const _el2 = _$createElement("input", _root);
         _$appendChild(_root, _el2);
         _$vaporBindUseRef(_el2, ()=>(inputRef));

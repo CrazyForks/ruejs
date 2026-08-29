@@ -18,11 +18,28 @@ const nodeTypesRoot = path.dirname(
 
 export const RUNTIME_TYPESCRIPT_TARGETS = Object.freeze(
   [
+    'compiled.js',
     'index.js',
     'index.node.js',
+    'protocol.js',
+    'reactive.browser.js',
     'reactive.js',
     'reactive.node.js',
+    'reactive.shared.js',
     'reactive.vapor.js',
+    'reactive-kernel/computed.js',
+    'reactive-kernel/effect.js',
+    'reactive-kernel/graph.js',
+    'reactive-kernel/index.js',
+    'reactive-kernel/log.js',
+    'reactive-kernel/reactive.js',
+    'reactive-kernel/resource.js',
+    'reactive-kernel/runtime-state.js',
+    'reactive-kernel/scheduler.js',
+    'reactive-kernel/scope.js',
+    'reactive-kernel/signal.js',
+    'reactive-kernel/watch.js',
+    'runtime-entry.js',
     'runtime-entry-wrap.js',
     'vapor-bridge.js',
     'vapor.js',
@@ -61,6 +78,42 @@ export const RUNTIME_TYPESCRIPT_TARGETS = Object.freeze(
   ].sort(),
 )
 
+const RUNTIME_TYPESCRIPT_BROWSER_TARGETS = new Set([
+  'compiled.js',
+  'index.js',
+  'reactive.browser.js',
+  'reactive.js',
+  'reactive.vapor.js',
+  'vapor.js',
+])
+const RUNTIME_TYPESCRIPT_NODE_TARGETS = new Set([
+  'index.node.js',
+  'reactive.node.js',
+  'vapor.node.js',
+])
+const RUNTIME_TYPESCRIPT_PLATFORM_TARGETS = new Set([
+  ...RUNTIME_TYPESCRIPT_BROWSER_TARGETS,
+  ...RUNTIME_TYPESCRIPT_NODE_TARGETS,
+])
+
+export const targetsForPlatform = (platform = 'all') => {
+  if (platform === 'all') return RUNTIME_TYPESCRIPT_TARGETS
+  const platformTargets =
+    platform === 'browser'
+      ? RUNTIME_TYPESCRIPT_BROWSER_TARGETS
+      : platform === 'node'
+        ? RUNTIME_TYPESCRIPT_NODE_TARGETS
+        : undefined
+  if (!platformTargets) {
+    throw new Error(`Invalid runtime-vapor TypeScript platform: ${platform}`)
+  }
+  return Object.freeze(
+    RUNTIME_TYPESCRIPT_TARGETS.filter(
+      target => !RUNTIME_TYPESCRIPT_PLATFORM_TARGETS.has(target) || platformTargets.has(target),
+    ),
+  )
+}
+
 export const EXPLICIT_ANY_ALLOWLIST = Object.freeze([])
 export const RUNTIME_TYPESCRIPT_AUXILIARY_DECLARATIONS = Object.freeze(['js-reactive/types.d.ts'])
 
@@ -74,8 +127,9 @@ const pathExists = async filePath => {
   }
 }
 
-const sourceForTarget = target => target.replace(/\.js$/, '.ts')
-const declarationForTarget = target => target.replace(/\.js$/, '.d.ts')
+const sourceForTarget = target => `src/${target.replace(/\.js$/, '.ts')}`
+const outputForTarget = target => `dist/${target}`
+const declarationForTarget = target => `dist/${target.replace(/\.js$/, '.d.ts')}`
 
 const lineAt = (source, offset) => {
   let line = 1
@@ -146,15 +200,12 @@ export const auditTypeScriptRuntime = async ({
   for (const target of targets) {
     const relativeSource = sourceForTarget(target)
     const sourcePath = path.resolve(runtimeDir, relativeSource)
-    const outputPath = path.resolve(runtimeDir, target)
     const hasSource = await pathExists(sourcePath)
-    const hasOutput = await pathExists(outputPath)
 
-    if (!hasSource && !hasOutput) {
+    if (!hasSource) {
       violations.push({ rule: 'missing-target', source: relativeSource, line: 1 })
       continue
     }
-    if (!hasSource) continue
 
     migratedCount += 1
     const source = await readFile(sourcePath, 'utf8')
@@ -168,7 +219,8 @@ const formatViolations = violations =>
   violations.map(({ rule, source, line }) => `${source}:${line} ${rule}`).join('\n')
 
 const compileToDirectory = (runtimeDir, outputDir, relativeSources) => {
-  const environmentFile = path.resolve(runtimeDir, 'runtime-vapor-env.d.ts')
+  const sourceDir = path.resolve(runtimeDir, 'src')
+  const environmentFile = path.resolve(sourceDir, 'global.d.ts')
   const rootFiles = relativeSources.map(source => path.resolve(runtimeDir, source))
   const compilerArgs = [
     typescriptCli,
@@ -196,7 +248,7 @@ const compileToDirectory = (runtimeDir, outputDir, relativeSources) => {
     '--newLine',
     'lf',
     '--rootDir',
-    runtimeDir,
+    sourceDir,
     '--outDir',
     outputDir,
     ...rootFiles,
@@ -240,25 +292,38 @@ export const emitTypeScriptRuntime = async ({
       const relativeSource = sourceForTarget(target)
       if (!relativeSources.includes(relativeSource)) continue
 
-      for (const output of [target, declarationForTarget(target)]) {
-        const generatedPath = path.resolve(outputDir, output)
+      for (const [generatedOutput, destinationOutput] of [
+        [target, outputForTarget(target)],
+        [target.replace(/\.js$/, '.d.ts'), declarationForTarget(target)],
+      ]) {
+        const generatedPath = path.resolve(outputDir, generatedOutput)
         if (!(await pathExists(generatedPath))) {
-          throw new Error(`TypeScript did not emit expected runtime artifact: ${output}`)
+          throw new Error(`TypeScript did not emit expected runtime artifact: ${generatedOutput}`)
         }
-        const destinationPath = path.resolve(runtimeDir, output)
+        const destinationPath = path.resolve(runtimeDir, destinationOutput)
         await mkdir(path.dirname(destinationPath), { recursive: true })
         await copyFile(generatedPath, destinationPath)
-        outputFiles.push(output)
+        outputFiles.push(destinationOutput)
       }
     }
 
     for (const output of RUNTIME_TYPESCRIPT_AUXILIARY_DECLARATIONS) {
       const generatedPath = path.resolve(outputDir, output)
       if (!(await pathExists(generatedPath))) continue
-      const destinationPath = path.resolve(runtimeDir, output)
+      const destinationOutput = `dist/${output}`
+      const destinationPath = path.resolve(runtimeDir, destinationOutput)
       await mkdir(path.dirname(destinationPath), { recursive: true })
       await copyFile(generatedPath, destinationPath)
-      outputFiles.push(output)
+      outputFiles.push(destinationOutput)
+    }
+
+    const environmentFile = path.resolve(runtimeDir, 'src/global.d.ts')
+    if (await pathExists(environmentFile)) {
+      const destinationOutput = 'dist/global.d.ts'
+      const destinationPath = path.resolve(runtimeDir, destinationOutput)
+      await mkdir(path.dirname(destinationPath), { recursive: true })
+      await copyFile(environmentFile, destinationPath)
+      outputFiles.push(destinationOutput)
     }
 
     return { outputFiles: outputFiles.sort() }
@@ -271,8 +336,12 @@ const isDirectRun =
   process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 
 if (isDirectRun) {
-  const checkOnly = process.argv.slice(2).includes('--check')
-  const audit = await auditTypeScriptRuntime()
+  const args = process.argv.slice(2)
+  const checkOnly = args.includes('--check')
+  const platformFlagIndex = args.indexOf('--platform')
+  const platform = platformFlagIndex === -1 ? 'all' : args[platformFlagIndex + 1]
+  const targets = targetsForPlatform(platform)
+  const audit = await auditTypeScriptRuntime({ targets })
   if (audit.violations.length > 0) {
     console.error(formatViolations(audit.violations))
     process.exitCode = 1
@@ -281,7 +350,7 @@ if (isDirectRun) {
       `runtime-vapor TypeScript check: ${audit.targetCount} targets, ${audit.migratedCount} migrated`,
     )
   } else {
-    const emitted = await emitTypeScriptRuntime()
+    const emitted = await emitTypeScriptRuntime({ targets })
     console.log(
       `runtime-vapor TypeScript emit: ${audit.targetCount} targets, ${audit.migratedCount} migrated, ${emitted.outputFiles.length} artifacts`,
     )

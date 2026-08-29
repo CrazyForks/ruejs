@@ -37,18 +37,17 @@ export default ConditionalRendering;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, _$createElement, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">条件渲染</h3>');
+const _$getTemplate2 = _$template("<div></div>");
 const showA = true;
 const showB = false;
 const ConditionalRendering: FC = ()=>vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold");
-        _$appendChild(_el1, _$createTextNode("条件渲染"));
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
         const _el2 = _$createElement("div", _root);
         _$appendChild(_root, _el2);
         const _el3 = _$createTextWrapper(_el2);
@@ -65,10 +64,8 @@ const ConditionalRendering: FC = ()=>vapor((__rue_parent_context)=>{
             _$settextContent(_el5, showB && 'B 显示（&&）');
         });
         _$appendChild(_el4, _$createTextNode("]--"));
-        const _el6 = _$createElement("div", _root);
-        _$appendChild(_root, _el6);
-        const _el7 = _$createElement("div", _root);
-        _$appendChild(_root, _el7);
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
         const _el8 = _$createElement("div", _root);
         _$appendChild(_root, _el8);
         _$appendChild(_el8, _$createTextNode("--["));

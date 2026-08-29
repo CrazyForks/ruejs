@@ -14,6 +14,7 @@ fn new_vt() -> crate::vapor::VaporTransform {
         next_child: 0,
         once_depth: 0,
         did_transform: false,
+        static_templates: true,
         el_tag_by_ident: HashMap::new(),
         renderable_local_scopes: Vec::new(),
         plain_local_scopes: Vec::new(),
@@ -86,8 +87,8 @@ fn preserves_children_slots_and_map_lists_inside_fragments() {
 
     assert!(out.contains(&normalize(r#"rue:children:anchor"#)));
     assert!(out.contains(&normalize(r#"const __slot = (props.children);"#)));
-    assert!(out.contains(&normalize(r#"_$vaporKeyedList({"#)));
-    assert!(out.contains(&normalize(r#"rue:list:start"#)));
+    assert!(out.contains(&normalize(r#"_$reconcileKeyed("#)));
+    assert!(out.contains(&normalize(r#"rue:list:end"#)));
 }
 
 #[test]

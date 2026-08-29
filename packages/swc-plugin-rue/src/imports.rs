@@ -10,18 +10,23 @@ use swc_core::ecma::ast::*;
 // SWC 只读访问器：
 // - Visit：只读遍历接口
 // - VisitWith：在节点上执行只读访问器
-use swc_core::ecma::visit::{Visit, VisitWith};
+use swc_core::ecma::visit::{Visit, VisitMut, VisitMutWith, VisitWith};
+
+use crate::compiled_capabilities::{
+    RuntimeTier, aggregate_runtime_tier, runtime_import_tier, runtime_tier_for_helper,
+    should_auto_inject_helper,
+};
 
 /// 运行时导入收集与按需注入：
 /// - `RuntimeUseCollector` 通过遍历表达式与类型引用，收集使用到的运行时符号与类型（如 `FC`）。
 /// - `ensure_runtime_imports` 在模块级：
 ///   - 类型导入仍从 `@rue-js/rue` 注入，保持作者侧公开入口稳定；
-///   - Vapor helper 值导入改为 `@rue-js/rue/vapor`，将编译产物依赖从默认入口收窄到专用子入口；
+///   - compiled 值与 Vapor helper 分别进入对应子入口，Vapor 模块中的共享核心跟随最高 tier；
 ///   - 若对应 source 已存在 import，则仅追加缺失的 specifier；否则在顶部插入新的 import。
 /// - 设计权衡：按需导入避免“全量导入”造成的未使用警告与打包体积波动，同时保证多次转换只产生一次导入。
 struct RuntimeUseCollector {
-    known_values: HashSet<&'static str>,
     used_values: HashSet<String>,
+    used_capabilities: HashSet<String>,
     used_types: HashSet<String>,
     used_type_refs: HashSet<String>,
 }
@@ -40,121 +45,13 @@ impl NamedImportSpec {
     }
 }
 
-const VAPOR_SAFE_VALUE_IMPORTS: &[&str] = &[
-    // 响应式与生命周期 API 必须允许从 vapor 子入口导入，保证编译产物不会回到默认 runtime。
-    "effect",
-    "batch",
-    "onCleanup",
-    "onScopeDispose",
-    "untrack",
-    "setCurrentInstance",
-    "getCurrentInstance",
-    "withHookSlot",
-    "toValue",
-    "watchFn",
-    "watchEffect",
-    "watchSignal",
-    "watchDeepSignal",
-    "watchPath",
-    "createResource",
-    "watch",
-    "useState",
-    "useSignal",
-    "useEffect",
-    "signal",
-    "ref",
-    "shallowRef",
-    "triggerRef",
-    "toRef",
-    "toRefs",
-    "computed",
-    "isProxy",
-    "isReactive",
-    "isReadonly",
-    "reactive",
-    "shallowReactive",
-    "readonly",
-    "shallowReadonly",
-    "toRaw",
-    "propsReactive",
-    "useMemo",
-    "useCallback",
-    "useSetup",
-    "useRef",
-    "unref",
-    "setReactiveScheduling",
-    "vapor",
-    "renderAnchor",
-    "renderBetween",
-    "useApp",
-    "onBeforeCreate",
-    "onCreated",
-    "onBeforeMount",
-    "onMounted",
-    "onBeforeUpdate",
-    "onUpdated",
-    "onRenderTracked",
-    "onBeforeUnmount",
-    "onUnmounted",
-    "onError",
-    "getCurrentContainer",
-    "Transition",
-    "Template",
-];
-
 const FORCED_ROOT_TYPE_IMPORTS: &[&str] = &["FC"];
-
-const AUTO_INJECTED_VALUE_IMPORTS: &[&str] = &[
-    "vapor",
-    "renderAnchor",
-    "renderBetween",
-    "untrack",
-    "watchEffect",
-    "getCurrentInstance",
-    "useMemo",
-    "computed",
-    "useSetup",
-    "onBeforeUnmount",
-    "Template",
-];
 
 impl RuntimeUseCollector {
     fn new() -> Self {
-        let known_values: HashSet<&'static str> = AUTO_INJECTED_VALUE_IMPORTS
-            .iter()
-            .copied()
-            .chain([
-                "_$createComponent",
-                "_$vaporWithHookId",
-                "_$createElement",
-                "_$createComment",
-                "_$createTextNode",
-                "_$setStyle",
-                "_$settextContent",
-                "_$createDocumentFragment",
-                "_$appendChild",
-                "_$insertBefore",
-                "_$vaporKeyedList",
-                "_$createTextWrapper",
-                "_$vaporWithKey",
-                "_$vaporShowStyle",
-                "_$vaporBindUseRef",
-                "_$vaporWithEventModifiers",
-                "_$vaporWithNativeEvents",
-                "_$setAttribute",
-                "_$addEventListener",
-                "_$setClassName",
-                "_$setInnerHTML",
-                "_$setValue",
-                "_$setChecked",
-                "_$setDisabled",
-                "_$setProperty",
-                "_$spreadAttributes",
-            ])
-            .collect();
         Self {
-            known_values,
             used_values: HashSet::new(),
+            used_capabilities: HashSet::new(),
             used_types: HashSet::new(),
             used_type_refs: HashSet::new(),
         }
@@ -165,7 +62,10 @@ impl Visit for RuntimeUseCollector {
     fn visit_expr(&mut self, e: &Expr) {
         if let Expr::Ident(i) = e {
             let name = i.sym.as_ref();
-            if self.known_values.contains(name) {
+            if runtime_tier_for_helper(name).is_some() {
+                self.used_capabilities.insert(name.to_string());
+            }
+            if should_auto_inject_helper(name) {
                 self.used_values.insert(name.to_string());
             }
         }
@@ -212,10 +112,6 @@ fn spec_to_named_import(spec: &NamedImportSpec) -> ImportSpecifier {
         }),
         is_type_only: spec.is_type_only,
     })
-}
-
-fn is_safe_vapor_value_import(name: &str) -> bool {
-    VAPOR_SAFE_VALUE_IMPORTS.contains(&name)
 }
 
 fn mark_root_type_only_imports(m: &mut Module, used_type_refs: &HashSet<String>) {
@@ -297,8 +193,12 @@ fn insert_import(m: &mut Module, import_source: &Str, specs: Vec<NamedImportSpec
     m.body.insert(0, import);
 }
 
-fn drain_safe_root_value_imports(m: &mut Module) -> Vec<NamedImportSpec> {
+fn drain_routed_root_value_imports(
+    m: &mut Module,
+    allow_compiled_root_values: bool,
+) -> Vec<NamedImportSpec> {
     let mut moved = Vec::new();
+    let mut routed_bindings = Vec::new();
     let mut next_body = Vec::with_capacity(m.body.len());
 
     for item in m.body.drain(..) {
@@ -310,10 +210,19 @@ fn drain_safe_root_value_imports(m: &mut Module) -> Vec<NamedImportSpec> {
                 for spec in decl.specifiers {
                     match spec {
                         ImportSpecifier::Named(named) => {
-                            let named_spec = named_import_to_spec(&named);
-                            if !named_spec.is_type_only
-                                && is_safe_vapor_value_import(named_spec.export_name())
-                            {
+                            let mut named_spec = named_import_to_spec(&named);
+                            let tier = runtime_tier_for_helper(named_spec.export_name());
+                            let can_route = match tier {
+                                Some(RuntimeTier::Compiled) => allow_compiled_root_values,
+                                Some(RuntimeTier::Vapor) => true,
+                                Some(RuntimeTier::None) | None => false,
+                            };
+                            if !named_spec.is_type_only && can_route {
+                                if named_spec.local_ctxt != SyntaxContext::empty() {
+                                    routed_bindings
+                                        .push((named.local.sym.clone(), named_spec.local_ctxt));
+                                    named_spec.local_ctxt = SyntaxContext::empty();
+                                }
                                 moved.push(named_spec);
                             } else {
                                 next_specifiers.push(ImportSpecifier::Named(named));
@@ -333,7 +242,41 @@ fn drain_safe_root_value_imports(m: &mut Module) -> Vec<NamedImportSpec> {
     }
 
     m.body = next_body;
+    if !routed_bindings.is_empty() {
+        m.visit_mut_with(&mut RoutedBindingNormalizer { bindings: routed_bindings });
+    }
     moved
+}
+
+struct RoutedBindingNormalizer {
+    bindings: Vec<(Atom, SyntaxContext)>,
+}
+
+impl VisitMut for RoutedBindingNormalizer {
+    fn visit_mut_ident(&mut self, ident: &mut Ident) {
+        if self.bindings.iter().any(|(sym, ctxt)| ident.sym == *sym && ident.ctxt == *ctxt) {
+            ident.ctxt = SyntaxContext::empty();
+        }
+    }
+}
+
+fn runtime_subpath_import_locals(m: &Module) -> HashSet<String> {
+    m.body
+        .iter()
+        .filter_map(|item| {
+            let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
+                return None;
+            };
+            matches!(decl.src.value.as_str(), Some("@rue-js/rue/compiled" | "@rue-js/rue/vapor"))
+                .then_some(&decl.specifiers)
+        })
+        .flatten()
+        .map(|specifier| match specifier {
+            ImportSpecifier::Named(named) => named.local.sym.to_string(),
+            ImportSpecifier::Default(default) => default.local.sym.to_string(),
+            ImportSpecifier::Namespace(namespace) => namespace.local.sym.to_string(),
+        })
+        .collect()
 }
 
 fn sort_named_specs(specs: &mut [NamedImportSpec], rank: &HashMap<&str, usize>) {
@@ -359,16 +302,60 @@ pub fn ensure_runtime_imports(m: &mut Module) {
     crate::log::debug("rue-swc: ensure_runtime_imports start");
     let type_import_source =
         Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue").into(), raw: None };
-    let helper_import_source =
+    let compiled_import_source =
+        Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue/compiled").into(), raw: None };
+    let vapor_import_source =
         Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue/vapor").into(), raw: None };
 
     let mut collector = RuntimeUseCollector::new();
     m.visit_with(&mut collector);
+    if collector.used_capabilities.contains("effect")
+        && collector
+            .used_capabilities
+            .iter()
+            .any(|helper| matches!(helper.as_str(), "_$compiledRoot" | "_$reconcileKeyed"))
+    {
+        collector.used_values.insert("effect".to_string());
+    }
+    if collector.used_capabilities.contains("_$reconcileKeyed") {
+        for helper in ["createOwner", "createSelector", "disposeOwner", "runWithOwner"] {
+            if collector.used_capabilities.contains(helper) {
+                collector.used_values.insert(helper.to_string());
+            }
+        }
+    }
     mark_root_type_only_imports(m, &collector.used_type_refs);
+
+    // Compiled reactivity owns an intentionally independent graph. Root-entry values may only
+    // move there when this module also generated a compiled root/list boundary; otherwise an
+    // ordinary consumer (for example a test that renders an imported component) would configure
+    // or mutate a different graph from the imported Vapor component.
+    let has_runtime_subpath_import = m.body.iter().any(|item| {
+        let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
+            return false;
+        };
+        matches!(decl.src.value.as_str(), Some("@rue-js/rue/compiled" | "@rue-js/rue/vapor"))
+    });
+    let allow_compiled_root_values = has_runtime_subpath_import
+        || collector
+            .used_capabilities
+            .iter()
+            .any(|helper| matches!(helper.as_str(), "_$compiledRoot" | "_$reconcileKeyed"));
+    let mut moved_helper_specs = drain_routed_root_value_imports(m, allow_compiled_root_values);
+    let module_tier = aggregate_runtime_tier(
+        collector
+            .used_capabilities
+            .iter()
+            .map(String::as_str)
+            .chain(moved_helper_specs.iter().map(NamedImportSpec::export_name)),
+    );
+    let existing_runtime_locals = runtime_subpath_import_locals(m);
+    moved_helper_specs.retain(|spec| !existing_runtime_locals.contains(&spec.local));
 
     let mut helper_specs: Vec<NamedImportSpec> = collector
         .used_values
         .iter()
+        .filter(|name| !existing_runtime_locals.contains(name.as_str()))
         .map(|s| NamedImportSpec {
             local: s.clone(),
             local_ctxt: SyntaxContext::empty(),
@@ -376,7 +363,6 @@ pub fn ensure_runtime_imports(m: &mut Module) {
             is_type_only: false,
         })
         .collect();
-    let mut moved_helper_specs = drain_safe_root_value_imports(m);
     moved_helper_specs.append(&mut helper_specs);
     let mut helper_specs = moved_helper_specs;
 
@@ -418,6 +404,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "renderBetween",
         "useApp",
         "_$createElement",
+        "_$template",
         "_$createComment",
         "_$createTextNode",
         "_$setStyle",
@@ -426,6 +413,11 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "_$appendChild",
         "_$insertBefore",
         "effect",
+        "_$reconcileKeyed",
+        "createOwner",
+        "createSelector",
+        "runWithOwner",
+        "disposeOwner",
         "batch",
         "onCleanup",
         "onScopeDispose",
@@ -468,6 +460,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "_$vaporWithEventModifiers",
         "_$vaporWithNativeEvents",
         "_$vaporWithHookId",
+        "_$vaporMarkComponentRenderReactive",
         "_$setAttribute",
         "_$addEventListener",
         "_$setClassName",
@@ -484,8 +477,21 @@ pub fn ensure_runtime_imports(m: &mut Module) {
     sort_named_specs(&mut helper_specs, &rank);
     dedupe_named_specs(&mut helper_specs);
 
+    let mut compiled_specs = Vec::new();
+    let mut vapor_specs = Vec::new();
+    for spec in helper_specs {
+        let tier = runtime_import_tier(spec.export_name(), module_tier);
+        match tier {
+            Some(RuntimeTier::Compiled) => compiled_specs.push(spec),
+            Some(RuntimeTier::Vapor) => vapor_specs.push(spec),
+            Some(RuntimeTier::None) | None => {}
+        }
+    }
+    crate::log::debug(&format!("rue-swc: module runtime tier {module_tier:?}"));
+
     let mut merged_type = type_specs.is_empty();
-    let mut merged_helper = helper_specs.is_empty();
+    let mut merged_compiled = compiled_specs.is_empty();
+    let mut merged_vapor = vapor_specs.is_empty();
     for item in &mut m.body {
         if let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item {
             if !merged_type && decl.src.value.as_str() == Some("@rue-js/rue") {
@@ -493,20 +499,30 @@ pub fn ensure_runtime_imports(m: &mut Module) {
                 merged_type = true;
                 crate::log::debug("rue-swc: merge existing @rue-js/rue import");
             }
-            if !merged_helper && decl.src.value.as_str() == Some("@rue-js/rue/vapor") {
-                append_missing_specifiers(decl, &helper_specs);
-                merged_helper = true;
+            if !merged_compiled && decl.src.value.as_str() == Some("@rue-js/rue/compiled") {
+                append_missing_specifiers(decl, &compiled_specs);
+                merged_compiled = true;
+                crate::log::debug("rue-swc: merge existing @rue-js/rue/compiled import");
+            }
+            if !merged_vapor && decl.src.value.as_str() == Some("@rue-js/rue/vapor") {
+                append_missing_specifiers(decl, &vapor_specs);
+                merged_vapor = true;
                 crate::log::debug("rue-swc: merge existing @rue-js/rue/vapor import");
             }
-            if merged_type && merged_helper {
+            if merged_type && merged_compiled && merged_vapor {
                 break;
             }
         }
     }
 
-    if !merged_helper {
+    if !merged_vapor {
         crate::log::debug("rue-swc: insert new @rue-js/rue/vapor import");
-        insert_import(m, &helper_import_source, helper_specs);
+        insert_import(m, &vapor_import_source, vapor_specs);
+    }
+
+    if !merged_compiled {
+        crate::log::debug("rue-swc: insert new @rue-js/rue/compiled import");
+        insert_import(m, &compiled_import_source, compiled_specs);
     }
 
     if !merged_type {

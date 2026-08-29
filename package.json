@@ -13,7 +13,6 @@
   "scripts": {
     "preapp-dev": "node scripts/pre-app-dev.js",
     "docs-search-index": "node scripts/generate-doc-search-index.js",
-    "runtime-vapor-addr2line": "node scripts/runtime-vapor-addr2line.js",
     "preapp-build": "node scripts/pre-app-dev.js",
     "preapp-static-build": "node scripts/pre-app-dev.js",
     "app-dev": "vite",
@@ -42,7 +41,7 @@
     "size-global": "node scripts/build.js rue runtime -f global -p --size",
     "size-esm-runtime": "node scripts/build.js rue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime shared -f esm-bundler",
-    "size-runtime": "pnpm --filter @rue-js/runtime-vapor run build && pnpm --filter @rue-js/runtime-vapor run build-vapor && node scripts/runtime-size-audit.js",
+    "size-runtime": "pnpm --filter @rue-js/runtime-vapor run build-ts && node scripts/runtime-size-audit.js",
     "precheck": "node scripts/ensure-runtime-vapor-build.js",
     "check": "tsc --incremental --noEmit",
     "check:text": "pnpm --dir packages/text check",
@@ -68,6 +67,7 @@
     "bench-compare": "vitest bench --project=unit --compare=temp/bench.json",
     "benchmark:js-framework": "node scripts/js-framework-performance.mjs",
     "benchmark:js-framework:check": "pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-baseline.json --budget scripts/js-framework-performance-budget.json --output temp/performance/final.json",
+    "benchmark:js-framework:install-local": "node scripts/install-local-js-framework-benchmark.mjs",
     "release": "node scripts/release.js",
     "release-check": "npm run oxlint-fix && npm run format && node scripts/release.js --check --skipPrompts",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
@@ -147,7 +147,6 @@
     "valibot": "^1.4.0",
     "validator": "^13.15.35",
     "vite": "catalog:",
-    "vite-plugin-wasm": "^3.6.0",
     "vite-plus": "catalog:",
     "vitest": "4.1.10",
     "vue": "3.5.40"

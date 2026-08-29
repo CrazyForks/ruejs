@@ -36,27 +36,74 @@ export default Goods;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$appendChild } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
+const _$getTemplate1 = _$template("<div>1</div>");
+const _$getTemplate2 = _$template("<h1>Rue 响应式框架示例</h1>");
 const Hello: FC = ()=>{
-    return vapor(()=>{
-        const _root = _$createElement("div");
-        _$appendChild(_root, _$createTextNode("1"));
-        return _root;
-    });
+    return (()=>{
+        let _root;
+        let _disposed = false;
+        const _dispose = ()=>{
+            if (_disposed) return;
+            _disposed = true;
+            if (_root && _root.parentNode) {
+                _root.parentNode.removeChild(_root);
+            }
+        };
+        return {
+            __rue_cleanup_bucket: [
+                _dispose
+            ],
+            __rue_vapor_setup: (__rue_parent_context)=>{
+                if (_disposed) {
+                    throw new Error("Cannot mount a disposed static root");
+                }
+                if (_root) {
+                    throw new Error("A static root can only be mounted once");
+                }
+                const _fragment = _$getTemplate1().content.cloneNode(true);
+                _root = _fragment.firstChild;
+                return _root;
+            },
+            dispose: _dispose
+        };
+    })();
 };
 const World: FC = ()=>{
-    return vapor(()=>{
-        const _root = _$createElement("div");
-        _$appendChild(_root, _$createTextNode("1"));
-        return _root;
-    });
+    return (()=>{
+        let _root;
+        let _disposed = false;
+        const _dispose = ()=>{
+            if (_disposed) return;
+            _disposed = true;
+            if (_root && _root.parentNode) {
+                _root.parentNode.removeChild(_root);
+            }
+        };
+        return {
+            __rue_cleanup_bucket: [
+                _dispose
+            ],
+            __rue_vapor_setup: (__rue_parent_context)=>{
+                if (_disposed) {
+                    throw new Error("Cannot mount a disposed static root");
+                }
+                if (_root) {
+                    throw new Error("A static root can only be mounted once");
+                }
+                const _fragment = _$getTemplate1().content.cloneNode(true);
+                _root = _fragment.firstChild;
+                return _root;
+            },
+            dispose: _dispose
+        };
+    })();
 };
-const Goods: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        const _el1 = _$createElement("h1");
-        _$appendChild(_root, _el1);
-        _$appendChild(_el1, _$createTextNode("Rue 响应式框架示例"));
+const Goods: FC = ()=>vapor((__rue_parent_context)=>{
+        const _root = _$createElement("div", __rue_parent_context);
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
         const _list1 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list1);
         const __slot2 = _$createComponent(Hello, {});

@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module'
-
 import { describe, expect, it } from 'vitest'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
+import { createReactiveKernel } from '../../runtime-vapor/dist/reactive-kernel/index.js'
 
-const require = createRequire(import.meta.url)
-const rustRuntime = require('../../runtime-vapor/pkg-node/rue_runtime_vapor.js')
+const reactiveKernel = createReactiveKernel()
 
 type HookHost = {
   __hooks?: {
@@ -35,7 +33,7 @@ type ValueBackend = {
 }
 
 const createJsBackend = (): ValueBackend => {
-  const hooks = createReactiveFacade(rustRuntime).hooks as unknown as ValueModule & {
+  const hooks = createReactiveFacade(reactiveKernel).hooks as unknown as ValueModule & {
     renderHooks<T>(host: HookHost, render: () => T): T
   }
   return {

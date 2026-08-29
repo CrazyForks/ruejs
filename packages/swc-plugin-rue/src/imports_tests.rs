@@ -42,6 +42,12 @@ fn import_source_count(src: &str, source: &str) -> usize {
     src.matches(&format!("'{source}'")).count() + src.matches(&format!("\"{source}\"")).count()
 }
 
+fn import_clause_for_source<'a>(src: &'a str, source: &str) -> &'a str {
+    let source_offset = src.find(source).expect("import source");
+    let import_offset = src[..source_offset].rfind("import").expect("import declaration");
+    &src[import_offset..source_offset]
+}
+
 #[test]
 fn converts_named_import_specs_for_ident_and_string_exports() {
     let ident_name = ModuleExportName::Ident(Ident::new(
@@ -123,8 +129,37 @@ fn ensure_runtime_imports_inserts_only_missing_sources() {
     assert_eq!(import_source_count(&helper_only, "@rue-js/rue"), 0);
     assert_eq!(import_source_count(&helper_only, "@rue-js/rue/vapor"), 1);
 
+    let template_only = ensure_and_emit("const getTemplate = _$template('<div></div>');");
+    assert!(template_only.starts_with("import{_$template}from"));
+    assert_eq!(import_source_count(&template_only, "@rue-js/rue/compiled"), 1);
+    assert_eq!(import_source_count(&template_only, "@rue-js/rue/vapor"), 0);
+
+    let compiled_only = ensure_and_emit(
+        "import { signal, effect, _$compiledRoot } from '@rue-js/rue'; signal; effect; _$compiledRoot;",
+    );
+    assert_eq!(import_source_count(&compiled_only, "@rue-js/rue"), 0);
+    assert_eq!(import_source_count(&compiled_only, "@rue-js/rue/compiled"), 1);
+    assert_eq!(import_source_count(&compiled_only, "@rue-js/rue/vapor"), 0);
+    assert!(
+        import_clause_for_source(&compiled_only, "@rue-js/rue/compiled")
+            .contains("effect,signal,_$compiledRoot"),
+        "{compiled_only}",
+    );
+
     let unused = ensure_and_emit("const value = 1;");
     assert_eq!(unused, "constvalue=1;");
+}
+
+#[test]
+fn ensure_runtime_imports_keeps_compiled_values_on_root_without_a_generated_boundary() {
+    let out = ensure_and_emit(
+        "import { h, render, setReactiveScheduling, signal } from '@rue-js/rue'; h; render; setReactiveScheduling; signal;",
+    );
+
+    assert_eq!(import_source_count(&out, "@rue-js/rue"), 1, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/compiled"), 0, "{out}");
+    assert!(out.contains("setReactiveScheduling"), "{out}");
+    assert!(out.contains("signal"), "{out}");
 }
 
 #[test]
@@ -204,4 +239,118 @@ watchEffect(() => state.value);
     assert_eq!(import_source_count(&out, "@rue-js/rue/vapor"), 1);
     assert_eq!(out.matches("refaslocalRef").count(), 1, "{out}");
     assert!(out.contains("watchEffect"), "{out}");
+}
+
+#[test]
+fn ensure_runtime_imports_keeps_compiled_helpers_on_the_vapor_graph_in_mixed_modules() {
+    let out = ensure_and_emit(
+        r#"
+import { type FC, signal, effect, _$compiledRoot, renderBetween, Transition, KeepAlive, Suspense, Hydration, "_$vaporMarkComponentRenderReactive" as markRender } from '@rue-js/rue';
+
+type View = FC;
+signal;
+effect;
+_$compiledRoot;
+renderBetween;
+Transition;
+KeepAlive;
+Suspense;
+Hydration;
+markRender;
+"#,
+    );
+
+    assert_eq!(import_source_count(&out, "@rue-js/rue"), 1, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/compiled"), 0, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/vapor"), 1, "{out}");
+    assert!(out.contains("import{typeFC}from"), "{out}");
+    let vapor_clause = import_clause_for_source(&out, "@rue-js/rue/vapor");
+    assert!(vapor_clause.contains("_$compiledRoot"), "{out}");
+    assert!(vapor_clause.contains("signal"), "{out}");
+    assert!(vapor_clause.contains("effect"), "{out}");
+    assert!(out.contains("renderBetween"), "{out}");
+    assert!(out.contains("Transition"), "{out}");
+    assert!(out.contains("KeepAlive"), "{out}");
+    assert!(out.contains("Suspense"), "{out}");
+    assert!(out.contains("Hydration"), "{out}");
+    assert!(out.contains("_$vaporMarkComponentRenderReactiveasmarkRender"), "{out}");
+}
+
+#[test]
+fn ensure_runtime_imports_preserves_aliases_and_collisions_across_runtime_sources() {
+    let out = ensure_and_emit(
+        r#"
+import signal, { effect } from '@rue-js/rue/compiled';
+import renderBetween, { "_$vaporMarkComponentRenderReactive" as markRender } from '@rue-js/rue/vapor';
+import { "signal" as localSignal, "renderBetween" as localRender, createApp } from '@rue-js/rue';
+
+signal;
+effect;
+localSignal;
+renderBetween;
+localRender;
+markRender;
+createApp;
+"#,
+    );
+
+    assert_eq!(import_source_count(&out, "@rue-js/rue"), 1, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/compiled"), 1, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/vapor"), 1, "{out}");
+    assert_eq!(out.matches("effect").count(), 2, "{out}");
+    assert_eq!(out.matches("signalaslocalSignal").count(), 1, "{out}");
+    assert_eq!(out.matches("renderBetweenaslocalRender").count(), 1, "{out}");
+    assert_eq!(out.matches("_$vaporMarkComponentRenderReactive").count(), 1, "{out}");
+    assert!(out.contains("import{createApp}from'@rue-js/rue'"), "{out}");
+}
+
+#[test]
+fn ensure_runtime_imports_uses_existing_vapor_values_for_module_tier_aggregation() {
+    let out = ensure_and_emit(
+        r#"
+import { ref } from '@rue-js/rue/vapor';
+import { signal } from '@rue-js/rue';
+
+const legacy = ref(0);
+const state = signal(0);
+legacy;
+state;
+"#,
+    );
+
+    assert_eq!(import_source_count(&out, "@rue-js/rue"), 0, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/compiled"), 0, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/vapor"), 1, "{out}");
+    let vapor_clause = import_clause_for_source(&out, "@rue-js/rue/vapor");
+    assert!(vapor_clause.contains("ref"), "{out}");
+    assert!(vapor_clause.contains("signal"), "{out}");
+}
+
+#[test]
+fn ensure_runtime_imports_injects_vapor_owned_list_effect_and_reconcile_in_mixed_modules() {
+    let out = ensure_and_emit(
+        "vapor(() => {}); effect(() => {}); _$reconcileKeyed(parent, before, rows, items, key, mount);",
+    );
+
+    assert_eq!(import_source_count(&out, "@rue-js/rue/compiled"), 0, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/vapor"), 1, "{out}");
+    let vapor_clause = import_clause_for_source(&out, "@rue-js/rue/vapor");
+    assert!(vapor_clause.contains("vapor"), "{out}");
+    assert!(vapor_clause.contains("effect"), "{out}");
+    assert!(vapor_clause.contains("_$reconcileKeyed"), "{out}");
+}
+
+#[test]
+fn ensure_runtime_imports_injects_only_used_compiled_row_owner_helpers() {
+    let out = ensure_and_emit(
+        "vapor(() => {}); _$reconcileKeyed(parent, before, rows, items, key, mount); const owner = createOwner(); runWithOwner(owner, mount); disposeOwner(owner);",
+    );
+
+    assert_eq!(import_source_count(&out, "@rue-js/rue/compiled"), 0, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/vapor"), 1, "{out}");
+    let vapor_clause = import_clause_for_source(&out, "@rue-js/rue/vapor");
+    for helper in ["_$reconcileKeyed", "createOwner", "runWithOwner", "disposeOwner"] {
+        assert!(vapor_clause.contains(helper), "missing {helper}: {out}");
+    }
+    assert!(!vapor_clause.contains("createSelector"), "{out}");
 }

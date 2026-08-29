@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 
 import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
   checkPerformanceBudget,
   normalizeChromiumResults,
+  validateFixtureAssetIsolation,
   verifyWorkspaceArtifactSource,
 } from '../js-framework-performance.mjs'
 
@@ -103,7 +105,7 @@ describe('js-framework workspace artifact validation', () => {
         afterSha256: 'a'.repeat(64),
       },
       {
-        path: '/workspace/ruejs/packages/runtime-vapor/pkg/rue_runtime_vapor_bg.wasm',
+        path: '/workspace/ruejs/packages/runtime-vapor/dist/reactive-kernel/index.js',
         beforeSha256: 'b'.repeat(64),
         afterSha256: 'b'.repeat(64),
       },
@@ -145,6 +147,11 @@ describe('js-framework workspace artifact validation', () => {
 })
 
 const sha256 = 'a'.repeat(64)
+const entrySha256 = {
+  rue: 'b'.repeat(64),
+  'rue-signal': 'c'.repeat(64),
+  vue: 'd'.repeat(64),
+} as const
 
 const makeMeasurement = (medianKey: string, value: number, sampleKey: string) => ({
   [medianKey]: value,
@@ -152,7 +159,7 @@ const makeMeasurement = (medianKey: string, value: number, sampleKey: string) =>
   [sampleKey]: [value, value, value],
 })
 
-const makeReportEntry = (multiplier = 1) => ({
+const makeReportEntry = (multiplier = 1, entryName: keyof typeof entrySha256 = 'rue') => ({
   cpu: Object.fromEntries(
     operationNames.map(name => [name, makeMeasurement('medianMs', 100 * multiplier, 'samplesMs')]),
   ),
@@ -173,8 +180,16 @@ const makeReportEntry = (multiplier = 1) => ({
   },
   firstPaint: makeMeasurement('medianMs', 50 * multiplier, 'samplesMs'),
   size: {
-    javascript: [{ path: 'assets/app.js', rawBytes: 100, brotliBytes: 25 * multiplier, sha256 }],
-    wasm: [{ path: 'assets/app.wasm', rawBytes: 100, brotliBytes: 25 * multiplier, sha256 }],
+    javascript: [
+      {
+        path: `assets/${entryName}.js`,
+        rawBytes: 100,
+        brotliBytes: 25 * multiplier,
+        sha256: entrySha256[entryName],
+        isEntry: true,
+        moduleIds: [`/workspace/${entryName}.tsx`],
+      },
+    ],
   },
 })
 
@@ -193,6 +208,8 @@ const makePerformanceReport = () => {
       vueVersion: '3.5.40',
       vuePackagePath: '/workspace/ruejs/node_modules/vue/package.json',
       vuePackageSha256: sha256,
+      fixtureManifestSha256: sha256,
+      fixtureModuleManifestSha256: sha256,
     },
     configuration: {
       warmupRounds: 1,
@@ -201,12 +218,12 @@ const makePerformanceReport = () => {
       operations: operationNames,
     },
     results: {
-      rue: makeReportEntry(0.5),
-      'rue-signal': makeReportEntry(0.5),
-      vue: makeReportEntry(0.25),
+      rue: makeReportEntry(0.5, 'rue'),
+      'rue-signal': makeReportEntry(0.5, 'rue-signal'),
+      vue: makeReportEntry(0.5, 'vue'),
     },
   }
-  for (const entryName of ['rue', 'rue-signal'] as const) {
+  for (const entryName of ['rue', 'rue-signal', 'vue'] as const) {
     report.results[entryName].cpu.select1k.medianMs = 40
     report.results[entryName].cpu.swap1k.medianMs = 40
   }
@@ -227,8 +244,8 @@ const performanceBaseline = {
     operations: operationNames,
   },
   results: {
-    rue: makeReportEntry(1),
-    'rue-signal': makeReportEntry(1),
+    rue: makeReportEntry(1, 'rue'),
+    'rue-signal': makeReportEntry(1, 'rue-signal'),
   },
 }
 
@@ -257,6 +274,37 @@ const performanceBudget = {
     select1k: { maxMutations: 2 },
     swap1k: { maxMutations: 6 },
   },
+  sameRunVue: {
+    entry: 'rue-signal',
+    referenceEntry: 'vue',
+    cpu: {
+      maxWeightedGeometricMeanRatio: 1,
+      weights: {
+        create1k: 0.64280248137063,
+        replace1k: 0.5607178150466176,
+        update10th: 0.5643800750716564,
+        select1k: 0.1925635870170522,
+        swap1k: 0.13200612879341714,
+        remove1k: 0.5277091212292658,
+        create10k: 0.5644449600965534,
+        append1k: 0.5508359820582848,
+        clear1k: 0.4225836631419211,
+      },
+    },
+    operations: {
+      update10th: { maxRatio: 1.05 },
+      select1k: { maxRatio: 1.05 },
+      swap1k: { maxRatio: 1.05 },
+      clear1k: { maxRatio: 1.1 },
+    },
+    heap: {
+      ready: { maxRatio: 1.1 },
+      create1k: { maxRatio: 1.1 },
+      createClear: { maxRatio: 1.1 },
+    },
+    size: { brotli: { maxRatio: 1 } },
+    firstPaint: { maxRatio: 1.1 },
+  },
 }
 
 describe('js-framework performance budget', () => {
@@ -272,10 +320,190 @@ describe('js-framework performance budget', () => {
           swap1kRatio: 0.4,
           createClearHeapRatio: 0.5,
           brotliRatio: 0.5,
-          firstPaintRatio: 0.5,
+          firstPaintRatio: 0,
         },
       },
-      comparison: { vue: expect.any(Object) },
+      comparison: {
+        vue: {
+          rueSignal: {
+            cpuWeightedGeometricMeanRatio: 1,
+            update10thRatio: 1,
+            select1kRatio: 1,
+            swap1kRatio: 1,
+            clear1kRatio: 1,
+            heapReadyRatio: 1,
+            heapCreate1kRatio: 1,
+            heapCreateClearRatio: 1,
+            brotliRatio: 1,
+            firstPaintRatio: 1,
+          },
+        },
+      },
+    })
+  })
+
+  it.each([
+    [
+      'CPU 加权几何均值',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        for (const operation of operationNames) {
+          report.results['rue-signal'].cpu[operation].medianMs =
+            report.results.vue.cpu[operation].medianMs * 1.12
+        }
+      },
+      /rue-signal.*vue.*cpu.*weighted.*1\.12.*1/i,
+    ],
+    [
+      'update',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].cpu.update10th.medianMs = 52.51
+      },
+      /rue-signal.*vue.*update10th.*1\.0502.*1\.05/i,
+    ],
+    [
+      'select',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].cpu.select1k.medianMs = 42.01
+      },
+      /rue-signal.*vue.*select1k.*1\.05025.*1\.05/i,
+    ],
+    [
+      'swap',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].cpu.swap1k.medianMs = 42.01
+      },
+      /rue-signal.*vue.*swap1k.*1\.05025.*1\.05/i,
+    ],
+    [
+      'ready heap',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].heap.ready.medianBytes = 55.01
+      },
+      /rue-signal.*vue.*heap\.ready.*1\.1002.*1\.1/i,
+    ],
+    [
+      'create heap',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].heap.create1k.medianBytes = 110.01
+      },
+      /rue-signal.*vue.*heap\.create1k.*1\.1001.*1\.1/i,
+    ],
+    [
+      'run-clear heap',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].heap.createClear.medianBytes = 27.51
+      },
+      /rue-signal.*vue.*heap\.createClear.*1\.1004.*1\.1/i,
+    ],
+    [
+      'Brotli',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].size.javascript[0].brotliBytes = 12.51
+      },
+      /rue-signal.*vue.*brotli.*1\.0008.*1/i,
+    ],
+    [
+      'first paint',
+      (report: ReturnType<typeof makePerformanceReport>) => {
+        report.results['rue-signal'].firstPaint.medianMs = 27.51
+      },
+      /rue-signal.*vue.*firstPaint.*1\.1004.*1\.1/i,
+    ],
+  ])('拒绝同轮 Vue 相对超限结果：%s', (_label, mutate, message) => {
+    const report = makePerformanceReport()
+    mutate(report)
+    expect(() => checkPerformanceBudget(report, performanceBaseline, performanceBudget)).toThrow(
+      message,
+    )
+  })
+
+  it('拒绝同轮 clear1k 超过 Vue 1.10 倍', () => {
+    const configuredBudget = JSON.parse(
+      readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
+    )
+    const report = makePerformanceReport()
+    report.results['rue-signal'].cpu.clear1k.medianMs = 55.005
+
+    expect(() =>
+      checkPerformanceBudget(report, performanceBaseline, {
+        ...configuredBudget,
+        minimumValidSamples: 3,
+      }),
+    ).toThrow(/rue-signal.*vue.*clear1k.*1\.1001.*1\.1/i)
+  })
+
+  it('拒绝同轮总体 CPU 超过 Vue 1.00 倍', () => {
+    const configuredBudget = JSON.parse(
+      readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
+    )
+    const report = makePerformanceReport()
+    for (const operation of operationNames) {
+      report.results.vue.cpu[operation].medianMs =
+        report.results['rue-signal'].cpu[operation].medianMs / 1.0001
+    }
+
+    expect(() =>
+      checkPerformanceBudget(report, performanceBaseline, {
+        ...configuredBudget,
+        minimumValidSamples: 3,
+      }),
+    ).toThrow(/rue-signal.*vue.*cpu.*weighted.*1\.0001.*1/i)
+  })
+
+  it('接受同轮 clear1k 1.10 与总体 CPU 1.00 的边界值', () => {
+    const configuredBudget = JSON.parse(
+      readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
+    )
+    const cpuBoundary = checkPerformanceBudget(makePerformanceReport(), performanceBaseline, {
+      ...configuredBudget,
+      minimumValidSamples: 3,
+    })
+    const clearBoundaryReport = makePerformanceReport()
+    clearBoundaryReport.results['rue-signal'].cpu.clear1k.medianMs = 55
+    clearBoundaryReport.results['rue-signal'].cpu.create1k.medianMs = 45
+    const clearBoundary = checkPerformanceBudget(clearBoundaryReport, performanceBaseline, {
+      ...configuredBudget,
+      minimumValidSamples: 3,
+    })
+
+    expect(cpuBoundary.comparison.vue.rueSignal.cpuWeightedGeometricMeanRatio).toBe(1)
+    expect(clearBoundary.comparison.vue.rueSignal.clear1kRatio).toBe(1.1)
+  })
+
+  it('拒绝 rue 与 rue-signal 复用同一入口资产', () => {
+    const report = makePerformanceReport()
+    report.results['rue-signal'].size.javascript[0].sha256 =
+      report.results.rue.size.javascript[0].sha256
+
+    expect(() => validateFixtureAssetIsolation(report)).toThrow(/rue.*rue-signal.*entry.*sha-256/i)
+  })
+
+  it('记录三个入口的独立 entry、moduleIds 与正确运行时边界', () => {
+    const report = makePerformanceReport()
+    report.results.rue.size.javascript[0].moduleIds = [
+      '/workspace/main-ref.tsx',
+      '/workspace/rue.vapor.esm-bundler.js',
+    ]
+    report.results['rue-signal'].size.javascript[0].moduleIds = [
+      '/workspace/main-signal.tsx',
+      '/workspace/rue.compiled.esm-bundler.js',
+    ]
+    report.results.vue.size.javascript[0].moduleIds = [
+      '/workspace/vue.ts',
+      '/workspace/vue.runtime.esm-bundler.js',
+    ]
+
+    expect(validateFixtureAssetIsolation(report)).toMatchObject({
+      entrySha256: {
+        rue: entrySha256.rue,
+        'rue-signal': entrySha256['rue-signal'],
+        vue: entrySha256.vue,
+      },
+      moduleIds: {
+        rue: expect.arrayContaining([expect.stringContaining('main-ref.tsx')]),
+        'rue-signal': expect.arrayContaining([expect.stringContaining('rue.compiled')]),
+        vue: expect.arrayContaining([expect.stringContaining('vue.ts')]),
+      },
     })
   })
 
@@ -311,16 +539,16 @@ describe('js-framework performance budget', () => {
     [
       'Brotli',
       (report: ReturnType<typeof makePerformanceReport>) => {
-        report.results.rue.size.wasm[0].brotliBytes = 13
+        report.results.rue.size.javascript[0].brotliBytes = 12.75
       },
       /brotli.*0\.51.*0\.5/i,
     ],
     [
       'first paint',
       (report: ReturnType<typeof makePerformanceReport>) => {
-        report.results.rue.firstPaint.medianMs = 25.5
+        report.results.rue.firstPaint.medianMs = 37.51
       },
-      /firstPaint.*0\.51.*0\.5/i,
+      /firstPaint.*0\.5004.*0\.5/i,
     ],
     [
       'selection DOM',
@@ -342,6 +570,49 @@ describe('js-framework performance budget', () => {
     expect(() => checkPerformanceBudget(report, performanceBaseline, performanceBudget)).toThrow(
       message,
     )
+  })
+
+  it('只校验 JavaScript 工作区产物，不再接线 runtime-vapor Wasm', () => {
+    const source = readFileSync(path.resolve('scripts/js-framework-performance.mjs'), 'utf8')
+    const viteSource = readFileSync(
+      path.resolve('packages/runtime/__benchmarks__/js-framework/vite.config.ts'),
+      'utf8',
+    )
+
+    expect(`${source}\n${viteSource}`).not.toMatch(
+      /runtime-vapor\/pkg|rue_runtime_vapor_bg|vite-plugin-wasm/,
+    )
+  })
+
+  it('fixture 使用三个独立 HTML/entry，signal 入口只导入 compiled 子路径', () => {
+    const mainSource = readFileSync(
+      path.resolve('packages/runtime/__benchmarks__/js-framework/main.tsx'),
+      'utf8',
+    )
+    const refSource = readFileSync(
+      path.resolve('packages/runtime/__benchmarks__/js-framework/main-ref.tsx'),
+      'utf8',
+    )
+    const signalSource = readFileSync(
+      path.resolve('packages/runtime/__benchmarks__/js-framework/main-signal.tsx'),
+      'utf8',
+    )
+    const signalHtml = readFileSync(
+      path.resolve('packages/runtime/__benchmarks__/js-framework/rue-signal.html'),
+      'utf8',
+    )
+    const viteSource = readFileSync(
+      path.resolve('packages/runtime/__benchmarks__/js-framework/vite.config.ts'),
+      'utf8',
+    )
+
+    expect(mainSource).toMatch(/main-ref/)
+    expect(refSource).toContain("from '@rue-js/rue/vapor'")
+    expect(signalSource).toContain("from '@rue-js/rue/compiled'")
+    expect(signalSource).not.toMatch(/@rue-js\/rue(?:\/vapor)?['"]|main-ref|useRefState/)
+    expect(signalHtml).toMatch(/main-signal\.tsx/)
+    expect(viteSource).toMatch(/['"]rue-signal['"]\s*:/)
+    expect(viteSource).toMatch(/manifest\s*:\s*true/)
   })
 
   it.each([

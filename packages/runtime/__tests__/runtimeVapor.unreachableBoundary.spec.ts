@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createRue } from '@rue-js/runtime-vapor'
 
 describe('runtime-vapor flush diagnostics', () => {
-  it('rewrites raw wasm unreachable traps without useError', () => {
+  it('preserves ordinary JavaScript errors and reports them once', () => {
     const adapter = (globalThis as any).__rue_dom
     const runtime = createRue(adapter)
     runtime.setDOMAdapter(adapter)
@@ -17,8 +17,9 @@ describe('runtime-vapor flush diagnostics', () => {
       reportedErrors.push(error)
     })
 
+    const original = new Error('render failed')
     const handle = runtime.vapor(() => {
-      throw new WebAssembly.RuntimeError('unreachable')
+      throw original
     })
 
     let thrown: unknown
@@ -28,18 +29,7 @@ describe('runtime-vapor flush diagnostics', () => {
       thrown = error
     }
 
-    expect(thrown).toBeInstanceOf(Error)
-    const details = thrown as Error
-    expect(details.name).toBe('RueWasmTrapError')
-    expect(details.message).toContain('Rue Vapor/Wasm trapped with "unreachable"')
-    expect(details.message).toContain(
-      'assembling a fresh object instead of deleting or rewriting fields',
-    )
-    expect(details.message).toContain('RUE_VAPOR_TRANSFORMED')
-    expect(details.message).toContain('Original trap: RuntimeError: unreachable.')
-
-    expect(reportedErrors).toHaveLength(1)
-    expect(reportedErrors[0]?.name).toBe('RueWasmTrapError')
-    expect(reportedErrors[0]?.message).toBe(details.message)
+    expect(thrown).toBe(original)
+    expect(reportedErrors).toEqual([original])
   })
 })

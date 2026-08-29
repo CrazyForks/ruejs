@@ -1,11 +1,11 @@
 {
   "name": "@rue-js/runtime-vapor",
   "version": "0.8.15",
-  "description": "Rue JavaScript runtime backed by a Rust/WebAssembly reactive graph kernel",
+  "description": "Rue JavaScript runtime backed by a strict TypeScript reactive graph kernel",
   "keywords": [
+    "reactivity",
     "rue",
-    "runtime",
-    "wasm"
+    "runtime"
   ],
   "homepage": "https://github.com/hunzhiwange/ruejs/tree/main/packages/runtime-vapor#readme",
   "bugs": {
@@ -19,58 +19,50 @@
     "directory": "packages/runtime-vapor"
   },
   "files": [
-    "index.js",
-    "index.node.js",
-    "index.d.ts",
-    "global.d.ts",
-    "js-reactive/**/*.js",
-    "js-reactive/**/*.d.ts",
-    "js-runtime/**/*.js",
-    "js-runtime/**/*.d.ts",
-    "pkg-vapor",
-    "pkg-node",
-    "reactive.js",
-    "reactive.vapor.js",
-    "reactive.node.js",
-    "reactive.d.ts",
-    "runtime-entry-wrap.js",
-    "vapor.js",
-    "vapor.node.js",
-    "vapor-bridge.js",
-    "vapor.d.ts"
+    "dist"
   ],
   "type": "module",
-  "types": "./index.d.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
+      "types": "./dist/index.d.ts",
       "node": {
-        "development": "./index.node.js",
-        "default": "./index.node.js"
+        "development": "./dist/index.node.js",
+        "default": "./dist/index.node.js"
       },
-      "development": "./index.js",
-      "import": "./index.js",
-      "default": "./index.js"
+      "development": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./compiled": {
+      "types": "./dist/compiled.d.ts",
+      "import": "./dist/compiled.js",
+      "default": "./dist/compiled.js"
     },
     "./reactive": {
-      "types": "./reactive.d.ts",
+      "types": "./dist/reactive.d.ts",
       "node": {
-        "development": "./reactive.node.js",
-        "default": "./reactive.node.js"
+        "development": "./dist/reactive.node.js",
+        "default": "./dist/reactive.node.js"
       },
-      "development": "./reactive.js",
-      "import": "./reactive.js",
-      "default": "./reactive.js"
+      "development": "./dist/reactive.js",
+      "import": "./dist/reactive.js",
+      "default": "./dist/reactive.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "import": "./dist/protocol.js",
+      "default": "./dist/protocol.js"
     },
     "./vapor": {
-      "types": "./vapor.d.ts",
+      "types": "./dist/vapor.d.ts",
       "node": {
-        "development": "./vapor.node.js",
-        "default": "./vapor.node.js"
+        "development": "./dist/vapor.node.js",
+        "default": "./dist/vapor.node.js"
       },
-      "development": "./vapor.js",
-      "import": "./vapor.js",
-      "default": "./vapor.js"
+      "development": "./dist/vapor.js",
+      "import": "./dist/vapor.js",
+      "default": "./dist/vapor.js"
     }
   },
   "publishConfig": {
@@ -78,26 +70,18 @@
   },
   "scripts": {
     "build-ts": "node ./scripts/emit-typescript-runtime.mjs",
+    "build-ts:browser": "npm run build-ts -- --platform browser",
     "check-ts": "tsc -p tsconfig.json --noEmit && node ./scripts/emit-typescript-runtime.mjs --check",
-    "cleanup-wasm-pack": "node -e \"const fs=require('fs');for(const p of ['pkg-vapor/.gitignore','pkg-node/.gitignore']){if(fs.existsSync(p))fs.unlinkSync(p)}\"",
-    "build-profiling": "node ./scripts/run-wasm-pack.mjs build --profiling --target bundler --out-dir pkg-vapor --no-default-features --features dev --features log && npm run cleanup-wasm-pack",
-    "build-dev": "node ./scripts/run-wasm-pack.mjs build --release --target bundler --out-dir pkg-vapor --no-default-features --features dev --features log && npm run cleanup-wasm-pack",
-    "build": "npm run build-ts && node ./scripts/run-wasm-pack.mjs build --release --target bundler --out-dir pkg-vapor --no-default-features && npm run cleanup-wasm-pack",
-    "build-vapor": "npm run build-ts && node ./scripts/run-wasm-pack.mjs build --release --target bundler --out-dir pkg-vapor --no-default-features && npm run cleanup-wasm-pack",
-    "build-node": "npm run build-ts && node ./scripts/run-wasm-pack.mjs build --release --target nodejs --out-dir pkg-node --no-default-features --features log --features dev && npm run cleanup-wasm-pack",
-    "prepublishOnly": "npm run check-ts && npm run build && npm run build-node",
-    "prepack": "npm run check-ts && npm run build && npm run build-node",
-    "dev": "node ./scripts/run-wasm-pack.mjs watch",
-    "docs": "cargo doc --no-deps",
-    "test": "node ./scripts/run-wasm-pack.mjs test --node",
-    "check": "cargo check",
-    "fmt": "cargo fmt",
-    "test-coverage": "cargo llvm-cov  --html --open",
-    "test-coverage-wasm": "node ./scripts/run-wasm-coverage.mjs",
-    "test-coverage-wasm-html": "node ./scripts/run-wasm-coverage.mjs --html",
-    "test-coverage-wasm-lcov": "node ./scripts/run-wasm-coverage.mjs --lcov",
-    "test-coverage-wasm-all": "node ./scripts/run-wasm-coverage.mjs --html --lcov",
-    "test-coverage-js": "c8 --reporter=lcov --reporter=text node ./scripts/run-wasm-pack.mjs test --node"
+    "build": "npm run build-ts",
+    "build-vapor": "npm run build-ts -- --platform browser",
+    "build-node": "npm run build-ts -- --platform node",
+    "prepublishOnly": "npm run check-ts && npm run build",
+    "prepack": "npm run check-ts && npm run build",
+    "dev": "tsc -p tsconfig.json --noEmit --watch",
+    "test": "pnpm -w exec vitest run scripts/__tests__/runtime-vapor-typescript.spec.ts scripts/__tests__/runtime-vapor-no-wasm.spec.ts --project unit",
+    "check": "npm run check-ts",
+    "test-coverage": "pnpm -w exec vitest run scripts/__tests__/runtime-vapor-typescript.spec.ts scripts/__tests__/runtime-vapor-no-wasm.spec.ts --project unit --coverage",
+    "test-coverage-js": "npm run test-coverage"
   },
   "devDependencies": {
     "c8": "^11.0.0"

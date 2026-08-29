@@ -6,7 +6,6 @@ import path from 'node:path'
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { build, type Rollup } from 'vite'
-import wasm from 'vite-plugin-wasm'
 
 import '../src/dom'
 
@@ -22,8 +21,8 @@ type TestGlobal = typeof globalThis & {
   __rue_runtime_vapor_shared_bridge?: unknown
 }
 
-const runtimeVaporDir = path.resolve(process.cwd(), 'packages/runtime-vapor')
-const vaporEntry = path.resolve(runtimeVaporDir, 'vapor.js')
+const runtimeVaporDist = path.resolve(process.cwd(), 'packages/runtime-vapor/dist')
+const vaporEntry = path.resolve(runtimeVaporDist, 'vapor.js')
 
 const buildTestEntry = async () => {
   const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-vapor-entry-switch-'))
@@ -44,7 +43,6 @@ const buildTestEntry = async () => {
       appType: 'custom',
       logLevel: 'silent',
       define: { __TEST__: 'true' },
-      plugins: [wasm()],
       build: {
         target: 'es2020',
         minify: false,
@@ -75,7 +73,7 @@ afterEach(() => {
 })
 
 describe('runtime-vapor JavaScript Vapor production entry', () => {
-  it('constructs the JS Hook and Runtime shells over the real pkg-vapor kernel', async () => {
+  it('constructs the JS Hook and Runtime shells over the TypeScript kernel', async () => {
     const entry = await importBundle(await buildTestEntry())
     const markers: BackendMarker[] = []
     ;(globalThis as TestGlobal).__rue_runtime_vapor_backend_test_hook__ = marker => {
@@ -93,7 +91,7 @@ describe('runtime-vapor JavaScript Vapor production entry', () => {
         {
           entry: 'browser:vapor',
           hooks: 'js',
-          kernel: 'pkg-vapor',
+          kernel: 'typescript',
           runtime: 'js',
         },
       ])

@@ -1,6 +1,5 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import wasm from 'vite-plugin-wasm'
 import VitePluginRue from '../../packages/vite-plugin-rue/index.mjs'
 
 const sharedDir = path.dirname(fileURLToPath(import.meta.url))
@@ -57,6 +56,5 @@ export const createRueExampleDefine = ({ dev = true, ssr = false } = {}) => ({
 
 export const createRueExamplePlugins = ({ transformTimeoutMs = 60000 } = {}) => [
   createRueRuntimeVaporResolvePlugin(),
-  wasm(),
   VitePluginRue({ transformTimeoutMs }),
 ]

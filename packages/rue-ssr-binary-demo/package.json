@@ -21,7 +21,6 @@
   "devDependencies": {
     "@rue-js/vite-plugin-rue": "workspace:*",
     "@swc/core": "^1.15.33",
-    "vite": "catalog:",
-    "vite-plugin-wasm": "^3.6.0"
+    "vite": "catalog:"
   }
 }

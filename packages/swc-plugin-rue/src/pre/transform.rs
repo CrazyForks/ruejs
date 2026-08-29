@@ -12,8 +12,10 @@ use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 use super::for_directive;
 use super::helpers::{
+    arrow_has_reactive_render_control, block_has_explicit_vapor_return,
     has_component_render_return_in_block, is_fc_pat, is_untyped_arrow_component_decl,
-    lower_props_derived_consts_in_arrow, lower_props_derived_consts_in_function, process_fn_decl,
+    lower_props_derived_consts_in_arrow, lower_props_derived_consts_in_function,
+    mark_component_render_reactive, mark_nested_jsx_render_closure, process_fn_decl,
     process_function, process_var_decl, rewrite_component_props_destructure_in_arrow,
     rewrite_component_props_destructure_in_function, should_transform_fn_decl,
 };
@@ -65,6 +67,7 @@ pub struct PreTransform {
     scope_stack: Vec<usize>,
     next_scope: usize,
     hook_index_stack: Vec<usize>,
+    compiled_runtime_bindings: HashSet<String>,
 }
 
 #[derive(Default)]
@@ -109,6 +112,23 @@ mod tests;
 
 impl VisitMut for PreTransform {
     fn visit_mut_module(&mut self, m: &mut Module) {
+        self.compiled_runtime_bindings = m
+            .body
+            .iter()
+            .filter_map(|item| match item {
+                ModuleItem::ModuleDecl(ModuleDecl::Import(import))
+                    if import.src.value.as_str() == Some("@rue-js/rue/compiled") =>
+                {
+                    Some(&import.specifiers)
+                }
+                _ => None,
+            })
+            .flatten()
+            .filter_map(|specifier| match specifier {
+                ImportSpecifier::Named(named) => Some(named.local.sym.to_string()),
+                _ => None,
+            })
+            .collect();
         // 进入模块作用域：记录 scope，并初始化当前作用域的 hook 索引
         self.next_scope += 1;
         self.scope_stack.push(self.next_scope);
@@ -141,6 +161,20 @@ impl VisitMut for PreTransform {
         model_directive::transform_opening(opening);
         // v-show/r-show → 样式驱动显示控制
         show_directive::transform_opening(opening);
+        if self.in_component {
+            for attr in &mut opening.attrs {
+                let JSXAttrOrSpread::JSXAttr(attr) = attr else {
+                    continue;
+                };
+                let Some(JSXAttrValue::JSXExprContainer(container)) = &mut attr.value else {
+                    continue;
+                };
+                let JSXExpr::Expr(expr) = &mut container.expr else {
+                    continue;
+                };
+                mark_nested_jsx_render_closure(expr);
+            }
+        }
     }
 
     fn visit_mut_jsx_element(&mut self, el: &mut JSXElement) {
@@ -164,6 +198,17 @@ impl VisitMut for PreTransform {
             && let Some(memo_expr) = if_directive::memo_or_once_element_expr(el.as_ref())
         {
             *expr = memo_expr;
+        }
+    }
+
+    fn visit_mut_arrow_expr(&mut self, arrow: &mut ArrowExpr) {
+        arrow.visit_mut_children_with(self);
+        if arrow_has_reactive_render_control(arrow) {
+            rewrite_component_props_destructure_in_arrow(arrow);
+            lower_props_derived_consts_in_arrow(arrow);
+            if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_mut() {
+                mark_component_render_reactive(block);
+            }
         }
     }
 
@@ -199,8 +244,13 @@ impl VisitMut for PreTransform {
         if !is_comp {
             return;
         }
+        let requires_render_effect =
+            f.function.body.as_ref().is_some_and(|block| block_has_explicit_vapor_return(block));
         // 组件函数声明：执行 useSetup 注入
         process_fn_decl(f);
+        if requires_render_effect && let Some(block) = &mut f.function.body {
+            mark_component_render_reactive(block);
+        }
     }
 
     fn visit_mut_var_decl(&mut self, v: &mut VarDecl) {
@@ -227,6 +277,21 @@ impl VisitMut for PreTransform {
         // 恢复组件语境标志；组件的箭头函数体在 helpers 中完成 useSetup 注入
         self.in_component = prev;
         process_var_decl(v);
+        for decl in &mut v.decls {
+            let is_decl_comp = is_fc_pat(&decl.name) || is_untyped_arrow_component_decl(decl);
+            if !is_decl_comp {
+                continue;
+            }
+            let Some(Expr::Arrow(arrow)) = decl.init.as_mut().map(|expr| expr.as_mut()) else {
+                continue;
+            };
+            let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_mut() else {
+                continue;
+            };
+            if block_has_explicit_vapor_return(block) {
+                mark_component_render_reactive(block);
+            }
+        }
     }
 
     fn visit_mut_call_expr(&mut self, c: &mut CallExpr) {
@@ -238,26 +303,27 @@ impl VisitMut for PreTransform {
             && let Expr::Ident(id) = e.as_ref()
         {
             let name = id.sym.as_ref();
-            if name == "useMemo"
-                || name == "useEffect"
-                || name == "useCallback"
-                || name == "useRef"
-                || name == "reactive"
-                || name == "ref"
-                || name == "useState"
-                || name == "watchEffect"
-                || name == "watch"
-                || name == "watchSignal"
-                || name == "watchFn"
-                || name == "watchPath"
-                || name == "watchDeepSignal"
-                || name == "computed"
-                || name == "signal"
-                || name == "readonly"
-                || name == "shallowReactive"
-                || name == "useSignal"
-                || name == "useSetup"
-                || name == "shallowReadonly"
+            if !self.compiled_runtime_bindings.contains(name)
+                && (name == "useMemo"
+                    || name == "useEffect"
+                    || name == "useCallback"
+                    || name == "useRef"
+                    || name == "reactive"
+                    || name == "ref"
+                    || name == "useState"
+                    || name == "watchEffect"
+                    || name == "watch"
+                    || name == "watchSignal"
+                    || name == "watchFn"
+                    || name == "watchPath"
+                    || name == "watchDeepSignal"
+                    || name == "computed"
+                    || name == "signal"
+                    || name == "readonly"
+                    || name == "shallowReactive"
+                    || name == "useSignal"
+                    || name == "useSetup"
+                    || name == "shallowReadonly")
             {
                 should_wrap = true;
                 hook_name = Some(name.to_string());

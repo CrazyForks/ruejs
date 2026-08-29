@@ -13,6 +13,7 @@ mod emit;
 mod vapor;
 // 功能拆分模块
 mod attrs;
+mod compiled_capabilities;
 mod custom_element;
 mod element_children;
 mod element_component;
@@ -29,6 +30,10 @@ mod pre;
 mod router_link;
 mod text;
 mod utils;
+
+#[cfg(test)]
+#[path = "compiled_capabilities_tests.rs"]
+mod compiled_capabilities_tests;
 
 /*
 总体架构与设计说明：
@@ -65,16 +70,21 @@ mod utils;
 
 #[plugin_transform]
 // 插件入口：供 SWC 在编译时调用
-pub fn transform(program: Program, _metadata: TransformPluginProgramMetadata) -> Program {
-    run_full_transform(program)
+pub fn transform(program: Program, metadata: TransformPluginProgramMetadata) -> Program {
+    let static_templates = metadata
+        .get_transform_plugin_config()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+        .and_then(|config| config.get("staticTemplates").and_then(serde_json::Value::as_bool))
+        .unwrap_or(false);
+    run_full_transform(program, static_templates)
 }
 
 // 测试入口：在单元测试中直接复用同样的转换逻辑
 pub fn apply(program: Program) -> Program {
-    run_full_transform(program)
+    run_full_transform(program, true)
 }
 
-fn run_full_transform(program: Program) -> Program {
+fn run_full_transform(program: Program, static_templates: bool) -> Program {
     let mut p = program;
     log::info("rue-swc: apply(pre+vapor) start");
     p.visit_mut_with(&mut pre::PreTransform::default());
@@ -85,6 +95,7 @@ fn run_full_transform(program: Program) -> Program {
         next_child: 0,
         once_depth: 0,
         did_transform: false,
+        static_templates,
         el_tag_by_ident: std::collections::HashMap::new(),
         renderable_local_scopes: Vec::new(),
         plain_local_scopes: Vec::new(),

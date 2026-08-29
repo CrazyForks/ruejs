@@ -1175,8 +1175,8 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     )
     const rueBrowserRequireShim = resolveShimModulePath(shimsDir, 'rue-runtime-browser-require')
     for (const runtimeVaporDir of [
-      path.resolve(__dirname, 'runtime-vapor'),
-      path.resolve(__dirname, '../dist/runtime-vapor'),
+      path.resolve(__dirname, 'runtime-vapor/dist'),
+      path.resolve(__dirname, '../dist/runtime-vapor/dist'),
     ]) {
       for (const entryFile of ['index.node.js', 'reactive.node.js', 'vapor.node.js']) {
         const runtimeFile = path.join(runtimeVaporDir, entryFile)
@@ -1208,20 +1208,13 @@ export default function text(options: TextOptions = {}): PluginOption[] {
         registerRueServerRuntimeAlias(runtimeFile, runtimeFile)
       }
     }
-
-    for (const packageDir of ['pkg-node']) {
-      const runtimeFile = path.join(runtimeVaporDir, packageDir, 'rue_runtime_vapor.js')
-      if (fs.existsSync(runtimeFile)) {
-        registerRueServerRuntimeAlias(runtimeFile, runtimeFile)
-      }
-    }
   }
   try {
     const runtimeVaporDir = path.dirname(nodeRuntimeRequire.resolve('@rue-js/runtime-vapor'))
     registerRuntimeVaporNodeArtifacts(runtimeVaporDir)
   } catch {}
-  registerRuntimeVaporNodeArtifacts(path.resolve(__dirname, 'runtime-vapor'))
-  registerRuntimeVaporNodeArtifacts(path.resolve(__dirname, '../dist/runtime-vapor'))
+  registerRuntimeVaporNodeArtifacts(path.resolve(__dirname, 'runtime-vapor/dist'))
+  registerRuntimeVaporNodeArtifacts(path.resolve(__dirname, '../dist/runtime-vapor/dist'))
   const addRueServerSourceAlias = (
     packageName: string,
     sourceRelativePath: string,
@@ -2794,7 +2787,7 @@ export default function text(options: TextOptions = {}): PluginOption[] {
         // direct @vercel/og imports in metadata routes, and \0-prefixed
         // re-imports from @vitejs/plugin-rsc.
         filter: {
-          id: /(?:text\/|virtual:text-|^r(?:eact|ue)$|^text-intl(?:\/server)?$|^@vercel\/og(?:\.js)?$|^@rue-js\/(?:(?:rue|runtime)(?:\/(?:server-renderer|server|vapor|reactive))?|runtime-vapor(?:\/(?:vapor|reactive))?|server-renderer)$|(?:^|[/\\])(?:index|reactive|vapor)\.node\.js$|(?:^|[/\\])runtime[/\\]index\.js$|packages\/(?:rue|runtime|server-renderer)\/src\/(?:index|server-renderer|server|vapor)\.ts$|packages\/(?:runtime-vapor|text\/dist\/runtime-vapor)\/(?:(?:index|reactive|vapor)\.node\.js|pkg-node(?:-[^/]+)?\/rue_runtime_vapor\.js$))/,
+          id: /(?:text\/|virtual:text-|^r(?:eact|ue)$|^text-intl(?:\/server)?$|^@vercel\/og(?:\.js)?$|^@rue-js\/(?:(?:rue|runtime)(?:\/(?:server-renderer|server|vapor|reactive))?|runtime-vapor(?:\/(?:vapor|reactive))?|server-renderer)$|(?:^|[/\\])(?:index|reactive|vapor)\.node\.js$|(?:^|[/\\])runtime[/\\]index\.js$|packages\/(?:rue|runtime|server-renderer)\/src\/(?:index|server-renderer|server|vapor)\.ts$|packages\/(?:runtime-vapor|text\/dist\/runtime-vapor)\/(?:index|reactive|vapor)\.node\.js$)/,
         },
         handler(id, importer) {
           // Strip \0 prefix if present — @vitejs/plugin-rsc's generated
@@ -4485,34 +4478,6 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     // standalone/node_modules/ — uses the bundler's own import graph instead of
     // fragile regex scanning of emitted files.
     createServerExternalsManifestPlugin(),
-    {
-      name: 'text:runtime-vapor-node-artifacts',
-      apply: 'build',
-      enforce: 'post',
-      writeBundle: {
-        sequential: true,
-        order: 'post',
-        handler(options) {
-          const envName = this.environment?.name
-          if (envName !== 'rsc' && envName !== 'ssr') return
-
-          const outDir = options.dir
-          if (!outDir) return
-
-          const sourceDir = path.join(__dirname, 'runtime-vapor', 'pkg-node')
-          if (!fs.existsSync(sourceDir)) return
-
-          fs.cpSync(sourceDir, path.join(outDir, 'pkg-node'), { recursive: true })
-          fs.cpSync(
-            sourceDir,
-            path.join(outDir, 'ssr', ...ASSET_PREFIX_URL_DIR.split('/'), 'pkg-node'),
-            {
-              recursive: true,
-            },
-          )
-        },
-      },
-    },
     // Write image config JSON for the App Router production server.
     // The App Router RSC entry doesn't export textConfig (that's a Pages
     // Router pattern), so we write a separate JSON file at build time that

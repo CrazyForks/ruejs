@@ -11,6 +11,7 @@ import {
   getOwnedMountProtocol,
   onBeforeUnmount,
   prepareAsyncExternalOwnedDispose,
+  renderBetween,
   withOwnedMountContinuationContext,
 } from './rue'
 import {
@@ -24,15 +25,19 @@ import {
 } from './reactivity'
 import { getCurrentInstance } from '@rue-js/runtime-vapor/reactive'
 import {
+  addEventListener,
   createComment,
   createDocumentFragment,
   insertBefore,
   appendChild,
   getParentNode,
   removeChild,
+  removeEventListener,
   contains,
+  withDOMHostOperations,
 } from './dom'
-import type { DomNodeLike } from './dom'
+import type { DomElementLike, DomNodeLike, DOMEventHandler } from './dom'
+import type { BlockFactory, BlockInstance, RenderTarget } from './renderable'
 
 /** 根据条件生成 display 显隐样式
  * 支持字符串 style 与对象 style 的输入。
@@ -61,6 +66,53 @@ export const vaporWithKey = <T>(value: T, key: unknown): T => {
   return value
 }
 
+/** Mark a component factory, or the current compiled component, as requiring a render effect. */
+export function vaporMarkComponentRenderReactive<T extends (...args: any[]) => any>(component: T): T
+export function vaporMarkComponentRenderReactive(): void
+export function vaporMarkComponentRenderReactive<T extends (...args: any[]) => any>(
+  component?: T,
+): T | void {
+  if (typeof component === 'function') {
+    ;(component as T & { __rue_component_render_reactive_factory__?: boolean })[
+      '__rue_component_render_reactive_factory__'
+    ] = true
+    return component
+  }
+
+  type RenderOwner = {
+    __rue_component_render_reactive__?: boolean
+    __rue_component_render_invalidate__?: () => void
+    __rue_context_owner_parent__?: unknown
+    __rue_context_parent_instance__?: unknown
+  }
+
+  const candidates = [
+    getCurrentInstance(),
+    globalThis.__rue_runtime_vapor_shared_bridge?.getCurrentRenderOwner?.(),
+  ]
+  const visited = new Set<unknown>()
+  let owner: RenderOwner | undefined
+  for (const candidate of candidates) {
+    let current = candidate
+    while (
+      current != null &&
+      (typeof current === 'object' || typeof current === 'function') &&
+      !visited.has(current)
+    ) {
+      visited.add(current)
+      const renderOwner = current as RenderOwner
+      if (typeof renderOwner.__rue_component_render_invalidate__ === 'function') {
+        owner = renderOwner
+        break
+      }
+      current =
+        renderOwner.__rue_context_owner_parent__ ?? renderOwner.__rue_context_parent_instance__
+    }
+    if (owner) break
+  }
+  if (owner) owner.__rue_component_render_reactive__ = true
+}
+
 /** 列表项拥有的 DOM、响应式作用域和后续挂载资源。 */
 export type VaporListItemOwner = {
   /** 多根条目的起始锚点。 */
@@ -77,14 +129,6 @@ export type VaporListItemOwner = {
   renderState?: ReturnType<typeof signal<{ item: any; index: number; rawIdentity: unknown }>>
   /** trackIndex=false 时复用的稳定 item proxy。 */
   stableItem?: unknown
-  /** primitive 同 key 更新时重建 directRoot 行。 */
-  remount?: (item: any, index: number) => void
-  /** 编译器证明安全的单根行更新记录。 */
-  compiledRowPatch?: VaporCompiledRowPatch
-  /** compiled row 最近一次收到的原始 item。 */
-  compiledItem?: unknown
-  /** compiled row 最近一次收到的 index。 */
-  compiledIndex?: number
   /** 当前一代行资源所属的 detached scope。 */
   scope?: ReturnType<typeof effectScope>
   /** 通用清理栈，按注册顺序的逆序执行。 */
@@ -95,7 +139,7 @@ export type VaporListItemOwner = {
   ownedMountCleanups: Array<() => void>
   /** 同步不透明 direct renderable 的定向清理容器。 */
   opaqueRenderableCleanups: Array<() => void>
-  /** Rust/Wasm owned mount 的不透明 token。 */
+  /** JS backend owned mount 的不透明 token。 */
   ownedMountToken?: unknown
   /** DOM commit 前暂存的 mounted 工作。 */
   pendingMounted: unknown[]
@@ -105,12 +149,6 @@ export type VaporListItemOwner = {
   disposed: boolean
   /** owner 在列表状态 Map 中的实际索引。 */
   mapKey?: any
-}
-
-/** 编译器证明安全的原生单根行更新/清理契约。 */
-export type VaporCompiledRowPatch<T = any> = {
-  patch(nextItem: T, nextIndex: number): void
-  dispose?(): void
 }
 
 /** @deprecated 列表项现在是完整 owner；保留旧名称兼容既有编译产物与测试。 */
@@ -182,24 +220,281 @@ const releaseVaporListOwner = (owner: VaporListItemOwner, disposeState: boolean)
     return
   }
 
-  const compiledRowPatch = owner.compiledRowPatch
-  owner.compiledRowPatch = undefined
-  owner.compiledItem = undefined
-  owner.compiledIndex = undefined
-  compiledRowPatch?.dispose?.()
-
   owner.current = undefined
   owner.renderState = undefined
   owner.stableItem = undefined
-  owner.remount = undefined
   owner.start = undefined
   ;(owner as { end?: DomNodeLike }).end = undefined
   owner.mapKey = undefined
   owner.ownedMountToken = undefined
 }
 
+const systemModifierNames = ['ctrl', 'shift', 'alt', 'meta'] as const
+
+const keyModifierAliases: Record<string, string[]> = {
+  enter: ['enter'],
+  tab: ['tab'],
+  delete: ['backspace', 'delete', 'del'],
+  esc: ['esc', 'escape'],
+  space: [' ', 'space', 'spacebar'],
+  up: ['arrowup', 'up'],
+  down: ['arrowdown', 'down'],
+  left: ['arrowleft', 'left'],
+  right: ['arrowright', 'right'],
+}
+
+const normalizeEventKey = (value: unknown) => String(value ?? '').toLowerCase()
+
+const isKeyboardEvent = (event: any) =>
+  typeof event?.type === 'string' && event.type.startsWith('key')
+
+const matchesMouseButtonModifier = (event: any, modifier: string) => {
+  switch (modifier) {
+    case 'left':
+      return event?.button === 0
+    case 'middle':
+      return event?.button === 1
+    case 'right':
+      return event?.button === 2
+    default:
+      return true
+  }
+}
+
+const matchesKeyModifier = (event: any, modifier: string) => {
+  if (!isKeyboardEvent(event)) {
+    return false
+  }
+
+  if (/^\d+$/.test(modifier)) {
+    const keyCode = Number(modifier)
+    return event?.keyCode === keyCode || event?.which === keyCode
+  }
+
+  const actual = normalizeEventKey(event?.key)
+  const aliases = keyModifierAliases[modifier]
+  if (aliases) {
+    return aliases.includes(actual)
+  }
+
+  return actual === modifier.replace(/_/g, '-').toLowerCase()
+}
+
+/** 为事件处理器应用 stop/prevent/self/key/system 等模板修饰符。 */
+export const vaporWithEventModifiers = (
+  handler: DOMEventHandler,
+  modifiers: string[],
+): DOMEventHandler => {
+  const normalizedModifiers = modifiers.map(modifier => String(modifier).toLowerCase())
+  const systemModifiers = new Set(
+    normalizedModifiers.filter(modifier => systemModifierNames.includes(modifier as any)),
+  )
+  const listenerOptions: AddEventListenerOptions = {}
+
+  if (normalizedModifiers.includes('capture')) {
+    listenerOptions.capture = true
+  }
+  if (normalizedModifiers.includes('once')) {
+    listenerOptions.once = true
+  }
+  if (normalizedModifiers.includes('passive')) {
+    listenerOptions.passive = true
+  }
+
+  const wrapped = ((event: any) => {
+    for (const modifier of normalizedModifiers) {
+      switch (modifier) {
+        case 'stop':
+          event?.stopPropagation?.()
+          continue
+        case 'prevent':
+          event?.preventDefault?.()
+          continue
+        case 'self':
+          if (event?.target !== event?.currentTarget) {
+            return
+          }
+          continue
+        case 'ctrl':
+        case 'shift':
+        case 'alt':
+        case 'meta':
+          if (!event?.[`${modifier}Key`]) {
+            return
+          }
+          continue
+        case 'exact':
+          if (
+            systemModifierNames.some(
+              systemKey => !!event?.[`${systemKey}Key`] && !systemModifiers.has(systemKey),
+            )
+          ) {
+            return
+          }
+          continue
+        case 'capture':
+        case 'once':
+        case 'passive':
+        case 'native':
+          continue
+        case 'left':
+        case 'right':
+          if (isKeyboardEvent(event)) {
+            if (!matchesKeyModifier(event, modifier)) {
+              return
+            }
+            continue
+          }
+          if (!matchesMouseButtonModifier(event, modifier)) {
+            return
+          }
+          continue
+        case 'middle':
+          if (!matchesMouseButtonModifier(event, modifier)) {
+            return
+          }
+          continue
+        default:
+          if (!matchesKeyModifier(event, modifier)) {
+            return
+          }
+      }
+    }
+
+    return handler?.(event)
+  }) as DOMEventHandler
+
+  if (Object.keys(listenerOptions).length > 0) {
+    wrapped.__rue_options = listenerOptions
+  }
+
+  return wrapped
+}
+
+type VaporNativeEventMap = Record<string, DOMEventHandler>
+
+const isNodeLikeTarget = (value: unknown): value is DomNodeLike =>
+  !!value && typeof value === 'object' && 'nodeType' in (value as Record<string, unknown>)
+
+const isTargetInsideRange = (
+  parent: DomElementLike,
+  start: DomNodeLike,
+  end: DomNodeLike,
+  target: unknown,
+) => {
+  if (!isNodeLikeTarget(target) || !contains(parent, target)) {
+    return false
+  }
+
+  let node = (start as any).nextSibling as DomNodeLike | null
+  while (node && node !== end) {
+    if (node === target || contains(node, target)) {
+      return true
+    }
+    node = (node as any).nextSibling as DomNodeLike | null
+  }
+
+  return false
+}
+
+const mountNativeEventRange = (target: RenderTarget) => {
+  switch (target.kind) {
+    case 'container': {
+      const start = createComment('rue:native:start')
+      const end = createComment('rue:native:end')
+      appendChild(target.container, start)
+      appendChild(target.container, end)
+      return { parent: target.container, start, end }
+    }
+    case 'between': {
+      const start = createComment('rue:native:start')
+      const end = createComment('rue:native:end')
+      insertBefore(target.parent, end, target.end)
+      insertBefore(target.parent, start, end)
+      return { parent: target.parent, start, end }
+    }
+    case 'anchor':
+    case 'static': {
+      const start = createComment('rue:native:start')
+      const end = createComment('rue:native:end')
+      insertBefore(target.parent, end, target.anchor)
+      insertBefore(target.parent, start, end)
+      return { parent: target.parent, start, end }
+    }
+  }
+}
+
+/** 把 native 事件委托到一段 block 渲染范围上。 */
+export const vaporWithNativeEvents = <T>(
+  value: T,
+  nativeEvents: VaporNativeEventMap,
+): BlockFactory => {
+  const factory = (() => {
+    let parent: DomElementLike | null = null
+    let start: DomNodeLike | null = null
+    let end: DomNodeLike | null = null
+    const delegatedListeners: Array<[string, DOMEventHandler]> = []
+
+    const block: BlockInstance = {
+      kind: 'block',
+      mount(target) {
+        const mounted = mountNativeEventRange(target)
+        parent = mounted.parent
+        start = mounted.start
+        end = mounted.end
+
+        renderBetween(value as any, parent, start, end)
+
+        for (const [eventName, listener] of Object.entries(nativeEvents)) {
+          const delegated = ((event: any) => {
+            if (!parent || !start || !end) {
+              return
+            }
+            if (!isTargetInsideRange(parent, start, end, event?.target)) {
+              return
+            }
+            return listener(event)
+          }) as DOMEventHandler
+
+          delegated.__rue_options = listener.__rue_options
+          delegatedListeners.push([eventName, delegated])
+          addEventListener(parent, eventName, delegated)
+        }
+      },
+      unmount() {
+        if (!parent || !start || !end) {
+          return
+        }
+
+        for (const [eventName, listener] of delegatedListeners.splice(0)) {
+          removeEventListener(parent, eventName, listener)
+        }
+
+        if (getParentNode(start) === parent && getParentNode(end) === parent) {
+          renderBetween(null, parent, start, end)
+          if (contains(parent, start)) {
+            removeChild(parent, start)
+          }
+          if (contains(parent, end)) {
+            removeChild(parent, end)
+          }
+        }
+
+        parent = null
+        start = null
+        end = null
+      },
+    }
+
+    return block
+  }) as unknown as BlockFactory
+
+  ;(factory as unknown as { kind: 'block-factory' }).kind = 'block-factory'
+  return factory
+}
+
 /** 基于 Key 的列表渲染与重排 */
-export const vaporKeyedList = <T>(args: {
+const vaporKeyedListImpl = <T>(args: {
   /** 当前列表数据。 */
   items: T[]
   /** 从 item/index 计算稳定 key 的函数。 */
@@ -218,16 +513,12 @@ export const vaporKeyedList = <T>(args: {
   singleRoot?: boolean
   /** 是否把 index 变化视为需要刷新结构。 */
   trackIndex?: boolean
-  /** renderItem 是否直接挂载行根，不注册内层 renderAnchor。 */
-  directRoot?: boolean
   /** 原生结构行是否启用传递式 owned mount；缺能力或 hydration 时显式 fallback。 */
   ownedMount?: boolean
   /** renderItem 是否渲染一次求值后的同步不透明结果。 */
   opaqueRenderable?: boolean
   /** 需要取消/外部清理的内建组件；缺 owned 能力时显式释放全局 range。 */
   asyncExternalRenderable?: boolean
-  /** renderItem 是否返回编译器生成的原生单根行 patch 记录。 */
-  compiledRowPatch?: boolean
   /** 渲染单个条目的回调。 */
   renderItem: (
     item: T,
@@ -236,7 +527,7 @@ export const vaporKeyedList = <T>(args: {
     end: any,
     idx: number,
     registerRefCleanup: VaporListRefCleanupRegistrar,
-  ) => void | VaporCompiledRowPatch<T>
+  ) => void
 }) => {
   const {
     items,
@@ -249,11 +540,9 @@ export const vaporKeyedList = <T>(args: {
     renderItem,
     singleRoot = false,
     trackIndex = true,
-    directRoot = false,
     ownedMount = false,
     opaqueRenderable = false,
     asyncExternalRenderable = false,
-    compiledRowPatch = false,
   } = args
   const state = (providedState ?? {
     elements: legacyElements ?? new Map<any, VaporListItemRange>(),
@@ -416,14 +705,6 @@ export const vaporKeyedList = <T>(args: {
   }
   const hydrationFallback = isHydrationFallback()
   const ownedProtocol = ownedMount && !hydrationFallback ? getOwnedMountProtocol() : undefined
-  const canCompactDirectRoot =
-    singleRoot &&
-    directRoot &&
-    !ownedMount &&
-    !opaqueRenderable &&
-    !asyncExternalRenderable &&
-    !hydrationFallback
-  const canUseCompiledRowPatch = compiledRowPatch && canCompactDirectRoot
   const pendingMountedCommits = (state.pendingMountedCommits ??= [])
   const flushPendingMountedCommits = () => {
     pendingMountedCommits.sort(
@@ -621,7 +902,7 @@ export const vaporKeyedList = <T>(args: {
         range.stableItem = createStableItemProxy(range.current)
       }
 
-      if (range.singleRoot && range.stableItem) {
+      if (range.stableItem && (range.singleRoot || (ownedMount && nextRawIdentity !== nextItem))) {
         return undefined
       }
 
@@ -640,7 +921,11 @@ export const vaporKeyedList = <T>(args: {
       range.current.set({ item: nextItem, index: nextIndex, rawIdentity: nextRawIdentity })
     }
 
-    if (range.singleRoot && range.stableItem && isObjectLike(nextItem)) {
+    if (
+      range.stableItem &&
+      isObjectLike(nextItem) &&
+      (range.singleRoot || (ownedMount && nextRawIdentity !== nextItem))
+    ) {
       return undefined
     }
 
@@ -683,265 +968,8 @@ export const vaporKeyedList = <T>(args: {
     }
   }
 
-  const mountDirectRootRange = (
-    entry: VaporListItemRange,
-    item: T,
-    index: number,
-    itemParent: DomNodeLike,
-    end: DomNodeLike,
-  ) => {
-    const mount = (nextItem: T, nextIndex: number) => {
-      runInDetachedScope(entry, () => {
-        untrack(() => {
-          renderItem(
-            (entry.stableItem as T | undefined) ?? nextItem,
-            itemParent as any,
-            end,
-            end,
-            nextIndex,
-            createRefCleanupRegistrar(entry),
-          )
-        })
-      })
-    }
-
-    entry.remount = (nextItem, nextIndex) => {
-      releaseRange(entry, false)
-      const previousRoot = (end as any).previousSibling as DomNodeLike | null
-      if (previousRoot && contains(itemParent, previousRoot) && !isListMarker(previousRoot)) {
-        removeChild(itemParent, previousRoot)
-      }
-      mount(nextItem, nextIndex)
-    }
-    mount(item, index)
-  }
-
-  const collectInsertedNodes = (
-    itemParent: DomNodeLike,
-    previous: DomNodeLike | null,
-    before: DomNodeLike | null,
-  ) => {
-    const nodes: DomNodeLike[] = []
-    let node = previous
-      ? (((previous as any).nextSibling as DomNodeLike | null) ?? null)
-      : (((itemParent as any).firstChild as DomNodeLike | null) ?? null)
-    while (node && node !== before) {
-      nodes.push(node)
-      node = ((node as any).nextSibling as DomNodeLike | null) ?? null
-    }
-    return nodes
-  }
-
-  const getLastChild = (parent: DomNodeLike): DomNodeLike | null => {
-    const nativeLastChild = (parent as any).lastChild as DomNodeLike | null | undefined
-    if (nativeLastChild !== undefined) return nativeLastChild
-
-    const childNodes = (parent as any).childNodes as ArrayLike<DomNodeLike> | undefined
-    if (childNodes && typeof childNodes.length === 'number') {
-      return childNodes[childNodes.length - 1] ?? null
-    }
-
-    let last = ((parent as any).firstChild as DomNodeLike | null) ?? null
-    while (last && (last as any).nextSibling) {
-      last = (last as any).nextSibling as DomNodeLike
-    }
-    return last
-  }
-
-  const mountCompactDirectRootRange = (
-    item: T,
-    index: number,
-    itemParent: DomNodeLike,
-    before: DomNodeLike | null,
-    mapKey: any,
-  ) => {
-    const entry = createOwner({ end: before ?? itemParent, singleRoot: true }, mapKey)
-    syncCurrentItem(entry, item, index)
-
-    const mount = (nextItem: T, nextIndex: number, cursor: DomNodeLike | null) => {
-      const previous = cursor
-        ? ((((cursor as any).previousSibling as DomNodeLike | null) ?? null) as DomNodeLike | null)
-        : getLastChild(itemParent)
-      try {
-        runInDetachedScope(entry, () => {
-          untrack(() => {
-            renderItem(
-              (entry.stableItem as T | undefined) ?? nextItem,
-              itemParent as any,
-              cursor as any,
-              cursor as any,
-              nextIndex,
-              createRefCleanupRegistrar(entry),
-            )
-          })
-        })
-      } catch (error) {
-        for (const node of collectInsertedNodes(itemParent, previous, cursor)) {
-          if (contains(itemParent, node)) removeChild(itemParent, node)
-        }
-        throw error
-      }
-
-      const mountedNodes = collectInsertedNodes(itemParent, previous, cursor)
-      if (mountedNodes.length > 1) {
-        for (const node of mountedNodes) {
-          if (contains(itemParent, node)) removeChild(itemParent, node)
-        }
-        throw new Error('[rue] compact direct-root rows must mount exactly one DOM node')
-      }
-      return mountedNodes[0]
-    }
-
-    try {
-      const root = mount(item, index, before)
-      if (!root || entry.refCleanups.length > 0) {
-        const anchor = createComment('rue:list:item:anchor')
-        insertBefore(itemParent, anchor, before)
-        entry.start = undefined
-        entry.end = anchor
-      } else {
-        entry.start = root
-        entry.end = root
-      }
-
-      entry.remount = (nextItem, nextIndex) => {
-        releaseRange(entry, false)
-        const anchor = entry.start ? null : entry.end
-        const previousRoot = entry.start ?? ((anchor as any).previousSibling as DomNodeLike | null)
-        const cursor = anchor ?? ((previousRoot as any)?.nextSibling as DomNodeLike | null) ?? null
-        if (previousRoot && contains(itemParent, previousRoot)) {
-          removeChild(itemParent, previousRoot)
-        }
-        const nextRoot = mount(nextItem, nextIndex, cursor)
-        if (anchor) {
-          entry.start = undefined
-          entry.end = anchor
-        } else if (!nextRoot || entry.refCleanups.length > 0) {
-          const nextAnchor = createComment('rue:list:item:anchor')
-          insertBefore(itemParent, nextAnchor, cursor)
-          entry.start = undefined
-          entry.end = nextAnchor
-        } else {
-          entry.start = nextRoot
-          entry.end = nextRoot
-        }
-      }
-      return entry
-    } catch (error) {
-      releaseRange(entry, true)
-      throw error
-    }
-  }
-
-  const mountCompiledRowRange = (
-    item: T,
-    index: number,
-    itemParent: DomNodeLike,
-    before: DomNodeLike | null,
-    mapKey: any,
-  ) => {
-    const entry = createOwner({ end: before ?? itemParent, singleRoot: true }, mapKey)
-    const previous = before
-      ? ((((before as any).previousSibling as DomNodeLike | null) ?? null) as DomNodeLike | null)
-      : getLastChild(itemParent)
-
-    try {
-      const record = renderItem(
-        item,
-        itemParent as any,
-        before as any,
-        before as any,
-        index,
-        createRefCleanupRegistrar(entry),
-      )
-      const mountedNodes = collectInsertedNodes(itemParent, previous, before)
-      if (mountedNodes.length !== 1) {
-        throw new Error('[rue] compiled row records must mount exactly one DOM node')
-      }
-      if (!record || typeof record.patch !== 'function') {
-        throw new Error('[rue] compiled row renderItem must return a patch record')
-      }
-
-      entry.start = mountedNodes[0]
-      entry.end = mountedNodes[0]
-      entry.compiledRowPatch = record
-      entry.compiledItem = item
-      entry.compiledIndex = index
-      return entry
-    } catch (error) {
-      for (const node of collectInsertedNodes(itemParent, previous, before)) {
-        if (contains(itemParent, node)) removeChild(itemParent, node)
-      }
-      releaseRange(entry, true)
-      throw error
-    }
-  }
-
   const nextKeys = items.map((item, index) => getKey(item, index))
   const hasDuplicateNextKeys = new Set(nextKeys).size !== nextKeys.length
-
-  if (elements.size === 0 && items.length > 0 && canUseCompiledRowPatch && !hasDuplicateNextKeys) {
-    const batch = createDocumentFragment()
-
-    try {
-      for (let index = 0; index < items.length; index += 1) {
-        const item = items[index]
-        const key = nextKeys[index]
-        const entry = mountCompiledRowRange(item, index, batch, null, key)
-        nextElements.set(key, entry)
-      }
-    } catch (error) {
-      nextElements.forEach(range => releaseRange(range, true))
-      nextElements.clear()
-      throw error
-    }
-
-    if (before && contains(targetParent, before as any)) {
-      insertBefore(targetParent, batch, before as any)
-    } else {
-      appendChild(targetParent, batch)
-    }
-
-    elements.clear()
-    nextElements.forEach((range, key) => elements.set(key, range))
-    flushPendingMountedCommits()
-    return elements
-  }
-
-  if (
-    elements.size === 0 &&
-    items.length > 0 &&
-    canCompactDirectRoot &&
-    !trackIndex &&
-    !hasDuplicateNextKeys &&
-    items.every(isObjectLike)
-  ) {
-    const batch = createDocumentFragment()
-
-    try {
-      for (let index = 0; index < items.length; index += 1) {
-        const item = items[index]
-        const key = nextKeys[index]
-        const entry = mountCompactDirectRootRange(item, index, batch, null, key)
-        nextElements.set(key, entry)
-      }
-    } catch (error) {
-      nextElements.forEach(range => releaseRange(range, true))
-      nextElements.clear()
-      throw error
-    }
-
-    if (before && contains(targetParent, before as any)) {
-      insertBefore(targetParent, batch, before as any)
-    } else {
-      appendChild(targetParent, batch)
-    }
-
-    elements.clear()
-    nextElements.forEach((range, key) => elements.set(key, range))
-    flushPendingMountedCommits()
-    return elements
-  }
 
   // 空列表的安全单根行先在各自的小 Fragment 中 O(1) 组装，
   // 再顺序 append 到一个批量 Fragment。这样既避免在不断增长的
@@ -951,7 +979,6 @@ export const vaporKeyedList = <T>(args: {
     items.length > 0 &&
     singleRoot &&
     !trackIndex &&
-    (directRoot || ownedMount) &&
     !hasDuplicateNextKeys &&
     items.every(isObjectLike)
   ) {
@@ -979,8 +1006,7 @@ export const vaporKeyedList = <T>(args: {
                   index,
                   createRefCleanupRegistrar(entry),
                 )
-              if (directRoot) mount()
-              else runWithOwnedMount(entry, index, mount)
+              runWithOwnedMount(entry, index, mount)
             })
           })
         } catch (error) {
@@ -1022,21 +1048,13 @@ export const vaporKeyedList = <T>(args: {
   }
 
   const mountRange = (item: T, index: number, cursor: DomNodeLike | null, mapKey: any) => {
-    if (canUseCompiledRowPatch) {
-      return mountCompiledRowRange(item, index, targetParent, cursor, mapKey)
-    }
-    if (canCompactDirectRoot) {
-      return mountCompactDirectRootRange(item, index, targetParent, cursor, mapKey)
-    }
     if (singleRoot) {
       const end = createComment('rue:list:item:anchor')
       insertBefore(targetParent, end, cursor as any)
       const entry = createOwner({ end, singleRoot: true }, mapKey)
       const renderState = syncCurrentItem(entry, item, index)
       try {
-        if (directRoot) {
-          mountDirectRootRange(entry, item, index, targetParent, end)
-        } else if (renderState) {
+        if (renderState) {
           runInDetachedScope(entry, () => {
             watchEffect(() => {
               const next = renderState.get()
@@ -1083,25 +1101,40 @@ export const vaporKeyedList = <T>(args: {
     insertBefore(targetParent, end, cursor as any)
     insertBefore(targetParent, start, end)
     const entry = createOwner({ start, end }, mapKey)
-    const renderState = syncCurrentItem(entry, item, index)!
+    const renderState = syncCurrentItem(entry, item, index)
     try {
       runInDetachedScope(entry, () => {
-        watchEffect(() => {
-          const next = renderState.get()
-          const rangeParent = getParentNode(entry.start ?? entry.end) ?? targetParent
+        if (renderState) {
+          watchEffect(() => {
+            const next = renderState.get()
+            const rangeParent = getParentNode(entry.start ?? entry.end) ?? targetParent
+            untrack(() => {
+              runWithOwnedMount(entry, next.index, () =>
+                renderItem(
+                  (entry.stableItem as T | undefined) ?? next.item,
+                  rangeParent as any,
+                  start,
+                  end,
+                  next.index,
+                  createRefCleanupRegistrar(entry),
+                ),
+              )
+            })
+          }, syncEffectOptions)
+        } else {
           untrack(() => {
-            runWithOwnedMount(entry, next.index, () =>
+            runWithOwnedMount(entry, index, () =>
               renderItem(
-                (entry.stableItem as T | undefined) ?? next.item,
-                rangeParent as any,
+                (entry.stableItem as T | undefined) ?? item,
+                targetParent as any,
                 start,
                 end,
-                next.index,
+                index,
                 createRefCleanupRegistrar(entry),
               ),
             )
           })
-        }, syncEffectOptions)
+        }
       })
       return entry
     } catch (error) {
@@ -1111,25 +1144,9 @@ export const vaporKeyedList = <T>(args: {
   }
 
   const syncRange = (range: VaporListItemRange, item: T, index: number) => {
-    if (range.compiledRowPatch) {
-      range.compiledRowPatch.patch(item, index)
-      range.compiledItem = item
-      range.compiledIndex = index
-      return
-    }
     const previous = range.current ? untrack(() => range.current!.get()) : undefined
     if (previous?.item === item && (!trackIndex || previous.index === index)) return
-    const shouldRemountDirectRoot =
-      directRoot &&
-      range.singleRoot &&
-      !range.stableItem &&
-      !!range.remount &&
-      !!previous &&
-      (previous.rawIdentity !== getRawIdentity(item) || (trackIndex && previous.index !== index))
     syncCurrentItem(range, item, index)
-    if (shouldRemountDirectRoot) {
-      range.remount!(item, index)
-    }
   }
 
   const removeRange = (range: VaporListItemRange) => {
@@ -1143,7 +1160,7 @@ export const vaporKeyedList = <T>(args: {
 
     if (elements.get(range.mapKey) === range) elements.delete(range.mapKey)
     if (nextElements.get(range.mapKey) === range) nextElements.delete(range.mapKey)
-    releaseRange(range, true)
+    untrack(() => releaseRange(range, true))
     for (const staleNode of nodesToRemove) {
       if (contains(targetParent as any, staleNode as any)) {
         removeChild(targetParent as any, staleNode as any)
@@ -1216,7 +1233,6 @@ export const vaporKeyedList = <T>(args: {
       index => oldEntries[index][0] === nextKeys[index],
     )
   if (
-    !directRoot &&
     items.length > 0 &&
     oldEntries.length !== items.length &&
     hasSameKeyPrefix &&
@@ -1334,7 +1350,6 @@ export const vaporKeyedList = <T>(args: {
   // 让组件/opaque patch 在 O(1) 大小的父节点内完成，再一次提交回真实父节点。
   // 这也避免 jsdom 在大列表父节点上反复维护 child index。
   if (
-    !directRoot &&
     items.length > 0 &&
     oldEntries.length === items.length &&
     oldEntries.every(([key], index) => key === nextKeys[index]) &&
@@ -1561,6 +1576,13 @@ export const vaporKeyedList = <T>(args: {
   flushPendingMountedCommits()
   return elements
 }
+
+/** 基于 key 维护 Vapor 列表 DOM 范围，支持重排、增删和单根优化。 */
+export const vaporKeyedList = <T>(args: Parameters<typeof vaporKeyedListImpl<T>>[0]) =>
+  withDOMHostOperations(
+    args.parent ?? args.before?.parentNode ?? args.start?.parentNode ?? null,
+    () => vaporKeyedListImpl(args),
+  )
 
 /** 反应式绑定 ref：支持函数 ref 与对象 ref */
 export const vaporBindUseRef = (

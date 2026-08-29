@@ -148,7 +148,7 @@ const validateMeasurementSamples = (entryName, entry, minimumValidSamples) => {
 }
 
 const totalBrotliBytes = entry => {
-  const artifacts = [...(entry?.size?.javascript ?? []), ...(entry?.size?.wasm ?? [])]
+  const artifacts = entry?.size?.javascript ?? []
   if (artifacts.length === 0) throw new Error('Performance report is missing size artifacts')
   return artifacts.reduce((total, artifact, index) => {
     if (!isFiniteMeasurement(artifact.brotliBytes)) {
@@ -157,6 +157,28 @@ const totalBrotliBytes = entry => {
     requireSha256(artifact.sha256, `size artifact ${artifact.path ?? index}`)
     return total + artifact.brotliBytes
   }, 0)
+}
+
+const entryBrotliBytes = entry => {
+  const artifacts = entry?.size?.javascript ?? []
+  const entryArtifacts = artifacts.filter(artifact => artifact.isEntry === true)
+  if (entryArtifacts.length === 0) return totalBrotliBytes(entry)
+  return entryArtifacts.reduce((total, artifact, index) => {
+    if (!isFiniteMeasurement(artifact.brotliBytes)) {
+      throw new Error(`Performance report is missing entry size artifact ${index} Brotli bytes`)
+    }
+    requireSha256(artifact.sha256, `entry size artifact ${artifact.path ?? index}`)
+    return total + artifact.brotliBytes
+  }, 0)
+}
+
+const environmentAdjustedFirstPaintRatio = (current, previous, sameRunReference) => {
+  const floor = measurementValue(sameRunReference, 'firstPaint', null, 'medianMs')
+  const currentMs = measurementValue(current, 'firstPaint', null, 'medianMs')
+  const previousMs = measurementValue(previous, 'firstPaint', null, 'medianMs')
+  const previousAboveFloor = previousMs - floor
+  if (!(previousAboveFloor > 0)) return ratio(currentMs, previousMs, 'firstPaint')
+  return Math.max(0, currentMs - floor) / previousAboveFloor
 }
 
 const weightedMedian = values => {
@@ -170,6 +192,20 @@ const weightedMedian = values => {
     if (accumulated >= totalWeight / 2) return item.value
   }
   return sorted.at(-1).value
+}
+
+const weightedGeometricMean = values => {
+  const totalWeight = values.reduce((total, item) => total + item.weight, 0)
+  if (!(totalWeight > 0)) {
+    throw new Error('CPU weighted geometric mean requires at least one positive weight')
+  }
+  const logarithmicMean = values.reduce((total, item) => {
+    if (!(item.value > 0)) {
+      throw new Error('CPU weighted geometric mean ratios must be greater than zero')
+    }
+    return total + item.weight * Math.log(item.value)
+  }, 0)
+  return Math.exp(logarithmicMean / totalWeight)
 }
 
 const ratio = (actual, baseline, field) => {
@@ -191,6 +227,54 @@ export class PerformanceBudgetError extends Error {
   }
 }
 
+const entryArtifact = (entryName, entry) => {
+  const artifacts = entry?.size?.javascript ?? []
+  const entries = artifacts.filter(artifact => artifact.isEntry === true)
+  if (entries.length !== 1) {
+    throw new Error(
+      `Performance report must identify exactly one JavaScript entry asset for ${entryName}; received ${entries.length}`,
+    )
+  }
+  requireSha256(entries[0].sha256, `${entryName} entry asset ${entries[0].path ?? ''}`)
+  return entries[0]
+}
+
+export const validateFixtureAssetIsolation = report => {
+  const entrySha256 = {}
+  const moduleIds = {}
+  for (const entryName of ENTRY_NAMES) {
+    const entry = report?.results?.[entryName]
+    if (!entry) throw new Error(`Performance report is missing fixture entry: ${entryName}`)
+    const mainArtifact = entryArtifact(entryName, entry)
+    entrySha256[entryName] = mainArtifact.sha256
+    moduleIds[entryName] = [
+      ...new Set(
+        (entry.size.javascript ?? []).flatMap(artifact =>
+          Array.isArray(artifact.moduleIds) ? artifact.moduleIds : [],
+        ),
+      ),
+    ].sort()
+  }
+
+  if (entrySha256.rue === entrySha256['rue-signal']) {
+    throw new Error('rue and rue-signal entry assets have the same SHA-256')
+  }
+  if (new Set(Object.values(entrySha256)).size !== ENTRY_NAMES.length) {
+    throw new Error('Benchmark fixture entry asset SHA-256 values must be unique')
+  }
+
+  const forbiddenSignalModules = moduleIds['rue-signal'].filter(moduleId =>
+    /(?:rue|runtime)\.vapor\.|packages\/runtime-vapor\/dist\/(?:index|vapor)\.js$/.test(moduleId),
+  )
+  if (forbiddenSignalModules.length > 0) {
+    throw new Error(
+      `rue-signal loaded forbidden Vapor modules: ${forbiddenSignalModules.join(', ')}`,
+    )
+  }
+
+  return { entrySha256, moduleIds }
+}
+
 export const checkPerformanceBudget = (report, baseline, budget) => {
   requireString(report?.source?.workspaceVersion, 'source.workspaceVersion')
   requireString(report?.source?.packageVersion, 'source.packageVersion')
@@ -205,6 +289,8 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
   requireString(report?.source?.gitCommit, 'source.gitCommit')
   requireSha256(report?.source?.lockfileSha256, 'source.lockfileSha256')
   requireSha256(report?.source?.vuePackageSha256, 'source.vuePackageSha256')
+  requireSha256(report?.source?.fixtureManifestSha256, 'source.fixtureManifestSha256')
+  requireSha256(report?.source?.fixtureModuleManifestSha256, 'source.fixtureModuleManifestSha256')
 
   if (
     !Array.isArray(report?.source?.workspaceArtifacts) ||
@@ -243,9 +329,11 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
     validateMeasurementSamples(entryName, entry, minimumValidSamples)
     totalBrotliBytes(entry)
   }
+  validateFixtureAssetIsolation(report)
 
   const failures = []
   const entries = {}
+  const vue = report.results.vue
   for (const entryName of budget?.rueEntries ?? []) {
     const current = report.results[entryName]
     const previous = baseline?.results?.[entryName]
@@ -278,15 +366,11 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
       `${entryName}.heap.createClear`,
     )
     const brotliRatio = ratio(
-      totalBrotliBytes(current),
+      entryBrotliBytes(current),
       totalBrotliBytes(previous),
       `${entryName}.size.brotli`,
     )
-    const firstPaintRatio = ratio(
-      measurementValue(current, 'firstPaint', null, 'medianMs'),
-      measurementValue(previous, 'firstPaint', null, 'medianMs'),
-      `${entryName}.firstPaint`,
-    )
+    const firstPaintRatio = environmentAdjustedFirstPaintRatio(current, previous, vue)
     const result = {
       cpuWeightedMedianRatio,
       select1kRatio,
@@ -323,9 +407,122 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
     }
   }
 
+  const sameRunBudget = budget?.sameRunVue
+  const sameRunEntryName = requireString(sameRunBudget?.entry, 'sameRunVue.entry')
+  const referenceEntryName = requireString(
+    sameRunBudget?.referenceEntry,
+    'sameRunVue.referenceEntry',
+  )
+  const sameRunEntry = report.results[sameRunEntryName]
+  const referenceEntry = report.results[referenceEntryName]
+  if (!sameRunEntry) {
+    throw new Error(`Performance report is missing same-run Vue entry: ${sameRunEntryName}`)
+  }
+  if (!referenceEntry) {
+    throw new Error(`Performance report is missing same-run Vue reference: ${referenceEntryName}`)
+  }
+  const sameRunCpuRatios = Object.entries(sameRunBudget?.cpu?.weights ?? {}).map(
+    ([operation, weight]) => ({
+      operation,
+      value: ratio(
+        measurementValue(sameRunEntry, 'cpu', operation, 'medianMs'),
+        measurementValue(referenceEntry, 'cpu', operation, 'medianMs'),
+        `${sameRunEntryName}/vue.cpu.${operation}`,
+      ),
+      weight,
+    }),
+  )
+  const sameRunResult = {
+    cpuWeightedGeometricMeanRatio: weightedGeometricMean(sameRunCpuRatios),
+    update10thRatio: ratio(
+      measurementValue(sameRunEntry, 'cpu', 'update10th', 'medianMs'),
+      measurementValue(referenceEntry, 'cpu', 'update10th', 'medianMs'),
+      `${sameRunEntryName}/vue.cpu.update10th`,
+    ),
+    select1kRatio: ratio(
+      measurementValue(sameRunEntry, 'cpu', 'select1k', 'medianMs'),
+      measurementValue(referenceEntry, 'cpu', 'select1k', 'medianMs'),
+      `${sameRunEntryName}/vue.cpu.select1k`,
+    ),
+    swap1kRatio: ratio(
+      measurementValue(sameRunEntry, 'cpu', 'swap1k', 'medianMs'),
+      measurementValue(referenceEntry, 'cpu', 'swap1k', 'medianMs'),
+      `${sameRunEntryName}/vue.cpu.swap1k`,
+    ),
+    clear1kRatio: ratio(
+      measurementValue(sameRunEntry, 'cpu', 'clear1k', 'medianMs'),
+      measurementValue(referenceEntry, 'cpu', 'clear1k', 'medianMs'),
+      `${sameRunEntryName}/vue.cpu.clear1k`,
+    ),
+    heapReadyRatio: ratio(
+      measurementValue(sameRunEntry, 'heap', 'ready', 'medianBytes'),
+      measurementValue(referenceEntry, 'heap', 'ready', 'medianBytes'),
+      `${sameRunEntryName}/vue.heap.ready`,
+    ),
+    heapCreate1kRatio: ratio(
+      measurementValue(sameRunEntry, 'heap', 'create1k', 'medianBytes'),
+      measurementValue(referenceEntry, 'heap', 'create1k', 'medianBytes'),
+      `${sameRunEntryName}/vue.heap.create1k`,
+    ),
+    heapCreateClearRatio: ratio(
+      measurementValue(sameRunEntry, 'heap', 'createClear', 'medianBytes'),
+      measurementValue(referenceEntry, 'heap', 'createClear', 'medianBytes'),
+      `${sameRunEntryName}/vue.heap.createClear`,
+    ),
+    brotliRatio: ratio(
+      totalBrotliBytes(sameRunEntry),
+      totalBrotliBytes(referenceEntry),
+      `${sameRunEntryName}/vue.size.brotli`,
+    ),
+    firstPaintRatio: ratio(
+      measurementValue(sameRunEntry, 'firstPaint', null, 'medianMs'),
+      measurementValue(referenceEntry, 'firstPaint', null, 'medianMs'),
+      `${sameRunEntryName}/vue.firstPaint`,
+    ),
+  }
+  const sameRunLimits = [
+    [
+      'cpu.weightedGeometricMeanRatio',
+      sameRunResult.cpuWeightedGeometricMeanRatio,
+      sameRunBudget?.cpu?.maxWeightedGeometricMeanRatio,
+    ],
+    [
+      'cpu.update10thRatio',
+      sameRunResult.update10thRatio,
+      sameRunBudget?.operations?.update10th?.maxRatio,
+    ],
+    [
+      'cpu.select1kRatio',
+      sameRunResult.select1kRatio,
+      sameRunBudget?.operations?.select1k?.maxRatio,
+    ],
+    ['cpu.swap1kRatio', sameRunResult.swap1kRatio, sameRunBudget?.operations?.swap1k?.maxRatio],
+    ['cpu.clear1kRatio', sameRunResult.clear1kRatio, sameRunBudget?.operations?.clear1k?.maxRatio],
+    ['heap.readyRatio', sameRunResult.heapReadyRatio, sameRunBudget?.heap?.ready?.maxRatio],
+    [
+      'heap.create1kRatio',
+      sameRunResult.heapCreate1kRatio,
+      sameRunBudget?.heap?.create1k?.maxRatio,
+    ],
+    [
+      'heap.createClearRatio',
+      sameRunResult.heapCreateClearRatio,
+      sameRunBudget?.heap?.createClear?.maxRatio,
+    ],
+    ['size.brotliRatio', sameRunResult.brotliRatio, sameRunBudget?.size?.brotli?.maxRatio],
+    ['firstPaintRatio', sameRunResult.firstPaintRatio, sameRunBudget?.firstPaint?.maxRatio],
+  ]
+  for (const [dimension, actual, limit] of sameRunLimits) {
+    if (!isFiniteMeasurement(limit)) {
+      throw new Error(`Performance budget is missing a numeric limit for sameRunVue.${dimension}`)
+    }
+    if (actual > limit) {
+      failures.push({ entry: `${sameRunEntryName}/vue`, dimension, actual, limit })
+    }
+  }
+
   if (failures.length > 0) throw new PerformanceBudgetError(failures)
 
-  const vue = report.results.vue
   return {
     passed: true,
     entries,
@@ -340,6 +537,7 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
         createClearHeapBytes: measurementValue(vue, 'heap', 'createClear', 'medianBytes'),
         brotliBytes: totalBrotliBytes(vue),
         firstPaintMs: measurementValue(vue, 'firstPaint', null, 'medianMs'),
+        rueSignal: sameRunResult,
       },
     },
   }
@@ -419,8 +617,7 @@ const runCommand = (command, args) =>
   })
 
 const prepareWorkspaceBuild = async () => {
-  await runCommand('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build'])
-  await runCommand('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-vapor'])
+  await runCommand('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-ts'])
   await runCommand('node', [
     'scripts/build.js',
     '^shared$',
@@ -434,10 +631,13 @@ const prepareWorkspaceBuild = async () => {
 const workspaceArtifactPaths = [
   'packages/shared/dist/shared.esm-bundler.js',
   'packages/runtime/dist/runtime.esm-bundler.js',
+  'packages/runtime/dist/runtime.compiled.esm-bundler.js',
   'packages/runtime/dist/runtime.vapor.esm-bundler.js',
   'packages/rue/dist/rue.esm-bundler.js',
+  'packages/rue/dist/rue.compiled.esm-bundler.js',
   'packages/rue/dist/rue.vapor.esm-bundler.js',
-  'packages/runtime-vapor/pkg-vapor/rue_runtime_vapor_bg.wasm',
+  'packages/runtime-vapor/dist/compiled.js',
+  'packages/runtime-vapor/dist/reactive-kernel/index.js',
 ].map(relative => path.resolve(workspaceRoot, relative))
 
 const readPackageSource = async () => {
@@ -510,29 +710,59 @@ const walkFiles = async directory => {
 
 const collectFixtureArtifacts = async () => {
   const files = await walkFiles(benchmarkDist)
+  const manifestPath = path.resolve(benchmarkDist, '.vite/manifest.json')
+  const moduleManifestPath = path.resolve(benchmarkDist, 'benchmark-modules.json')
+  const [manifestBytes, moduleManifestBytes] = await Promise.all([
+    fs.readFile(manifestPath),
+    fs.readFile(moduleManifestPath),
+  ])
+  const manifest = JSON.parse(manifestBytes.toString('utf8'))
+  const moduleManifest = JSON.parse(moduleManifestBytes.toString('utf8'))
+  const chunksByFile = new Map((moduleManifest.chunks ?? []).map(chunk => [chunk.fileName, chunk]))
   const makeRecord = async filePath => {
     const bytes = await fs.readFile(filePath)
+    const urlPath = path.relative(benchmarkDist, filePath).split(path.sep).join('/')
+    const chunk = chunksByFile.get(urlPath)
     return {
       path: path.relative(workspaceRoot, filePath),
-      urlPath: path.relative(benchmarkDist, filePath).split(path.sep).join('/'),
+      urlPath,
       rawBytes: bytes.byteLength,
       brotliBytes: brotliCompressSync(bytes).byteLength,
       sha256: sha256Buffer(bytes),
+      facadeModuleId: chunk?.facadeModuleId ?? null,
+      imports: chunk?.imports ?? [],
+      isEntry: chunk?.isEntry === true,
+      moduleIds: chunk?.moduleIds ?? [],
+      name: chunk?.name ?? null,
     }
   }
   const javascript = await Promise.all(files.filter(file => file.endsWith('.js')).map(makeRecord))
-  const wasm = await Promise.all(files.filter(file => file.endsWith('.wasm')).map(makeRecord))
-  if (javascript.length === 0 || wasm.length === 0) {
-    throw new Error('Benchmark fixture must emit at least one JavaScript and one Wasm artifact')
+  const wasm = files.filter(file => file.endsWith('.wasm'))
+  if (javascript.length === 0) {
+    throw new Error('Benchmark fixture must emit at least one JavaScript artifact')
   }
-  return { javascript, wasm }
+  if (wasm.length > 0) {
+    throw new Error(`Benchmark fixture unexpectedly emitted Wasm artifacts: ${wasm.join(', ')}`)
+  }
+  return {
+    javascript,
+    manifest: {
+      path: path.relative(workspaceRoot, manifestPath),
+      sha256: sha256Buffer(manifestBytes),
+      entries: manifest,
+    },
+    moduleManifest: {
+      path: path.relative(workspaceRoot, moduleManifestPath),
+      sha256: sha256Buffer(moduleManifestBytes),
+      chunks: moduleManifest.chunks ?? [],
+    },
+  }
 }
 
 const contentTypes = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
-  ['.wasm', 'application/wasm'],
 ])
 
 const startStaticServer = async () => {
@@ -623,7 +853,11 @@ const measureEntryRound = async ({ browser, baseUrl, entryName, expectedVersion 
   const session = await context.newCDPSession(page)
   await session.send('Performance.enable')
   const entryUrl =
-    entryName === 'vue' ? new URL('vue.html', baseUrl).href : `${baseUrl}?variant=${entryName}`
+    entryName === 'vue'
+      ? new URL('vue.html', baseUrl).href
+      : entryName === 'rue-signal'
+        ? new URL('rue-signal.html', baseUrl).href
+        : baseUrl
   await page.goto(entryUrl, { waitUntil: 'networkidle' })
   await page.waitForFunction(() => Boolean(window.__RUE_BENCHMARK__))
   await page.waitForSelector('#run')
@@ -773,17 +1007,10 @@ const fixtureSizesForEntry = (entryName, rounds, fixtureArtifacts) => {
       .filter(artifact => loadedResources.has(artifact.urlPath))
       .map(({ urlPath: _urlPath, ...artifact }) => artifact)
   const javascript = selectLoaded(fixtureArtifacts.javascript)
-  const wasm = selectLoaded(fixtureArtifacts.wasm)
   if (javascript.length === 0) {
     throw new Error(`No JavaScript fixture artifact was loaded by ${entryName}`)
   }
-  if (entryName !== 'vue' && wasm.length === 0) {
-    throw new Error(`No Wasm fixture artifact was loaded by ${entryName}`)
-  }
-  if (entryName === 'vue' && wasm.length > 0) {
-    throw new Error('Vue control unexpectedly loaded a Rue Wasm artifact')
-  }
-  return { javascript, wasm }
+  return { javascript }
 }
 
 const summarizeSamples = normalized =>
@@ -870,7 +1097,7 @@ export const runBenchmark = async options => {
       ]),
     )
     const report = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       generatedAt: new Date().toISOString(),
       source: {
         workspaceVersion: packageSource.expectedVersion,
@@ -879,9 +1106,10 @@ export const runBenchmark = async options => {
         vueVersion: packageSource.vueVersion,
         vuePackagePath: packageSource.vuePackagePath,
         vuePackageSha256: packageSource.vuePackageSha256,
+        fixtureManifestSha256: fixtureArtifacts.manifest.sha256,
+        fixtureModuleManifestSha256: fixtureArtifacts.moduleManifest.sha256,
         lockfileSha256: packageSource.lockfileBeforeSha256,
         javascriptSha256: fixtureArtifacts.javascript.map(artifact => artifact.sha256),
-        wasmSha256: fixtureArtifacts.wasm.map(artifact => artifact.sha256),
         workspaceArtifacts: packageSource.artifacts.map(artifact => ({
           path: path.relative(workspaceRoot, artifact.path),
           sha256: artifact.afterSha256,
@@ -905,6 +1133,7 @@ export const runBenchmark = async options => {
       ),
       validSamples: summarizeSamples(normalized),
     }
+    report.source.fixtureValidation = validateFixtureAssetIsolation(report)
     const outputPath = path.resolve(workspaceRoot, options.output ?? options.writeBaseline)
     if (!isWithin(workspaceRoot, outputPath)) {
       throw new Error(`Performance output must stay within the workspace: ${outputPath}`)

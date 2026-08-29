@@ -1,11 +1,9 @@
-import { createRequire } from 'node:module'
-
 import { describe, expect, it } from 'vitest'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
+import { createReactiveKernel } from '../../runtime-vapor/dist/reactive-kernel/index.js'
 
-const require = createRequire(import.meta.url)
-const rustRuntime = require('../../runtime-vapor/pkg-node/rue_runtime_vapor.js')
+const reactiveKernel = createReactiveKernel()
 
 type HookHost = {
   __hooks?: {
@@ -39,7 +37,7 @@ type EffectHookBackend = {
 }
 
 const createJsBackend = (): EffectHookBackend => {
-  const facade = createReactiveFacade(rustRuntime)
+  const facade = createReactiveFacade(reactiveKernel)
   const hooks = facade.hooks as unknown as EffectHookModule & {
     __rueDisposeHookScopeForInstance(host: HookHost): void
     renderHooks<T>(host: HookHost, render: () => T): T
@@ -48,7 +46,7 @@ const createJsBackend = (): EffectHookBackend => {
     label: 'shared JS Hook backend',
     module: {
       ...hooks,
-      setReactiveScheduling: rustRuntime.setReactiveScheduling,
+      setReactiveScheduling: reactiveKernel.setReactiveScheduling,
       signal: facade.signal,
     },
     renderHooks: hooks.renderHooks,

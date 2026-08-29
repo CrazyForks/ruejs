@@ -4,9 +4,8 @@ import path from 'node:path'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { build, type Rollup } from 'vite'
-import wasm from 'vite-plugin-wasm'
 
-import { createReactiveFacade } from '../../runtime-vapor/js-reactive/facade.js'
+import { createReactiveFacade } from '../../runtime-vapor/dist/js-reactive/facade.js'
 
 type ReactiveEntry = Record<string, any>
 
@@ -63,7 +62,6 @@ const buildBrowserEntry = async (name: string, entry: string) => {
       publicDir: false,
       appType: 'custom',
       logLevel: 'silent',
-      plugins: [wasm()],
       build: {
         target: 'es2020',
         minify: false,
@@ -90,6 +88,60 @@ const importBrowserEntry = async (name: string, entry: string) => {
   const code = await buildBrowserEntry(name, entry)
   clearSharedBridge()
   return import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+}
+
+const importBrowserFacadePair = async () => {
+  const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-reactive-facade-pair-'))
+  const entryFile = path.resolve(fixtureDir, 'facade-pair.mjs')
+  const runtimeVaporDist = path.resolve(process.cwd(), 'packages/runtime-vapor/dist')
+  await writeFile(
+    entryFile,
+    `import * as full from ${JSON.stringify(path.resolve(runtimeVaporDist, 'reactive.js'))}\n` +
+      `import * as vapor from ${JSON.stringify(path.resolve(runtimeVaporDist, 'reactive.vapor.js'))}\n` +
+      `import * as fullEntry from ${JSON.stringify(path.resolve(runtimeVaporDist, 'index.js'))}\n` +
+      `import * as vaporEntry from ${JSON.stringify(path.resolve(runtimeVaporDist, 'vapor.js'))}\n` +
+      `export const fullDefault = full.default\n` +
+      `export const vaporDefault = vapor.default\n` +
+      `export const fullCreateSignal = full.createSignal\n` +
+      `export const vaporCreateSignal = vapor.createSignal\n` +
+      `export const fullEntryCreateSignal = fullEntry.createSignal\n` +
+      `export const vaporEntryCreateSignal = vaporEntry.createSignal\n` +
+      `export const createFullSignal = value => full.createSignal(value)\n` +
+      `export const getFullRegistry = () => full.__rueGetSignalWrapperRegistryDebugState()\n` +
+      `export const getVaporRegistry = () => vapor.__rueGetSignalWrapperRegistryDebugState()\n` +
+      `export const setFullCurrentInstance = value => full.setCurrentInstance(value)\n` +
+      `export const getVaporCurrentInstance = () => vapor.getCurrentInstance()\n`,
+    'utf8',
+  )
+
+  try {
+    const result = await build({
+      root: process.cwd(),
+      configFile: false,
+      publicDir: false,
+      appType: 'custom',
+      logLevel: 'silent',
+      build: {
+        target: 'es2020',
+        minify: false,
+        write: false,
+        lib: {
+          entry: entryFile,
+          formats: ['es'],
+          fileName: 'reactive-facade-pair',
+        },
+      },
+    })
+    const outputs = (Array.isArray(result) ? result : [result]) as Rollup.RollupOutput[]
+    const chunk = outputs
+      .flatMap(output => output.output)
+      .find((output): output is Rollup.OutputChunk => output.type === 'chunk' && output.isEntry)
+    if (!chunk) throw new Error('missing reactive facade pair bundle')
+    clearSharedBridge()
+    return import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString('base64')}`)
+  } finally {
+    await rm(fixtureDir, { recursive: true, force: true })
+  }
 }
 
 const exerciseEntry = (entry: ReactiveEntry) => {
@@ -131,17 +183,17 @@ describe('runtime-vapor reactive entry parity', () => {
   let nodeEntry: ReactiveEntry
 
   beforeAll(async () => {
-    const runtimeVaporDir = path.resolve(process.cwd(), 'packages/runtime-vapor')
+    const runtimeVaporDist = path.resolve(process.cwd(), 'packages/runtime-vapor/dist')
     fullEntry = await importBrowserEntry(
       'reactive-full',
-      path.resolve(runtimeVaporDir, 'reactive.js'),
+      path.resolve(runtimeVaporDist, 'reactive.js'),
     )
     vaporEntry = await importBrowserEntry(
       'reactive-vapor',
-      path.resolve(runtimeVaporDir, 'reactive.vapor.js'),
+      path.resolve(runtimeVaporDist, 'reactive.vapor.js'),
     )
     clearSharedBridge()
-    nodeEntry = await import('../../runtime-vapor/reactive.node.js')
+    nodeEntry = await import('../../runtime-vapor/dist/reactive.node.js')
   })
 
   afterAll(clearSharedBridge)
@@ -181,6 +233,24 @@ describe('runtime-vapor reactive entry parity', () => {
     expect(isolatedFacade.__rueGetSignalWrapperRegistryDebugState().liveWrappers).toBe(0)
   })
 
+  it('shares one browser facade and signal wrapper registry across reactive entries', async () => {
+    const pair = await importBrowserFacadePair()
+    const before = pair.getFullRegistry().liveWrappers
+    const source = pair.createFullSignal('shared browser facade')
+    const owner = {}
+    pair.setFullCurrentInstance(owner)
+
+    expect.soft(pair.fullDefault).toBe(pair.vaporDefault)
+    expect.soft(pair.fullCreateSignal).toBe(pair.vaporCreateSignal)
+    expect.soft(pair.fullEntryCreateSignal).toBe(pair.fullCreateSignal)
+    expect.soft(pair.vaporEntryCreateSignal).toBe(pair.fullCreateSignal)
+    expect.soft(pair.getFullRegistry()).toEqual(pair.getVaporRegistry())
+    expect(pair.getVaporRegistry().liveWrappers).toBe(before + 1)
+    expect(pair.getVaporCurrentInstance()).toBe(owner)
+    expect(source.get()).toBe('shared browser facade')
+    pair.setFullCurrentInstance(undefined)
+  })
+
   it('keeps the shared facade contract on all three entries', () => {
     const entries = [
       ['browser:full', fullEntry],
@@ -203,9 +273,10 @@ describe('runtime-vapor reactive entry parity', () => {
         scopeActive: false,
       })
     }
+    expect(Object.keys(fullEntry).sort()).toEqual(Object.keys(vaporEntry).sort())
   })
 
-  it('keeps full, Vapor, and Node kernels independently identifiable', () => {
+  it('keeps independently bundled entry graphs isolated', () => {
     expect(fullEntry.SignalHandle).not.toBe(vaporEntry.SignalHandle)
     expect(fullEntry.SignalHandle).not.toBe(nodeEntry.SignalHandle)
     expect(vaporEntry.SignalHandle).not.toBe(nodeEntry.SignalHandle)

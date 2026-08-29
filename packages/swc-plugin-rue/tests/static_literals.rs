@@ -109,12 +109,12 @@ export default StaticLiteralAttrs;
     assert!(s.contains("_$setAttribute(_el2, \"cy\", \"100\")"));
     assert!(s.contains("_$setAttribute(_el2, \"r\", \"80\")"));
     assert!(s.contains("_$setAttribute(_el2, \"strokeWidth\", \"1.5\")"));
-    assert!(s.contains("_$setAttribute(_el3, \"min\", \"0\")"));
-    assert!(s.contains("_$setAttribute(_el3, \"max\", \"100\")"));
-    assert!(s.contains("_$setValue(_el3, 0)"));
-    assert!(s.contains("_$setChecked(_el3, false)"));
-    assert!(s.contains("_$setDisabled(_el3, true)"));
-    assert!(s.contains("_el4.multiple = true;"));
+    assert!(s.contains(
+        "const _$getTemplate1 = _$template('<input min=\"0\" max=\"100\" value=\"0\" disabled=\"\">')"
+    ));
+    assert!(s.contains("const _$getTemplate2 = _$template('<select multiple=\"\"></select>')"));
+    assert!(s.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
+    assert!(s.contains("_root.appendChild(_$getTemplate2().content.cloneNode(true))"));
 }
 
 #[test]
@@ -152,10 +152,10 @@ export default StaticStyleExprs;
             && s.contains("color: 'tomato'")
             && s.contains("fontWeight: 'bold'")
     );
-    assert!(
-        s.contains("_$setStyle(_el2, \"display:flex;gap:8px;\")")
-            || s.contains("_$setStyle(_el2, 'display:flex;gap:8px;')")
-    );
+    assert!(s.contains(
+        "const _$getTemplate1 = _$template('<div style=\"display:flex;gap:8px;\">B</div>')"
+    ));
+    assert!(s.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
     assert!(s.contains("_$setStyle(_el3, null)"));
 }
 

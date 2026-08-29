@@ -5,13 +5,8 @@ Component 组件概述
 - 属性语义：除 is 外的其他 props 和 children 原样透传给最终解析结果。
 */
 
-import {
-  h,
-  type ComponentInstance,
-  type ComponentProps,
-  type FC,
-  type PropsWithChildren,
-} from '../rue'
+import { h } from '../jsx'
+import type { ComponentInstance, ComponentProps, FC, PropsWithChildren } from '../runtime-types'
 import { withParentContextProps } from '../context'
 import { resolveCurrentRuntimeComponent } from '../component-registry'
 

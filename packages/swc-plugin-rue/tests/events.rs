@@ -120,9 +120,14 @@ export default Events;
     // - 文本插值：普通文本值走 _$createTextWrapper；对象成员等可渲染表达式走 slot-anchor + renderAnchor
     // - disabled：基于 list.length 的 watch 控制
     // - 函数状态：调用 valueOf() 的格式化函数再 watch 更新
-    let expected_fragment = r##"import { useState, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"
+import { useState, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">事件处理</h3>');
+const _$getTemplate2 = _$template('<h3 class="text-xl font-semibold">数据状态（数组）</h3>');
+const _$getTemplate3 = _$template('<h3 class="text-xl font-semibold">对象状态</h3>');
+const _$getTemplate4 = _$template('<h3 class="text-xl font-semibold">函数状态</h3>');
 const DEC_FORMAT = (n: number)=>String(n);
 const HEX_FORMAT = (n: number)=>'0x' + n.toString(16);
 const Events: FC = ()=>{
@@ -152,13 +157,10 @@ const Events: FC = ()=>{
         }));
     const { count: count, setCount: setCount, list: list, setList: setList, user: user, setUser: setUser, format: format, setFormat: setFormat } = _$useSetup;
     return vapor((__rue_parent_context)=>{
-      const _root = _$createElement("div", __rue_parent_context);
+        const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-      const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold");
-        _$appendChild(_el1, _$createTextNode("事件处理"));
-      const _el2 = _$createElement("div", _root);
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
+        const _el2 = _$createElement("div", _root);
         _$appendChild(_root, _el2);
         _$appendChild(_el2, _$createTextNode("count: "));
         const _el3 = _$createTextWrapper(_el2);
@@ -166,16 +168,13 @@ const Events: FC = ()=>{
         watchEffect(()=>{
             _$settextContent(_el3, count.value);
         });
-      const _el4 = _$createElement("button", _root);
+        const _el4 = _$createElement("button", _root);
         _$appendChild(_root, _el4);
         _$setClassName(_el4, "px-3 py-2 rounded-md bg-blue-600 text-white");
         _$addEventListener(_el4, "click", (()=>setCount((c)=>c + 1)));
         _$appendChild(_el4, _$createTextNode("+1"));
-      const _el5 = _$createElement("h3", _root);
-        _$appendChild(_root, _el5);
-        _$setClassName(_el5, "text-xl font-semibold");
-        _$appendChild(_el5, _$createTextNode("数据状态（数组）"));
-      const _el6 = _$createElement("div", _root);
+        _root.appendChild(_$getTemplate2().content.cloneNode(true));
+        const _el6 = _$createElement("div", _root);
         _$appendChild(_root, _el6);
         _$appendChild(_el6, _$createTextNode("list: "));
         const _el7 = _$createTextWrapper(_el6);
@@ -183,10 +182,10 @@ const Events: FC = ()=>{
         watchEffect(()=>{
             _$settextContent(_el7, list.join(', '));
         });
-      const _el8 = _$createElement("div", _root);
+        const _el8 = _$createElement("div", _root);
         _$appendChild(_root, _el8);
         _$setClassName(_el8, "space-x-2");
-      const _el9 = _$createElement("button", _el8);
+        const _el9 = _$createElement("button", _el8);
         _$appendChild(_el8, _el9);
         _$setClassName(_el9, "px-3 py-2 rounded-md bg-gray-100 border");
         _$addEventListener(_el9, "click", (()=>setList((xs)=>[
@@ -194,7 +193,7 @@ const Events: FC = ()=>{
                     `Item ${xs.length + 1}`
                 ])));
         _$appendChild(_el9, _$createTextNode("添加项"));
-      const _el10 = _$createElement("button", _el8);
+        const _el10 = _$createElement("button", _el8);
         _$appendChild(_el8, _el10);
         _$setClassName(_el10, "px-3 py-2 rounded-md bg-gray-100 border");
         _$addEventListener(_el10, "click", (()=>setList((xs)=>xs.slice(0, -1))));
@@ -202,37 +201,34 @@ const Events: FC = ()=>{
             _$setDisabled(_el10, !list.length);
         });
         _$appendChild(_el10, _$createTextNode("移除最后一个"));
-      const _el11 = _$createElement("button", _el8);
+        const _el11 = _$createElement("button", _el8);
         _$appendChild(_el8, _el11);
         _$setClassName(_el11, "px-3 py-2 rounded-md bg-gray-100 border");
         _$addEventListener(_el11, "click", (()=>setList([
                 'A'
             ])));
         _$appendChild(_el11, _$createTextNode("重置"));
-      const _el12 = _$createElement("h3", _root);
-        _$appendChild(_root, _el12);
-        _$setClassName(_el12, "text-xl font-semibold");
-        _$appendChild(_el12, _$createTextNode("对象状态"));
-      const _el13 = _$createElement("div", _root);
+        _root.appendChild(_$getTemplate3().content.cloneNode(true));
+        const _el13 = _$createElement("div", _root);
         _$appendChild(_root, _el13);
         _$appendChild(_el13, _$createTextNode("name: "));
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_el13, _list1);
         watchEffect(()=>{
-        const __slot = (user.name);
-        untrack(()=>renderAnchor(__slot, _el13, _list1));
+            const __slot = (user.name);
+            untrack(()=>renderAnchor(__slot, _el13, _list1));
         });
         _$appendChild(_el13, _$createTextNode(", age: "));
         const _list2 = _$createComment("rue:slot:anchor");
         _$appendChild(_el13, _list2);
         watchEffect(()=>{
-        const __slot = (user.age);
-        untrack(()=>renderAnchor(__slot, _el13, _list2));
+            const __slot = (user.age);
+            untrack(()=>renderAnchor(__slot, _el13, _list2));
         });
-      const _el14 = _$createElement("div", _root);
+        const _el14 = _$createElement("div", _root);
         _$appendChild(_root, _el14);
         _$setClassName(_el14, "space-x-2");
-      const _el15 = _$createElement("button", _el14);
+        const _el15 = _$createElement("button", _el14);
         _$appendChild(_el14, _el15);
         _$setClassName(_el15, "px-3 py-2 rounded-md bg-gray-100 border");
         _$addEventListener(_el15, "click", (()=>setUser((u)=>({
@@ -240,51 +236,48 @@ const Events: FC = ()=>{
                     age: u.age + 1
                 }))));
         _$appendChild(_el15, _$createTextNode("年龄 +1"));
-      const _el16 = _$createElement("input", _el14);
+        const _el16 = _$createElement("input", _el14);
         _$appendChild(_el14, _el16);
         _$setClassName(_el16, "px-3 py-2 rounded-md border");
         watchEffect(()=>{
-        _$setValue(_el16, user.name);
+            _$setValue(_el16, user.name);
         });
         _$addEventListener(_el16, "input", ((e: any)=>setUser((u)=>({
                     ...u,
                     name: (e.target as HTMLInputElement).value
                 }))));
         _$setAttribute(_el16, "placeholder", "修改 name");
-      const _el17 = _$createElement("h3", _root);
-        _$appendChild(_root, _el17);
-        _$setClassName(_el17, "text-xl font-semibold");
-        _$appendChild(_el17, _$createTextNode("函数状态"));
-      const _el18 = _$createElement("div", _root);
+        _root.appendChild(_$getTemplate4().content.cloneNode(true));
+        const _el18 = _$createElement("div", _root);
         _$appendChild(_root, _el18);
         _$appendChild(_el18, _$createTextNode("formatted count: "));
         const _el19 = _$createTextWrapper(_el18);
         _$appendChild(_el18, _el19);
         watchEffect(()=>{
-        _$settextContent(_el19, ((format as any).valueOf())(count));
+            _$settextContent(_el19, ((format as any).valueOf())(count));
         });
-      const _el20 = _$createElement("div", _root);
+        const _el20 = _$createElement("div", _root);
         _$appendChild(_root, _el20);
         _$setClassName(_el20, "space-x-2");
-      const _el21 = _$createElement("button", _el20);
+        const _el21 = _$createElement("button", _el20);
         _$appendChild(_el20, _el21);
         _$setClassName(_el21, "px-3 py-2 rounded-md bg-gray-100 border");
         _$addEventListener(_el21, "click", (()=>setFormat((prev: (n: number) => string)=>(prev === DEC_FORMAT ? HEX_FORMAT : DEC_FORMAT))));
         _$appendChild(_el21, _$createTextNode("切换十进制/十六进制"));
-      const _el22 = _$createElement("button", _el20);
+        const _el22 = _$createElement("button", _el20);
         _$appendChild(_el20, _el22);
         _$setClassName(_el22, "px-3 py-2 rounded-md bg-gray-100 border");
         _$addEventListener(_el22, "click", (()=>setFormat(()=>DEC_FORMAT)));
         _$appendChild(_el22, _$createTextNode("使用十进制"));
-      const _el23 = _$createElement("button", _el20);
+        const _el23 = _$createElement("button", _el20);
         _$appendChild(_el20, _el23);
         _$setClassName(_el23, "px-3 py-2 rounded-md bg-gray-100 border");
         _$addEventListener(_el23, "click", (()=>setFormat(()=>HEX_FORMAT)));
         _$appendChild(_el23, _$createTextNode("使用十六进制"));
-      const _el24 = _$createElement("a", _root);
+        const _el24 = _$createElement("a", _root);
         _$appendChild(_root, _el24);
         watchEffect(()=>{
-        _$setAttribute(_el24, "href", String(RouterLink.__rueHref("/jsx")));
+            _$setAttribute(_el24, "href", String(RouterLink.__rueHref("/jsx")));
         });
         _$addEventListener(_el24, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
         _$addEventListener(_el24, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));

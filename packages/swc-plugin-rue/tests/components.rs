@@ -33,9 +33,10 @@ export default Components;
     // - 父组件：组件元素以注释锚点占位，renderAnchor 插入 <Hello/>
     // - 文本与属性：静态文本使用 _$createTextNode；className 使用 setAttribute
     let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
+const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">组件与 Props 传递</h3>');
 const Hello: FC<{
     name: string;
 }> = (props)=>vapor((__rue_parent_context)=>{
@@ -52,10 +53,7 @@ const Hello: FC<{
 const Components: FC = ()=>vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
         _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        const _el1 = _$createElement("h3", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "text-xl font-semibold");
-        _$appendChild(_el1, _$createTextNode("组件与 Props 传递"));
+        _root.appendChild(_$getTemplate1().content.cloneNode(true));
         const _list2 = _$createComment("rue:component:anchor");
         _$appendChild(_root, _list2);
         const __slot3 = _$createComponent(Hello, {

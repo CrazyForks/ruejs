@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { hydrateRoot } from '../src/island'
 import { h, render } from '../src/rue'
-import { vapor } from '../src/vapor-runtime'
+import { vapor } from '../src/rue'
 import {
   appendChild,
   createElement,

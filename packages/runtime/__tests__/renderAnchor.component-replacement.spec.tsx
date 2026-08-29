@@ -32,6 +32,68 @@ const flushEffects = async () => {
 }
 
 describe('renderAnchor component replacement', () => {
+  it('removes a child mounted asynchronously at an anchor inside a vapor fragment', async () => {
+    const mode = signal<'preview' | 'code'>('preview')
+    const AnchorOwner: FC = () => {
+      const view = useSetup(() => {
+        const parent = createElement('span') as HTMLElement
+        const anchor = createComment('outer:anchor') as Comment
+        appendChild(parent, anchor)
+        watchEffect(() => {
+          const currentMode = mode.get()
+          untrack(() => {
+            renderAnchor(
+              vapor(() => {
+                if (currentMode === 'preview') {
+                  const preview = document.createElement('div')
+                  preview.dataset.testid = 'preview'
+                  return preview
+                }
+
+                const fragment = document.createDocumentFragment()
+                const innerAnchor = document.createComment('inner:anchor')
+                fragment.append(innerAnchor)
+                queueMicrotask(() => {
+                  renderAnchor(
+                    vapor(() => {
+                      const code = document.createElement('div')
+                      code.dataset.testid = 'code'
+                      return code
+                    }),
+                    fragment as any,
+                    innerAnchor as any,
+                  )
+                })
+                return fragment
+              }),
+              parent as any,
+              anchor as any,
+            )
+          })
+        })
+        return parent
+      })
+      return vapor(() => view)
+    }
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    useApp(AnchorOwner).mount(container)
+    await flushEffects()
+    expect(container.querySelectorAll('[data-testid="preview"]')).toHaveLength(1)
+
+    mode.set('code')
+    await flushEffects()
+    expect(container.querySelectorAll('[data-testid="code"]')).toHaveLength(1)
+    expect(container.querySelectorAll('[data-testid="preview"]')).toHaveLength(0)
+
+    mode.set('preview')
+    await flushEffects()
+
+    expect(container.querySelectorAll('[data-testid="preview"]')).toHaveLength(1)
+    expect(container.querySelectorAll('[data-testid="code"]')).toHaveLength(0)
+  })
+
   it('removes component A when the same anchor replaces it with component B', async () => {
     const beforeUnmount = vi.fn()
     const unmounted = vi.fn()

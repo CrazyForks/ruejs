@@ -67,9 +67,9 @@ export {
   vaporBindUseRef as _$vaporBindUseRef,
   vaporShowStyle as _$vaporShowStyle,
   vaporWithKey as _$vaporWithKey,
+  vaporWithHookId as _$vaporWithHookId,
+  vaporMarkComponentRenderReactive as _$vaporMarkComponentRenderReactive,
 } from './vapor-helpers'
-// 稳定 hook id 辅助直接来自 runtime-vapor reactive。
-export { vaporWithHookId as _$vaporWithHookId } from '@rue-js/runtime-vapor/reactive'
 
 export { Transition } from './components/Transition'
 export type { TransitionMode, TransitionProps } from './components/Transition'
