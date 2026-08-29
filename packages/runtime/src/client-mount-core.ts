@@ -502,6 +502,13 @@ export const createComponentAdapterCore = (options: ComponentAdapterCoreOptions)
     const renderableType = isClassComponentType<P>(resolvedType)
       ? createClassComponentAdapter(resolvedType)
       : resolvedType
+    if (typeof renderableType !== 'function') {
+      const detail =
+        renderableType && typeof renderableType === 'object'
+          ? `object keys: ${Reflect.ownKeys(renderableType).map(String).join(', ')}`
+          : String(renderableType)
+      throw new TypeError(`Rue runtime: component type must be a function (${detail})`)
+    }
     return createComponentReturnAdapter(renderableType)
   }
 

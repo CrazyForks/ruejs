@@ -67,7 +67,7 @@ describe('vite-plugin-rue conditional map slot transform', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expectConditionalMapLowering(code)
-    expect(code).toContain('_$createTextNode("empty")')
+    expect(code).toContain('_$compiledCreateTextNode("empty")')
   })
 
   it('rewrites map callbacks that return JSX inside logical-and branches', async () => {
@@ -102,6 +102,6 @@ describe('vite-plugin-rue conditional map slot transform', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expectConditionalMapLowering(code)
-    expect(code).toMatch(/\}\)\s*:\s*"";/)
+    expect(code).toMatch(/\},\s*true\)\s*:\s*"";/)
   })
 })

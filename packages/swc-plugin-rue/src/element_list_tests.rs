@@ -2403,7 +2403,7 @@ fn coalesces_safe_native_row_bindings() {
         "safe selected row should emit one list effect and one row selector effect: {out}"
     );
     assert!(
-        out.contains("return{node:_el1,patch:_$rowPatch,dispose:()=>disposeOwner(_$rowOwner)}"),
+        out.contains("return{node:_el1,patch:_$rowPatch,dispose:()=>_$rowEffect.dispose()}"),
         "safe row must return the compact row record: {out}"
     );
     assert!(
@@ -2464,7 +2464,7 @@ fn coalesces_safe_native_row_signal_get_bindings() {
         "signal getter row should emit one list effect and one row selector effect: {out}"
     );
     assert!(
-        out.contains("return{node:_el1,patch:_$rowPatch,dispose:()=>disposeOwner(_$rowOwner)}"),
+        out.contains("return{node:_el1,patch:_$rowPatch,dispose:()=>_$rowEffect.dispose()}"),
         "{out}"
     );
     assert!(out.contains("selected.get()"), "{out}");
@@ -2615,7 +2615,7 @@ fn keeps_unstable_or_capability_bearing_rows_on_vapor_keyed_list() {
 }
 
 #[test]
-fn lowers_stable_event_rows_to_owned_compiled_listeners() {
+fn lowers_stable_event_rows_to_dom_owned_compiled_listeners() {
     let mut vt = new_vt();
     let call = parse_call(
         "rows.map(row => <tr key={row.id} onClick={() => select(row)}><td>{row.label}</td></tr>)",
@@ -2628,15 +2628,16 @@ fn lowers_stable_event_rows_to_owned_compiled_listeners() {
 
     assert!(out.contains("_$reconcileKeyed("), "{out}");
     assert!(out.contains(".addEventListener(\"click\""), "{out}");
-    assert!(out.contains("onCleanup(()=>"), "{out}");
-    assert!(out.contains(".removeEventListener(\"click\""), "{out}");
-    assert!(out.contains("dispose:()=>disposeOwner("), "{out}");
+    assert!(!out.contains("onCleanup("), "{out}");
+    assert!(!out.contains(".removeEventListener("), "{out}");
+    assert!(!out.contains("createOwner()"), "{out}");
+    assert!(!out.contains("disposeOwner("), "{out}");
     assert!(!out.contains("_$addEventListener"), "{out}");
     assert!(!out.contains("_$vaporKeyedList"), "{out}");
 }
 
 #[test]
-fn shares_one_owner_for_compiled_row_events_and_selector() {
+fn uses_direct_effect_handle_for_compiled_row_selector() {
     let mut vt = new_vt();
     let call = parse_call(
         "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''} onClick={() => select(row)} onMouseOver={() => preview(row)}><td>{row.label}</td></tr>)",
@@ -2648,23 +2649,24 @@ fn shares_one_owner_for_compiled_row_events_and_selector() {
     let out = compact(&emit_stmts(stmts));
 
     assert!(out.contains("_$reconcileKeyed("), "{out}");
-    assert_eq!(out.matches("createOwner()").count(), 1, "{out}");
-    assert_eq!(out.matches("disposeOwner(").count(), 1, "{out}");
+    assert_eq!(out.matches("createOwner()").count(), 0, "{out}");
+    assert_eq!(out.matches("disposeOwner(").count(), 0, "{out}");
     assert_eq!(out.matches(".addEventListener(").count(), 2, "{out}");
-    assert_eq!(out.matches(".removeEventListener(").count(), 2, "{out}");
-    assert_eq!(out.matches("runWithOwner(").count(), 3, "{out}");
+    assert_eq!(out.matches(".removeEventListener(").count(), 0, "{out}");
+    assert_eq!(out.matches("runWithOwner(").count(), 0, "{out}");
     assert!(out.contains("effect(()=>"), "{out}");
+    assert!(out.contains("dispose:()=>_$rowEffect.dispose()"), "{out}");
 
     for (name, source, expected_owner_count) in [
         (
             "event-only",
             "rows.get().map(row => <tr key={row.id} onClick={() => select(row)}>{row.label}</tr>)",
-            1,
+            0,
         ),
         (
             "selector-only",
             "rows.get().map(row => <tr key={row.id} className={row.id === selected.get() ? 'danger' : ''}>{row.label}</tr>)",
-            1,
+            0,
         ),
         ("owner-free", "rows.get().map(row => <tr key={row.id}>{row.label}</tr>)", 0),
     ] {
@@ -2716,9 +2718,10 @@ fn lowers_stable_row_key_equality_to_one_external_selector() {
                 || out.contains("createSelector(()=>selected.value)"),
             "{out}"
         );
-        assert!(out.contains("runWithOwner("), "{out}");
-        assert!(out.contains("createOwner()"), "{out}");
-        assert!(out.contains("disposeOwner("), "{out}");
+        assert!(!out.contains("runWithOwner("), "{out}");
+        assert!(!out.contains("createOwner()"), "{out}");
+        assert!(!out.contains("disposeOwner("), "{out}");
+        assert!(out.contains("dispose:()=>_$rowEffect.dispose()"), "{out}");
         assert!(out.contains("effect(()=>"), "{out}");
         assert!(out.contains("_$reconcileKeyed("), "{out}");
         assert!(out.contains(".textContent="), "item label must remain in row patch: {out}");

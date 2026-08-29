@@ -20,6 +20,11 @@ const builtinSignatures = Object.freeze({
   TransitionGroup: Object.freeze(['data-rue-leaving']),
 })
 
+const compatSignatures = Object.freeze({
+  'head-record': Object.freeze(['rue.element.head-record', 'text.head.record']),
+  'stable-host': Object.freeze(['__rue_stable_component_host__']),
+})
+
 const vaporInput = Object.freeze({
   entry: '@rue-js/rue/vapor',
   imports: Object.freeze(['vapor']),
@@ -49,7 +54,14 @@ const rootInput = imports =>
     imports: Object.freeze(imports),
   })
 
-/** @type {ReadonlyArray<{name: string, input: ReadonlyArray<{entry: string, imports: ReadonlyArray<string>}>, builtin: boolean}>} */
+/** @param {ReadonlyArray<string>} imports */
+const jsxRuntimeInput = imports =>
+  Object.freeze({
+    entry: '@rue-js/jsx-runtime',
+    imports: Object.freeze(imports),
+  })
+
+/** @type {ReadonlyArray<{name: string, input: ReadonlyArray<{entry: string, imports: ReadonlyArray<string>}>, fixtureSource?: string, builtin: boolean}>} */
 export const RUNTIME_SIZE_PRESETS = Object.freeze([
   Object.freeze({
     name: 'compiled-core',
@@ -57,6 +69,36 @@ export const RUNTIME_SIZE_PRESETS = Object.freeze([
     builtin: false,
   }),
   Object.freeze({ name: 'vapor-core', input: Object.freeze([vaporInput]), builtin: false }),
+  Object.freeze({
+    name: 'compiled-component',
+    input: Object.freeze([vaporEntryInput(['vapor', '_$createComponent', 'renderAnchor'])]),
+    fixtureSource: `
+import { vapor, _$createComponent, renderAnchor } from '@rue-js/rue/vapor'
+const CompiledChild = props => vapor(() => document.createTextNode(String(props.value)))
+const compiledHandle = _$createComponent(CompiledChild, { value: 1 })
+export const mountCompiledComponent = (parent, anchor) =>
+  renderAnchor(compiledHandle, parent, anchor)
+`,
+    builtin: false,
+  }),
+  Object.freeze({
+    name: 'h-only',
+    input: Object.freeze([rootInput(['h', 'render'])]),
+    fixtureSource: `
+import { h, render } from '@rue-js/rue'
+export const mountRenderFunction = target => render(h('div', { class: 'rue-size-fixture' }, 'Rue'), target)
+`,
+    builtin: false,
+  }),
+  Object.freeze({
+    name: 'jsx-runtime-only',
+    input: Object.freeze([jsxRuntimeInput(['jsx'])]),
+    fixtureSource: `
+import { jsx } from '@rue-js/jsx-runtime'
+export const automaticJsxNode = jsx('div', { class: 'rue-size-fixture', children: 'Rue' })
+`,
+    builtin: false,
+  }),
   Object.freeze({
     name: 'vapor-app',
     input: Object.freeze([vaporAppInput]),
@@ -245,6 +287,55 @@ export function checkRuntimeSizeBudget(report, budget) {
       })
     }
 
+    if (presetBudget.forbidCompatPatch && preset.sources?.compatPatch) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.compatPatch',
+        actual: preset.sources.compatModules?.join(', ') || 'detected',
+        limit: 'forbidden',
+      })
+    }
+
+    const forbiddenCompatTokens = new Set(presetBudget.forbidCompatTokens ?? [])
+    const retainedCompatTokens = (preset.sources?.compatTokens ?? []).filter(
+      (/** @type {string} */ token) => forbiddenCompatTokens.has(token),
+    )
+    if (retainedCompatTokens.length > 0) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.compatTokens',
+        actual: retainedCompatTokens.join(', '),
+        limit: 'forbidden',
+      })
+    }
+
+    if (presetBudget.forbidAutomaticJsxRuntime && preset.sources?.automaticJsxRuntime) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.automaticJsxRuntime',
+        actual: preset.sources.jsxRuntimeModules?.join(', ') || 'detected',
+        limit: 'forbidden',
+      })
+    }
+
+    if (presetBudget.requireAutomaticJsxRuntime && !preset.sources?.automaticJsxRuntime) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.automaticJsxRuntime.required',
+        actual: preset.sources?.automaticJsxRuntime ?? 'missing',
+        limit: 'required',
+      })
+    }
+
+    if (presetBudget.requireCompatRenderer && !preset.sources?.compatRenderer) {
+      failures.push({
+        preset: presetName,
+        dimension: 'sources.compatRenderer.required',
+        actual: preset.sources?.compatRenderer ?? 'missing',
+        limit: 'required',
+      })
+    }
+
     const forbiddenBuiltins = new Set(presetBudget.forbidBuiltins ?? [])
     /** @type {string[]} */
     const retainedBuiltins = (preset.sources?.builtins ?? []).filter(
@@ -307,6 +398,12 @@ export { measureCodeSizes }
  *     ssrModules: string[],
  *     reactiveKernel: {moduleCount: number, renderedBytes: number, modules: string[]},
  *     wasmModules: string[]
+ *     compatRenderer: boolean,
+ *     compatPatch: boolean,
+ *     compatModules: string[],
+ *     compatTokens: string[],
+ *     automaticJsxRuntime: boolean,
+ *     jsxRuntimeModules: string[]
  *   }
  * }>} measurements
  */
@@ -411,6 +508,15 @@ function detectRuntimeSources(moduleIds, code, renderedModules) {
       /(?:^|\/)packages\/runtime-vapor\/dist\/compiled\.js$/.test(id),
   )
   const wasmModules = normalized.filter(id => id.endsWith('.wasm'))
+  const compatModules = normalized.filter(id =>
+    /(?:^|\/)packages\/runtime-vapor\/(?:dist\/)?js-runtime\/mount-compat\.(?:js|ts)$/.test(id),
+  )
+  const compatTokens = Object.entries(compatSignatures)
+    .filter(([, signatures]) => signatures.some(signature => code.includes(signature)))
+    .map(([name]) => name)
+  const jsxRuntimeModules = normalized.filter(id =>
+    /(?:^|\/)packages\/jsx-(?:dev-)?runtime\//.test(id),
+  )
   const renderedSizeByModule = new Map(
     Object.entries(renderedModules).map(([id, info]) => [
       normalizeModuleId(id),
@@ -443,6 +549,12 @@ function detectRuntimeSources(moduleIds, code, renderedModules) {
       modules: reactiveKernelModules,
     },
     wasmModules,
+    compatRenderer: defaultRuntime || compatModules.length > 0,
+    compatPatch: compatModules.length > 0,
+    compatModules,
+    compatTokens,
+    automaticJsxRuntime: jsxRuntimeModules.length > 0,
+    jsxRuntimeModules,
     builtins: Object.entries(builtinSignatures)
       .filter(([, signatures]) => signatures.some(signature => code.includes(signature)))
       .map(([name]) => name),
@@ -456,7 +568,7 @@ async function buildPreset(preset) {
   const sizeDir = path.resolve(projectRoot, 'temp/size')
   const entryFile = path.resolve(sizeDir, `${sanitizePresetName(preset.name)}.runtime-audit.mjs`)
   await mkdir(sizeDir, { recursive: true })
-  await writeFile(entryFile, createFixtureSource(preset.input), 'utf8')
+  await writeFile(entryFile, preset.fixtureSource ?? createFixtureSource(preset.input), 'utf8')
 
   try {
     const result = await build({

@@ -151,6 +151,7 @@ const componentRecord = <HostNode>(
 ): MountedComponent<HostNode> => ({
   kind: 'component',
   type: input.type.component,
+  updateMode: input.type.updateMode,
   key: input.key,
   instance,
   subtree,
@@ -222,6 +223,7 @@ export const isSameComponent = <HostNode>(
 ): mounted is MountedComponent<HostNode> =>
   mounted?.kind === 'component' &&
   mounted.type === input.type.component &&
+  mounted.updateMode === input.type.updateMode &&
   mounted.key === input.key
 
 /** Mount a component function and retain its instance even when it renders an empty subtree. */
@@ -320,6 +322,28 @@ export const patchComponent = <HostNode>(
   input: ComponentMountInput<HostNode>,
   patchSubtree: PatchSubtree<HostNode>,
 ): MountedComponent<HostNode> => {
+  if (input.type.updateMode === 'fine-grained' && !mounted.renderEffect) {
+    const focusSnapshot = captureFocusSnapshot(mounted.host)
+    runComponentRenderEntry(state, () => {
+      state.components.update(mounted.instance, input)
+      state.components.withCurrent(mounted.instance, () => {
+        state.lifecycle.call(mounted.instance.host, 'before_update')
+      })
+      const pendingLifecycle =
+        state.ownedMounts?.currentLifecycleEntries?.() ?? state.pendingComponentLifecycle
+      pendingLifecycle.push({
+        instance: mounted.instance,
+        name: 'updated',
+        subtree: mounted.subtree,
+      })
+    })
+    restoreFocusSnapshot(focusSnapshot, mounted.host)
+    mounted.type = input.type.component
+    mounted.updateMode = input.type.updateMode
+    mounted.key = input.key
+    return mounted
+  }
+
   const preserveUncontrolledTextControl = (() => {
     const containsActiveControl = state.adapter
       ? Reflect.get(state.adapter, 'hasActiveUncontrolledTextControlWithin')
@@ -336,14 +360,19 @@ export const patchComponent = <HostNode>(
   if (preserveUncontrolledTextControl) {
     state.components.update(mounted.instance, input)
     mounted.type = input.type.component
+    mounted.updateMode = input.type.updateMode
     mounted.key = input.key
     return mounted
   }
 
   if (mounted.renderEffect) {
     state.components.update(mounted.instance, input)
-    mounted.renderEffect?.rerender()
+    // Fine-grained compiled components are invalidated by their reactive props proxy. Calling
+    // rerender() here as well performs the same render twice (once synchronously and once from
+    // the graph scheduler). Classic rerender handles retain the explicit compatibility pass.
+    if (input.type.updateMode === 'rerender') mounted.renderEffect.rerender()
     mounted.type = input.type.component
+    mounted.updateMode = input.type.updateMode
     mounted.key = input.key
     return mounted
   }
@@ -353,6 +382,7 @@ export const patchComponent = <HostNode>(
   restoreFocusSnapshot(focusSnapshot, subtree?.host)
   mounted.instance.isMounted = true
   mounted.type = input.type.component
+  mounted.updateMode = input.type.updateMode
   mounted.key = input.key
   mounted.subtree = subtree
   mounted.host = subtree?.host

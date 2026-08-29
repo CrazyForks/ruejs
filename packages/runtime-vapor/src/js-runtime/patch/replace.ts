@@ -1,12 +1,12 @@
 import { insertMountedBefore } from '../render/helpers.js'
-import { patchMountedInput } from '../mount.js'
 import { patchText } from './text.js'
-import type { DOMHost, Mounted, MountInput, RenderRuntimeState } from '../types.js'
+import type { DOMHost, MountController, Mounted, MountInput, RenderRuntimeState } from '../types.js'
 
 /** Patch a text root in place or replace a mounted root at one stable DOM boundary. */
 export const replaceMountedBefore = <HostNode>(
   state: RenderRuntimeState<HostNode>,
   host: DOMHost<HostNode>,
+  controller: MountController<HostNode>,
   previous: Mounted<HostNode> | undefined,
   input: MountInput<HostNode>,
   parent: HostNode,
@@ -16,7 +16,7 @@ export const replaceMountedBefore = <HostNode>(
     return patchText(host, previous, input)
   }
 
-  const mounted = patchMountedInput(state, host, previous, input, parent)
+  const mounted = controller.patchMountedInput(state, host, previous, input, parent)
   insertMountedBefore(host, parent, mounted, before)
   return mounted
 }

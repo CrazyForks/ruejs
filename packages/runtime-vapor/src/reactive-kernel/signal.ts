@@ -205,17 +205,20 @@ export class SignalHandle<T> {
 
   setPath(path: SignalPath, value: unknown): void {
     const normalized = normalizeSignalPath(path)
+    if (Object.is(getAtPath(this.#value, normalized), value)) return
     this.write(setAtPathImmutable(this.#value, normalized, value) as T, normalized)
   }
 
   updatePath(path: SignalPath, updater: (currentAtPath: unknown) => unknown): void {
     const normalized = normalizeSignalPath(path)
+    const previous = getAtPath(this.#value, normalized)
     let next: unknown
     try {
-      next = updater(getAtPath(this.#value, normalized))
+      next = updater(previous)
     } catch {
       next = undefined
     }
+    if (Object.is(previous, next)) return
     this.write(setAtPathImmutable(this.#value, normalized, next) as T, normalized)
   }
 

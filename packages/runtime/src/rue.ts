@@ -10,10 +10,12 @@ Rue 运行时架构概述
 
 import {
   RUE_KEEP_ALIVE_HOOK_TARGET_KEY,
+  RUE_COMPONENT_UPDATE_MODE_KEY,
   RUE_PORTABLE_COMPONENT_ID_KEY,
   RUE_PORTABLE_COMPONENT_TYPE_KEY,
   RUE_PORTABLE_VAPOR_SETUP_KEY,
   RUE_REPEATABLE_MOUNT_FACTORY_KEY,
+  type ComponentUpdateMode,
 } from '@rue-js/runtime-vapor/protocol'
 import {
   getCurrentInstance,
@@ -27,25 +29,15 @@ import type { DomNodeLike, DomElementLike } from './dom'
 import { copyContextProviderPropsMarker, withParentContextProps } from './context'
 import { Component as DynamicComponent } from './components/Component'
 import {
-  addEventListener,
   appendChild,
-  applyRef,
   createComment,
   createDocumentFragment,
   createElement as createDOMElement,
-  createTextNode,
   getParentNode,
   hasActiveTextControlWithin,
   removeChild,
   scheduleTrackedTextControlRestoreWithin,
   setAttribute,
-  setChecked,
-  setClassName,
-  setDisabled,
-  setInnerHTML,
-  setProperty,
-  setStyle,
-  setValue,
   settextContent,
   withDOMHostOperations,
 } from './dom'
@@ -86,11 +78,9 @@ import {
   resolveActiveRuntime,
   runWithRuntime,
 } from './runtime-context'
-import { installJSXCreateElement } from './jsx'
 import {
   captureOwnedMountContinuation,
   createComponentAdapterCore,
-  createDOMPropsCore,
   createLifecycleCore,
   createMountReplayCore,
   resolveOwnedMountProtocol,
@@ -110,7 +100,7 @@ import type {
 
 export { getMarkedRuntimeDOMBridge, markRuntimeDOMBridge } from './client-runtime'
 export { runWithRuntime } from './runtime-context'
-export { Fragment, h, jsx, jsxDEV, jsxs } from './jsx'
+export { Fragment, jsx, jsxDEV, jsxs } from './jsx'
 export { captureOwnedMountContinuation, withOwnedMountContinuationContext }
 export type {
   ComponentInstance,
@@ -138,6 +128,7 @@ const RUE_RUNTIME_SETUP_HANDLE_KEY = '__rue_runtime_setup_handle'
 const RUE_CONTEXT_OWNER_PARENT_PROP = '__rue_context_owner_parent__'
 const RUE_CONTEXT_PARENT_INSTANCE_PROP = '__rue_context_parent_instance__'
 const RUE_FORCE_CONTAINER_ANCHOR_RENDER_KEY = '__rue_force_container_anchor_render__'
+const RUE_COMPILED_ANCHOR_VAPOR_KEY = '__rue_compiled_anchor_vapor__'
 const TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY = '__TEXT_RESOLVE_CLIENT_REFERENCE_EXPORT__'
 let componentTypeIdentitySeed = 0
 
@@ -182,6 +173,7 @@ const pendingAnchorHandleRenders = new WeakMap<
   { parent: DomElementLike; value: RenderableInput; runtime: any }
 >()
 const pendingAnchorScopeCleanupRegistered = new WeakSet<object>()
+const ownedMountAnchorBoundaries = new WeakSet<object>()
 const activeRuntimeErrorCaptures: Array<(error: Error) => void> = []
 
 const readAnchorParentChildren = (parent: DomElementLike): DomNodeLike[] => {
@@ -609,57 +601,6 @@ const attachHeadRecordSnapshot = (
   return mountHandle
 }
 
-const { applyDomElementProps } = createDOMPropsCore({
-  addEventListener,
-  applyRef,
-  setAttribute,
-  setChecked,
-  setClassName,
-  setDisabled,
-  setInnerHTML,
-  setProperty,
-  setStyle,
-  setValue,
-})
-
-const mountDomElementChildren = (parent: DomElementLike, children: ChildInput[]) => {
-  const mountChild = (child: ChildInput) => {
-    if (Array.isArray(child)) {
-      child.forEach(mountChild)
-      return
-    }
-    if (child === null || child === undefined || typeof child === 'boolean') return
-    if (typeof child === 'string' || typeof child === 'number') {
-      appendChild(parent, createTextNode(String(child)))
-      return
-    }
-    const anchor = createComment('rue:element:anchor')
-    appendChild(parent, anchor)
-    renderAnchor(child as RenderableInput, parent, anchor)
-  }
-  children.forEach(mountChild)
-}
-
-const createDomElementMountHandle = (
-  type: string,
-  props: ComponentProps | null,
-  children: ChildInput[],
-): RenderableOutput =>
-  createRepeatableVaporHandle(parentContext => {
-    const root =
-      type === 'fragment'
-        ? (createDocumentFragment() as DomElementLike)
-        : (createDOMElement(type, parentContext) as DomElementLike)
-    const hasInnerHTML = type === 'fragment' ? false : applyDomElementProps(root, props)
-    if (type.includes('-')) {
-      setProperty(root, '__rue_context_parent_instance__', getCurrentInstance())
-    }
-    if (!hasInnerHTML) {
-      mountDomElementChildren(root, children)
-    }
-    return root
-  })
-
 const createRepeatableElementHandle = <P = {}>(
   type: string | ComponentInstance<P>,
   props: ComponentProps | null,
@@ -669,17 +610,23 @@ const createRepeatableElementHandle = <P = {}>(
     nextProps: ComponentProps | null,
     nextChildren: ChildInput[],
   ) => RenderableOutput,
+  replay = false,
 ): RenderableOutput => {
-  const nextProps = replayMountAwareProps(props)
-  const nextChildren = replayMountAwareValue(children) as ChildInput[]
-  const mountHandle =
-    typeof type === 'string'
-      ? createDomElementMountHandle(type, nextProps, nextChildren)
-      : (getRue().createElement(type, nextProps, nextChildren as any) as RenderableOutput)
+  // Fresh h() children already own unconsumed one-shot MountInputs. Replay only when this
+  // element's repeatable factory is invoked after the original tree has been consumed.
+  const nextProps = replay ? replayMountAwareProps(props) : props
+  const replayedChildren = replay ? (replayMountAwareValue(children) as ChildInput[]) : children
+  // The canonical JavaScript runtime deliberately accepts only portable mount inputs.
+  // Island descriptors are a Rue-layer protocol, so lower them before crossing that boundary.
+  const nextChildren = normalizeIslandDescriptorHandles(replayedChildren) as ChildInput[]
+  const mountHandle = getRue().createElement(
+    type,
+    nextProps,
+    nextChildren as any,
+  ) as RenderableOutput
   const nextMountHandle = finalize ? finalize(mountHandle, nextProps, nextChildren) : mountHandle
-  attachHeadRecordSnapshot(nextMountHandle, type, nextProps, nextChildren)
   return attachRepeatableMountFactory(nextMountHandle, () =>
-    createRepeatableElementHandle(type, props, children, finalize),
+    createRepeatableElementHandle(type, props, children, finalize, true),
   )
 }
 
@@ -688,6 +635,7 @@ const createRepeatableResolvedComponentHandle = <P = {}>(
   props: ComponentProps | null,
   sourceType: ComponentInstance<P> | Record<PropertyKey, unknown> = componentType,
   metadataSource?: unknown,
+  updateMode: ComponentUpdateMode = 'rerender',
 ): RenderableOutput => {
   if (!(RUE_PORTABLE_COMPONENT_ID_KEY in componentType)) {
     try {
@@ -704,6 +652,7 @@ const createRepeatableResolvedComponentHandle = <P = {}>(
   const mountedComponentType = resolveKeepAliveHookTargetComponent(componentType, hookTarget)
   const mountHandle = {
     [RUE_PORTABLE_COMPONENT_TYPE_KEY]: mountedComponentType,
+    [RUE_COMPONENT_UPDATE_MODE_KEY]: updateMode,
     props: nextProps,
     ...(nextProps?.key == null ? null : { key: nextProps.key }),
   } as RenderableOutput
@@ -725,22 +674,46 @@ const createRepeatableResolvedComponentHandle = <P = {}>(
     markAnchorRemountableMountHandle(mountedComponentType, nextProps, [], mountHandle),
   )
   return attachRepeatableMountFactory(nextMountHandle, () =>
-    createRepeatableResolvedComponentHandle(componentType, props, sourceType, metadataSource),
+    createRepeatableResolvedComponentHandle(
+      componentType,
+      props,
+      sourceType,
+      metadataSource,
+      updateMode,
+    ),
   )
 }
 
 const createRepeatableComponentHandle = <P = {}>(
   type: ComponentInstance<P>,
   props: ComponentProps | null,
+  updateMode: ComponentUpdateMode = 'rerender',
 ): RenderableOutput => {
   const componentType = resolveRenderableComponent(type) as ComponentInstance<P> &
     Record<string, unknown>
-  return createRepeatableResolvedComponentHandle(componentType, props, type)
+  return createRepeatableResolvedComponentHandle(componentType, props, type, undefined, updateMode)
+}
+
+const createRepeatableCompiledElementHandle = (
+  type: string,
+  props: ComponentProps | null,
+  replay = false,
+): RenderableOutput => {
+  const nextProps = replay ? replayMountAwareProps(props) : props
+  const mountHandle = {
+    [RUE_PORTABLE_COMPONENT_TYPE_KEY]: type,
+    [RUE_COMPONENT_UPDATE_MODE_KEY]: 'fine-grained',
+    props: nextProps,
+  } as RenderableOutput
+  return attachRepeatableMountFactory(mountHandle, () =>
+    createRepeatableCompiledElementHandle(type, props, true),
+  )
 }
 
 const createRepeatableVaporHandle = (
   setup: (parentContext?: DomElementLike | null) => VaporSetupResult,
   inheritedParentOwner?: unknown,
+  compiledAnchor = false,
 ): RenderableOutput => {
   const bridge = getSharedRuntimeBridge()
   const owner: Record<string, unknown> = {}
@@ -764,11 +737,16 @@ const createRepeatableVaporHandle = (
   handle = getRue().vapor(wrappedSetup) as RenderableOutput
   if (handle && typeof handle === 'object') {
     ;(handle as Record<string, unknown>)[RUE_RUNTIME_SETUP_HANDLE_KEY] = true
+    if (compiledAnchor) {
+      ;(handle as Record<string, unknown>)[RUE_COMPILED_ANCHOR_VAPOR_KEY] = true
+    }
   }
   registerOwnerCleanup(handle, () => {
     bridge?.disposeVaporScope(owner)
   })
-  return attachRepeatableMountFactory(handle, () => createRepeatableVaporHandle(setup, parentOwner))
+  return attachRepeatableMountFactory(handle, () =>
+    createRepeatableVaporHandle(setup, parentOwner, compiledAnchor),
+  )
 }
 
 const createRepeatableFragmentHandle = (children: unknown[]): RenderableOutput =>
@@ -822,7 +800,7 @@ const createIslandDescriptorMountHandle = (descriptor: RueIslandDescriptor): Ren
     const content =
       hydrate === 'only'
         ? descriptor.fallback
-        : createElement(descriptor.component, descriptor.props)
+        : createCompiledComponent(descriptor.component, descriptor.props)
     if (content !== undefined && content !== null) {
       const anchor = createComment('rue:island:content')
       appendChild(root, anchor)
@@ -941,9 +919,10 @@ const adaptRenderableForBackend = (
   kind: 'container' | 'between' | 'anchor' | 'static',
 ) => {
   const analysis = analyzeDefaultRenderableInput(value)
-  return analysis.kind === 'renderable'
-    ? createRenderableMountHandle(analysis.value, kind, createRepeatableVaporHandle)
-    : createFreshMountHandle(value)
+  if (analysis.kind === 'renderable') {
+    return createRenderableMountHandle(analysis.value, kind, createRepeatableVaporHandle)
+  }
+  return createFreshMountHandle(value)
 }
 
 const getEffectiveChildren = (
@@ -1093,22 +1072,50 @@ export const createElement = <P = {}>(
       resolvedType,
       elementProps,
       normalizedChildren,
-      (mountHandle, nextProps, nextChildren) =>
-        markAnchorRemountableMountHandle(resolvedType, nextProps, nextChildren, mountHandle),
+      (mountHandle, nextProps, nextChildren) => {
+        const marked = markAnchorRemountableMountHandle(
+          resolvedType,
+          nextProps,
+          nextChildren,
+          mountHandle,
+        )
+        return attachHeadRecordSnapshot(marked, resolvedType, nextProps, nextChildren)
+      },
     ),
   )
 }
 
-installJSXCreateElement(createElement)
+/** 手写渲染函数入口；默认 JSX runtime 的安装由完整入口负责。 */
+export const h = createElement
 
 /** 创建 portable component mount handle，供 Vapor 编译产物直接引用。 */
+export const createCompiledComponent = <P = {}>(
+  type: string | ComponentInstance<P>,
+  props: ComponentProps | null,
+) => {
+  if (typeof type === 'string') {
+    const contextualProps = withParentContextProps(
+      type,
+      props as Record<string, unknown> | null,
+    ) as ComponentProps | null
+    return withActiveKeepAliveHookTargetMetadata(
+      createRepeatableCompiledElementHandle(type, contextualProps),
+    )
+  }
+  assertDefaultChildren(props, [])
+  return withActiveKeepAliveHookTargetMetadata(
+    createRepeatableComponentHandle(type, props, 'fine-grained'),
+  )
+}
+
+/** 创建公开 component mount handle；字符串输入继续走 h() 兼容元素路径。 */
 export const createComponent = <P = {}>(
   type: string | ComponentInstance<P>,
   props: ComponentProps | null,
 ) =>
   typeof type === 'string'
     ? createElement(type, props, ...getEffectiveChildren(props, []))
-    : createElement(type, props)
+    : createCompiledComponent(type, props)
 /** 渲染到容器；默认 Renderable 先适配为 portable handle，再交给 canonical backend。 */
 export const render = (value: RenderableInput, container: DomElementLike) => {
   return withRenderEntryGuard('render', 'container', container as object, () => {
@@ -1276,6 +1283,9 @@ const renderAnchorUntracked = (
     const anchorKey = anchor as object
     const anchorRuntime = runtimeByAnchor.get(anchorKey) ?? getRue()
     runtimeByAnchor.set(anchorKey, anchorRuntime)
+    if (anchorRuntime.ownedMountCollecting?.() === true) {
+      ownedMountAnchorBoundaries.add(anchorKey)
+    }
     const normalizedValue = normalizeMountHandleSingletonInput(value)
     pendingAnchorHandleRenders.delete(anchor as object)
     const targetParent = resolveAnchorTargetParent(parent, anchor)
@@ -1313,6 +1323,12 @@ const renderAnchorUntracked = (
         : undefined
     const hasPortableComponent = typeof componentType === 'function'
     const componentName = getBuiltinComponentName(componentType)
+    const isCompiledAnchorVapor =
+      hasVaporSetup &&
+      !ownedMountAnchorBoundaries.has(anchorKey) &&
+      !!normalizedValue &&
+      typeof normalizedValue === 'object' &&
+      RUE_COMPILED_ANCHOR_VAPOR_KEY in normalizedValue
     const shouldPreserveComponentChildrenInstance =
       componentName === 'KeepAlive' ||
       (!shouldForceRemount && hasActiveTextControlWithin(targetParent))
@@ -1321,7 +1337,7 @@ const renderAnchorUntracked = (
     const shouldRemountComponentChildren =
       prevOwner === mountHandleOwner &&
       (shouldForceRemount ||
-        hasVaporSetup ||
+        (hasVaporSetup && !isCompiledAnchorVapor) ||
         (hasComponentChildren && !shouldPreserveComponentChildrenInstance))
     const lastMountHandleValue = lastMountHandleAnchorValueByAnchor.get(anchor as object)
     const readMountHandleKey = (handle: unknown): unknown => {
@@ -1397,7 +1413,8 @@ const renderAnchorUntracked = (
               mountHandleValue,
               targetParent,
               anchor,
-              prevOwner === mountHandleOwner && !Object.is(previousKey, nextKey),
+              prevOwner === mountHandleOwner &&
+                (isCompiledAnchorVapor || !Object.is(previousKey, nextKey)),
             )
       lastMountHandleAnchorValueByAnchor.set(anchor as object, mountHandleValue)
       scheduleTrackedTextControlRestoreWithin(targetParent)
@@ -1512,8 +1529,13 @@ const lifecycleCore = createLifecycleCore({
 /** 根据 props 生成组件事件发射器，并兼容 Custom Element emit bridge。 */
 export const useEmit = lifecycleCore.useEmit
 /** 创建 Vapor 块挂载句柄，setup 会在 runtime-vapor 作用域内执行。 */
-export const vapor = (setup: (parentContext?: DomElementLike | null) => VaporSetupResult) => {
-  return withActiveKeepAliveHookTargetMetadata(createRepeatableVaporHandle(setup))
+export const vapor = (
+  setup: (parentContext?: DomElementLike | null) => VaporSetupResult,
+  compiledAnchor = false,
+) => {
+  return withActiveKeepAliveHookTargetMetadata(
+    createRepeatableVaporHandle(setup, undefined, compiledAnchor),
+  )
 }
 /** 生命周期：创建前 */
 export const onBeforeCreate = lifecycleCore.onBeforeCreate

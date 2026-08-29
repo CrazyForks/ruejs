@@ -101,7 +101,7 @@ const View: FC = () => {
 }
 
 #[test]
-fn apply_escalates_signal_with_component_render_marker_to_vapor() {
+fn apply_keeps_direct_vapor_setup_off_the_component_render_effect() {
     let src = r#"
 import { type FC, signal, vapor } from '@rue-js/rue';
 
@@ -116,7 +116,7 @@ const View: FC = (props) => {
     assert!(out.contains(&normalize("@rue-js/rue/vapor")), "{out}");
     assert!(!out.contains(&normalize("@rue-js/rue/compiled")), "{out}");
     assert!(out.contains("signal"), "{out}");
-    assert!(out.contains("_$vaporMarkComponentRenderReactive"), "{out}");
+    assert!(!out.contains("_$vaporMarkComponentRenderReactive"), "{out}");
 }
 
 #[test]
@@ -140,7 +140,6 @@ const View: FC = () => {
 fn apply_closes_compiled_and_vapor_capability_boundaries() {
     let vapor_cases = [
         ("component", "export const View = () => <Child value=\"x\" />;"),
-        ("fragment", "export const View = () => <><i>A</i><b>B</b></>;"),
         (
             "conditional renderable",
             "export const View = (props) => <div>{props.ready ? <i>A</i> : null}</div>;",
@@ -188,6 +187,13 @@ fn apply_closes_compiled_and_vapor_capability_boundaries() {
             "{name} must route through the Vapor boundary: {out}",
         );
     }
+
+    let fragment_src = "export const View = () => <><i>A</i><b>B</b></>;";
+    let (fragment_program, fragment_cm) = parse_program(fragment_src);
+    let fragment_out = emit(apply(fragment_program), fragment_cm);
+    assert!(fragment_out.contains("@rue-js/rue/compiled"), "{fragment_out}");
+    assert!(!fragment_out.contains("@rue-js/rue/vapor"), "{fragment_out}");
+    assert!(fragment_out.contains("_$compiledRoot"), "{fragment_out}");
 
     let unproven_src = "export const View = () => <div>{state.get()}</div>;";
     let (unproven_program, unproven_cm) = parse_program(unproven_src);
@@ -304,7 +310,7 @@ const View = () => {
 };
 "#;
     let (program, cm) = parse_program(src);
-    let out = normalize(&emit(run_full_transform(program, true), cm));
+    let out = normalize(&emit(run_full_transform(program, true, None), cm));
 
     assert!(out.contains(&normalize("@rue-js/rue/vapor")));
     assert!(out.contains(&normalize(r#"const count = _$vaporWithHookId("ref:"#)));

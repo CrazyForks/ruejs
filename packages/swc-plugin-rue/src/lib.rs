@@ -76,18 +76,26 @@ pub fn transform(program: Program, metadata: TransformPluginProgramMetadata) -> 
         .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
         .and_then(|config| config.get("staticTemplates").and_then(serde_json::Value::as_bool))
         .unwrap_or(false);
-    run_full_transform(program, static_templates)
+    run_full_transform(
+        program,
+        static_templates,
+        metadata.comments.or(Some(swc_core::plugin::proxies::PluginCommentsProxy)),
+    )
 }
 
 // 测试入口：在单元测试中直接复用同样的转换逻辑
 pub fn apply(program: Program) -> Program {
-    run_full_transform(program, true)
+    run_full_transform(program, true, None)
 }
 
-fn run_full_transform(program: Program, static_templates: bool) -> Program {
+fn run_full_transform(
+    program: Program,
+    static_templates: bool,
+    comments: Option<swc_core::plugin::proxies::PluginCommentsProxy>,
+) -> Program {
     let mut p = program;
     log::info("rue-swc: apply(pre+vapor) start");
-    p.visit_mut_with(&mut pre::PreTransform::default());
+    p.visit_mut_with(&mut pre::PreTransform::with_comments(comments));
     p.visit_mut_with(&mut vapor::VaporTransform {
         next_el: 0,
         next_list: 0,

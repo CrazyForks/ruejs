@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": "docs",
-  "files": 92,
+  "files": 95,
   "blocks": [
     {
       "id": "about/astro-islands-alignment:0",
@@ -7878,6 +7878,50 @@
       "type": "list",
       "text": "渲染函数 自定义元素",
       "searchText": "api 参考 高级 api 渲染函数 自定义元素 api/index"
+    },
+    {
+      "id": "api/mdx-detail-fixture:0",
+      "docId": "api/mdx-detail-fixture",
+      "route": "/api/api/mdx-detail-fixture",
+      "href": "/api/api/mdx-detail-fixture#-api-mdx-detail",
+      "title": "API MDX Detail",
+      "sectionTitle": "API MDX Detail",
+      "type": "heading",
+      "text": "API MDX Detail",
+      "searchText": "api mdx detail api mdx detail api mdx detail api/mdx-detail-fixture"
+    },
+    {
+      "id": "api/mdx-detail-fixture:1",
+      "docId": "api/mdx-detail-fixture",
+      "route": "/api/api/mdx-detail-fixture",
+      "href": "/api/api/mdx-detail-fixture#-api-mdx-detail",
+      "title": "API MDX Detail",
+      "sectionTitle": "API MDX Detail",
+      "type": "paragraph",
+      "text": "API content rendered from an MDX module.",
+      "searchText": "api mdx detail api mdx detail api content rendered from an mdx module. api/mdx-detail-fixture"
+    },
+    {
+      "id": "api/mdx-detail-fixture:2",
+      "docId": "api/mdx-detail-fixture",
+      "route": "/api/api/mdx-detail-fixture",
+      "href": "/api/api/mdx-detail-fixture#-api-mdx-detail",
+      "title": "API MDX Detail",
+      "sectionTitle": "API MDX Detail",
+      "type": "code",
+      "text": "pnpm create rue@latest",
+      "searchText": "api mdx detail api mdx detail pnpm create rue@latest api/mdx-detail-fixture"
+    },
+    {
+      "id": "api/mdx-detail-fixture:3",
+      "docId": "api/mdx-detail-fixture",
+      "route": "/api/api/mdx-detail-fixture",
+      "href": "/api/api/mdx-detail-fixture#-api-mdx-detail",
+      "title": "API MDX Detail",
+      "sectionTitle": "API MDX Detail",
+      "type": "code",
+      "text": "npm create rue@latest",
+      "searchText": "api mdx detail api mdx detail npm create rue@latest api/mdx-detail-fixture"
     },
     {
       "id": "api/reactivity-advanced:0",
@@ -35034,12 +35078,23 @@
       "href": "/guide/guide/extras/render-function#render-functions-jsx",
       "title": "渲染函数与 JSX",
       "sectionTitle": "渲染函数与 JSX",
+      "type": "paragraph",
+      "text": "h()/render 使用默认入口的 rerender 兼容协议：同身份组件更新时可以重新执行渲染函数，并使用通用 Element / Fragment patch 保留 DOM 语义。这个兼容 renderer 是手写渲染函数的独立 bundle 成本；编译组件使用 fine-grained helper，同身份 props 更新只同步响应式 props 并触发局部 effect，不会自动携带这套 compat patch。",
+      "searchText": "渲染函数与 jsx 渲染函数与 jsx h()/render 使用默认入口的 rerender 兼容协议：同身份组件更新时可以重新执行渲染函数，并使用通用 element / fragment patch 保留 dom 语义。这个兼容 renderer 是手写渲染函数的独立 bundle 成本；编译组件使用 fine-grained helper，同身份 props 更新只同步响应式 props 并触发局部 effect，不会自动携带这套 compat patch。 guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:3",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#render-functions-jsx",
+      "title": "渲染函数与 JSX",
+      "sectionTitle": "渲染函数与 JSX",
       "type": "blockquote",
       "text": "如果你还没建立 Rue 渲染机制的整体图景，请先阅读渲染机制。",
       "searchText": "渲染函数与 jsx 渲染函数与 jsx 如果你还没建立 rue 渲染机制的整体图景，请先阅读渲染机制。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:3",
+      "id": "guide/extras/render-function:4",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#basic-usage",
@@ -35050,7 +35105,7 @@
       "searchText": "渲染函数与 jsx 基本用法 基本用法 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:4",
+      "id": "guide/extras/render-function:5",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35061,7 +35116,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 创建渲染输出 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:6",
+      "id": "guide/extras/render-function:7",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35072,7 +35127,18 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 h() 创建的是公开渲染输出。编译器通常会直接生成 renderable / block，而不是在每个节点上都显式调用 h()。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:7",
+      "id": "guide/extras/render-function:8",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#creating-render-output",
+      "title": "渲染函数与 JSX",
+      "sectionTitle": "创建渲染输出",
+      "type": "paragraph",
+      "text": "更严格地说，经过 Rue SWC 的 JSX 不会生成 h()、jsx、jsxs 或 jsxDEV 调用，也不会导入 @rue-js/jsx-runtime；它会按已证明的能力直接选择 compiled 或 Vapor 子入口。@rue-js/jsx-runtime 仍为没有经过 Rue SWC 的 automatic JSX transform 提供兼容性，它和手写 h() 一样会加载通用 renderer。若目标是 compiled-only 体积，请确保源码经过 Rue SWC，而不是仅把 TypeScript 的 jsxImportSource 指向 Rue。",
+      "searchText": "渲染函数与 jsx 创建渲染输出 更严格地说，经过 rue swc 的 jsx 不会生成 h()、jsx、jsxs 或 jsxdev 调用，也不会导入 @rue-js/jsx-runtime；它会按已证明的能力直接选择 compiled 或 vapor 子入口。@rue-js/jsx-runtime 仍为没有经过 rue swc 的 automatic jsx transform 提供兼容性，它和手写 h() 一样会加载通用 renderer。若目标是 compiled-only 体积，请确保源码经过 rue swc，而不是仅把 typescript 的 jsximportsource 指向 rue。 guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:9",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35083,7 +35149,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 import { h } from '@rue-js/rue' const output = h('div', { id: 'foo', class: 'bar' }, [ /* children */ ]) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:8",
+      "id": "guide/extras/render-function:10",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35094,7 +35160,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 h() 是 hyperscript 的缩写。你可以把它理解为“手写描述渲染输出的最小 api”。它在 rue 中主要用于： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:9",
+      "id": "guide/extras/render-function:11",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35105,7 +35171,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 手写渲染函数 包装高度动态的子树 构造需要手动组合的渲染输出 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:10",
+      "id": "guide/extras/render-function:12",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35116,7 +35182,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 h() 的参数保持灵活： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:11",
+      "id": "guide/extras/render-function:13",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35127,7 +35193,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 // 除 type 外的所有参数都是可选的 h('div') h('div', { id: 'foo' }) // props 中可以使用属性和特性 h('div', { class: 'bar', innerhtml: 'hello' }) // 可以使用 `.` 和 `^` 前缀分别添加 `.prop` 和 `.attr` 修饰符 h('div', { '.name': 'some-name', '^width': '100' }) // class 和 style 具有与模板中相同的对象/数组值支持 h('div', { class: [foo, { bar }], style: { color: 'red' } }) // 事件监听器应该以 onxxx 形式传递 h('div', { onclick: () => {} }) // children 可以是字符串、数组或 renderable h('div', { id: 'foo' }, 'hello') h('div', 'hello') h('div', [h('span', 'hello')]) h('div', ['hello', h('span', 'hello')]) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:12",
+      "id": "guide/extras/render-function:14",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35138,7 +35204,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 当你显式操作这类公开渲染输出对象时，通常会看到下面这些公开字段： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:13",
+      "id": "guide/extras/render-function:15",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35149,7 +35215,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 const output = h('div', { id: 'foo' }, []) output.type output.props output.children output.key guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:14",
+      "id": "guide/extras/render-function:16",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
@@ -35160,7 +35226,7 @@
       "searchText": "渲染函数与 jsx 创建渲染输出 :::warning 注意 不要依赖公开字段之外的内部属性。rue 当前的公开渲染输出会继续随运行时演进而调整。 ::: guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:15",
+      "id": "guide/extras/render-function:17",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35171,7 +35237,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 声明渲染函数 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:16",
+      "id": "guide/extras/render-function:18",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35182,7 +35248,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 在 rue 当前的 fc 模式下，函数组件本身就是渲染函数。你直接返回渲染输出即可，不需要再额外返回一个 () => ...。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:17",
+      "id": "guide/extras/render-function:19",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35193,7 +35259,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 import { ref, h } from '@rue-js/rue' import type { fc } from '@rue-js/rue' interface props { msg: string } const app: fc<props> = props => { const count = ref(1) return h('div', `${props.msg} ${count.value}`) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:18",
+      "id": "guide/extras/render-function:20",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35204,7 +35270,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 除了返回单个节点，你还可以直接返回字符串或数组： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:19",
+      "id": "guide/extras/render-function:21",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35215,7 +35281,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 import type { fc } from '@rue-js/rue' const textonly: fc = () => 'hello world!' guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:20",
+      "id": "guide/extras/render-function:22",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35226,7 +35292,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 import { h } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const multiroot: fc = () => [h('div', 'one'), h('div', 'two'), h('div', 'three')] guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:21",
+      "id": "guide/extras/render-function:23",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35237,7 +35303,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 :::tip 如果你在旧文档或旧代码里见到 return () => ...，那通常对应的是早期 setup() 风格写法，不是 rue 当前推荐的 fc 组件签名。 ::: guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:22",
+      "id": "guide/extras/render-function:24",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35248,7 +35314,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 如果组件不需要额外状态，也可以直接写成普通函数： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:23",
+      "id": "guide/extras/render-function:25",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#declaring-render-functions",
@@ -35259,7 +35325,7 @@
       "searchText": "渲染函数与 jsx 声明渲染函数 function hello() { return 'hello world!' } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:24",
+      "id": "guide/extras/render-function:26",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
@@ -35270,7 +35336,7 @@
       "searchText": "渲染函数与 jsx 渲染输出必须唯一 渲染输出必须唯一 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:25",
+      "id": "guide/extras/render-function:27",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
@@ -35281,7 +35347,7 @@
       "searchText": "渲染函数与 jsx 渲染输出必须唯一 同一个输出对象不要在一次渲染里重复复用。这个规则同样适用于你手动持有的 dom / block / renderable 边界。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:26",
+      "id": "guide/extras/render-function:28",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
@@ -35292,7 +35358,7 @@
       "searchText": "渲染函数与 jsx 渲染输出必须唯一 function render() { const p = h('p', 'hi') return h('div', [p, p]) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:27",
+      "id": "guide/extras/render-function:29",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
@@ -35303,7 +35369,7 @@
       "searchText": "渲染函数与 jsx 渲染输出必须唯一 如果你需要多个相同节点，请为每一项重新创建： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:28",
+      "id": "guide/extras/render-function:30",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
@@ -35314,7 +35380,7 @@
       "searchText": "渲染函数与 jsx 渲染输出必须唯一 function render() { return h( 'div', array.from({ length: 20 }).map(() => h('p', 'hi')), ) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:29",
+      "id": "guide/extras/render-function:31",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-tsx",
@@ -35325,7 +35391,7 @@
       "searchText": "渲染函数与 jsx jsx / tsx jsx / tsx guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:30",
+      "id": "guide/extras/render-function:32",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-tsx",
@@ -35336,7 +35402,7 @@
       "searchText": "渲染函数与 jsx jsx / tsx jsx 允许你用更接近模板的方式编写渲染逻辑： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:31",
+      "id": "guide/extras/render-function:33",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-tsx",
@@ -35347,7 +35413,7 @@
       "searchText": "渲染函数与 jsx jsx / tsx const output = <div>hello</div> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:32",
+      "id": "guide/extras/render-function:34",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-tsx",
@@ -35358,7 +35424,7 @@
       "searchText": "渲染函数与 jsx jsx / tsx const output = <div id={dynamicid}>hello, {username}</div> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:33",
+      "id": "guide/extras/render-function:35",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-tsx",
@@ -35369,7 +35435,7 @@
       "searchText": "渲染函数与 jsx jsx / tsx rue 的 jsx 与 react jsx 有两点最容易混淆的区别： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:34",
+      "id": "guide/extras/render-function:36",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-tsx",
@@ -35380,7 +35446,7 @@
       "searchText": "渲染函数与 jsx jsx / tsx 你可以直接使用 class 和 for，无需改写成 classname 或 htmlfor 组件 children 最终会落到 props.children 或显式命名 props，而不是默认套入额外的 slots 上下文 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:35",
+      "id": "guide/extras/render-function:37",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-tsx",
@@ -35391,7 +35457,7 @@
       "searchText": "渲染函数与 jsx jsx / tsx rue 的 jsx 编译会优先落到当前的 renderable / block 执行模型。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:36",
+      "id": "guide/extras/render-function:38",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-type-inference",
@@ -35402,7 +35468,7 @@
       "searchText": "渲染函数与 jsx jsx 类型推断 jsx 类型推断 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:37",
+      "id": "guide/extras/render-function:39",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-type-inference",
@@ -35413,7 +35479,7 @@
       "searchText": "渲染函数与 jsx jsx 类型推断 使用 tsx 时，请确保 tsconfig.json 中保留 jsx 语法给 rue 的转换器处理： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:38",
+      "id": "guide/extras/render-function:40",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-type-inference",
@@ -35424,7 +35490,7 @@
       "searchText": "渲染函数与 jsx jsx 类型推断 { \"compileroptions\": { \"jsx\": \"preserve\", \"jsximportsource\": \"@rue-js/rue\" } } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:39",
+      "id": "guide/extras/render-function:41",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#jsx-type-inference",
@@ -35435,7 +35501,7 @@
       "searchText": "渲染函数与 jsx jsx 类型推断 你也可以在单个文件顶部使用 / @jsximportsource @rue-js/rue /。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:40",
+      "id": "guide/extras/render-function:42",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#render-function-recipes",
@@ -35446,7 +35512,7 @@
       "searchText": "渲染函数与 jsx 渲染函数配方 渲染函数配方 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:41",
+      "id": "guide/extras/render-function:43",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#render-function-recipes",
@@ -35457,7 +35523,7 @@
       "searchText": "渲染函数与 jsx 渲染函数配方 下面是一些模板能力对应的渲染函数 / jsx 写法。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:42",
+      "id": "guide/extras/render-function:44",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-if",
@@ -35468,7 +35534,7 @@
       "searchText": "渲染函数与 jsx v-if v-if guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:43",
+      "id": "guide/extras/render-function:45",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-if",
@@ -35479,7 +35545,7 @@
       "searchText": "渲染函数与 jsx v-if 模板： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:44",
+      "id": "guide/extras/render-function:46",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-if",
@@ -35490,7 +35556,7 @@
       "searchText": "渲染函数与 jsx v-if <div> <div v-if={ok.value}>yes</div> <span v-else>no</span> </div> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:45",
+      "id": "guide/extras/render-function:47",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-if",
@@ -35501,7 +35567,7 @@
       "searchText": "渲染函数与 jsx v-if 等效渲染函数 / jsx： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:46",
+      "id": "guide/extras/render-function:48",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-if",
@@ -35512,7 +35578,7 @@
       "searchText": "渲染函数与 jsx v-if import { h, ref } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = () => { const ok = ref(true) return h('div', [ok.value ? h('div', 'yes') : h('span', 'no')]) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:47",
+      "id": "guide/extras/render-function:49",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-if",
@@ -35523,7 +35589,7 @@
       "searchText": "渲染函数与 jsx v-if <div>{ok.value ? <div>yes</div> : <span>no</span>}</div> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:48",
+      "id": "guide/extras/render-function:50",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-for",
@@ -35534,7 +35600,7 @@
       "searchText": "渲染函数与 jsx v-for v-for guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:49",
+      "id": "guide/extras/render-function:51",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-for",
@@ -35545,7 +35611,7 @@
       "searchText": "渲染函数与 jsx v-for 模板： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:50",
+      "id": "guide/extras/render-function:52",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-for",
@@ -35556,7 +35622,7 @@
       "searchText": "渲染函数与 jsx v-for <ul> <li v-for=\"{ id, text } in items.value\" key={id}> {text} </li> </ul> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:51",
+      "id": "guide/extras/render-function:53",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-for",
@@ -35567,7 +35633,7 @@
       "searchText": "渲染函数与 jsx v-for 等效渲染函数 / jsx： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:52",
+      "id": "guide/extras/render-function:54",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-for",
@@ -35578,7 +35644,7 @@
       "searchText": "渲染函数与 jsx v-for import { h, ref } from '@rue-js/rue' import type { fc } from '@rue-js/rue' interface item { id: number text: string } const app: fc = () => { const items = ref<item[]>([ { id: 1, text: 'item 1' }, { id: 2, text: 'item 2' }, ]) return h( 'ul', items.value.map(({ id, text }) => h('li', { key: id }, text)), ) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:53",
+      "id": "guide/extras/render-function:55",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-for",
@@ -35589,7 +35655,7 @@
       "searchText": "渲染函数与 jsx v-for <ul> {items.value.map(({ id, text }) => ( <li key={id}>{text}</li> ))} </ul> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:54",
+      "id": "guide/extras/render-function:56",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-on",
@@ -35600,7 +35666,7 @@
       "searchText": "渲染函数与 jsx v-on v-on guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:55",
+      "id": "guide/extras/render-function:57",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-on",
@@ -35611,7 +35677,7 @@
       "searchText": "渲染函数与 jsx v-on 以 on 开头后跟大写字母的 prop 名称会被视为事件监听器： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:56",
+      "id": "guide/extras/render-function:58",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-on",
@@ -35622,7 +35688,7 @@
       "searchText": "渲染函数与 jsx v-on import { h } from '@rue-js/rue' h( 'button', { onclick(event: mouseevent) { /* ... */ }, }, '点击我', ) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:57",
+      "id": "guide/extras/render-function:59",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-on",
@@ -35633,7 +35699,7 @@
       "searchText": "渲染函数与 jsx v-on <button onclick={event => { /* ... */ }} > 点击我 </button> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:58",
+      "id": "guide/extras/render-function:60",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#event-modifiers",
@@ -35644,7 +35710,7 @@
       "searchText": "渲染函数与 jsx 事件修饰符 事件修饰符 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:59",
+      "id": "guide/extras/render-function:61",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#event-modifiers",
@@ -35655,7 +35721,7 @@
       "searchText": "渲染函数与 jsx 事件修饰符 .passive、.capture 和 .once 可以直接拼在事件名后面： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:60",
+      "id": "guide/extras/render-function:62",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#event-modifiers",
@@ -35666,7 +35732,7 @@
       "searchText": "渲染函数与 jsx 事件修饰符 h('input', { onclickcapture() { /* capture */ }, onkeyuponce() { /* once */ }, onmouseoveroncecapture() { /* once + capture */ }, }) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:61",
+      "id": "guide/extras/render-function:63",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#event-modifiers",
@@ -35677,7 +35743,7 @@
       "searchText": "渲染函数与 jsx 事件修饰符 <input onclickcapture={() => {}} onkeyuponce={() => {}} onmouseoveroncecapture={() => {}} /> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:62",
+      "id": "guide/extras/render-function:64",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#event-modifiers",
@@ -35688,7 +35754,7 @@
       "searchText": "渲染函数与 jsx 事件修饰符 其他修饰符可以直接写在处理器中，或在 tsx 模板中使用 v-on / r-on 事件指令： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:63",
+      "id": "guide/extras/render-function:65",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#event-modifiers",
@@ -35699,7 +35765,7 @@
       "searchText": "渲染函数与 jsx 事件修饰符 h('div', { onclick(event) { if (event.target !== event.currenttarget) return // ... }, }) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:64",
+      "id": "guide/extras/render-function:66",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35710,7 +35776,7 @@
       "searchText": "渲染函数与 jsx 组件 组件 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:65",
+      "id": "guide/extras/render-function:67",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35721,7 +35787,7 @@
       "searchText": "渲染函数与 jsx 组件 要为组件创建输出，传给 h() 的第一个参数应该是组件本身： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:66",
+      "id": "guide/extras/render-function:68",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35732,7 +35798,7 @@
       "searchText": "渲染函数与 jsx 组件 import foo from './foo.tsx' import bar from './bar.tsx' function render() { return h('div', [h(foo), h(bar)]) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:67",
+      "id": "guide/extras/render-function:69",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35743,7 +35809,7 @@
       "searchText": "渲染函数与 jsx 组件 function render() { return ( <div> <foo /> <bar /> </div> ) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:68",
+      "id": "guide/extras/render-function:70",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35754,7 +35820,7 @@
       "searchText": "渲染函数与 jsx 组件 动态组件同样直接通过条件表达式切换： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:69",
+      "id": "guide/extras/render-function:71",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35765,7 +35831,7 @@
       "searchText": "渲染函数与 jsx 组件 function render() { return ok.value ? h(foo) : h(bar) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:70",
+      "id": "guide/extras/render-function:72",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35776,7 +35842,7 @@
       "searchText": "渲染函数与 jsx 组件 rue 当前更推荐直接导入组件。默认主入口不再另外文档化按名称解析组件的渲染函数 helper。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:71",
+      "id": "guide/extras/render-function:73",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35787,7 +35853,7 @@
       "searchText": "渲染函数与 jsx 渲染插槽 渲染插槽 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:72",
+      "id": "guide/extras/render-function:74",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35798,7 +35864,7 @@
       "searchText": "渲染函数与 jsx 渲染插槽 rue 当前更推荐把插槽理解成普通 props： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:73",
+      "id": "guide/extras/render-function:75",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35809,7 +35875,7 @@
       "searchText": "渲染函数与 jsx 渲染插槽 默认插槽读取 props.children 具名插槽通常建模成显式命名 props，如 header、footer 作用域插槽则是“函数作为 children / prop” guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:74",
+      "id": "guide/extras/render-function:76",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35820,7 +35886,7 @@
       "searchText": "渲染函数与 jsx 渲染插槽 import { h } from '@rue-js/rue' import type { fc, renderableoutput } from '@rue-js/rue' interface layoutprops { message: string footer?: (scope: { text: string }) => renderableoutput children?: renderableoutput } const layout: fc<layoutprops> = props => { return h('section', [ h('div', props.children), h('footer', props.footer?.({ text: props.message }) ?? null), ]) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:75",
+      "id": "guide/extras/render-function:77",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35831,7 +35897,7 @@
       "searchText": "渲染函数与 jsx 渲染插槽 jsx 中同样如此： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:76",
+      "id": "guide/extras/render-function:78",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35842,7 +35908,7 @@
       "searchText": "渲染函数与 jsx 渲染插槽 function layout(props: layoutprops) { return ( <section> <div>{props.children}</div> <footer>{props.footer?.({ text: props.message })}</footer> </section> ) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:77",
+      "id": "guide/extras/render-function:79",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#passing-slots",
@@ -35853,7 +35919,7 @@
       "searchText": "渲染函数与 jsx 传递插槽 传递插槽 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:78",
+      "id": "guide/extras/render-function:80",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#passing-slots",
@@ -35864,7 +35930,7 @@
       "searchText": "渲染函数与 jsx 传递插槽 传递默认内容时，直接把 children 放到第三个参数或 jsx 子节点里即可；传递具名内容时，使用显式命名 props。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:79",
+      "id": "guide/extras/render-function:81",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#passing-slots",
@@ -35875,7 +35941,7 @@
       "searchText": "渲染函数与 jsx 传递插槽 // 默认内容 h(layout, { message: 'hello' }, 'body') // 具名内容 h( layout, { message: 'hello', footer: ({ text }) => h('small', text), }, 'body', ) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:80",
+      "id": "guide/extras/render-function:82",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#passing-slots",
@@ -35886,7 +35952,7 @@
       "searchText": "渲染函数与 jsx 传递插槽 <layout message=\"hello\">body</layout> <layout message=\"hello\" footer={({ text }) => <small>{text}</small>}> body </layout> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:81",
+      "id": "guide/extras/render-function:83",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#passing-slots",
@@ -35897,7 +35963,7 @@
       "searchText": "渲染函数与 jsx 传递插槽 如果你需要把调用时机延迟到子组件内部，就把 children 本身写成函数。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:82",
+      "id": "guide/extras/render-function:84",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#scoped-slots",
@@ -35908,7 +35974,7 @@
       "searchText": "渲染函数与 jsx 作用域插槽 作用域插槽 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:83",
+      "id": "guide/extras/render-function:85",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#scoped-slots",
@@ -35919,7 +35985,7 @@
       "searchText": "渲染函数与 jsx 作用域插槽 作用域插槽在 rue 中就是 render prop：父组件把函数传给子组件，子组件在合适的时机调用，并把自己的数据作为参数传回去。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:84",
+      "id": "guide/extras/render-function:86",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#scoped-slots",
@@ -35930,7 +35996,7 @@
       "searchText": "渲染函数与 jsx 作用域插槽 import { h, ref } from '@rue-js/rue' import type { fc, renderableoutput } from '@rue-js/rue' interface childprops { children?: (scope: { text: string }) => renderableoutput } const child: fc<childprops> = props => { const text = ref('hi') return h('div', props.children?.({ text: text.value }) ?? null) } const parent: fc = () => h(child, ({ text }) => h('p', text)) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:85",
+      "id": "guide/extras/render-function:87",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#scoped-slots",
@@ -35941,7 +36007,7 @@
       "searchText": "渲染函数与 jsx 作用域插槽 <child>{({ text }) => <p>{text}</p>}</child> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:86",
+      "id": "guide/extras/render-function:88",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#built-in-components",
@@ -35952,7 +36018,7 @@
       "searchText": "渲染函数与 jsx 内置组件 内置组件 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:87",
+      "id": "guide/extras/render-function:89",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#built-in-components",
@@ -35963,7 +36029,7 @@
       "searchText": "渲染函数与 jsx 内置组件 渲染函数里使用内置组件时，直接导入它们即可。当前文档中的核心内置组件包括 teleport、transition 和 transitiongroup： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:88",
+      "id": "guide/extras/render-function:90",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#built-in-components",
@@ -35974,7 +36040,7 @@
       "searchText": "渲染函数与 jsx 内置组件 import { h, teleport, transition, transitiongroup } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = () => h(transition, { mode: 'out-in' }) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:89",
+      "id": "guide/extras/render-function:91",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#built-in-components",
@@ -35985,7 +36051,7 @@
       "searchText": "渲染函数与 jsx 内置组件 这些组件在默认路径下同样直接消费 renderable / children，而不要求你手动构造旧的对象桥接层。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:90",
+      "id": "guide/extras/render-function:92",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-model",
@@ -35996,7 +36062,7 @@
       "searchText": "渲染函数与 jsx v-model v-model guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:91",
+      "id": "guide/extras/render-function:93",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-model",
@@ -36007,7 +36073,7 @@
       "searchText": "渲染函数与 jsx v-model v-model 在手写渲染函数里需要你显式提供 modelvalue 和 onupdatemodelvalue： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:92",
+      "id": "guide/extras/render-function:94",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#v-model",
@@ -36018,7 +36084,7 @@
       "searchText": "渲染函数与 jsx v-model import type { fc } from '@rue-js/rue' interface props { modelvalue: string onupdatemodelvalue?: (value: string) => void } const myinput: fc<props> = props => { return ( <input value={props.modelvalue} oninput={event => props.onupdatemodelvalue?.((event.target as htmlinputelement).value)} /> ) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:93",
+      "id": "guide/extras/render-function:95",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#template-refs",
@@ -36029,7 +36095,7 @@
       "searchText": "渲染函数与 jsx 模板 refs 模板 refs guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:94",
+      "id": "guide/extras/render-function:96",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#template-refs",
@@ -36040,7 +36106,7 @@
       "searchText": "渲染函数与 jsx 模板 refs 模板 ref 当前更适合在模板或 jsx 路径中使用。对于手写 h() 边界，如需获取节点引用，优先通过显式回调 props、对象 ref、原始 dom 节点或 mount handle 来建模，而不是再假设存在额外的旧式 ref 收集机制。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:95",
+      "id": "guide/extras/render-function:97",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -36051,7 +36117,7 @@
       "searchText": "渲染函数与 jsx 函数式组件 函数式组件 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:96",
+      "id": "guide/extras/render-function:98",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -36062,7 +36128,7 @@
       "searchText": "渲染函数与 jsx 函数式组件 rue 当前的函数式组件就是普通 fc：接收 props，直接返回渲染输出。它不需要 this，也不依赖额外的 setup 上下文。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:97",
+      "id": "guide/extras/render-function:99",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -36073,7 +36139,7 @@
       "searchText": "渲染函数与 jsx 函数式组件 import type { fc } from '@rue-js/rue' interface props { message: string onsendmessage?: (message: string) => void } const mycomponent: fc<props> = props => { return <button onclick={() => props.onsendmessage?.(props.message)}>{props.message}</button> } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:98",
+      "id": "guide/extras/render-function:100",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -36084,7 +36150,7 @@
       "searchText": "渲染函数与 jsx 函数式组件 如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 onsendmessage、onclose、onupdatemodelvalue。如果组件需要默认内容或 render prop，则继续使用 props.children。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:99",
+      "id": "guide/extras/render-function:101",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -36095,7 +36161,7 @@
       "searchText": "渲染函数与 jsx 函数式组件 函数组件可以像普通组件一样被导入、注册和消费；把函数传给 h() 的第一个参数时，它就会被视为组件。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:100",
+      "id": "guide/extras/render-function:102",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#typing-functional-components",
@@ -36106,7 +36172,7 @@
       "searchText": "渲染函数与 jsx 函数式组件的类型定义 函数式组件的类型定义 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:101",
+      "id": "guide/extras/render-function:103",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#typing-functional-components",
@@ -36117,7 +36183,7 @@
       "searchText": "渲染函数与 jsx 函数式组件的类型定义 大多数场景下，直接给 fc 标注类型就够了： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:102",
+      "id": "guide/extras/render-function:104",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#typing-functional-components",
@@ -36128,7 +36194,7 @@
       "searchText": "渲染函数与 jsx 函数式组件的类型定义 import type { fc } from '@rue-js/rue' interface messagebuttonprops { message: string onsendmessage?: (message: string) => void } const messagebutton: fc<messagebuttonprops> = props => { return <button onclick={() => props.onsendmessage?.(props.message)}>{props.message}</button> } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:103",
+      "id": "guide/extras/render-function:105",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#typing-functional-components",
@@ -36139,7 +36205,7 @@
       "searchText": "渲染函数与 jsx 函数式组件的类型定义 如果你的组件还要接受 render prop，可以继续把它声明在 props 里： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:104",
+      "id": "guide/extras/render-function:106",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#typing-functional-components",
@@ -36212,8 +36278,8 @@
       "title": "渲染机制",
       "sectionTitle": "三层执行模型",
       "type": "list",
-      "text": "静态 DOM：没有 Rue 动态值的原生 JSX 会被直接编译成 DOM 创建与插入代码，Rue 值依赖为零。 Compiled core：Signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 DOM 核心，不依赖 createRue、JSX facade 或通用 Vapor helper。 Vapor fallback：组件、多根或结构化列表、Hydration、Teleport、Transition、生命周期、异步或不透明 renderable 等复杂能力进入兼容层，以完整语义为优先。",
-      "searchText": "渲染机制 三层执行模型 静态 dom：没有 rue 动态值的原生 jsx 会被直接编译成 dom 创建与插入代码，rue 值依赖为零。 compiled core：signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 dom 核心，不依赖 createrue、jsx facade 或通用 vapor helper。 vapor fallback：组件、多根或结构化列表、hydration、teleport、transition、生命周期、异步或不透明 renderable 等复杂能力进入兼容层，以完整语义为优先。 guide/extras/rendering-mechanism"
+      "text": "静态 DOM：没有 Rue 动态值的原生 JSX 会被直接编译成 DOM 创建与插入代码，Rue 值依赖为零。 Compiled core：Signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 DOM 核心，不依赖 createRue、JSX facade 或通用 Vapor helper。 Vapor fallback：手写 h()、未编译组件，以及 Hydration、Teleport、Transition、异步或不透明 renderable 等无法静态证明的能力进入兼容层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。",
+      "searchText": "渲染机制 三层执行模型 静态 dom：没有 rue 动态值的原生 jsx 会被直接编译成 dom 创建与插入代码，rue 值依赖为零。 compiled core：signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 dom 核心，不依赖 createrue、jsx facade 或通用 vapor helper。 vapor fallback：手写 h()、未编译组件，以及 hydration、teleport、transition、异步或不透明 renderable 等无法静态证明的能力进入兼容层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:7",
@@ -36256,8 +36322,8 @@
       "title": "渲染机制",
       "sectionTitle": "渲染管道",
       "type": "list",
-      "text": "编译：模板或 JSX 被分类为静态 DOM、compiled core 或 Vapor fallback。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：静态输出直接创建真实 DOM；动态输出由对应的最小层建立 effect、owner、锚点或区间边界。 更新：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 DOM。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 DOM 区间一并释放。",
-      "searchText": "渲染机制 渲染管道 编译：模板或 jsx 被分类为静态 dom、compiled core 或 vapor fallback。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：静态输出直接创建真实 dom；动态输出由对应的最小层建立 effect、owner、锚点或区间边界。 更新：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 dom。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 dom 区间一并释放。 guide/extras/rendering-mechanism"
+      "text": "编译：模板或 JSX 被分类为静态 DOM、compiled core 或 Vapor fallback。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：静态输出直接创建真实 DOM；动态输出由对应的最小层建立 effect、owner、锚点或区间边界。 更新：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 DOM。同身份编译组件会原地同步只读响应式 props，不会仅因 props 变化重新调用整个组件函数。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 DOM 区间一并释放。",
+      "searchText": "渲染机制 渲染管道 编译：模板或 jsx 被分类为静态 dom、compiled core 或 vapor fallback。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。 挂载：静态输出直接创建真实 dom；动态输出由对应的最小层建立 effect、owner、锚点或区间边界。 更新：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 dom。同身份编译组件会原地同步只读响应式 props，不会仅因 props 变化重新调用整个组件函数。 清理：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 dom 区间一并释放。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:11",
@@ -36340,6 +36406,17 @@
       "id": "guide/extras/rendering-mechanism:18",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
+      "title": "渲染机制",
+      "sectionTitle": "模板与渲染函数",
+      "type": "paragraph",
+      "text": "这里的“编译 JSX”特指经过 Rue SWC 的产物。编译器会直接导入 @rue-js/rue/compiled 或按能力回退到 @rue-js/rue/vapor，不会把 h()、jsx、jsxs、jsxDEV 当作内部渲染货币，也不会引入 @rue-js/jsx-runtime。手写 h()，以及没有经过 Rue SWC、由 TypeScript/Babel automatic runtime 生成的 JSX，则属于显式兼容消费端，会加载默认 renderer 的通用 Element / Fragment patch。两类兼容写法仍受支持，但其 bundle 成本不能代表 compiled core 的成本。",
+      "searchText": "渲染机制 模板与渲染函数 这里的“编译 jsx”特指经过 rue swc 的产物。编译器会直接导入 @rue-js/rue/compiled 或按能力回退到 @rue-js/rue/vapor，不会把 h()、jsx、jsxs、jsxdev 当作内部渲染货币，也不会引入 @rue-js/jsx-runtime。手写 h()，以及没有经过 rue swc、由 typescript/babel automatic runtime 生成的 jsx，则属于显式兼容消费端，会加载默认 renderer 的通用 element / fragment patch。两类兼容写法仍受支持，但其 bundle 成本不能代表 compiled core 的成本。 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:19",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
       "sectionTitle": "编译器知情的渲染路径",
@@ -36348,7 +36425,7 @@
       "searchText": "渲染机制 编译器知情的渲染路径 编译器知情的渲染路径 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:20",
+      "id": "guide/extras/rendering-mechanism:21",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36359,7 +36436,7 @@
       "searchText": "渲染机制 编译器知情的渲染路径 rue 的核心优势在于同时掌控编译器与分层运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；无法证明安全时则保守回退，而不是牺牲行为一致性。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:21",
+      "id": "guide/extras/rendering-mechanism:22",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36370,18 +36447,18 @@
       "searchText": "渲染机制 编译器知情的渲染路径 rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量接近真实 dom 变更本身。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:22",
+      "id": "guide/extras/rendering-mechanism:23",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
       "title": "渲染机制",
       "sectionTitle": "编译器知情的渲染路径",
       "type": "paragraph",
-      "text": "下面这些优化服务于静态 DOM 与 compiled core；遇到组件或复杂结构时，相同源码会自动改用 Vapor fallback。",
-      "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化服务于静态 dom 与 compiled core；遇到组件或复杂结构时，相同源码会自动改用 vapor fallback。 guide/extras/rendering-mechanism"
+      "text": "下面这些优化服务于静态 DOM、compiled core 和编译组件；只有无法静态证明安全的结构才会自动改用 Vapor fallback。",
+      "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化服务于静态 dom、compiled core 和编译组件；只有无法静态证明安全的结构才会自动改用 vapor fallback。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:23",
+      "id": "guide/extras/rendering-mechanism:24",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36392,7 +36469,7 @@
       "searchText": "渲染机制 静态提升 静态提升 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:24",
+      "id": "guide/extras/rendering-mechanism:25",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36403,7 +36480,7 @@
       "searchText": "渲染机制 静态提升 模板中不含动态绑定的片段，会在编译阶段被提升、缓存或折叠成可复用的静态结构。这样更新时无需重新创建这些节点，也无需再次遍历它们。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:25",
+      "id": "guide/extras/rendering-mechanism:26",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36414,7 +36491,7 @@
       "searchText": "渲染机制 静态提升 <div> <div>foo</div> <div>bar</div> <div>{dynamic.value}</div> </div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:26",
+      "id": "guide/extras/rendering-mechanism:27",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36425,7 +36502,7 @@
       "searchText": "渲染机制 静态提升 在这个例子里，只有 dynamic 所在的片段需要参与更新；静态节点会在初次挂载后尽量复用。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:27",
+      "id": "guide/extras/rendering-mechanism:28",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36436,7 +36513,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 patch 标记与精准更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:28",
+      "id": "guide/extras/rendering-mechanism:29",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36447,7 +36524,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 对于有动态绑定的节点，编译器会把“究竟什么会变”编码进产物，例如文本、class、style、属性或稳定片段。运行时据此直接走对应的更新路径。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:29",
+      "id": "guide/extras/rendering-mechanism:30",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36458,7 +36535,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 <div class={active.value ? 'active' : ''}></div> <input id={id.value} value={value.value} /> <div>{dynamic.value}</div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:30",
+      "id": "guide/extras/rendering-mechanism:31",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36469,7 +36546,51 @@
       "searchText": "渲染机制 patch 标记与精准更新 这类提示让运行时可以把更新收敛为“改 class”“改 value”“改 text”这样的定点操作。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:31",
+      "id": "guide/extras/rendering-mechanism:32",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
+      "title": "渲染机制",
+      "sectionTitle": "编译组件更新与根替换",
+      "type": "heading",
+      "text": "编译组件更新与根替换",
+      "searchText": "渲染机制 编译组件更新与根替换 编译组件更新与根替换 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:33",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
+      "title": "渲染机制",
+      "sectionTitle": "编译组件更新与根替换",
+      "type": "paragraph",
+      "text": "编译器生成的组件 helper 会把组件标记为 fine-grained。首次挂载后，运行时保留同一个组件实例和响应式只读 props；父组件传入新 props 时只同步这层 props，组件内部已经建立的文本、属性、列表和子组件 effect 会各自更新。没有显式 render-effect 标记时，props 更新不会重新执行组件函数，也不会递归 patch 组件返回的整棵 Element / Fragment 树。",
+      "searchText": "渲染机制 编译组件更新与根替换 编译器生成的组件 helper 会把组件标记为 fine-grained。首次挂载后，运行时保留同一个组件实例和响应式只读 props；父组件传入新 props 时只同步这层 props，组件内部已经建立的文本、属性、列表和子组件 effect 会各自更新。没有显式 render-effect 标记时，props 更新不会重新执行组件函数，也不会递归 patch 组件返回的整棵 element / fragment 树。 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:34",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
+      "title": "渲染机制",
+      "sectionTitle": "编译组件更新与根替换",
+      "type": "paragraph",
+      "text": "根替换仍然是必要的动态边界，而不是常规 props 更新手段。组件身份或 key 改变、动态分支切换到不同根、锚点区间需要替换，或者组件显式声明组件级响应式控制流时，运行时会通过已有 anchor / range 完成替换和清理。这样保留了结构变化的正确性，同时让稳定组件的日常更新停留在局部 effect。",
+      "searchText": "渲染机制 编译组件更新与根替换 根替换仍然是必要的动态边界，而不是常规 props 更新手段。组件身份或 key 改变、动态分支切换到不同根、锚点区间需要替换，或者组件显式声明组件级响应式控制流时，运行时会通过已有 anchor / range 完成替换和清理。这样保留了结构变化的正确性，同时让稳定组件的日常更新停留在局部 effect。 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:35",
+      "docId": "guide/extras/rendering-mechanism",
+      "route": "/guide/guide/extras/rendering-mechanism",
+      "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
+      "title": "渲染机制",
+      "sectionTitle": "编译组件更新与根替换",
+      "type": "paragraph",
+      "text": "手写 h() 与未编译组件使用 rerender 兼容协议。该路径继续提供通用 Element / Fragment props 与 children patch，但它是默认入口带来的显式兼容成本，不会被编译组件消费端自动加载。",
+      "searchText": "渲染机制 编译组件更新与根替换 手写 h() 与未编译组件使用 rerender 兼容协议。该路径继续提供通用 element / fragment props 与 children patch，但它是默认入口带来的显式兼容成本，不会被编译组件消费端自动加载。 guide/extras/rendering-mechanism"
+    },
+    {
+      "id": "guide/extras/rendering-mechanism:36",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -36480,7 +36601,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 树扁平化与区间更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:32",
+      "id": "guide/extras/rendering-mechanism:37",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -36491,7 +36612,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 编译器会把真正可能变化的后代节点提取出来，以 block 或区间边界的方式组织。这样组件更新时，运行时通常只需要遍历动态段，而不是重新访问整个静态子树。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:33",
+      "id": "guide/extras/rendering-mechanism:38",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -38975,6 +39096,50 @@
       "type": "list",
       "text": "如果你计划构建完整的应用程序，推荐使用 ref + reactive + JSX 如果你从 React 迁移过来，useState 可以帮你更快上手",
       "searchText": "简介 选择哪种方式？ 如果你计划构建完整的应用程序，推荐使用 ref + reactive + jsx 如果你从 react 迁移过来，usestate 可以帮你更快上手 guide/introduction"
+    },
+    {
+      "id": "guide/mdx-detail-fixture:0",
+      "docId": "guide/mdx-detail-fixture",
+      "route": "/guide/guide/mdx-detail-fixture",
+      "href": "/guide/guide/mdx-detail-fixture#-guide-mdx-detail",
+      "title": "Guide MDX Detail",
+      "sectionTitle": "Guide MDX Detail",
+      "type": "heading",
+      "text": "Guide MDX Detail",
+      "searchText": "guide mdx detail guide mdx detail guide mdx detail guide/mdx-detail-fixture"
+    },
+    {
+      "id": "guide/mdx-detail-fixture:1",
+      "docId": "guide/mdx-detail-fixture",
+      "route": "/guide/guide/mdx-detail-fixture",
+      "href": "/guide/guide/mdx-detail-fixture#-guide-mdx-detail",
+      "title": "Guide MDX Detail",
+      "sectionTitle": "Guide MDX Detail",
+      "type": "paragraph",
+      "text": "Guide content rendered from an MDX module.",
+      "searchText": "guide mdx detail guide mdx detail guide content rendered from an mdx module. guide/mdx-detail-fixture"
+    },
+    {
+      "id": "guide/mdx-detail-fixture:2",
+      "docId": "guide/mdx-detail-fixture",
+      "route": "/guide/guide/mdx-detail-fixture",
+      "href": "/guide/guide/mdx-detail-fixture#-guide-mdx-detail",
+      "title": "Guide MDX Detail",
+      "sectionTitle": "Guide MDX Detail",
+      "type": "code",
+      "text": "pnpm create rue@latest",
+      "searchText": "guide mdx detail guide mdx detail pnpm create rue@latest guide/mdx-detail-fixture"
+    },
+    {
+      "id": "guide/mdx-detail-fixture:3",
+      "docId": "guide/mdx-detail-fixture",
+      "route": "/guide/guide/mdx-detail-fixture",
+      "href": "/guide/guide/mdx-detail-fixture#-guide-mdx-detail",
+      "title": "Guide MDX Detail",
+      "sectionTitle": "Guide MDX Detail",
+      "type": "code",
+      "text": "npm create rue@latest",
+      "searchText": "guide mdx detail guide mdx detail npm create rue@latest guide/mdx-detail-fixture"
     },
     {
       "id": "guide/quick-start:0",
@@ -44409,6 +44574,50 @@
       "type": "code",
       "text": "// 带有状态的组件示例 import { type FC, ref } from '@rue-js/rue' const Counter: FC = () => { const count = ref(0) return <button onClick={() => count.value++}>点击次数：{count.value}</button> } export default Counter",
       "searchText": "rue 介绍 rue 介绍 // 带有状态的组件示例 import { type fc, ref } from '@rue-js/rue' const counter: fc = () => { const count = ref(0) return <button onclick={() => count.value++}>点击次数：{count.value}</button> } export default counter intro"
+    },
+    {
+      "id": "page/mdx-detail-fixture:0",
+      "docId": "page/mdx-detail-fixture",
+      "route": "/page/page/mdx-detail-fixture",
+      "href": "/page/page/mdx-detail-fixture#-page-mdx-detail",
+      "title": "Page MDX Detail",
+      "sectionTitle": "Page MDX Detail",
+      "type": "heading",
+      "text": "Page MDX Detail",
+      "searchText": "page mdx detail page mdx detail page mdx detail page/mdx-detail-fixture"
+    },
+    {
+      "id": "page/mdx-detail-fixture:1",
+      "docId": "page/mdx-detail-fixture",
+      "route": "/page/page/mdx-detail-fixture",
+      "href": "/page/page/mdx-detail-fixture#-page-mdx-detail",
+      "title": "Page MDX Detail",
+      "sectionTitle": "Page MDX Detail",
+      "type": "paragraph",
+      "text": "Page content rendered from an MDX module.",
+      "searchText": "page mdx detail page mdx detail page content rendered from an mdx module. page/mdx-detail-fixture"
+    },
+    {
+      "id": "page/mdx-detail-fixture:2",
+      "docId": "page/mdx-detail-fixture",
+      "route": "/page/page/mdx-detail-fixture",
+      "href": "/page/page/mdx-detail-fixture#-page-mdx-detail",
+      "title": "Page MDX Detail",
+      "sectionTitle": "Page MDX Detail",
+      "type": "code",
+      "text": "pnpm create rue@latest",
+      "searchText": "page mdx detail page mdx detail pnpm create rue@latest page/mdx-detail-fixture"
+    },
+    {
+      "id": "page/mdx-detail-fixture:3",
+      "docId": "page/mdx-detail-fixture",
+      "route": "/page/page/mdx-detail-fixture",
+      "href": "/page/page/mdx-detail-fixture#-page-mdx-detail",
+      "title": "Page MDX Detail",
+      "sectionTitle": "Page MDX Detail",
+      "type": "code",
+      "text": "npm create rue@latest",
+      "searchText": "page mdx detail page mdx detail npm create rue@latest page/mdx-detail-fixture"
     },
     {
       "id": "partners/index:0",

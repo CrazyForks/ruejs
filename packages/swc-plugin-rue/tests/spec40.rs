@@ -40,9 +40,9 @@ export default HelloWorld
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, _$vaporMarkComponentRenderReactive, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
-const HelloWorld: FC = ()=>{
+const HelloWorld: FC = _$vaporMarkComponentRenderReactive(()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
         console.log('--------start');
         const x = _$vaporWithHookId("ref:1:0", ()=>ref(0));
@@ -64,7 +64,7 @@ const HelloWorld: FC = ()=>{
     return (<div>
       <div>x.value: {x.value}</div>
     </div>);
-};
+});
 export default HelloWorld;
 "##;
 

@@ -14,6 +14,45 @@ fn compile(src: &str, name: &str) -> String {
 }
 
 #[test]
+fn compiles_safe_nested_element_and_fragment_slots_directly() {
+    let src = r##"
+import { type FC } from '@rue-js/rue'
+const Demo: FC<{ ok: boolean }> = props => (
+  <div>
+    {props.ok ? <span>ready</span> : <><em>fallback</em><b>idle</b></>}
+    {props.ok && <small>small</small>}
+  </div>
+)
+"##;
+
+    let out = compile(src, "expr_safe_compiled_slots");
+
+    assert!(out.contains(&utils::normalize("props.ok ? _$compiledRoot(")), "{out}");
+    assert!(out.contains(&utils::normalize("document.createDocumentFragment()")), "{out}");
+    assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"span\"")), "{out}");
+    assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"small\"")), "{out}");
+    assert!(!out.contains(&utils::normalize("props.ok ? vapor(")), "{out}");
+}
+
+#[test]
+fn unsafe_nested_slots_keep_vapor_fallbacks() {
+    let src = r##"
+const Child = () => <i />
+const holder = { get() {} }
+const parts = []
+const Demo = (props) => <div>
+  {props.ok ? <Child /> : <span>{holder.get()}</span>}
+  {props.more && <>{...parts}</>}
+</div>
+"##;
+
+    let out = compile(src, "expr_unsafe_vapor_slots");
+
+    assert!(out.contains(&utils::normalize("props.ok ? vapor(")), "{out}");
+    assert!(out.contains(&utils::normalize("props.more ? vapor(")), "{out}");
+}
+
+#[test]
 fn lowers_bare_fragment_expression_container_to_slot_render() {
     let src = r##"
 import { type FC } from '@rue-js/rue'
@@ -145,14 +184,10 @@ const Demo: FC = () => {
     assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
     assert!(out.contains(&utils::normalize("renderItem: (item, parent, start, end, idx)=>{")));
     assert!(out.contains(&utils::normalize("_$createElement(\"button\", _root)")));
+    assert!(out.contains(&utils::normalize(": _$compiledRoot((__rue_parent_context)=>{")));
     assert!(
-        out.contains(&utils::normalize(
-            "const _$getTemplate1 = _$template(\"<span>empty</span>\")"
-        ))
+        out.contains(&utils::normalize("_$compiledCreateElement(\"span\", __rue_parent_context)"))
     );
-    assert!(out.contains(&utils::normalize(
-        "_root.appendChild(_$getTemplate1().content.cloneNode(true))"
-    )));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
     assert!(!out.contains("_jsxDEV("));
 }

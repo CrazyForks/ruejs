@@ -1,7 +1,6 @@
-import { mountInput } from '../mount.js'
 import { replaceMountedBefore } from '../patch/replace.js'
 import { isObjectLike } from '../types.js'
-import type { DOMHost, Mounted, MountInput, RenderRuntimeState } from '../types.js'
+import type { DOMHost, MountController, Mounted, MountInput, RenderRuntimeState } from '../types.js'
 import {
   clearBetween,
   compactRangeMounts,
@@ -14,6 +13,7 @@ import {
 /** Render one tracked mount between a start/end boundary pair. */
 export const renderBetween = <HostNode>(
   state: RenderRuntimeState<HostNode>,
+  controller: MountController<HostNode>,
   input: MountInput<HostNode> | null | undefined,
   parent: HostNode,
   start: HostNode,
@@ -48,12 +48,20 @@ export const renderBetween = <HostNode>(
 
   if (entry) {
     entry.end = end
-    entry.mounted = replaceMountedBefore(state, host, entry.mounted, input, destParent, end)
+    entry.mounted = replaceMountedBefore(
+      state,
+      host,
+      controller,
+      entry.mounted,
+      input,
+      destParent,
+      end,
+    )
     clearBetweenExceptMounted(host, destParent, start, end, entry.mounted)
     return
   }
 
-  const mounted = mountInput(state, host, input, parent)
+  const mounted = controller.mountInput(state, host, input, parent)
   if (!mounted) return
   clearBetween(host, destParent, start, end)
   insertMountedBefore(host, destParent, mounted, end)

@@ -4,20 +4,22 @@ use swc_core::atoms::Atom;
 // SWC 常量与上下文：
 // - DUMMY_SP：稳定的占位 span
 // - SyntaxContext：语义上下文（统一 empty）
-use swc_core::common::{DUMMY_SP, SyntaxContext};
+use swc_core::common::{DUMMY_SP, Span, Spanned, SyntaxContext, comments::Comments};
 // SWC ECMAScript AST 节点类型集合（Module/JSXElement/CallExpr 等）
 use swc_core::ecma::ast::*;
 // SWC 可变访问器与驱动接口
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
+use swc_core::plugin::proxies::PluginCommentsProxy;
 
 use super::for_directive;
 use super::helpers::{
-    arrow_has_reactive_render_control, block_has_explicit_vapor_return,
+    arrow_has_reactive_render_control, block_has_reactive_render_control,
     has_component_render_return_in_block, is_fc_pat, is_untyped_arrow_component_decl,
     lower_props_derived_consts_in_arrow, lower_props_derived_consts_in_function,
-    mark_component_render_reactive, mark_nested_jsx_render_closure, process_fn_decl,
-    process_function, process_var_decl, rewrite_component_props_destructure_in_arrow,
-    rewrite_component_props_destructure_in_function, should_transform_fn_decl,
+    mark_component_render_reactive, mark_component_render_reactive_factory,
+    mark_nested_jsx_render_closure, process_fn_decl, process_function, process_var_decl,
+    rewrite_component_props_destructure_in_arrow, rewrite_component_props_destructure_in_function,
+    should_transform_fn_decl,
 };
 use super::if_directive;
 use super::model_directive;
@@ -68,6 +70,17 @@ pub struct PreTransform {
     next_scope: usize,
     hook_index_stack: Vec<usize>,
     compiled_runtime_bindings: HashSet<String>,
+    comments: Option<PluginCommentsProxy>,
+}
+
+impl PreTransform {
+    pub fn with_comments(comments: Option<PluginCommentsProxy>) -> Self {
+        Self { comments, ..Self::default() }
+    }
+
+    fn mark_pure(&self, span: Span) {
+        self.comments.as_ref().map(|comments| comments.add_pure_comment(span.lo));
+    }
 }
 
 #[derive(Default)]
@@ -148,6 +161,53 @@ impl VisitMut for PreTransform {
                 }
             }
         }
+        // Mark top-level function factories before their first invocation so the runtime can
+        // enter the render effect directly instead of mounting and replacing an untracked tree.
+        let mut body = Vec::with_capacity(m.body.len());
+        for item in std::mem::take(&mut m.body) {
+            let reactive_function = match &item {
+                ModuleItem::Stmt(Stmt::Decl(Decl::Fn(decl)))
+                    if should_transform_fn_decl(decl)
+                        && decl
+                            .function
+                            .body
+                            .as_ref()
+                            .is_some_and(block_has_reactive_render_control) =>
+                {
+                    Some(decl.ident.clone())
+                }
+                ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                    decl: Decl::Fn(decl),
+                    ..
+                })) if should_transform_fn_decl(decl)
+                    && decl
+                        .function
+                        .body
+                        .as_ref()
+                        .is_some_and(block_has_reactive_render_control) =>
+                {
+                    Some(decl.ident.clone())
+                }
+                _ => None,
+            };
+            body.push(item);
+            if let Some(ident) = reactive_function {
+                let span = ident.span;
+                let mut call = crate::emit::call_ident(
+                    "_$vaporMarkComponentRenderReactive",
+                    vec![Expr::Ident(ident)],
+                );
+                if let Expr::Call(call_expr) = &mut call {
+                    call_expr.span = span;
+                }
+                self.mark_pure(span);
+                body.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(call),
+                })));
+            }
+        }
+        m.body = body;
         // 统一为同模块内重复的 hook id 追加稳定后缀，避免跨组件槽位碰撞。
         m.visit_mut_with(&mut HookIdDeduper::default());
         // 合并确保运行时导入（例如 _$vaporWithHookId/_$vaporShowStyle/useSetup 等）
@@ -206,7 +266,12 @@ impl VisitMut for PreTransform {
         if arrow_has_reactive_render_control(arrow) {
             rewrite_component_props_destructure_in_arrow(arrow);
             lower_props_derived_consts_in_arrow(arrow);
-            if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_mut() {
+            // Component variable declarations are marked at the factory after process_var_decl
+            // has extracted one-time setup. An eager body marker would make process_var_decl bail
+            // out and rerun setup statements inside the component render effect.
+            if !self.in_component
+                && let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_mut()
+            {
                 mark_component_render_reactive(block);
             }
         }
@@ -245,7 +310,7 @@ impl VisitMut for PreTransform {
             return;
         }
         let requires_render_effect =
-            f.function.body.as_ref().is_some_and(|block| block_has_explicit_vapor_return(block));
+            f.function.body.as_ref().is_some_and(block_has_reactive_render_control);
         // 组件函数声明：执行 useSetup 注入
         process_fn_decl(f);
         if requires_render_effect && let Some(block) = &mut f.function.body {
@@ -288,8 +353,11 @@ impl VisitMut for PreTransform {
             let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_mut() else {
                 continue;
             };
-            if block_has_explicit_vapor_return(block) {
-                mark_component_render_reactive(block);
+            if block_has_reactive_render_control(block) {
+                if let Some(init) = &mut decl.init {
+                    mark_component_render_reactive_factory(init);
+                    self.mark_pure(init.span());
+                }
             }
         }
     }

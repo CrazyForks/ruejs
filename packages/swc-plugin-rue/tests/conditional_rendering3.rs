@@ -52,10 +52,9 @@ export default ReactConditionalDemo;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$settextContent, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$addEventListener, _$setClassName, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const _$getTemplate1 = _$template('<h2 class="text-xl font-semibold text-purple-600 mb-3">React 风格条件渲染</h2>');
-const _$getTemplate2 = _$template('<div class="mt-2"><p class="text-gray-700">详情区域：仅在 show 为 true 时显示</p></div>');
 const ReactConditionalDemo: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const show = _$vaporWithHookId("ref:1:0", ()=>ref(true));
@@ -83,9 +82,13 @@ const ReactConditionalDemo: FC = ()=>{
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
         watchEffect(()=>{
-            const __slot = show.value ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            const __slot = show.value ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _root.className = "mt-2";
+                const _el5 = _$compiledCreateElement("p", _root);
+                _$compiledAppendChild(_root, _el5);
+                _el5.className = "text-gray-700";
+                _$compiledAppendChild(_el5, _$compiledCreateTextNode("详情区域：仅在 show 为 true 时显示"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list1));
@@ -93,9 +96,13 @@ const ReactConditionalDemo: FC = ()=>{
         const _list2 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list2);
         watchEffect(()=>{
-            const __slot = show.value ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            const __slot = show.value ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _root.className = "mt-2";
+                const _el6 = _$compiledCreateElement("p", _root);
+                _$compiledAppendChild(_root, _el6);
+                _el6.className = "text-gray-700";
+                _$compiledAppendChild(_el6, _$compiledCreateTextNode("详情区域：仅在 show 为 true 时显示"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list2));
@@ -103,9 +110,13 @@ const ReactConditionalDemo: FC = ()=>{
         const _list3 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list3);
         watchEffect(()=>{
-            const __slot = show.value ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            const __slot = show.value ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _root.className = "mt-2";
+                const _el7 = _$compiledCreateElement("p", _root);
+                _$compiledAppendChild(_root, _el7);
+                _el7.className = "text-gray-700";
+                _$compiledAppendChild(_el7, _$compiledCreateTextNode("详情区域：仅在 show 为 true 时显示"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list3));

@@ -516,6 +516,7 @@ function createPureCompoundComponentPlugin() {
     .resolve(rootDir, 'packages/rue-design/src/components')
     .replaceAll('\\', '/')}/`
   const compoundAssignment = /^((?:const|let|var)\s+[^=\r\n]+?=\s*)Object\.assign\(/gm
+  const renderReactiveFactoryCall = /_\$vaporMarkComponentRenderReactive\(/g
 
   return {
     name: 'rue-design-pure-compound-components',
@@ -534,6 +535,12 @@ function createPureCompoundComponentPlugin() {
         magic ||= new MagicString(code)
         const insertionPoint = match.index + objectAssignOffset
         magic.appendLeft(insertionPoint, '/* @__PURE__ */ ')
+      }
+
+      for (const match of code.matchAll(renderReactiveFactoryCall)) {
+        if (match.index == null) continue
+        magic ||= new MagicString(code)
+        magic.appendLeft(match.index, '/* @__PURE__ */ ')
       }
 
       return magic

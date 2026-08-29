@@ -2,6 +2,7 @@ import {
   PORTABLE_HANDLE_KEYS,
   PORTABLE_PROTOCOL_KEYS,
   RUE_CLEANUP_BUCKET_KEY,
+  RUE_COMPONENT_UPDATE_MODE_KEY,
   RUE_EFFECT_SCOPE_ID_KEY,
   RUE_MOUNT_ID_KEY,
   RUE_PORTABLE_COMPONENT_TYPE_KEY,
@@ -11,6 +12,7 @@ import {
 import { isObjectLike } from './types.js'
 import type {
   ComponentProps,
+  ComponentUpdateMode,
   ComponentType,
   EffectScopeId,
   KernelBridge,
@@ -73,6 +75,9 @@ const normalizeKey = (value: unknown): MountKey | undefined => {
 
 const normalizeScopeId = (value: unknown): EffectScopeId | undefined =>
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined
+
+const normalizeComponentUpdateMode = (value: unknown): ComponentUpdateMode =>
+  value === 'fine-grained' || value === 'rerender' ? value : 'rerender'
 
 interface MountMetadata {
   key: MountKey | undefined
@@ -147,7 +152,6 @@ const createInput = <HostNode>({
 const normalizeChildren = <HostNode>(
   state: RuntimeState<HostNode>,
   value: unknown,
-  normalizeObjectChild?: (value: object) => MountInput<HostNode> | null,
 ): MountChild<HostNode>[] => {
   const children: MountChild<HostNode>[] = []
   const push = (child: unknown): void => {
@@ -160,9 +164,7 @@ const normalizeChildren = <HostNode>(
       return
     }
     if (isObjectLike(child)) {
-      const input = normalizeObjectChild
-        ? normalizeObjectChild(child)
-        : normalizeMountInput(state, child, 'render')
+      const input = normalizeMountInput(state, child, 'render')
       if (input) children.push({ kind: 'input', value: input })
     }
   }
@@ -183,7 +185,6 @@ export const createElementMountInput = <HostNode = unknown>(
   propsValue: unknown,
   childrenValue: unknown,
   options: {
-    normalizeObjectChild?: (value: object) => MountInput<HostNode> | null
     strictComponentReturns?: boolean
   } = {},
 ): MountInput<HostNode> => {
@@ -193,14 +194,14 @@ export const createElementMountInput = <HostNode = unknown>(
   } else if (childrenValue != null) {
     props.children = [childrenValue]
   }
-  const children = normalizeChildren(
-    state,
-    effectiveChildren(props, childrenValue),
-    options.normalizeObjectChild,
-  )
+  const children = normalizeChildren(state, effectiveChildren(props, childrenValue))
   let type: MountInputType<HostNode>
   if (typeof typeTag === 'function') {
-    type = { kind: 'component', component: typeTag as ComponentType }
+    type = {
+      kind: 'component',
+      component: typeTag as ComponentType,
+      updateMode: 'rerender',
+    }
   } else if (typeTag === 'fragment') {
     type = { kind: 'fragment' }
   } else if (typeTag === 'vapor') {
@@ -285,15 +286,29 @@ const takeTaggedMountInput = <HostNode>(
 }
 
 const portableComponentInput = <HostNode>(
+  state: RuntimeState<HostNode>,
   source: ObjectLike,
   entry: RuntimeEntry,
 ): MountInput<HostNode> => {
   const component = read(source, RUE_PORTABLE_COMPONENT_TYPE_KEY)
+  if (typeof component === 'string') {
+    const props = copyProps(read(source, 'props'))
+    return createInput<HostNode>({
+      type: { kind: 'element', tag: component },
+      props,
+      children: normalizeChildren(state, props.children),
+      source,
+    })
+  }
   if (typeof component !== 'function') {
-    throw protocolError(entry, `${RUE_PORTABLE_COMPONENT_TYPE_KEY} must be a function`)
+    throw protocolError(entry, `${RUE_PORTABLE_COMPONENT_TYPE_KEY} must be a function or string`)
   }
   return createInput<HostNode>({
-    type: { kind: 'component', component: component as ComponentType },
+    type: {
+      kind: 'component',
+      component: component as ComponentType,
+      updateMode: normalizeComponentUpdateMode(read(source, RUE_COMPONENT_UPDATE_MODE_KEY)),
+    },
     props: read(source, 'props'),
     source,
   })
@@ -335,7 +350,7 @@ const normalizeMountInputValue = <HostNode>(
       return takeTaggedMountInput(state, value, entry)
     }
     if (hasOwnOrInherited(value, RUE_PORTABLE_COMPONENT_TYPE_KEY)) {
-      return portableComponentInput(value, entry)
+      return portableComponentInput(state, value, entry)
     }
     if (hasOwnOrInherited(value, RUE_PORTABLE_VAPOR_SETUP_KEY)) {
       return portableVaporInput(value)

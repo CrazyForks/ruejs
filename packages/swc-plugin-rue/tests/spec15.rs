@@ -267,7 +267,7 @@ const ListTransitionExample: FC = ()=>{
                         _$addEventListener(_el12, "click", (()=>remove(item)));
                         _$appendChild(_el12, _$createTextNode("x"));
                         return _root;
-                    }), item))
+                    }, true), item))
             });
             untrack(()=>renderAnchor(__slot2, _el8, _list1));
         });

@@ -508,19 +508,6 @@ const Fab: FC<FabProps> = props => {
     { immediate: true },
   )
 
-  watch(
-    () => defaultOpen,
-    nextDefaultOpen => {
-      if (!isControlled) {
-        const nextOpen = !!nextDefaultOpen
-        uncontrolledOpen.value = nextOpen
-        setCurrentOpen(nextOpen)
-        syncMenuDom(nextOpen)
-      }
-    },
-    { immediate: true },
-  )
-
   onMounted(() => {
     if (typeof window === 'undefined') return
 

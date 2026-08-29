@@ -4,6 +4,56 @@
 use swc_plugin_rue::apply;
 mod utils;
 
+fn compile(src: &str, name: &str) -> String {
+    let (program, cm) = utils::parse(src, &format!("{name}.tsx"));
+    let program = apply(program);
+    utils::strip_marker(&utils::emit(program, cm))
+}
+
+#[test]
+fn compiles_safe_root_fragments_without_vapor() {
+    let out = compile(
+        r##"
+import { type FC } from '@rue-js/rue';
+const Demo: FC = () => <><h1>Title</h1><span title={Boolean(true)}>safe</span></>;
+"##,
+        "safe-root-fragment",
+    );
+    let normalized = utils::normalize(&out);
+
+    assert!(out.contains("@rue-js/rue/compiled"), "{out}");
+    assert!(!out.contains("@rue-js/rue/vapor"), "{out}");
+    assert!(normalized.contains(&utils::normalize("_$compiledRoot((__rue_parent_context)=>{")));
+    assert!(normalized.contains(&utils::normalize("document.createDocumentFragment()")));
+    assert!(normalized.contains(&utils::normalize("_$compiledCreateElement(\"span\", _root)")));
+    assert!(!normalized.contains(&utils::normalize("vapor(")), "{out}");
+}
+
+#[test]
+fn unsafe_root_fragments_keep_vapor_fallbacks() {
+    let component = compile(
+        "import { type FC } from '@rue-js/rue'; const Child: FC = () => <i />; const Demo: FC = () => <><Child /></>;",
+        "fragment-component-fallback",
+    );
+    let spread = compile(
+        "import { type FC } from '@rue-js/rue'; const parts = []; const Demo: FC = () => <>{...parts}</>;",
+        "fragment-spread-fallback",
+    );
+    let renderable = compile(
+        "import { type FC } from '@rue-js/rue'; const holder = { get() {} }; const Demo: FC = () => <>{holder.get()}</>;",
+        "fragment-get-fallback",
+    );
+    let async_root = compile(
+        "import { type FC } from '@rue-js/rue'; const Demo = async () => <><span>later</span></>;",
+        "fragment-async-fallback",
+    );
+
+    for out in [component, spread, renderable, async_root] {
+        assert!(out.contains("@rue-js/rue/vapor"), "{out}");
+        assert!(utils::normalize(&out).contains(&utils::normalize("vapor(")), "{out}");
+    }
+}
+
 #[test]
 fn transforms_fragments_tsx() {
     let src = r##"

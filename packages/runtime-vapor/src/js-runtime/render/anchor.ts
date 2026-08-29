@@ -1,6 +1,5 @@
-import { mountInput } from '../mount.js'
 import { replaceMountedBefore } from '../patch/replace.js'
-import type { MountInput, RenderRuntimeState } from '../types.js'
+import type { MountController, MountInput, RenderRuntimeState } from '../types.js'
 import {
   compactAnchorMounts,
   hostForRender,
@@ -12,6 +11,7 @@ import {
 /** Render one tracked mount immediately before a stable anchor node. */
 export const renderAnchor = <HostNode>(
   state: RenderRuntimeState<HostNode>,
+  controller: MountController<HostNode>,
   input: MountInput<HostNode> | null | undefined,
   parent: HostNode,
   anchor: HostNode,
@@ -39,11 +39,19 @@ export const renderAnchor = <HostNode>(
       ownedMounts.prepareAnchorUpdate(anchor)
       entry = ownedEntries[0]!
     }
-    entry.mounted = replaceMountedBefore(state, host, entry.mounted, input, destParent, anchor)
+    entry.mounted = replaceMountedBefore(
+      state,
+      host,
+      controller,
+      entry.mounted,
+      input,
+      destParent,
+      anchor,
+    )
     return
   }
 
-  const mounted = mountInput(state, host, input, parent)
+  const mounted = controller.mountInput(state, host, input, parent)
   if (!mounted) return
   insertMountedBefore(host, destParent, mounted, anchor)
   const nextEntry = { anchor, mounted }

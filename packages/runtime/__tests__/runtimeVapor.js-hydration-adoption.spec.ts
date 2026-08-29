@@ -122,7 +122,7 @@ describe('runtime-vapor JavaScript hydration adoption parity', () => {
     expect(results[1]).toEqual({ ...results[0], label: 'js' })
     expect(results[0]).toEqual({
       label: 'rust',
-      events: ['click:hydrated', 'click:updated', 'click:updated'],
+      events: ['click:hydrated', 'click:updated'],
       adoptedRootRetained: true,
       adoptedInputRetained: true,
       adoptedButtonRetained: true,

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as rustEntry from '@rue-js/runtime-vapor'
@@ -27,9 +28,130 @@ type RuntimeLike = {
   componentWrapperCount(): number
   createComponent(type: (props: any) => unknown, props?: unknown): unknown
   createElement(type: unknown, props?: unknown, children?: unknown): unknown
+  effectScopeCount(): number
   free(): void
   render(input: unknown, container: Element): void
   unmount(container: Element): void
+}
+
+const exerciseHighLevelCompatTree = async (runtime: RuntimeLike, hooks: HookCarrier) => {
+  const container = document.createElement('main')
+  const events: string[] = []
+  const childHosts: ComponentHost[] = []
+  const childSlots: object[] = []
+
+  const Child = (props: Record<string, unknown>) => {
+    childHosts.push(hooks.getCurrentInstance()!)
+    childSlots.push(hooks.useSetup(() => ({})))
+    return createHighLevelElement('em', { 'data-testid': 'deep-child' }, String(props.label))
+  }
+  const View = (props: Record<string, unknown>) =>
+    createHighLevelElement(
+      'section',
+      { key: props.rootKey, 'data-revision': props.label },
+      createHighLevelElement(
+        'div',
+        { 'data-testid': 'level-one' },
+        createHighLevelElement(
+          'article',
+          { 'data-testid': 'level-two' },
+          createHighLevelElement(
+            props.controlTag as string,
+            {
+              key: 'control',
+              'data-testid': 'level-three-control',
+              value: props.label,
+              onClick: () => events.push(String(props.label)),
+            },
+            String(props.label),
+          ),
+          createHighLevelElement(Child, { key: 'child', label: props.label }),
+          props.extra
+            ? createHighLevelElement('span', { key: 'extra', 'data-testid': 'extra' }, 'extra')
+            : null,
+        ),
+      ),
+    )
+
+  runtime.render(
+    runtime.createComponent(View, {
+      rootKey: 'stable-root',
+      controlTag: 'button',
+      label: 'one',
+      extra: true,
+    }),
+    container,
+  )
+  await settleRuntime()
+  const first = {
+    root: container.firstElementChild,
+    levelOne: container.querySelector('[data-testid="level-one"]'),
+    levelTwo: container.querySelector('[data-testid="level-two"]'),
+    control: container.querySelector('[data-testid="level-three-control"]'),
+    child: container.querySelector('[data-testid="deep-child"]'),
+  }
+  ;(first.control as HTMLButtonElement | null)?.click()
+
+  runtime.render(
+    runtime.createComponent(View, {
+      rootKey: 'stable-root',
+      controlTag: 'button',
+      label: 'two',
+      extra: false,
+    }),
+    container,
+  )
+  await settleRuntime()
+  const stable = {
+    root: container.firstElementChild,
+    levelOne: container.querySelector('[data-testid="level-one"]'),
+    levelTwo: container.querySelector('[data-testid="level-two"]'),
+    control: container.querySelector('[data-testid="level-three-control"]'),
+    child: container.querySelector('[data-testid="deep-child"]'),
+  }
+  const updatedHtml = stable.root?.outerHTML
+  ;(stable.control as HTMLButtonElement | null)?.click()
+
+  runtime.render(
+    runtime.createComponent(View, {
+      rootKey: 'stable-root',
+      controlTag: 'a',
+      label: 'three',
+      extra: false,
+    }),
+    container,
+  )
+  await settleRuntime()
+  const tagReplacement = container.querySelector('[data-testid="level-three-control"]')
+
+  runtime.render(
+    runtime.createComponent(View, {
+      rootKey: 'replacement-root',
+      controlTag: 'a',
+      label: 'four',
+      extra: false,
+    }),
+    container,
+  )
+  await settleRuntime()
+  const keyedReplacement = container.firstElementChild
+
+  const result = {
+    events,
+    stableRoot: first.root === stable.root,
+    stableLevelOne: first.levelOne === stable.levelOne,
+    stableLevelTwo: first.levelTwo === stable.levelTwo,
+    stableControl: first.control === stable.control,
+    stableChild: first.child === stable.child,
+    stableChildInstance: childHosts.length >= 2 && childHosts[0] === childHosts[1],
+    stableChildSlot: childSlots.length >= 2 && childSlots[0] === childSlots[1],
+    updatedHtml,
+    removedExtra: container.querySelector('[data-testid="extra"]') == null,
+    replacedTag: tagReplacement !== stable.control && tagReplacement?.tagName.toLowerCase() === 'a',
+    replacedKey: keyedReplacement !== stable.root,
+  }
+  runtime.unmount(container)
+  return { ...result, afterUnmountScopes: runtime.effectScopeCount() }
 }
 
 const getDOMBridge = () =>
@@ -196,6 +318,56 @@ afterEach(() => {
 })
 
 describe('runtime-vapor JavaScript component instance and patch parity', () => {
+  it('keeps deeply nested h elements and child components stable until tag or key changes', async () => {
+    const results = []
+    for (const backend of createBackends()) {
+      const runtime = backend.create()
+      try {
+        results.push({
+          label: backend.label,
+          ...(await exerciseHighLevelCompatTree(runtime, backend.hooks)),
+        })
+      } finally {
+        runtime.free()
+      }
+    }
+
+    expect(results[1]).toEqual({ ...results[0], label: 'js' })
+    expect(results[0]).toMatchObject({
+      events: ['one', 'two'],
+      stableRoot: true,
+      stableLevelOne: true,
+      stableLevelTwo: true,
+      stableControl: true,
+      stableChild: true,
+      stableChildInstance: true,
+      stableChildSlot: true,
+      removedExtra: true,
+      replacedTag: true,
+      replacedKey: true,
+      afterUnmountScopes: 0,
+    })
+    expect(results[0].updatedHtml).toContain('data-revision="two"')
+    expect(results[0].updatedHtml).toContain('value="two"')
+    expect(results[0].updatedHtml).toContain('>two</button>')
+  })
+
+  it('does not retain the retired h element reconstruction bridge in runtime-vapor source', () => {
+    const sourceFiles = [
+      '../../runtime-vapor/src/protocol.ts',
+      '../../runtime-vapor/src/js-runtime/component.ts',
+      '../../runtime-vapor/src/js-runtime/mount.ts',
+      '../../runtime-vapor/src/js-runtime/props.ts',
+    ]
+    const source = sourceFiles
+      .map(file => readFileSync(new URL(file, import.meta.url), 'utf8'))
+      .join('\n')
+
+    expect(source).not.toMatch(
+      /RUE_STABLE_COMPONENT_HOST_KEY|descendantDepth|patchStableElementChildren|readNativeElementHeadRecord/,
+    )
+  })
+
   it('keeps the owning runtime active while a component creates its subtree', async () => {
     const runtimeGlobal = globalThis as typeof globalThis & { __rue?: RuntimeLike }
     const hadDefaultRuntime = Object.prototype.hasOwnProperty.call(runtimeGlobal, '__rue')
@@ -378,8 +550,8 @@ describe('runtime-vapor JavaScript component instance and patch parity', () => {
       stablePropsObject: true,
       stableHookSlot: true,
       hookSlotCount: 1,
-      reusedRoot: false,
-      reusedInput: false,
+      reusedRoot: true,
+      reusedInput: true,
       retainedDraft: 'abcdef',
       restoredInputState: { focused: true, selection: [2, 5] },
       replacedRoot: true,
@@ -416,7 +588,7 @@ describe('runtime-vapor JavaScript component instance and patch parity', () => {
       stableParentSlot: true,
       stableChildSlot: true,
       childParent: true,
-      replacedLeafHost: true,
+      replacedLeafHost: false,
       afterUnmountInstances: 0,
     })
   })

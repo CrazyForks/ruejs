@@ -17,6 +17,7 @@ import type { RenderableOutput, VaporSetupResult } from './runtime-types'
 
 const RUE_CONTEXT_OWNER_PARENT_KEY = '__rue_context_owner_parent__'
 const RUE_CONTEXT_PARENT_INSTANCE_KEY = '__rue_context_parent_instance__'
+const RUE_COMPILED_ANCHOR_VAPOR_KEY = '__rue_compiled_anchor_vapor__'
 
 type VaporScopeBridge = {
   beginVaporScope(owner: unknown): boolean
@@ -28,6 +29,7 @@ type VaporScopeBridge = {
 const createVaporSetupHandle = (
   setup: (parentContext?: DomElementLike | null) => VaporSetupResult,
   inheritedParentOwner?: unknown,
+  compiledAnchor = false,
 ): RenderableOutput => {
   const vaporGlobal = globalThis as typeof globalThis & {
     __rue_runtime_vapor_shared_bridge?: VaporScopeBridge
@@ -56,18 +58,21 @@ const createVaporSetupHandle = (
   const handle = {
     [RUE_PORTABLE_VAPOR_SETUP_KEY]: wrappedSetup,
     [RUE_CLEANUP_BUCKET_KEY]: [() => bridge?.disposeVaporScope(owner)],
+    ...(compiledAnchor ? { [RUE_COMPILED_ANCHOR_VAPOR_KEY]: true } : null),
   } as RenderableOutput & Record<string, unknown>
   const hookTarget = vaporGlobal[RUE_KEEP_ALIVE_HOOK_TARGET_KEY]
   if (hookTarget != null) {
     handle[RUE_KEEP_ALIVE_HOOK_TARGET_KEY] = hookTarget
   }
   Object.defineProperty(handle, RUE_REPEATABLE_MOUNT_FACTORY_KEY, {
-    value: () => createVaporSetupHandle(setup, parentOwner),
+    value: () => createVaporSetupHandle(setup, parentOwner, compiledAnchor),
     configurable: true,
   })
   return handle
 }
 
 /** 创建轻量 Vapor setup handle，并让响应式 scope 与卸载清理共享 TypeScript 内核实例。 */
-export const vapor = (setup: (parentContext?: DomElementLike | null) => VaporSetupResult) =>
-  createVaporSetupHandle(setup)
+export const vapor = (
+  setup: (parentContext?: DomElementLike | null) => VaporSetupResult,
+  compiledAnchor = false,
+) => createVaporSetupHandle(setup, undefined, compiledAnchor)

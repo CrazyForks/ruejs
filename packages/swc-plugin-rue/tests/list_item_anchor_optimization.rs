@@ -156,7 +156,7 @@ const Page: FC<{ todos: Array<{ id: number; text: string; completed: boolean }>;
 
     assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
     assert!(out.contains(&utils::normalize(".addEventListener(")));
-    assert!(out.contains(&utils::normalize(".removeEventListener(")));
-    assert!(out.contains(&utils::normalize("disposeOwner(")));
+    assert!(!out.contains(&utils::normalize(".removeEventListener(")));
+    assert!(!out.contains(&utils::normalize("disposeOwner(")));
     assert!(!out.contains(&utils::normalize("_$vaporKeyedList")));
 }

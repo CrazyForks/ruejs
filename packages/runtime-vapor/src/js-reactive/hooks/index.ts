@@ -70,6 +70,13 @@ export const createHooks = (reactiveRuntime: unknown) => {
     }
   }
 
+  const runUntracked = <T>(factory: () => T): T => {
+    const untrack = safeGet(reactiveRuntime, 'untrack')
+    return typeof untrack === 'function'
+      ? (Reflect.apply(untrack, reactiveRuntime, [factory]) as T)
+      : factory()
+  }
+
   /**
    * useSetup：仅在首次调用时计算一次并缓存
    *
@@ -90,7 +97,10 @@ export const createHooks = (reactiveRuntime: unknown) => {
       value: undefined,
     }))
     if (!slot.initialized) {
-      const value = runInPersistentHookScope(instance, factory)
+      // Setup is an initialization boundary. Reads performed while creating its cached value
+      // must not subscribe an enclosing component render effect; effects created by the factory
+      // establish their own tracking contexts and continue to collect dependencies normally.
+      const value = runInPersistentHookScope(instance, () => runUntracked(factory))
       slot.value = value
       slot.initialized = true
     }

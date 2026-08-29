@@ -84,13 +84,7 @@ export const insertMountedBefore = <HostNode>(
   before: HostNode,
 ): void => {
   if (!mounted) return
-  if (mounted.kind === 'fragment') {
-    for (const node of mounted.fragmentNodes ?? host.collectFragmentChildren(mounted.host)) {
-      host.insertBefore(parent, node, before)
-    }
-    return
-  }
-  if (mounted.host) host.insertBefore(parent, mounted.host, before)
+  for (const node of mountedNodes(mounted)) host.insertBefore(parent, node, before)
 }
 
 const readHostProperty = <HostNode>(node: HostNode, key: PropertyKey): unknown =>

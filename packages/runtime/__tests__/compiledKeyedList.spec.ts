@@ -198,6 +198,7 @@ describe('_$reconcileKeyed', () => {
     const before = document.createComment('list:end')
     const getKey = vi.fn((item: Row) => item.id)
     const mount = vi.fn()
+    const removeChild = vi.spyOn(parent, 'removeChild')
     let keyReads = 0
     const attachedAtDispose: boolean[] = []
 
@@ -207,6 +208,7 @@ describe('_$reconcileKeyed', () => {
       parent.appendChild(node)
       const row = {
         key: 1,
+        item: { id, label: `row ${id}` },
         node,
         patch: vi.fn(),
         dispose: vi.fn(() => attachedAtDispose.push(node.parentNode === parent)),
@@ -232,8 +234,126 @@ describe('_$reconcileKeyed', () => {
     expect(previous.every(row => !vi.mocked(row.patch).mock.calls.length)).toBe(true)
     expect(previous.every(row => vi.mocked(row.dispose).mock.calls.length === 1)).toBe(true)
     expect(attachedAtDispose).toEqual([true, true])
+    expect(removeChild).not.toHaveBeenCalled()
     expect(parent.childNodes).toEqual(expect.objectContaining({ length: 1 }))
     expect(parent.firstChild).toBe(before)
+  })
+
+  it('uses the exact two-row swap fast path without allocating a key index map', () => {
+    const parent = document.createElement('tbody')
+    const before = document.createComment('list:end')
+    parent.appendChild(before)
+    const insertBefore = vi.spyOn(parent, 'insertBefore')
+    const patchCounts = new Map<number, number>()
+    const mount = (item: Row) => {
+      const node = document.createElement('tr')
+      node.dataset.id = String(item.id)
+      return {
+        node,
+        patch(next: Row) {
+          node.dataset.id = String(next.id)
+          node.textContent = next.label
+          patchCounts.set(next.id, (patchCounts.get(next.id) ?? 0) + 1)
+        },
+        dispose: vi.fn(),
+      }
+    }
+    const rows = Array.from({ length: 1_000 }, (_, index) => ({
+      id: index + 1,
+      label: `row ${index + 1}`,
+    }))
+    let previous = _$reconcileKeyed(parent, before, [], rows, item => item.id, mount)
+    patchCounts.clear()
+    insertBefore.mockClear()
+
+    const swapped = rows.slice()
+    ;[swapped[1], swapped[998]] = [
+      { ...swapped[998], label: 'moved high' },
+      { ...swapped[1], label: 'moved low' },
+    ]
+    const NativeMap = globalThis.Map
+    const allocatedMaps: CountingMap<unknown, unknown>[] = []
+    class CountingMap<K, V> extends NativeMap<K, V> {
+      constructor(entries?: readonly (readonly [K, V])[] | null) {
+        super(entries)
+        allocatedMaps.push(this as CountingMap<unknown, unknown>)
+      }
+    }
+    vi.stubGlobal('Map', CountingMap)
+    try {
+      previous = _$reconcileKeyed(parent, before, previous, swapped, item => item.id, mount)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+
+    expect(
+      allocatedMaps.some(
+        map =>
+          map.size >= 900 &&
+          Array.from(map).every(
+            ([key, value]) => typeof key === 'number' && typeof value === 'number',
+          ),
+      ),
+    ).toBe(false)
+    expect(insertBefore).toHaveBeenCalledTimes(2)
+    expect(Array.from(patchCounts.values()).reduce((total, count) => total + count, 0)).toBe(1_000)
+    expect(previous[1].node.textContent).toBe('moved high')
+    expect(previous[998].node.textContent).toBe('moved low')
+    expect(rowIds(parent)).toEqual(swapped.map(item => item.id))
+  })
+
+  it('falls back when a two-row swap also replaces an otherwise stable item', () => {
+    const parent = document.createElement('tbody')
+    const before = document.createComment('list:end')
+    parent.appendChild(before)
+    const mount = (item: Row) => {
+      const node = document.createElement('tr')
+      node.dataset.id = String(item.id)
+      return {
+        node,
+        patch(next: Row) {
+          node.dataset.id = String(next.id)
+          node.textContent = next.label
+        },
+        dispose: vi.fn(),
+      }
+    }
+    const rows = Array.from({ length: 1_000 }, (_, index) => ({
+      id: index + 1,
+      label: `row ${index + 1}`,
+    }))
+    const previous = _$reconcileKeyed(parent, before, [], rows, item => item.id, mount)
+    const mixed = rows.slice()
+    ;[mixed[1], mixed[998]] = [mixed[998], mixed[1]]
+    mixed[500] = { ...mixed[500], label: 'unrelated replacement' }
+
+    const NativeMap = globalThis.Map
+    const allocatedMaps: CountingMap<unknown, unknown>[] = []
+    class CountingMap<K, V> extends NativeMap<K, V> {
+      constructor(entries?: readonly (readonly [K, V])[] | null) {
+        super(entries)
+        allocatedMaps.push(this as CountingMap<unknown, unknown>)
+      }
+    }
+    vi.stubGlobal('Map', CountingMap)
+    let next: CompiledKeyedRow<Row, number>[]
+    try {
+      next = _$reconcileKeyed(parent, before, previous, mixed, item => item.id, mount)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+
+    expect(
+      allocatedMaps.some(
+        map =>
+          map.size >= 900 &&
+          Array.from(map).every(
+            ([key, value]) => typeof key === 'number' && typeof value === 'number',
+          ),
+      ),
+    ).toBe(true)
+    expect(next[500].node.textContent).toBe('unrelated replacement')
+    expect(rowIds(parent)).toEqual(mixed.map(item => item.id))
   })
 
   it('mounts 1k direct roots without row anchors or fragments and limits swap moves', () => {

@@ -441,6 +441,27 @@ describe('useCustomElement', () => {
     })
   })
 
+  it('patches a directly returned h custom-element host in place', async () => {
+    const tag = defineTag(runtimeMain.useCustomElement(Message, { shadowRoot: false }))
+    const container = document.createElement('div')
+    const label = runtimeMain.signal('one')
+    const CompatHost = runtimeMain._$vaporMarkComponentRenderReactive((() =>
+      runtimeMain.h(tag as any, { key: 'stable-host', label: label.get() })) as FC)
+
+    document.body.appendChild(container)
+    runtimeMain.render(runtimeMain.h(CompatHost, null) as any, container as any)
+    await flush()
+
+    const firstHost = container.querySelector(tag)
+    expect(firstHost?.querySelector('[data-testid="msg"]')?.textContent).toBe('one')
+
+    label.set('two')
+    await flush()
+
+    expect(container.querySelector(tag)).toBe(firstHost)
+    expect(firstHost?.querySelector('[data-testid="msg"]')?.textContent).toBe('two')
+  })
+
   it('preserves context through nested custom element boundaries', async () => {
     const innerTag = defineTag(
       runtimeMain.useCustomElement(ContextSlotConsumer, { shadowRoot: false }),

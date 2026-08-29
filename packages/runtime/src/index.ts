@@ -4,6 +4,11 @@
 - 对 DOM/Vapor 运行时方法进行别名导出（带 _$ 前缀），便于编译产物按需引用。
 - 保持与 @rue-js/runtime-vapor 的接口兼容性，便于替换底层实现。
 */
+import { installJSXCreateElement } from './jsx'
+import { createElement } from './rue'
+
+installJSXCreateElement(createElement)
+
 export { version } from './version'
 
 // 核心 JSX/runtime API：组件类型、h、render/mount、生命周期与插件安装。

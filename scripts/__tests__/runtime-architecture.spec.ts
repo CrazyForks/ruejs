@@ -218,4 +218,29 @@ describe('runtime source architecture', () => {
       }
     }
   })
+
+  it('keeps Element and Fragment mounting behind the compatibility factory', async () => {
+    const sources = Object.fromEntries(
+      await Promise.all(
+        [
+          'js-runtime/mount.ts',
+          'js-runtime/mount-compat.ts',
+          'js-runtime/create-rue.ts',
+          'js-runtime/create-vapor-rue.ts',
+          'runtime-entry.ts',
+        ].map(async source => [
+          source,
+          await readFile(path.resolve(runtimeVaporSourceDir, source), 'utf8'),
+        ]),
+      ),
+    )
+
+    expect(sources['js-runtime/mount.ts']).not.toContain("from './mount-compat.js'")
+    expect(sources['js-runtime/mount.ts']).not.toContain("from './props.js'")
+    expect(sources['js-runtime/mount-compat.ts']).toContain("from './mount.js'")
+    expect(sources['js-runtime/mount-compat.ts']).toContain("from './props.js'")
+    expect(sources['js-runtime/create-rue.ts']).toContain("from './mount-compat.js'")
+    expect(sources['js-runtime/create-vapor-rue.ts']).toContain("from './mount.js'")
+    expect(sources['runtime-entry.ts']).not.toContain("from './js-runtime/create-rue.js'")
+  })
 })

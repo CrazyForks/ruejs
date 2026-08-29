@@ -1,15 +1,7 @@
-import {
-  RUE_CLEANUP_BUCKET_KEY,
-  RUE_MOUNT_ID_KEY,
-  RUE_PORTABLE_COMPONENT_TYPE_KEY,
-  RUE_PORTABLE_VAPOR_SETUP_KEY,
-  RUE_STABLE_COMPONENT_HOST_KEY,
-} from '../protocol.js'
-import { createElementMountInput, normalizeMountInput } from './mount-input.js'
+import { normalizeMountInput } from './mount-input.js'
 import type {
   ComponentInstanceManager,
   ComponentMountInput,
-  ComponentProps,
   LifecycleController,
   MountInput,
   Mounted,
@@ -28,101 +20,6 @@ import type {
 type ComponentRuntimeState<HostNode> = RuntimeState<HostNode> & {
   components: ComponentInstanceManager<HostNode>
   lifecycle: LifecycleController
-}
-
-const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
-const TEXT_HEAD_RECORD = Symbol.for('text.head.record')
-
-interface ElementHeadRecord {
-  [TEXT_HEAD_RECORD]: true
-  props?: Record<string, unknown> | null
-  type: string
-}
-
-const readNativeElementHeadRecord = (value: unknown): ElementHeadRecord | undefined => {
-  if ((typeof value !== 'object' && typeof value !== 'function') || value == null) return undefined
-  const head = Reflect.get(value, RUE_ELEMENT_HEAD_RECORD)
-  if ((typeof head !== 'object' && typeof head !== 'function') || head == null) return undefined
-  if (Reflect.get(head, TEXT_HEAD_RECORD) !== true) return undefined
-  const type = Reflect.get(head, 'type')
-  // Custom elements still require the high-level Vapor setup to inject their context owner.
-  if (typeof type !== 'string' || type === 'fragment' || type.includes('-')) return undefined
-  return head as ElementHeadRecord
-}
-
-const disposeUnusedMountInput = <HostNode>(
-  state: RuntimeState<HostNode>,
-  input: MountInput<HostNode> | null,
-): void => {
-  const bucket = input?.mountCleanupBucket
-  if (Array.isArray(bucket)) {
-    for (const cleanup of bucket.splice(0)) {
-      if (typeof cleanup === 'function') cleanup()
-    }
-  }
-  const scopeId = input?.mountEffectScopeId
-  if (scopeId !== undefined) {
-    state.kernel.disposeEffectScope(scopeId)
-    state.effectScopeIds.delete(scopeId)
-  }
-}
-
-const disposeUnusedVaporHandle = <HostNode>(
-  state: RuntimeState<HostNode>,
-  value: unknown,
-): void => {
-  if ((typeof value !== 'object' && typeof value !== 'function') || value == null) return
-  const input = normalizeMountInput(state, value, 'render')
-  disposeUnusedMountInput(state, input)
-  const bucket = Reflect.get(value, RUE_CLEANUP_BUCKET_KEY)
-  if (!Array.isArray(bucket)) return
-  for (const cleanup of bucket.splice(0)) {
-    if (typeof cleanup === 'function') cleanup()
-  }
-}
-
-const isStructuredMountChild = (value: unknown): boolean => {
-  if (Array.isArray(value)) return value.every(isStructuredMountChild)
-  if (
-    value == null ||
-    typeof value === 'boolean' ||
-    typeof value === 'string' ||
-    typeof value === 'number'
-  ) {
-    return true
-  }
-  if (typeof value !== 'object' && typeof value !== 'function') return false
-  return (
-    Reflect.has(value, RUE_MOUNT_ID_KEY) ||
-    Reflect.has(value, RUE_PORTABLE_COMPONENT_TYPE_KEY) ||
-    Reflect.has(value, RUE_PORTABLE_VAPOR_SETUP_KEY)
-  )
-}
-
-const createStableNativeElementInput = <HostNode>(
-  state: RuntimeState<HostNode>,
-  value: unknown,
-  descendantDepth: number,
-): MountInput<HostNode> | undefined => {
-  const nativeRoot = readNativeElementHeadRecord(value)
-  if (!nativeRoot) return undefined
-  // Island descriptors, DOM nodes, and other high-level renderables must be adapted before they
-  // reach the strict MountInput protocol, so keep those roots on the established Vapor path.
-  if (!isStructuredMountChild(nativeRoot.props?.children)) return undefined
-  const props: ComponentProps = {
-    ...nativeRoot.props,
-    [RUE_STABLE_COMPONENT_HOST_KEY]: true,
-  }
-  disposeUnusedVaporHandle(state, value)
-  const input = createElementMountInput(state, nativeRoot.type, props, props.children, {
-    normalizeObjectChild:
-      descendantDepth > 0
-        ? child =>
-            createStableNativeElementInput(state, child, descendantDepth - 1) ??
-            normalizeMountInput(state, child, 'render')
-        : undefined,
-  })
-  return input
 }
 
 interface LifecycleOrderNode extends ObjectLike {
@@ -152,10 +49,6 @@ const normalizeComponentResult = <HostNode>(
       strictComponentReturns: false,
     }
   }
-  // Preserve the component host and two native descendant levels. This covers wrapper/panel
-  // identity boundaries without recursively changing replacement semantics for the full DOM.
-  const nativeRoot = createStableNativeElementInput(state, value, 2)
-  if (nativeRoot) return nativeRoot
   return normalizeMountInput(state, value, 'render')
 }
 

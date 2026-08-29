@@ -90,28 +90,27 @@ export default PostDetail
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-
-const PostDetail = ()=>{
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, _$vaporMarkComponentRenderReactive, useSetup } from "@rue-js/rue/vapor";
+const PostDetail = _$vaporMarkComponentRenderReactive(()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        console.log('我是setup');
-        const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-        let msg = 'start';
-        const double = ()=>{
-            console.log('double click');
-            return count.value * 2;
-        };
-        const dec = ()=>{
-            console.log('dec click');
-            count.value--;
-        };
-        return {
-            count: count,
-            double: double,
-            dec: dec,
-            msg: msg
-        };
-    }));
+            console.log('我是setup');
+            const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+            let msg = 'start';
+            const double = ()=>{
+                console.log('double click');
+                return count.value * 2;
+            };
+            const dec = ()=>{
+                console.log('dec click');
+                count.value--;
+            };
+            return {
+                count: count,
+                double: double,
+                dec: dec,
+                msg: msg
+            };
+        }));
     const { count: count, double: double, dec: dec } = _$useSetup;
     let { msg: msg } = _$useSetup;
     if (count.value > 15) {
@@ -158,9 +157,8 @@ const PostDetail = ()=>{
         开始消息：{msg}
       </div>
     </div>);
-};
-export default PostDetail;
-"##;
+});
+export default PostDetail;"##;
 
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();

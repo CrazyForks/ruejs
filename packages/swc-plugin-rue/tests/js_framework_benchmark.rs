@@ -84,7 +84,8 @@ const App: FC = () => {
 
 fn transform_signal_benchmark_row() -> String {
     let source = r##"
-import { type FC, signal } from '@rue-js/rue';
+import type { FC } from '@rue-js/rue';
+import { signal } from '@rue-js/rue/compiled';
 
 type Row = { id: number; label: string };
 
@@ -151,8 +152,12 @@ fn benchmark_row_codegen_stays_within_effect_budget() {
         "benchmark mount must return the compiled node/patch/dispose record: {output}"
     );
     assert!(
-        output.contains(".addEventListener(") && output.contains(".removeEventListener("),
-        "benchmark events must be direct and row-owned: {output}"
+        output.contains(".addEventListener(") && !output.contains(".removeEventListener("),
+        "benchmark events must be direct and DOM-owned: {output}"
+    );
+    assert!(
+        output.contains("dispose: ()=>_$rowEffect.dispose()"),
+        "benchmark selector must dispose its direct effect handle: {output}"
     );
     assert!(
         output.contains(".textContent ="),
@@ -229,6 +234,23 @@ fn signal_benchmark_stays_on_native_signal_apis() {
         assert!(
             !output.contains(forbidden),
             "native signal codegen must not fall back to `{forbidden}`: {output}"
+        );
+    }
+
+    let compiled_import = output
+        .lines()
+        .find(|line| line.contains("@rue-js/rue/compiled"))
+        .expect("compiled runtime import");
+    for helper in ["signal", "effect", "_$reconcileKeyed", "createSelector"] {
+        assert!(
+            compiled_import.contains(helper),
+            "generated `{helper}` must share the explicit compiled signal graph: {output}"
+        );
+    }
+    for removed_helper in ["createOwner", "disposeOwner", "runWithOwner", "onCleanup"] {
+        assert!(
+            !compiled_import.contains(removed_helper),
+            "compiled selector rows must not import `{removed_helper}`: {output}"
         );
     }
 }

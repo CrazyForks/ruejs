@@ -6,6 +6,7 @@ Calendar 组件概述
 */
 import type { FC } from '@rue-js/rue'
 import { onUnmounted, ref, renderAnchor, useRef, useSetup, vapor } from '@rue-js/rue'
+import { _$vaporMarkComponentRenderReactive } from '@rue-js/rue/vapor'
 
 /** CalendarMode 类型。 */
 export type CalendarMode = 'month' | 'year'
@@ -1398,7 +1399,7 @@ const getTodayFormatter = (locale: string) => {
 }
 
 /** Calendar Panel 的内部工具函数。 */
-const CalendarPanel: FC<CalendarProps> = ({
+const CalendarPanelImpl: FC<CalendarProps> = ({
   value,
   defaultValue,
   mode,
@@ -2018,6 +2019,8 @@ const CalendarPanel: FC<CalendarProps> = ({
     return host
   })
 }
+
+const CalendarPanel = _$vaporMarkComponentRenderReactive(CalendarPanelImpl)
 
 /** Cally web component 容器 */
 const Cally: FC<CalendarHostProps> = ({ className, children, ...rest }) => {

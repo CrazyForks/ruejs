@@ -288,8 +288,8 @@ export default UseCart;
     assert!(normalized.contains("const _$rowBindingNext1 = pr.price"));
     assert!(normalized.contains("_el6.textContent = _$rowBindingNext1"));
     assert!(normalized.contains("const _$rowBindingNext0 = i.name"));
-    assert!(normalized.contains("_el13.textContent = _$rowBindingNext0"));
+    assert!(normalized.contains("_el11.textContent = _$rowBindingNext0"));
     assert!(normalized.contains("const _$rowBindingNext1 = i.qty"));
-    assert!(normalized.contains("_el14.textContent = _$rowBindingNext1"));
+    assert!(normalized.contains("_el12.textContent = _$rowBindingNext1"));
     assert!(!normalized.contains("_$vaporKeyedList"));
 }

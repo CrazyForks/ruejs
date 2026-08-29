@@ -12,12 +12,13 @@
 */
 
 import type { HookCarrier } from '../js-reactive/types.js'
-import type { PortableMountHandle } from '../protocol.js'
+import type { ComponentUpdateMode, PortableMountHandle } from '../protocol.js'
 
-export type { PortableMountHandle } from '../protocol.js'
+export type { ComponentUpdateMode, PortableMountHandle } from '../protocol.js'
 export {
   PORTABLE_HANDLE_KEYS,
   RUE_CLEANUP_BUCKET_KEY as CLEANUP_BUCKET_KEY,
+  RUE_COMPONENT_UPDATE_MODE_KEY as COMPONENT_UPDATE_MODE_KEY,
   RUE_EFFECT_SCOPE_ID_KEY as EFFECT_SCOPE_ID_KEY,
   RUE_KEEP_ALIVE_HOOK_TARGET_KEY as KEEP_ALIVE_HOOK_TARGET_KEY,
   RUE_MOUNT_ID_KEY as DEFAULT_MOUNT_HANDLE_KEY,
@@ -270,6 +271,7 @@ export interface ElementMountInputType {
 export interface ComponentMountInputType {
   kind: 'component'
   component: ComponentType
+  updateMode: ComponentUpdateMode
 }
 
 export interface VaporMountInputType<HostNode = unknown> {
@@ -355,6 +357,7 @@ export interface MountedElement<HostNode = unknown> extends MountedHostBase<Host
   tag: string
   props: ComponentProps
   children: Mounted<HostNode>[]
+  resetHostProps(): void
 }
 
 export interface MountedFragment<HostNode = unknown> extends MountedHostBase<HostNode, 'fragment'> {
@@ -365,6 +368,7 @@ export interface MountedFragment<HostNode = unknown> extends MountedHostBase<Hos
 
 export interface MountedComponent<HostNode = unknown> extends MountedBase<HostNode, 'component'> {
   type: ComponentType
+  updateMode: ComponentUpdateMode
   instance: ComponentInstance<ComponentProps, HostNode>
   subtree: Mounted<HostNode> | undefined
   fragmentNodes: HostNode[]
@@ -397,6 +401,48 @@ export type MountFunction<HostNode = unknown> = (
   input: MountInput<HostNode> | null | undefined,
   parentContext: HostNode,
 ) => Mounted<HostNode> | undefined
+
+export interface MountController<HostNode = unknown> {
+  mountInput: MountFunction<HostNode>
+  patchMountedInput(
+    state: RenderRuntimeState<HostNode>,
+    host: DOMHost<HostNode>,
+    mounted: Mounted<HostNode> | undefined,
+    input: MountInput<HostNode> | null,
+    parentContext: HostNode,
+  ): Mounted<HostNode> | undefined
+}
+
+export interface MountCompatibilityController<HostNode = unknown> {
+  mountElement(
+    state: RenderRuntimeState<HostNode>,
+    host: DOMHost<HostNode>,
+    input: ElementMountInput<HostNode>,
+    parentContext: HostNode,
+    controller: MountController<HostNode>,
+  ): MountedElement<HostNode>
+  mountFragment(
+    state: RenderRuntimeState<HostNode>,
+    host: DOMHost<HostNode>,
+    input: FragmentMountInput<HostNode>,
+    controller: MountController<HostNode>,
+  ): MountedFragment<HostNode>
+  patchElement(
+    state: RenderRuntimeState<HostNode>,
+    host: DOMHost<HostNode>,
+    mounted: MountedElement<HostNode>,
+    input: ElementMountInput<HostNode>,
+    controller: MountController<HostNode>,
+  ): MountedElement<HostNode>
+  patchFragment(
+    state: RenderRuntimeState<HostNode>,
+    host: DOMHost<HostNode>,
+    mounted: MountedFragment<HostNode>,
+    input: FragmentMountInput<HostNode>,
+    parentContext: HostNode,
+    controller: MountController<HostNode>,
+  ): MountedFragment<HostNode>
+}
 
 export type PatchSubtree<HostNode = unknown> = (
   input: MountInput<HostNode> | null,

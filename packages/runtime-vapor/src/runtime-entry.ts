@@ -1,6 +1,6 @@
-import { createRue as createJsRue } from './js-runtime/create-rue.js'
 import { wrapCreateRue } from './runtime-entry-wrap.js'
 import { installSharedBridge } from './vapor-bridge.js'
+import type { RueRuntime } from './js-runtime/types.js'
 
 type RuntimeEntryMetadata = Parameters<
   NonNullable<typeof globalThis.__rue_runtime_vapor_backend_test_hook__>
@@ -10,8 +10,11 @@ interface RuntimeEntryOptions extends Pick<RuntimeEntryMetadata, 'entry' | 'kern
   normalizeRenderTriggeredEvent?: (event: unknown) => unknown
 }
 
+type CreateRueFactory = (adapter: unknown, reactiveKernel?: unknown) => RueRuntime
+
 export const createRuntimeEntry = <TRuntime extends RuntimeVaporSharedRuntime>(
   sharedRuntime: TRuntime,
+  createRue: CreateRueFactory,
   { entry, kernel, normalizeRenderTriggeredEvent }: RuntimeEntryOptions,
 ) => {
   installSharedBridge(sharedRuntime)
@@ -24,7 +27,7 @@ export const createRuntimeEntry = <TRuntime extends RuntimeVaporSharedRuntime>(
         runtime: 'js',
       })
     }
-    return createJsRue(adapter, sharedRuntime)
+    return createRue(adapter, sharedRuntime)
   }
 
   return wrapCreateRue(createJsRuntime, normalizeRenderTriggeredEvent)

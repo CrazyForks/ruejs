@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
+  RUE_COMPONENT_UPDATE_MODE_KEY,
+  RUE_REPEATABLE_MOUNT_FACTORY_KEY,
+} from '@rue-js/runtime-vapor/protocol'
+
+import {
   getCurrentContainer as getDefaultCurrentContainer,
   h,
   ref,
@@ -73,6 +78,23 @@ const VaporEntryApp = () => {
 }
 
 describe('vapor entry interop', () => {
+  it('marks compiled helper components as fine-grained and h components as rerender across replay', () => {
+    const Component = () => null
+    const compiled = _$createComponent(Component, null) as Record<string, unknown>
+    const handwritten = h(Component, null) as Record<string, unknown>
+
+    const replay = (handle: Record<string, unknown>) => {
+      const factory = handle[RUE_REPEATABLE_MOUNT_FACTORY_KEY]
+      expect(factory).toBeTypeOf('function')
+      return Reflect.apply(factory as () => unknown, undefined, []) as Record<string, unknown>
+    }
+
+    expect(compiled[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('fine-grained')
+    expect(replay(compiled)[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('fine-grained')
+    expect(handwritten[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('rerender')
+    expect(replay(handwritten)[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('rerender')
+  })
+
   it('shares the default client runtime identity across default and vapor app entries', () => {
     const defaultContainer = document.createElement('div')
     const vaporContainer = document.createElement('div')

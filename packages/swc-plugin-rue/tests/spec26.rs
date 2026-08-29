@@ -29,11 +29,8 @@ export default OrCases
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
+import { vapor, renderAnchor, _$createElement, _$createComment, _$appendChild, untrack, watchEffect, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
-const _$getTemplate1 = _$template("<div>Alt</div>");
-const _$getTemplate2 = _$template("<div>A</div>");
-const _$getTemplate3 = _$template("<div>B</div>");
 const show = false;
 const a = false;
 const b = false;
@@ -43,9 +40,9 @@ const OrCases: FC = ()=>{
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
         watchEffect(()=>{
-            const __slot = show || vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate1().content.cloneNode(true));
+            const __slot = show || _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("Alt"));
                 return _root;
             });
             untrack(()=>renderAnchor(__slot, _root, _list1));
@@ -53,13 +50,13 @@ const OrCases: FC = ()=>{
         const _list2 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list2);
         watchEffect(()=>{
-            const __slot = a ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            const __slot = a ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("A"));
                 return _root;
-            }) : b || vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate3().content.cloneNode(true));
+            }) : b || _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("B"));
                 return _root;
             });
             untrack(()=>renderAnchor(__slot, _root, _list2));

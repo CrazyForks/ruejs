@@ -90,9 +90,9 @@ export default PostDetail
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, _$vaporMarkComponentRenderReactive, useSetup } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
-const PostDetail: FC = ()=>{
+const PostDetail: FC = _$vaporMarkComponentRenderReactive(()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
         console.log('我是setup');
         const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
@@ -158,7 +158,7 @@ const PostDetail: FC = ()=>{
         开始消息：{msg}
       </div>
     </div>);
-};
+});
 export default PostDetail;
 "##;
 

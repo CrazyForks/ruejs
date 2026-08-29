@@ -1,4 +1,5 @@
 import { createRuntimeEntry } from './runtime-entry.js'
+import { createRue as createFullRue } from './js-runtime/create-rue.js'
 // Node 入口复用 reactive.node.js 的 JS 包装 API，保持 SSR/测试环境和浏览器入口一致。
 import {
   computed,
@@ -29,7 +30,7 @@ import {
 } from './reactive.node.js'
 import runtimeWithJsHooks from './reactive.node.js'
 
-const createRue = createRuntimeEntry(runtimeWithJsHooks, {
+const createRue = createRuntimeEntry(runtimeWithJsHooks, createFullRue, {
   entry: 'node:full',
   kernel: 'typescript',
   normalizeRenderTriggeredEvent,

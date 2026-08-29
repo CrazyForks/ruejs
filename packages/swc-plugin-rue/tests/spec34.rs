@@ -185,7 +185,7 @@ export default DocDetail
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML, _$compiledCreateElement, _$compiledRoot } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlayground';
@@ -412,10 +412,8 @@ const DocDetail: FC = ()=>{
                                 untrack(()=>renderAnchor(__slot, _el3, _list1));
                             });
                             return _root;
-                        }) : vapor(()=>{
-                            const _root = _$createDocumentFragment();
-                            const _el4 = _$createElement("span", _root);
-                            _$appendChild(_root, _el4);
+                        }) : _$compiledRoot((__rue_parent_context)=>{
+                            const _root = _$compiledCreateElement("span", __rue_parent_context);
                             return _root;
                         });
                         untrack(()=>renderAnchor(__slot, _el2, _list2));
@@ -425,36 +423,34 @@ const DocDetail: FC = ()=>{
                     watchEffect(()=>{
                         const __slot = next ? vapor(()=>{
                             const _root = _$createDocumentFragment();
-                            const _el5 = _$createElement("a", _root);
-                            _$appendChild(_root, _el5);
+                            const _el4 = _$createElement("a", _root);
+                            _$appendChild(_root, _el4);
                             watchEffect(()=>{
-                                _$setAttribute(_el5, "href", String(RouterLink.__rueHref(`${uiBase}/${next.id}`)));
+                                _$setAttribute(_el4, "href", String(RouterLink.__rueHref(`${uiBase}/${next.id}`)));
                             });
-                            _$addEventListener(_el5, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${next.id}`, false)));
-                            _$addEventListener(_el5, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
-                            _$addEventListener(_el5, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
-                            _$addEventListener(_el5, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
-                            _$addEventListener(_el5, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
-                            _$setClassName(_el5, "btn btn-outline btn-sm");
-                            _$appendChild(_el5, _$createTextNode("下一页："));
+                            _$addEventListener(_el4, "click", ((e)=>RouterLink.__rueOnClick(e, `${uiBase}/${next.id}`, false)));
+                            _$addEventListener(_el4, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
+                            _$addEventListener(_el4, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
+                            _$addEventListener(_el4, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
+                            _$addEventListener(_el4, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, `${uiBase}/${next.id}`, "hover")));
+                            _$setClassName(_el4, "btn btn-outline btn-sm");
+                            _$appendChild(_el4, _$createTextNode("下一页："));
                             const _list3 = _$createComment("rue:slot:anchor");
-                            _$appendChild(_el5, _list3);
+                            _$appendChild(_el4, _list3);
                             watchEffect(()=>{
                                 const __slot = (next.title);
-                                untrack(()=>renderAnchor(__slot, _el5, _list3));
+                                untrack(()=>renderAnchor(__slot, _el4, _list3));
                             });
-                            _$appendChild(_el5, _$createTextNode(" →"));
+                            _$appendChild(_el4, _$createTextNode(" →"));
                             return _root;
-                        }) : vapor(()=>{
-                            const _root = _$createDocumentFragment();
-                            const _el6 = _$createElement("span", _root);
-                            _$appendChild(_root, _el6);
+                        }) : _$compiledRoot((__rue_parent_context)=>{
+                            const _root = _$compiledCreateElement("span", __rue_parent_context);
                             return _root;
                         });
                         untrack(()=>renderAnchor(__slot, _el2, _list4));
                     });
                     return _root;
-                }) : "";
+                }, true) : "";
                 untrack(()=>renderAnchor(__slot, _root, _list5));
             });
             return _root;

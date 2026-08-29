@@ -23,13 +23,14 @@ type TestGlobal = typeof globalThis & {
 
 const runtimeVaporDist = path.resolve(process.cwd(), 'packages/runtime-vapor/dist')
 const vaporEntry = path.resolve(runtimeVaporDist, 'vapor.js')
+const fullEntry = path.resolve(runtimeVaporDist, 'index.js')
 
-const buildTestEntry = async () => {
+const buildTestEntry = async (runtimeEntry = vaporEntry) => {
   const fixtureDir = await mkdtemp(path.join(tmpdir(), 'rue-vapor-entry-switch-'))
   const entryFile = path.resolve(fixtureDir, 'entry.mjs')
   await writeFile(
     entryFile,
-    `import * as entry from ${JSON.stringify(vaporEntry)}\n` +
+    `import * as entry from ${JSON.stringify(runtimeEntry)}\n` +
       `export const entryExports = Object.keys(entry).sort()\n` +
       `export const createRuntime = adapter => entry.createRue(adapter)\n`,
     'utf8',
@@ -84,7 +85,14 @@ describe('runtime-vapor JavaScript Vapor production entry', () => {
     const runtime = entry.createRuntime(adapter)
     const container = document.createElement('main')
     try {
-      runtime.render(runtime.createElement('strong', null, ['JS Vapor entry']), container)
+      runtime.render(
+        runtime.vapor(() => {
+          const element = document.createElement('strong')
+          element.textContent = 'JS Vapor entry'
+          return element
+        }),
+        container,
+      )
       expect(container.innerHTML).toBe('<strong>JS Vapor entry</strong>')
       expect(Object.getPrototypeOf(runtime)).toBe(Object.prototype)
       expect(markers).toEqual([
@@ -96,6 +104,70 @@ describe('runtime-vapor JavaScript Vapor production entry', () => {
         },
       ])
       expect(entry.entryExports).not.toContain('__rueRuntimeBackend')
+    } finally {
+      runtime.unmount?.(container)
+      runtime.free()
+    }
+  })
+
+  it('rejects compatibility Element and Fragment inputs with a stable core-entry error', async () => {
+    const entry = await importBundle(await buildTestEntry())
+    const adapter = (globalThis as typeof globalThis & { __rue_dom: unknown }).__rue_dom
+    const runtime = entry.createRuntime(adapter)
+    const container = document.createElement('main')
+    try {
+      expect(() =>
+        runtime.render(runtime.createElement('strong', null, ['element']), container),
+      ).toThrowError(
+        'Rue runtime: Element and Fragment inputs require the full runtime-vapor entry',
+      )
+      expect(() =>
+        runtime.render(runtime.createElement('fragment', null, ['fragment']), container),
+      ).toThrowError(
+        'Rue runtime: Element and Fragment inputs require the full runtime-vapor entry',
+      )
+    } finally {
+      runtime.free()
+    }
+  })
+
+  it('mounts and replaces compiled Vapor roots at a core anchor', async () => {
+    const entry = await importBundle(await buildTestEntry())
+    const adapter = (globalThis as typeof globalThis & { __rue_dom: unknown }).__rue_dom
+    const runtime = entry.createRuntime(adapter)
+    const parent = document.createElement('main')
+    const anchor = document.createComment('core-anchor')
+    parent.append(anchor)
+    const vaporText = (value: string) =>
+      runtime.vapor(() => {
+        const element = document.createElement('strong')
+        element.textContent = value
+        return element
+      })
+    try {
+      runtime.renderAnchor(vaporText('first'), parent, anchor)
+      runtime.renderAnchor(vaporText('second'), parent, anchor)
+      expect(parent.innerHTML).toBe('<strong>second</strong><!--core-anchor-->')
+    } finally {
+      runtime.unmount?.(parent)
+      runtime.free()
+    }
+  })
+
+  it('keeps Element and Fragment rendering on the full compatibility entry', async () => {
+    const entry = await importBundle(await buildTestEntry(fullEntry))
+    const adapter = (globalThis as typeof globalThis & { __rue_dom: unknown }).__rue_dom
+    const runtime = entry.createRuntime(adapter)
+    const container = document.createElement('main')
+    try {
+      runtime.render(
+        runtime.createElement('fragment', null, [
+          runtime.createElement('strong', null, ['full']),
+          ' entry',
+        ]),
+        container,
+      )
+      expect(container.innerHTML).toBe('<strong>full</strong> entry')
     } finally {
       runtime.unmount?.(container)
       runtime.free()

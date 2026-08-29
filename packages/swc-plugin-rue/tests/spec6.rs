@@ -29,40 +29,39 @@ export default Comp;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$createComment, _$settextContent, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
 import { type FC, h } from '@rue-js/rue';
-const _$getTemplate1 = _$template('<p id="empty">empty</p>');
-const _$getTemplate2 = _$template("<ul><li>ok</li></ul>");
 const count = _$vaporWithHookId("ref:1:0", ()=>ref(22));
 const Comp: FC = ()=>vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
         watchEffect(()=>{
-            const __slot = count.value === 0 ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate1().content.cloneNode(true));
+            const __slot = count.value === 0 ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("p", __rue_parent_context);
+                _root.setAttribute("id", "empty");
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("empty"));
                 return _root;
-            }) : vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            }) : _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("ul", __rue_parent_context);
+                const _el1 = _$compiledCreateElement("li", _root);
+                _$compiledAppendChild(_root, _el1);
+                _$compiledAppendChild(_el1, _$compiledCreateTextNode("ok"));
                 return _root;
             });
             untrack(()=>renderAnchor(__slot, _root, _list1));
         });
-        const _el4 = _$createElement("span", _root);
-        _$appendChild(_root, _el4);
-        _$setAttribute(_el4, "id", "n");
-        const _el5 = _$createTextWrapper(_el4);
-        _$appendChild(_el4, _el5);
+        const _el2 = _$createElement("span", _root);
+        _$appendChild(_root, _el2);
+        _$setAttribute(_el2, "id", "n");
+        const _el3 = _$createTextWrapper(_el2);
+        _$appendChild(_el2, _el3);
         watchEffect(()=>{
-            _$settextContent(_el5, count.value);
+            _$settextContent(_el3, count.value);
         });
         return _root;
     });
-export default Comp;
-"##;
+export default Comp;"##;
 
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();

@@ -8,6 +8,7 @@ Slot 组件概述
 import { appendChild, createComment, createDocumentFragment } from '../dom'
 import { getCurrentInstance } from '../reactivity'
 import { renderAnchor, vapor, type FC, type PropsWithChildren, type RenderableOutput } from '../rue'
+import { vaporMarkComponentRenderReactive } from '../vapor-helpers'
 
 /** 编译器注入作用域插槽表时使用的隐藏 prop 名。 */
 export const RUE_SLOT_BAG_PROP = '__rue_slots'
@@ -122,7 +123,7 @@ const resolveSlotValue = (
 }
 
 /** 渲染命名插槽或默认插槽，缺失时渲染 fallback children。 */
-export const Slot: FC<SlotProps> = props => {
+const SlotImpl: FC<SlotProps> = props => {
   const name = props.name ?? DEFAULT_SLOT_NAME
   const source = resolveSlotSource(props.source)
   const resolved = resolveSlotValue(source, name)
@@ -138,3 +139,5 @@ export const Slot: FC<SlotProps> = props => {
 
   return createSlotValueHandle(value)
 }
+
+export const Slot = vaporMarkComponentRenderReactive(SlotImpl)

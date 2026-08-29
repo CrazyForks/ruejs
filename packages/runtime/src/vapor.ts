@@ -27,7 +27,7 @@ export {
   renderAnchor,
   renderBetween,
   useEmit,
-  createComponent as _$createComponent,
+  createCompiledComponent as _$createComponent,
 } from './rue'
 
 export { useVaporApp as useApp } from './hooks/useVaporApp'

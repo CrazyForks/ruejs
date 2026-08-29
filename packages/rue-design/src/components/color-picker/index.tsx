@@ -1922,16 +1922,16 @@ const ColorPicker: FC<ColorPickerProps> = ({
   const setPopupOpen = (nextOpen: boolean) => {
     if (!nextOpen) {
       popupFloatingStyle.value = HIDDEN_POPUP_STYLE
-      if (mergedDestroyOnHidden && popupRef.current) {
-        popupRef.current.remove()
-        popupRef.current = undefined
-      }
     }
     if (!isControlledOpen) {
       popupOpen.value = nextOpen
     }
     requestRender()
     syncPopupDom()
+    if (!nextOpen && mergedDestroyOnHidden && popupRef.current) {
+      popupRef.current.remove()
+      popupRef.current = undefined
+    }
     if (nextOpen) {
       schedulePopupPositionSync()
     }
@@ -2785,8 +2785,8 @@ const ColorPicker: FC<ColorPickerProps> = ({
             </div>
           </div>
         ) : null
-      ) : (
-        <Teleport to={popupOpen.value || !mergedDestroyOnHidden ? resolvedContainer : undefined}>
+      ) : popupOpen.value || !mergedDestroyOnHidden ? (
+        <Teleport to={resolvedContainer}>
           <div
             ref={(element: HTMLDivElement | null) => {
               const previousElement = popupRef.current
@@ -2848,7 +2848,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
             </div>
           </div>
         </Teleport>
-      )}
+      ) : null}
     </div>
   )
 

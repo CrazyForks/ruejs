@@ -14,7 +14,6 @@ import {
   onCleanup as compiledOnCleanup,
   runWithOwner as runWithCompiledOwner,
   signal,
-  type CompiledOwner,
 } from '../../runtime-vapor/dist/compiled.js'
 import { _$compiledRoot } from '../src/compiled-root'
 import { _$reconcileKeyed } from '../src/compiled-keyed-list'
@@ -92,22 +91,18 @@ describe('compiled selector codegen', () => {
     const compiledImport = output.match(
       /import\s*\{([^}]*)\}\s*from\s*["']@rue-js\/rue\/compiled["']/,
     )
-    for (const helper of [
-      'createOwner',
-      'createSelector',
-      'disposeOwner',
-      'effect',
-      'onCleanup',
-      'runWithOwner',
-      '_$reconcileKeyed',
-    ]) {
+    for (const helper of ['createSelector', 'effect', '_$reconcileKeyed']) {
       expect(compiledImport?.[1]).toContain(helper)
+    }
+    for (const helper of ['createOwner', 'disposeOwner', 'onCleanup', 'runWithOwner']) {
+      expect(compiledImport?.[1]).not.toContain(helper)
     }
     expect(output).not.toContain('watchEffect')
     expect(output).not.toContain('_$vaporKeyedList')
     expect(output.indexOf('createSelector')).toBeLessThan(output.lastIndexOf('effect'))
-    expect(output.match(/\bcreateOwner\(\)/g)).toHaveLength(1)
-    expect(output.match(/\bdisposeOwner\(/g)).toHaveLength(1)
+    expect(output.match(/\bcreateOwner\(\)/g)).toBeNull()
+    expect(output.match(/\bdisposeOwner\(/g)).toBeNull()
+    expect(output).toContain('.dispose()')
 
     let selectorBindingRuns = 0
     const clickEvents: number[] = []
@@ -123,40 +118,20 @@ describe('compiled selector codegen', () => {
       return _$reconcileKeyed(...args)
     }
 
-    const activeOwners = new Set<CompiledOwner>()
-    const rowEffects = new Map<CompiledOwner, ReturnType<typeof compiledEffect>[]>()
-    let currentOwner: CompiledOwner | undefined
-    const trackedCreateOwner = (): CompiledOwner => {
-      const owner = createCompiledOwner()
-      activeOwners.add(owner)
-      return owner
-    }
-    const trackedRunWithOwner = <T,>(owner: CompiledOwner, callback: () => T): T | undefined =>
-      runWithCompiledOwner(owner, () => {
-        const previous = currentOwner
-        currentOwner = owner
-        try {
-          return callback()
-        } finally {
-          currentOwner = previous
-        }
-      })
-    const trackedEffect: typeof compiledEffect = callback => {
-      const handle = compiledEffect(callback)
-      if (currentOwner !== undefined) {
-        const handles = rowEffects.get(currentOwner) ?? []
-        handles.push(handle)
-        rowEffects.set(currentOwner, handles)
+    const activeEffects = new Set<number>()
+    const trackedEffect: typeof compiledEffect = (callback, options) => {
+      const handle = compiledEffect(callback, options)
+      activeEffects.add(handle.id)
+      const dispose = () => {
+        handle.dispose()
+        activeEffects.delete(handle.id)
       }
-      return handle
-    }
-    const trackedDisposeOwner = (owner: CompiledOwner): boolean => {
-      const disposed = disposeCompiledOwner(owner)
-      if (disposed) {
-        activeOwners.delete(owner)
-        rowEffects.delete(owner)
+      return {
+        id: handle.id,
+        dispose,
+        free: dispose,
+        [Symbol.dispose]: dispose,
       }
-      return disposed
     }
 
     const executable = `${stripModuleSyntax(output)}\nreturn View;`
@@ -187,12 +162,12 @@ describe('compiled selector codegen', () => {
       selected,
       (id: number) => clickEvents.push(id),
       (id: number) => mouseOverEvents.push(id),
-      trackedCreateOwner,
+      createCompiledOwner,
       createCompiledSelector,
-      trackedDisposeOwner,
+      disposeCompiledOwner,
       trackedEffect,
       compiledOnCleanup,
-      trackedRunWithOwner,
+      runWithCompiledOwner,
       reconcile,
       _$compiledRoot,
       _$compiledCreateElement,
@@ -219,10 +194,7 @@ describe('compiled selector codegen', () => {
     })
     if (!tbody) throw new Error('Expected compiled tbody')
     expect(tbody.querySelectorAll('tr')).toHaveLength(1_000)
-    expect({ owners: activeOwners.size, effects: rowEffects.size }).toEqual({
-      owners: 1_000,
-      effects: 1_000,
-    })
+    expect(activeEffects.size).toBe(1_001)
     const firstRow = tbody.querySelectorAll('tr')[0]!
     firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     firstRow.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
@@ -278,16 +250,13 @@ describe('compiled selector codegen', () => {
     const removedSelectedRow = tbody.querySelectorAll('tr')[874]!
     rows.set(rows.peek().filter(row => row.key !== 875))
     await flushCompiledEffects()
-    const afterSelectedRowRemoval = { owners: activeOwners.size, effects: rowEffects.size }
-    expect(afterSelectedRowRemoval).toEqual({
-      owners: 999,
-      effects: 999,
-    })
+    const afterSelectedRowRemoval = { effects: activeEffects.size }
+    expect(afterSelectedRowRemoval).toEqual({ effects: 1_000 })
     removedSelectedRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     removedSelectedRow.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
     expect({ clickEvents, mouseOverEvents }).toEqual({
-      clickEvents: [1],
-      mouseOverEvents: [1],
+      clickEvents: [1, 875],
+      mouseOverEvents: [1, 875],
     })
     selectorBindingRuns = 0
     selected.set(1)
@@ -299,18 +268,15 @@ describe('compiled selector codegen', () => {
     await flushCompiledEffects()
     expect(tbody.querySelectorAll('tr')).toHaveLength(0)
     expect(tbody.childNodes).toHaveLength(1)
-    expect({ owners: activeOwners.size, effects: rowEffects.size }).toEqual({
-      owners: 0,
-      effects: 0,
-    })
+    expect(activeEffects.size).toBe(1)
     firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     firstRow.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
     selected.set(2)
     await flushCompiledEffects()
     expect(selectorBindingRuns).toBe(0)
     expect({ clickEvents, mouseOverEvents }).toEqual({
-      clickEvents: [1],
-      mouseOverEvents: [1],
+      clickEvents: [1, 875, 1],
+      mouseOverEvents: [1, 875, 1],
     })
 
     console.info('[compiled selector codegen]', {

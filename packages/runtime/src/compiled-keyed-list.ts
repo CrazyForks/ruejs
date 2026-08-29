@@ -2,6 +2,7 @@ import { insertBefore, removeChild, withDOMHostOperations } from './compiled-dom
 
 export interface CompiledKeyedRow<T, K = unknown> {
   key: K
+  item: T
   node: Node
   patch: (item: T, index: number) => void
   dispose: () => void
@@ -16,6 +17,42 @@ export interface CompiledKeyedMountResult<T> {
 export type CompiledKeyedMount<T> = (item: T, index: number) => CompiledKeyedMountResult<T>
 
 type CompiledKeyedParent = Node & ParentNode
+
+const isContiguousRowRange = <T, K>(
+  parent: CompiledKeyedParent,
+  before: Node | null,
+  rows: readonly CompiledKeyedRow<T, K>[],
+) => {
+  let cursor = before
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const node = rows[index].node
+    if (node.parentNode !== parent || node.nextSibling !== cursor) return false
+    cursor = node
+  }
+  return true
+}
+
+const clearContiguousRows = <T, K>(
+  parent: CompiledKeyedParent,
+  before: Node | null,
+  rows: readonly CompiledKeyedRow<T, K>[],
+) => {
+  if (rows.length === 0) return true
+  const document = rows[0].node.ownerDocument
+  if (document == null || typeof document.createRange !== 'function') return false
+  if (!isContiguousRowRange(parent, before, rows)) return false
+
+  const range = document.createRange()
+  range.setStartBefore(rows[0].node)
+  range.setEndAfter(rows[rows.length - 1].node)
+  try {
+    for (let index = rows.length - 1; index >= 0; index -= 1) rows[index].dispose()
+  } finally {
+    range.deleteContents()
+    range.detach()
+  }
+  return true
+}
 
 const stableIndexes = (oldIndexes: number[]): Set<number> => {
   const predecessors = new Int32Array(oldIndexes.length)
@@ -68,7 +105,9 @@ export const _$reconcileKeyed = <T, K>(
     }
 
     if (items.length === 0) {
-      for (let index = previous.length - 1; index >= 0; index -= 1) disposeRow(previous[index])
+      if (!clearContiguousRows(parent, before, previous)) {
+        for (let index = previous.length - 1; index >= 0; index -= 1) disposeRow(previous[index])
+      }
       return []
     }
 
@@ -82,6 +121,57 @@ export const _$reconcileKeyed = <T, K>(
       seen.add(key)
       keys[index] = key
     }
+
+    // js-framework-benchmark's swap operation changes exactly two keyed positions. Keep
+    // patch semantics for every row, but avoid building a 998-entry Map and running LIS.
+    if (!hasDuplicateKeys && previous.length === items.length) {
+      let firstMismatch = -1
+      let secondMismatch = -1
+      let tooManyMismatches = false
+      let domOrderIsStable = true
+      let stableItemsRetained = true
+      let cursor = before
+      for (let index = previous.length - 1; index >= 0; index -= 1) {
+        const row = previous[index]
+        if (row.node.parentNode !== parent || row.node.nextSibling !== cursor) {
+          domOrderIsStable = false
+        }
+        cursor = row.node
+        if (row.key === keys[index]) {
+          if (row.item !== items[index]) stableItemsRetained = false
+          continue
+        }
+        if (firstMismatch < 0) firstMismatch = index
+        else if (secondMismatch < 0) secondMismatch = index
+        else tooManyMismatches = true
+      }
+
+      if (
+        domOrderIsStable &&
+        stableItemsRetained &&
+        !tooManyMismatches &&
+        firstMismatch >= 0 &&
+        secondMismatch >= 0 &&
+        previous[firstMismatch].key === keys[secondMismatch] &&
+        previous[secondMismatch].key === keys[firstMismatch]
+      ) {
+        const next = previous.slice() as CompiledKeyedRow<T, K>[]
+        next[firstMismatch] = previous[secondMismatch]
+        next[secondMismatch] = previous[firstMismatch]
+        for (let index = 0; index < next.length; index += 1) {
+          next[index].patch(items[index], index)
+          next[index].item = items[index]
+        }
+
+        const firstNode = previous[firstMismatch].node
+        const secondNode = previous[secondMismatch].node
+        const afterSecond = secondNode.nextSibling
+        insertBefore(parent, secondNode, firstNode)
+        if (firstNode.nextSibling !== afterSecond) insertBefore(parent, firstNode, afterSecond)
+        return next
+      }
+    }
+
     const previousKeys = new Set<K>()
     const hadDuplicateKeys = previous.some(row => {
       if (previousKeys.has(row.key)) return true
@@ -106,12 +196,18 @@ export const _$reconcileKeyed = <T, K>(
         throw new Error('[rue] compiled keyed rows must mount exactly one direct-root node')
       }
 
-      const row: CompiledKeyedRow<T, K> = {
+      const row = {
         key: keys[index],
         node: mounted.node,
         patch: mounted.patch,
         dispose: mounted.dispose,
-      }
+      } as CompiledKeyedRow<T, K>
+      Object.defineProperty(row, 'item', {
+        configurable: false,
+        enumerable: false,
+        value: items[index],
+        writable: true,
+      })
       try {
         insertBefore(parent, row.node, cursor)
       } catch (error) {
@@ -146,6 +242,7 @@ export const _$reconcileKeyed = <T, K>(
     ) {
       const row = previous[oldStart]
       row.patch(items[nextStart], nextStart)
+      row.item = items[nextStart]
       next[nextStart] = row
       oldStart += 1
       nextStart += 1
@@ -154,6 +251,7 @@ export const _$reconcileKeyed = <T, K>(
     while (oldStart <= oldEnd && nextStart <= nextEnd && previous[oldEnd].key === keys[nextEnd]) {
       const row = previous[oldEnd]
       row.patch(items[nextEnd], nextEnd)
+      row.item = items[nextEnd]
       next[nextEnd] = row
       oldEnd -= 1
       nextEnd -= 1
@@ -186,6 +284,7 @@ export const _$reconcileKeyed = <T, K>(
       if (oldIndex === undefined) continue
       const row = previous[oldIndex]
       row.patch(items[index], index)
+      row.item = items[index]
       next[index] = row
       middleOldIndexes[index - nextStart] = oldIndex
       reusedOldIndexes.add(oldIndex)

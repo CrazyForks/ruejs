@@ -45,16 +45,8 @@ export default Chain
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
+import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$appendChild, untrack, watchEffect, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
-const _$getTemplate1 = _$template("<div>A</div>");
-const _$getTemplate2 = _$template("<div>B</div>");
-const _$getTemplate3 = _$template("<div>C</div>");
-const _$getTemplate4 = _$template("<div>D</div>");
-const _$getTemplate5 = _$template("<div>E</div>");
-const _$getTemplate6 = _$template("<div>F</div>");
-const _$getTemplate7 = _$template("<div>G</div>");
-const _$getTemplate8 = _$template("<div>H</div>");
 const Chain: FC = ()=>{
     return vapor((__rue_parent_context)=>{
         const _root = _$createElement("div", __rue_parent_context);
@@ -62,9 +54,9 @@ const Chain: FC = ()=>{
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
         watchEffect(()=>{
-            const __slot = 0 ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate1().content.cloneNode(true));
+            const __slot = 0 ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("A"));
                 return _root;
             }) : 0;
             untrack(()=>renderAnchor(__slot, _root, _list1));
@@ -73,9 +65,9 @@ const Chain: FC = ()=>{
         const _list2 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list2);
         watchEffect(()=>{
-            const __slot = ' ' ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            const __slot = ' ' ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("B"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list2));
@@ -84,9 +76,9 @@ const Chain: FC = ()=>{
         const _list3 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list3);
         watchEffect(()=>{
-            const __slot = '' ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate3().content.cloneNode(true));
+            const __slot = '' ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("C"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list3));
@@ -95,9 +87,9 @@ const Chain: FC = ()=>{
         const _list4 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list4);
         watchEffect(()=>{
-            const __slot = NaN ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate4().content.cloneNode(true));
+            const __slot = NaN ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("D"));
                 return _root;
             }) : NaN;
             untrack(()=>renderAnchor(__slot, _root, _list4));
@@ -106,9 +98,9 @@ const Chain: FC = ()=>{
         const _list5 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list5);
         watchEffect(()=>{
-            const __slot = {} ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate5().content.cloneNode(true));
+            const __slot = {} ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("E"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list5));
@@ -117,9 +109,9 @@ const Chain: FC = ()=>{
         const _list6 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list6);
         watchEffect(()=>{
-            const __slot = false ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate6().content.cloneNode(true));
+            const __slot = false ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("F"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list6));
@@ -128,9 +120,9 @@ const Chain: FC = ()=>{
         const _list7 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list7);
         watchEffect(()=>{
-            const __slot = null ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate7().content.cloneNode(true));
+            const __slot = null ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("G"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list7));
@@ -139,9 +131,9 @@ const Chain: FC = ()=>{
         const _list8 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list8);
         watchEffect(()=>{
-            const __slot = undefined ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate8().content.cloneNode(true));
+            const __slot = undefined ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("H"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list8));
@@ -150,9 +142,9 @@ const Chain: FC = ()=>{
         const _list9 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list9);
         watchEffect(()=>{
-            const __slot = !!0 ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate1().content.cloneNode(true));
+            const __slot = !!0 ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("A"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list9));
@@ -161,9 +153,9 @@ const Chain: FC = ()=>{
         const _list10 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list10);
         watchEffect(()=>{
-            const __slot = !!' ' ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            const __slot = !!' ' ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("B"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list10));
@@ -172,9 +164,9 @@ const Chain: FC = ()=>{
         const _list11 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list11);
         watchEffect(()=>{
-            const __slot = !!'' ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate3().content.cloneNode(true));
+            const __slot = !!'' ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("C"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list11));
@@ -183,9 +175,9 @@ const Chain: FC = ()=>{
         const _list12 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list12);
         watchEffect(()=>{
-            const __slot = !!NaN ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate4().content.cloneNode(true));
+            const __slot = !!NaN ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("D"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list12));
@@ -194,9 +186,9 @@ const Chain: FC = ()=>{
         const _list13 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list13);
         watchEffect(()=>{
-            const __slot = !!{} ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate5().content.cloneNode(true));
+            const __slot = !!{} ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("E"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list13));
@@ -205,9 +197,9 @@ const Chain: FC = ()=>{
         const _list14 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list14);
         watchEffect(()=>{
-            const __slot = !!false ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate6().content.cloneNode(true));
+            const __slot = !!false ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("F"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list14));
@@ -216,9 +208,9 @@ const Chain: FC = ()=>{
         const _list15 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list15);
         watchEffect(()=>{
-            const __slot = !!null ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate7().content.cloneNode(true));
+            const __slot = !!null ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("G"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list15));
@@ -227,9 +219,9 @@ const Chain: FC = ()=>{
         const _list16 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list16);
         watchEffect(()=>{
-            const __slot = !!undefined ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate8().content.cloneNode(true));
+            const __slot = !!undefined ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("H"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list16));

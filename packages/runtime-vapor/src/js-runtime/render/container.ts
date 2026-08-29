@@ -1,6 +1,12 @@
 import { createHost } from '../host.js'
-import { mountInput, patchMountedInput } from '../mount.js'
-import type { DOMHost, Mounted, MountInput, RenderRuntimeState, RuntimeState } from '../types.js'
+import type {
+  DOMHost,
+  MountController,
+  Mounted,
+  MountInput,
+  RenderRuntimeState,
+  RuntimeState,
+} from '../types.js'
 
 const clearContainer = <HostNode>(
   host: DOMHost<HostNode>,
@@ -35,6 +41,7 @@ const commitMountedContainer = <HostNode>(
 /** Render one normalized basic MountInput into a tracked host container. */
 export const renderContainer = <HostNode>(
   state: RenderRuntimeState<HostNode>,
+  controller: MountController<HostNode>,
   input: MountInput<HostNode> | null | undefined,
   container: HostNode,
 ): void => {
@@ -48,13 +55,13 @@ export const renderContainer = <HostNode>(
 
   const previous = state.containerMounts.get(container)
   if (previous) {
-    const mounted = patchMountedInput(state, host, previous, input, container)
+    const mounted = controller.patchMountedInput(state, host, previous, input, container)
     if (mounted) commitMountedContainer(host, container, mounted)
     if (mounted) state.containerMounts.set(container, mounted)
     return
   }
 
-  const mounted = mountInput(state, host, input, container)
+  const mounted = controller.mountInput(state, host, input, container)
   if (!mounted) return
 
   commitMountedContainer(host, container, mounted)

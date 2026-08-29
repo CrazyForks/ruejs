@@ -61,13 +61,16 @@ const reactiveTargets = [
 const runtimeTargets = [
   'js-runtime/app.js',
   'js-runtime/component.js',
+  'js-runtime/create-rue-base.js',
   'js-runtime/create-rue.js',
+  'js-runtime/create-vapor-rue.js',
   'js-runtime/errors.js',
   'js-runtime/host.js',
   'js-runtime/instance.js',
   'js-runtime/keep-alive.js',
   'js-runtime/kernel-bridge.js',
   'js-runtime/lifecycle.js',
+  'js-runtime/mount-compat.js',
   'js-runtime/mount-input.js',
   'js-runtime/mount.js',
   'js-runtime/owned-mount.js',
@@ -135,10 +138,10 @@ afterEach(async () => {
 })
 
 describe('runtime-vapor TypeScript build guardrails', () => {
-  it('defines the exact 57 handwritten runtime targets', async () => {
+  it('defines the exact 60 handwritten runtime targets', async () => {
     const tool = await loadTool()
 
-    expect(expectedTargets).toHaveLength(57)
+    expect(expectedTargets).toHaveLength(60)
     expect([...tool.RUNTIME_TYPESCRIPT_TARGETS].sort()).toEqual(expectedTargets)
     expect(tool.RUNTIME_TYPESCRIPT_TARGETS).not.toContain('vitest-shim.cjs')
     expect(tool.RUNTIME_TYPESCRIPT_TARGETS.some(file => file.startsWith('pkg-'))).toBe(false)
@@ -163,7 +166,7 @@ describe('runtime-vapor TypeScript build guardrails', () => {
     )
 
     const audit = await tool.auditTypeScriptRuntime({ runtimeDir: runtimeVaporDir })
-    expect(audit).toMatchObject({ targetCount: 57, migratedCount: 57, violations: [] })
+    expect(audit).toMatchObject({ targetCount: 60, migratedCount: 60, violations: [] })
     console.info(
       `[runtime-vapor TypeScript] ${audit.migratedCount}/${audit.targetCount} migrated targets`,
     )

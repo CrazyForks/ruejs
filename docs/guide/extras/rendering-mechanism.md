@@ -12,7 +12,7 @@ Rue 允许你手写 `h()` 或 JSX。编译器会提前识别静态结构、动�
 
 1. **静态 DOM**：没有 Rue 动态值的原生 JSX 会被直接编译成 DOM 创建与插入代码，Rue 值依赖为零。
 2. **Compiled core**：Signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 DOM 核心，不依赖 `createRue`、JSX facade 或通用 Vapor helper。
-3. **Vapor fallback**：组件、多根或结构化列表、Hydration、Teleport、Transition、生命周期、异步或不透明 renderable 等复杂能力进入兼容层，以完整语义为优先。
+3. **Vapor fallback**：手写 `h()`、未编译组件，以及 Hydration、Teleport、Transition、异步或不透明 renderable 等无法静态证明的能力进入兼容层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。
 
 “静态零运行时”只描述第一层的构建产物。只要页面使用交互状态或复杂能力，就会加载与该能力匹配的运行时代码。
 
@@ -22,7 +22,7 @@ Rue 允许你手写 `h()` 或 JSX。编译器会提前识别静态结构、动�
 
 1. **编译**：模板或 JSX 被分类为静态 DOM、compiled core 或 Vapor fallback。静态结构、动态区段、锚点与更新提示会尽可能在构建时确定。
 2. **挂载**：静态输出直接创建真实 DOM；动态输出由对应的最小层建立 effect、owner、锚点或区间边界。
-3. **更新**：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 DOM。
+3. **更新**：依赖变更后，只重新执行受影响的 binding、列表 reconcile、block 或 effect，并直接更新对应 DOM。同身份编译组件会原地同步只读响应式 props，不会仅因 props 变化重新调用整个组件函数。
 4. **清理**：当分支切换、组件卸载或 renderable 边界失效时，对应 owner / cleanup bucket 会被回收，事件、订阅与 DOM 区间一并释放。
 
 可以把它理解成一条能力路由管道：编译器先证明最小安全能力集，再生成静态 DOM 或导入恰好足够的运行时层，后者负责挂载、更新与清理。
@@ -42,6 +42,8 @@ Rue 依然支持手写渲染函数，但默认推荐模板或普通 JSX，原因
 
 如果你需要手写 `h()`，请把它视为显式边界，而不是默认开发路径。相关写法见 [渲染函数与 JSX](/guide/guide/extras/render-function)。
 
+这里的“编译 JSX”特指经过 Rue SWC 的产物。编译器会直接导入 `@rue-js/rue/compiled` 或按能力回退到 `@rue-js/rue/vapor`，不会把 `h()`、`jsx`、`jsxs`、`jsxDEV` 当作内部渲染货币，也不会引入 `@rue-js/jsx-runtime`。手写 `h()`，以及没有经过 Rue SWC、由 TypeScript/Babel automatic runtime 生成的 JSX，则属于显式兼容消费端，会加载默认 renderer 的通用 Element / Fragment patch。两类兼容写法仍受支持，但其 bundle 成本不能代表 compiled core 的成本。
+
 ## 编译器知情的渲染路径 {#compiler-informed-rendering}
 
 <span id="compiler-informed-virtual-dom"></span>
@@ -51,7 +53,7 @@ Rue 的核心优势在于同时掌控编译器与分层运行时。编译器可�
 
 Rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量接近真实 DOM 变更本身。
 
-下面这些优化服务于静态 DOM 与 compiled core；遇到组件或复杂结构时，相同源码会自动改用 Vapor fallback。
+下面这些优化服务于静态 DOM、compiled core 和编译组件；只有无法静态证明安全的结构才会自动改用 Vapor fallback。
 
 ### 静态提升 {#cache-static}
 
@@ -78,6 +80,14 @@ Rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量�
 ```
 
 这类提示让运行时可以把更新收敛为“改 class”“改 value”“改 text”这样的定点操作。
+
+### 编译组件更新与根替换 {#compiled-component-updates}
+
+编译器生成的组件 helper 会把组件标记为 fine-grained。首次挂载后，运行时保留同一个组件实例和响应式只读 props；父组件传入新 props 时只同步这层 props，组件内部已经建立的文本、属性、列表和子组件 effect 会各自更新。没有显式 render-effect 标记时，props 更新不会重新执行组件函数，也不会递归 patch 组件返回的整棵 Element / Fragment 树。
+
+根替换仍然是必要的动态边界，而不是常规 props 更新手段。组件身份或 key 改变、动态分支切换到不同根、锚点区间需要替换，或者组件显式声明组件级响应式控制流时，运行时会通过已有 anchor / range 完成替换和清理。这样保留了结构变化的正确性，同时让稳定组件的日常更新停留在局部 effect。
+
+手写 `h()` 与未编译组件使用 rerender 兼容协议。该路径继续提供通用 Element / Fragment props 与 children patch，但它是默认入口带来的显式兼容成本，不会被编译组件消费端自动加载。
 
 ### 树扁平化与区间更新 {#tree-flattening}
 

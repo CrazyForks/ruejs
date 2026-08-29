@@ -221,6 +221,22 @@ describe('runtime-vapor TypeScript Signal paths', () => {
       siblingHits: 1,
     })
   })
+
+  it('does not notify path subscribers for identical setPath and updatePath values', () => {
+    const { kernel } = createTypeScriptKernel()
+    kernel.setReactiveScheduling('sync')
+    const signal = kernel.createSignal({ value: false })
+    let hits = 0
+    kernel.createEffect(() => {
+      hits += 1
+      signal.getPath('value')
+    })
+
+    signal.setPath('value', false)
+    signal.updatePath('value', value => value)
+
+    expect(hits).toBe(1)
+  })
 })
 
 describe('runtime-vapor TypeScript Reactive Proxy', () => {

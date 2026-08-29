@@ -84,7 +84,7 @@ const detachDependencies = (effect: EffectRecord): void => {
 const runEffect = (effect: EffectRecord): void => {
   if (!effect.active || effect.running) return
   effect.running = true
-  pendingEffects.delete(effect)
+  if (pendingEffects.size > 0) pendingEffects.delete(effect)
   detachDependencies(effect)
   runCleanups(effect.cleanups)
   const previousEffect = currentEffect
@@ -142,7 +142,7 @@ const notifyDependency = (dependency: DependencyRecord | undefined): void => {
 const disposeEffect = (effect: EffectRecord): void => {
   if (!effect.active) return
   effect.active = false
-  pendingEffects.delete(effect)
+  if (pendingEffects.size > 0) pendingEffects.delete(effect)
   detachDependencies(effect)
   runCleanups(effect.cleanups)
   if (effect.owner !== undefined) owners.get(effect.owner)?.effects.delete(effect)

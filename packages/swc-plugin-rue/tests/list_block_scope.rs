@@ -204,7 +204,9 @@ const Demo: FC = () => {
     let out = compile(src, "list_block_scope_outer_ref_value");
 
     assert!(out.contains("const __slot = vapor(()=>{"));
-    assert!(out.contains("const __slot = !(editingId.value === row.id) ? vapor(()=>{"));
+    assert!(out.contains(
+        "const __slot = !(editingId.value === row.id) ? _$compiledRoot((__rue_parent_context)=>{"
+    ));
     assert!(out.contains("const __slot = (editingId.value === row.id) ? vapor(()=>{"));
     assert!(out.contains("renderAnchor(__slot, _el1, _list3)"));
     assert!(out.contains("renderAnchor(__slot, _el1, _list4)"));

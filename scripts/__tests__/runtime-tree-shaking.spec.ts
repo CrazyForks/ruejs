@@ -34,6 +34,24 @@ const fullSSRRendererSourceIds = (moduleIds: readonly string[]) =>
     /(?:^|\/)(?:runtime\.server|rue\.server-renderer|server-renderer)\.esm-bundler\.js$/.test(id),
   )
 
+const compatPatchSourceIds = (moduleIds: readonly string[]) =>
+  moduleIds.filter(id => /runtime-vapor\/(?:dist\/)?js-runtime\/mount-compat\.js$/.test(id))
+
+const automaticJsxRuntimeSourceIds = (moduleIds: readonly string[]) =>
+  moduleIds.filter(id => /packages\/jsx-(?:dev-)?runtime\//.test(id))
+
+const defaultRuntimeSourceIds = (moduleIds: readonly string[]) =>
+  moduleIds.filter(id =>
+    /packages\/(?:rue\/dist\/rue\.runtime|runtime\/dist\/runtime)\.esm-bundler\.js$/.test(id),
+  )
+
+const vaporRuntimeSourceIds = (moduleIds: readonly string[]) =>
+  moduleIds.filter(id =>
+    /packages\/(?:rue\/dist\/rue\.vapor|runtime\/dist\/runtime\.vapor(?:-core)?)\.esm-bundler\.js$/.test(
+      id,
+    ),
+  )
+
 const getEntryChunk = (result: Rollup.RollupOutput | Rollup.RollupOutput[]) => {
   const outputs = Array.isArray(result) ? result : [result]
   const chunk = outputs
@@ -50,17 +68,19 @@ const getEntryChunk = (result: Rollup.RollupOutput | Rollup.RollupOutput[]) => {
 const buildPublishedConsumer = async (
   fixtureName: string,
   exports: ReadonlyArray<{ entry: string; imports: readonly string[] }>,
+  fixtureSource?: string,
 ) => {
   await mkdir(fixtureDir, { recursive: true })
   const entryFile = path.resolve(fixtureDir, `${fixtureName}.mjs`)
   await writeFile(
     entryFile,
-    exports
-      .map(
-        ({ entry, imports }, index) =>
-          `export { ${imports.join(', ')} } from ${JSON.stringify(entry)} // input-${index}`,
-      )
-      .join('\n'),
+    fixtureSource ??
+      exports
+        .map(
+          ({ entry, imports }, index) =>
+            `export { ${imports.join(', ')} } from ${JSON.stringify(entry)} // input-${index}`,
+        )
+        .join('\n'),
     'utf8',
   )
 
@@ -118,6 +138,99 @@ describe('published runtime built-in tree-shaking', () => {
     ).toBeGreaterThan(0)
     expect(moduleIds.filter(id => /\.wasm$|\/pkg-(?:vapor|node)\//.test(id))).toEqual([])
     expect(code).not.toContain('__vite-plugin-wasm-helper')
+  })
+
+  it('loads Element and Fragment patching only from the full runtime-vapor entry', async () => {
+    const [core, full] = await Promise.all([
+      buildPublishedConsumer('runtime-vapor-core-mount', [
+        { entry: '@rue-js/runtime-vapor/vapor', imports: ['createRue'] },
+      ]),
+      buildPublishedConsumer('runtime-vapor-full-mount', [
+        { entry: '@rue-js/runtime-vapor', imports: ['createRue'] },
+      ]),
+    ])
+    const compatibilityModules = (moduleIds: readonly string[]) =>
+      moduleIds.filter(id => /runtime-vapor\/(?:dist\/)?js-runtime\/mount-compat\.js$/.test(id))
+
+    expect(compatibilityModules(core.moduleIds)).toEqual([])
+    expect(compatibilityModules(full.moduleIds)).toHaveLength(1)
+  })
+
+  it('keeps the default, Vapor, automatic JSX, and h compatibility layers out of compiled core', async () => {
+    const { code, moduleIds } = await buildPublishedConsumer('compiled-core-boundary', [
+      {
+        entry: '@rue-js/rue/compiled',
+        imports: ['signal', 'effect', 'createSelector'],
+      },
+    ])
+
+    expect(defaultRuntimeSourceIds(moduleIds)).toEqual([])
+    expect(vaporRuntimeSourceIds(moduleIds)).toEqual([])
+    expect(automaticJsxRuntimeSourceIds(moduleIds)).toEqual([])
+    expect(compatPatchSourceIds(moduleIds)).toEqual([])
+    expect(code).not.toContain('rue.element.head-record')
+    expect(code).not.toContain('createElementMountInput')
+    expect(code).not.toMatch(/function h\s*\(/)
+  })
+
+  it('keeps compat patch and legacy host tokens out of a compiled component consumer', async () => {
+    const { code, moduleIds } = await buildPublishedConsumer(
+      'compiled-component',
+      [
+        {
+          entry: '@rue-js/rue/vapor',
+          imports: ['vapor', '_$createComponent', 'renderAnchor'],
+        },
+      ],
+      `
+import { vapor, _$createComponent, renderAnchor } from '@rue-js/rue/vapor'
+const Child = props => vapor(() => document.createTextNode(String(props.value)))
+const handle = _$createComponent(Child, { value: 1 })
+export const mount = (parent, anchor) => renderAnchor(handle, parent, anchor)
+`,
+    )
+
+    expect(compatPatchSourceIds(moduleIds)).toEqual([])
+    expect(automaticJsxRuntimeSourceIds(moduleIds)).toEqual([])
+    expect(code).not.toContain('rue.element.head-record')
+    expect(code).not.toContain('__rue_stable_component_host__')
+  })
+
+  it('keeps h and render as an explicit compat consumer', async () => {
+    const { code, moduleIds } = await buildPublishedConsumer(
+      'h-only',
+      [{ entry: '@rue-js/rue', imports: ['h', 'render'] }],
+      `
+import { h, render } from '@rue-js/rue'
+export const mount = target => render(h('div', { class: 'fixture' }, 'Rue'), target)
+`,
+    )
+
+    expect(
+      moduleIds.some(id =>
+        /packages\/(?:rue\/dist\/rue\.runtime|runtime\/dist\/runtime)\.esm-bundler\.js$/.test(id),
+      ),
+    ).toBe(true)
+    expect(code).toContain('rue.element.head-record')
+    expect(automaticJsxRuntimeSourceIds(moduleIds)).toEqual([])
+  })
+
+  it('keeps the automatic JSX runtime as an independent compat consumer', async () => {
+    const { code, moduleIds } = await buildPublishedConsumer(
+      'jsx-runtime-only',
+      [{ entry: '@rue-js/jsx-runtime', imports: ['jsx'] }],
+      `
+import { jsx } from '@rue-js/jsx-runtime'
+export const node = jsx('div', { class: 'fixture', children: 'Rue' })
+`,
+    )
+
+    expect(automaticJsxRuntimeSourceIds(moduleIds)).not.toEqual([])
+    expect(defaultRuntimeSourceIds(moduleIds)).not.toEqual([])
+    expect(compatPatchSourceIds(moduleIds)).not.toEqual([])
+    expect(code).toContain('rue.element.head-record')
+    expect(fullSSRRendererSourceIds(moduleIds)).toEqual([])
+    expect(moduleIds.filter(id => /\.wasm$|\/pkg-(?:vapor|node)\//.test(id))).toEqual([])
   })
 
   it('keeps the vapor app on the vapor runtime without the default runtime', async () => {

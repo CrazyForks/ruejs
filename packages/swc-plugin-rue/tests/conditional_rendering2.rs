@@ -62,14 +62,9 @@ export default ReactConditionalDemo;
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$addEventListener, _$setClassName, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const _$getTemplate1 = _$template('<h2 class="text-xl font-semibold text-purple-600 mb-3">React 风格条件渲染</h2>');
-const _$getTemplate2 = _$template('<span class="text-red-600">清空消息</span>');
-const _$getTemplate3 = _$template('<div class="mt-2"><p class="text-gray-700">详情区域：仅在 show 为 true 时显示</p></div>');
-const _$getTemplate4 = _$template('<div class="mt-2"><p class="text-gray-700">详情区域2：仅在 show 为 true 时显示</p></div>');
-const _$getTemplate5 = _$template('<span class="text-red-600">高级</span>');
-const _$getTemplate6 = _$template('<span class="text-green-600">普通</span>');
 const ReactConditionalDemo: FC = ()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const show = _$vaporWithHookId("ref:1:0", ()=>ref(true));
@@ -110,9 +105,10 @@ const ReactConditionalDemo: FC = ()=>{
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_el6, _list1);
         watchEffect(()=>{
-            const __slot = message.value ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate2().content.cloneNode(true));
+            const __slot = message.value ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("span", __rue_parent_context);
+                _root.className = "text-red-600";
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("清空消息"));
                 return _root;
             }) : '恢复消息';
             untrack(()=>renderAnchor(__slot, _el6, _list1));
@@ -120,9 +116,13 @@ const ReactConditionalDemo: FC = ()=>{
         const _list2 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list2);
         watchEffect(()=>{
-            const __slot = show.value ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate3().content.cloneNode(true));
+            const __slot = show.value ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _root.className = "mt-2";
+                const _el7 = _$compiledCreateElement("p", _root);
+                _$compiledAppendChild(_root, _el7);
+                _el7.className = "text-gray-700";
+                _$compiledAppendChild(_el7, _$compiledCreateTextNode("详情区域：仅在 show 为 true 时显示"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list2));
@@ -130,47 +130,53 @@ const ReactConditionalDemo: FC = ()=>{
         const _list3 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list3);
         watchEffect(()=>{
-            const __slot = show.value ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate4().content.cloneNode(true));
+            const __slot = show.value ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("div", __rue_parent_context);
+                _root.className = "mt-2";
+                const _el8 = _$compiledCreateElement("p", _root);
+                _$compiledAppendChild(_root, _el8);
+                _el8.className = "text-gray-700";
+                _$compiledAppendChild(_el8, _$compiledCreateTextNode("详情区域2：仅在 show 为 true 时显示"));
                 return _root;
             }) : "";
             untrack(()=>renderAnchor(__slot, _root, _list3));
         });
-        const _el12 = _$createElement("p", _root);
-        _$appendChild(_root, _el12);
-        _$setClassName(_el12, "text-gray-700");
-        _$appendChild(_el12, _$createTextNode("等级状态："));
+        const _el9 = _$createElement("p", _root);
+        _$appendChild(_root, _el9);
+        _$setClassName(_el9, "text-gray-700");
+        _$appendChild(_el9, _$createTextNode("等级状态："));
         const _list4 = _$createComment("rue:slot:anchor");
-        _$appendChild(_el12, _list4);
+        _$appendChild(_el9, _list4);
         watchEffect(()=>{
-            const __slot = level.value >= 3 ? vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate5().content.cloneNode(true));
+            const __slot = level.value >= 3 ? _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("span", __rue_parent_context);
+                _root.className = "text-red-600";
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("高级"));
                 return _root;
-            }) : vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _root.appendChild(_$getTemplate6().content.cloneNode(true));
+            }) : _$compiledRoot((__rue_parent_context)=>{
+                const _root = _$compiledCreateElement("span", __rue_parent_context);
+                _root.className = "text-green-600";
+                _$compiledAppendChild(_root, _$compiledCreateTextNode("普通"));
                 return _root;
             });
-            untrack(()=>renderAnchor(__slot, _el12, _list4));
+            untrack(()=>renderAnchor(__slot, _el9, _list4));
         });
         const _list5 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list5);
         watchEffect(()=>{
             const __slot = message.value ? vapor(()=>{
                 const _root = _$createDocumentFragment();
-                const _el15 = _$createElement("p", _root);
-                _$appendChild(_root, _el15);
-                _$setClassName(_el15, "text-gray-700 bg-gray-100 p-2 rounded-md");
-                _$appendChild(_el15, _$createTextNode("消息："));
-                const _el16 = _$createTextWrapper(_el15);
-                _$appendChild(_el15, _el16);
+                const _el10 = _$createElement("p", _root);
+                _$appendChild(_root, _el10);
+                _$setClassName(_el10, "text-gray-700 bg-gray-100 p-2 rounded-md");
+                _$appendChild(_el10, _$createTextNode("消息："));
+                const _el11 = _$createTextWrapper(_el10);
+                _$appendChild(_el10, _el11);
                 watchEffect(()=>{
-                    _$settextContent(_el16, message.value);
+                    _$settextContent(_el11, message.value);
                 });
                 return _root;
-            }) : "";
+            }, true) : "";
             untrack(()=>renderAnchor(__slot, _root, _list5));
         });
         return _root;

@@ -341,6 +341,36 @@ fn ensure_runtime_imports_injects_vapor_owned_list_effect_and_reconcile_in_mixed
 }
 
 #[test]
+fn ensure_runtime_imports_keeps_generated_list_helpers_with_explicit_compiled_signals() {
+    let out = ensure_and_emit(
+        r#"
+import { signal } from '@rue-js/rue/compiled';
+
+const rows = signal([]);
+useSetup(() => rows);
+effect(() => rows.get());
+_$reconcileKeyed(parent, before, rows.get(), items, key, mount);
+const owner = createOwner();
+runWithOwner(owner, mount);
+disposeOwner(owner);
+"#,
+    );
+
+    assert_eq!(import_source_count(&out, "@rue-js/rue/compiled"), 1, "{out}");
+    assert_eq!(import_source_count(&out, "@rue-js/rue/vapor"), 1, "{out}");
+    let compiled_clause = import_clause_for_source(&out, "@rue-js/rue/compiled");
+    for helper in
+        ["signal", "effect", "_$reconcileKeyed", "createOwner", "runWithOwner", "disposeOwner"]
+    {
+        assert!(compiled_clause.contains(helper), "missing {helper}: {out}");
+    }
+    let vapor_clause = import_clause_for_source(&out, "@rue-js/rue/vapor");
+    assert!(vapor_clause.contains("useSetup"), "{out}");
+    assert!(!vapor_clause.contains("effect"), "{out}");
+    assert!(!vapor_clause.contains("_$reconcileKeyed"), "{out}");
+}
+
+#[test]
 fn ensure_runtime_imports_injects_only_used_compiled_row_owner_helpers() {
     let out = ensure_and_emit(
         "vapor(() => {}); _$reconcileKeyed(parent, before, rows, items, key, mount); const owner = createOwner(); runWithOwner(owner, mount); disposeOwner(owner);",

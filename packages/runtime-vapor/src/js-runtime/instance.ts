@@ -21,6 +21,7 @@ import { shallowEqualProp } from '../js-reactive/hooks/values.js'
 
 const CONTEXT_OWNER_PARENT_KEY = '__rue_context_owner_parent__'
 const CONTEXT_PARENT_INSTANCE_KEY = '__rue_context_parent_instance__'
+const CONTEXT_PROP_KEYS = new Set([CONTEXT_OWNER_PARENT_KEY, CONTEXT_PARENT_INSTANCE_KEY])
 
 const isObjectLike = (value: unknown): value is ObjectLike =>
   (typeof value === 'object' || typeof value === 'function') && value != null
@@ -57,6 +58,18 @@ const copyProps = <HostNode>(input: ComponentMountInput<HostNode>): ComponentPro
 const syncProps = (target: StableComponentProps, next: ComponentProps): void => {
   const signal = isObjectLike(target) ? target.__signal__ : undefined
   if (typeof signal?.peekPath === 'function' && typeof signal?.setPath === 'function') {
+    const hasRemovedUserProp = Object.keys(target).some(
+      key => !CONTEXT_PROP_KEYS.has(key) && !Object.prototype.hasOwnProperty.call(next, key),
+    )
+    if (hasRemovedUserProp) {
+      const replacement = { ...next }
+      for (const key of CONTEXT_PROP_KEYS) {
+        const contextValue = signal.peekPath([key])
+        if (contextValue !== undefined) replacement[key] = contextValue
+      }
+      signal.setPath([], replacement)
+      return
+    }
     for (const key of Object.keys(next)) {
       const previous = signal.peekPath([key])
       if (!shallowEqualProp(previous, next[key])) signal.setPath([key], next[key])

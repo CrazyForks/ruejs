@@ -1,4 +1,5 @@
 import { createRuntimeEntry } from './runtime-entry.js'
+import { createRue as createFullRue } from './js-runtime/create-rue.js'
 // JS 包装层补充响应式便捷 API 与调试 hooks，默认入口与 reactive 子入口保持同一实现。
 import {
   computed,
@@ -29,7 +30,7 @@ import {
 } from './reactive.js'
 import runtimeWithJsHooks from './reactive.js'
 
-const createRue = createRuntimeEntry(runtimeWithJsHooks, {
+const createRue = createRuntimeEntry(runtimeWithJsHooks, createFullRue, {
   entry: 'browser:full',
   kernel: 'typescript',
   normalizeRenderTriggeredEvent,

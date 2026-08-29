@@ -910,6 +910,16 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
     }
   }
 
+  watch(
+    () => visibilityConfig?.visible,
+    nextVisible => {
+      if (!isControlled || typeof nextVisible !== 'boolean') return
+      currentVisible = nextVisible
+      syncPasswordVisibilityDom(nextVisible)
+    },
+    { immediate: true },
+  )
+
   const handleVisibleChange = (nextVisible: boolean, trigger?: HTMLElement | null) => {
     if (trigger instanceof HTMLButtonElement) {
       visibilityButtonElement = trigger

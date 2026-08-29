@@ -1,5 +1,4 @@
-import { mountInput } from '../mount.js'
-import type { MountInput, RenderRuntimeState } from '../types.js'
+import type { MountController, MountInput, RenderRuntimeState } from '../types.js'
 import {
   hostForRender,
   insertMountedBefore,
@@ -11,6 +10,7 @@ import {
 /** Mount static nodes once before a temporary anchor, then consume the anchor. */
 export const renderStatic = <HostNode>(
   state: RenderRuntimeState<HostNode>,
+  controller: MountController<HostNode>,
   input: MountInput<HostNode> | null | undefined,
   parent: HostNode,
   anchor: HostNode,
@@ -24,7 +24,7 @@ export const renderStatic = <HostNode>(
     return
   }
 
-  const mounted = mountInput(state, host, input, parent)
+  const mounted = controller.mountInput(state, host, input, parent)
   if (!mounted) return
   const nodes = mountedNodes(mounted)
   insertMountedBefore(host, destParent, mounted, anchor)

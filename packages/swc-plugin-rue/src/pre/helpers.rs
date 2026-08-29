@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use swc_core::atoms::Atom;
+use swc_core::common::Spanned;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{Visit, VisitMut, VisitMutWith, VisitWith};
@@ -1847,8 +1848,8 @@ pub fn rewrite_component_props_destructure_in_function(func: &mut Function) -> b
 pub fn collect_setup(
     block: &BlockStmt,
     ret_idx: usize,
-    _first_control_idx: usize,
-    _skip_var_after_control: bool,
+    first_control_idx: usize,
+    stop_at_control: bool,
     initial_locals: &HashSet<String>,
 ) -> (Vec<Stmt>, Vec<String>, Vec<String>, HashSet<String>) {
     let mut collected: Vec<Stmt> = Vec::new();
@@ -2146,11 +2147,10 @@ pub fn collect_setup(
         call_callee_ident_name(inner_call).is_some_and(is_setup_effect_name)
     }
 
-    // 迭代遍历语句，直到遇到包含 return 的语句为止（ret_idx 为边界，不跨越）
-    // 说明：目前实现未使用 first_control_idx/skip_var_after_control 进行“控制流后变量声明跳过”，
-    // 若后续需要更保守的策略，可在 i >= first_control_idx && skip_var_after_control 情况下对 VarDecl 进行过滤。
+    // 迭代遍历语句，直到遇到包含 return 的语句为止（ret_idx 为边界，不跨越）。
+    // 需要每次渲染重新选择分支时，控制流语句及其后续内容必须留在 render 阶段。
     for (i, s) in block.stmts.iter().enumerate() {
-        if i >= ret_idx {
+        if i >= ret_idx || (stop_at_control && i >= first_control_idx) {
             break;
         }
 
@@ -2402,13 +2402,14 @@ pub fn process_function(func: &mut Function) {
         Some(i) => i,
         None => return,
     };
-    // 2) 记录第一个控制流语句索引（当前实现仅作为参考）
-    let fci = first_control_idx(block, ret_idx);
+    // 2) 只有真正选择渲染结果的控制流才是 setup 提升边界。
+    let has_render_control = block_has_reactive_render_control(block);
+    let fci = first_reactive_render_control_idx(block, ret_idx);
     let params: Vec<Pat> = func.params.iter().map(|param| param.pat.clone()).collect();
     let initial_locals = collect_param_idents(&params);
     // 3) 在边界之前收集安全语句，分类导出名
     let (collected, names_const, names_let, _) =
-        collect_setup(block, ret_idx, fci, true, &initial_locals);
+        collect_setup(block, ret_idx, fci, has_render_control, &initial_locals);
     // 4) 注入 useSetup 与解构绑定
     inject_setup(block, ret_idx, names_const, names_let, collected);
 }
@@ -2427,49 +2428,84 @@ impl Visit for RenderControlJsxDetector {
     }
 }
 
-/// Detect block-arrow render logic that must remain live instead of becoming one-time setup.
-pub fn arrow_has_reactive_render_control(arrow: &ArrowExpr) -> bool {
-    let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() else {
-        return false;
-    };
-    let Some(ret_idx) = find_first_return_index(block) else {
-        return false;
-    };
-    block.stmts.iter().take(ret_idx + 1).any(|stmt| {
-        if !matches!(stmt, Stmt::If(_)) || stmt_contains_return(stmt) {
-            return false;
-        }
-        let mut jsx = RenderControlJsxDetector { found: false };
-        stmt.visit_with(&mut jsx);
-        jsx.found
-    })
-}
-
-struct ExplicitVaporReturnDetector {
+struct RenderControlReturnDetector {
     found: bool,
 }
 
-impl Visit for ExplicitVaporReturnDetector {
-    fn visit_return_stmt(&mut self, ret: &ReturnStmt) {
-        let Some(arg) = &ret.arg else {
-            return;
-        };
-        let Expr::Call(call) = crate::utils::unwrap_expr(arg.as_ref()) else {
-            return;
-        };
-        if call_expr_callee_ident_name(call) == Some("vapor") {
+impl Visit for RenderControlReturnDetector {
+    fn visit_return_stmt(&mut self, return_stmt: &ReturnStmt) {
+        if return_stmt.arg.as_ref().is_some_and(|arg| expr_is_component_renderable(arg.as_ref())) {
             self.found = true;
         }
     }
 }
 
-/// Explicit hand-written Vapor factories capture render snapshots before their setup runs.
-/// They need component-level dependency tracking so a props/signal change can rebuild that
-/// snapshot, while compiler-generated JSX components remain on the fine-grained DOM path.
-pub fn block_has_explicit_vapor_return(block: &BlockStmt) -> bool {
-    let mut detector = ExplicitVaporReturnDetector { found: false };
-    block.visit_with(&mut detector);
-    detector.found
+fn expr_selects_render_branch(expr: &Expr) -> bool {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::Cond(CondExpr { cons, alt, .. }) => {
+            expr_is_component_renderable(cons.as_ref())
+                || expr_is_component_renderable(alt.as_ref())
+                || expr_selects_render_branch(cons.as_ref())
+                || expr_selects_render_branch(alt.as_ref())
+        }
+        Expr::Bin(BinExpr { op: BinaryOp::LogicalAnd | BinaryOp::LogicalOr, right, .. }) => {
+            expr_is_component_renderable(right.as_ref())
+                || expr_selects_render_branch(right.as_ref())
+        }
+        Expr::Seq(sequence) => {
+            sequence.exprs.last().is_some_and(|expr| expr_selects_render_branch(expr.as_ref()))
+        }
+        _ => false,
+    }
+}
+
+fn stmt_has_render_control(stmt: &Stmt) -> bool {
+    match stmt {
+        Stmt::Return(ret) => {
+            ret.arg.as_ref().is_some_and(|arg| expr_selects_render_branch(arg.as_ref()))
+        }
+        Stmt::If(_)
+        | Stmt::Switch(_)
+        | Stmt::Try(_)
+        | Stmt::While(_)
+        | Stmt::For(_)
+        | Stmt::ForIn(_)
+        | Stmt::ForOf(_) => {
+            let mut jsx = RenderControlJsxDetector { found: false };
+            stmt.visit_with(&mut jsx);
+            if jsx.found {
+                return true;
+            }
+            let mut render_return = RenderControlReturnDetector { found: false };
+            stmt.visit_with(&mut render_return);
+            render_return.found
+        }
+        // Conditional/logical JSX inside a variable initializer or expression is lowered to a
+        // fine-grained anchor by the element transform. It does not require a component-wide
+        // render effect; marking it here reruns one-time setup and fights those generated effects.
+        Stmt::Decl(Decl::Var(_)) | Stmt::Expr(_) => false,
+        _ => false,
+    }
+}
+
+fn first_reactive_render_control_idx(block: &BlockStmt, ret_idx: usize) -> usize {
+    block.stmts.iter().take(ret_idx + 1).position(stmt_has_render_control).unwrap_or(ret_idx)
+}
+
+/// Detect setup-stage control flow that selects a component's render result. Direct Vapor setup
+/// returns stay fine-grained: their generated attr/text/list effects own subsequent updates.
+pub fn block_has_reactive_render_control(block: &BlockStmt) -> bool {
+    let Some(ret_idx) = find_first_return_index(block) else {
+        return false;
+    };
+    block.stmts.iter().take(ret_idx + 1).any(stmt_has_render_control)
+}
+
+pub fn arrow_has_reactive_render_control(arrow: &ArrowExpr) -> bool {
+    let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() else {
+        return false;
+    };
+    block_has_reactive_render_control(block)
 }
 
 fn block_has_component_render_reactive_marker(block: &BlockStmt) -> bool {
@@ -2496,6 +2532,16 @@ pub fn mark_component_render_reactive(block: &mut BlockStmt) {
             expr: Box::new(crate::emit::call_ident("_$vaporMarkComponentRenderReactive", vec![])),
         }),
     );
+}
+
+pub fn mark_component_render_reactive_factory(expr: &mut Box<Expr>) {
+    let component = expr.as_ref().clone();
+    let span = component.span();
+    let mut call = crate::emit::call_ident("_$vaporMarkComponentRenderReactive", vec![component]);
+    if let Expr::Call(call_expr) = &mut call {
+        call_expr.span = span;
+    }
+    *expr = Box::new(call);
 }
 
 /// Nested JSX-returning closures stay on the classic JSX runtime path when they are passed as
@@ -2653,12 +2699,13 @@ pub fn process_var_decl(v: &mut VarDecl) {
             Some(i) => i,
             None => continue,
         };
-        // 记录第一个控制流语句索引（当前实现仅作为参考）
-        let fci = first_control_idx(block, ret_idx);
+        // 记录第一个控制流语句索引，响应式渲染分支不能被提升进 setup。
+        let fci = first_reactive_render_control_idx(block, ret_idx);
+        let has_render_control = block_has_reactive_render_control(block);
         let initial_locals = collect_param_idents(&arrow.params);
         // 收集边界前安全语句并注入
         let (collected, names_const, names_let, _) =
-            collect_setup(block, ret_idx, fci, false, &initial_locals);
+            collect_setup(block, ret_idx, fci, has_render_control, &initial_locals);
         inject_setup(block, ret_idx, names_const, names_let, collected);
     }
 }

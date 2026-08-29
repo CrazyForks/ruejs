@@ -1,12 +1,52 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { FC } from '../src'
-import { h, ref, render } from '../src'
+import { Fragment, h, ref, render, setReactiveScheduling, signal } from '../src'
+import { _$vaporMarkComponentRenderReactive } from '../src/vapor'
+
+setReactiveScheduling('sync')
 
 afterEach(() => {
   document.body.innerHTML = ''
 })
 
 describe('patch_children_keyed anchor isolation', () => {
+  it('patches h fragments in place while inserting and deleting compatible children', async () => {
+    const container = document.createElement('div')
+    const label = signal('one')
+    const extra = signal(true)
+    const View = _$vaporMarkComponentRenderReactive(() =>
+      h(
+        Fragment,
+        null,
+        h('span', { key: 'stable', 'data-testid': 'fragment-stable' }, label.get()),
+        extra.get() ? h('i', { key: 'extra', 'data-testid': 'fragment-extra' }, 'extra') : null,
+      ),
+    )
+
+    document.body.appendChild(container)
+    render(h(View, null), container)
+    await Promise.resolve()
+    const first = container.querySelector('[data-testid="fragment-stable"]')
+
+    label.set('two')
+    extra.set(false)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.querySelector('[data-testid="fragment-stable"]')).toBe(first)
+    expect(first?.textContent).toBe('two')
+    expect(container.querySelector('[data-testid="fragment-extra"]')).toBeNull()
+
+    label.set('three')
+    extra.set(true)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(container.querySelector('[data-testid="fragment-stable"]')).toBe(first)
+    expect(first?.textContent).toBe('three')
+    expect(container.querySelector('[data-testid="fragment-extra"]')?.textContent).toBe('extra')
+  })
+
   it('keeps nested button text when sibling branches switch', async () => {
     const active = ref<'preview' | 'code'>('preview')
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   RUE_CLEANUP_BUCKET_KEY,
+  RUE_COMPONENT_UPDATE_MODE_KEY,
   RUE_EFFECT_SCOPE_ID_KEY,
   RUE_KEEP_ALIVE_HOOK_TARGET_KEY,
   RUE_MOUNT_ID_KEY,
@@ -62,7 +63,7 @@ describe('runtime-vapor JavaScript MountInput protocol', () => {
     runtime.render(repeatableHandle, {})
 
     expect(calls.map(call => (call[2] as any)?.type)).toEqual([
-      { kind: 'component', component: Component },
+      { kind: 'component', component: Component, updateMode: 'rerender' },
       { kind: 'vapor', setup },
       { kind: 'element', tag: 'article' },
       { kind: 'element', tag: 'article' },
@@ -74,6 +75,7 @@ describe('runtime-vapor JavaScript MountInput protocol', () => {
     })
     expect(componentMountInput.mountCleanupBucket).toBe(cleanup)
     expect(componentMountInput.mountEffectScopeId).toBe(17)
+    expect(componentMountInput.portable[RUE_COMPONENT_UPDATE_MODE_KEY]).toBeUndefined()
     expect(repeatableFactory).toHaveBeenCalledTimes(1)
   })
 
@@ -143,7 +145,11 @@ describe('runtime-vapor JavaScript MountInput protocol', () => {
     runtime.renderAnchor(portableComponent, { parent: true }, { anchor: true })
 
     const componentInput = calls[0]?.[2] as any
-    expect(componentInput.type).toEqual({ kind: 'component', component: Component })
+    expect(componentInput.type).toEqual({
+      kind: 'component',
+      component: Component,
+      updateMode: 'rerender',
+    })
     expect(componentInput.props).toEqual({ label: 'portable' })
     expect(componentInput.key).toBe('component-key')
     expect(componentInput.mountCleanupBucket).toBe(cleanup)
@@ -172,6 +178,30 @@ describe('runtime-vapor JavaScript MountInput protocol', () => {
       vaporHandle[REPEATABLE_MOUNT_FACTORY_KEY],
     )
     expect(setup).not.toHaveBeenCalled()
+  })
+
+  it('preserves a declared update mode while normalizing unknown modes to rerender', () => {
+    const { calls, kernel } = createRecorder()
+    const runtime = createRue(undefined, kernel)
+    const Component = () => null
+    const declared = {
+      [RUE_PORTABLE_COMPONENT_TYPE_KEY]: Component,
+      [RUE_COMPONENT_UPDATE_MODE_KEY]: 'fine-grained',
+    }
+    const invalid = {
+      [RUE_PORTABLE_COMPONENT_TYPE_KEY]: Component,
+      [RUE_COMPONENT_UPDATE_MODE_KEY]: 'unsupported-mode',
+    }
+
+    runtime.render(declared, {})
+    runtime.render(invalid, {})
+
+    const declaredInput = calls[0]?.[2] as any
+    const invalidInput = calls[1]?.[2] as any
+    expect(declaredInput.type.updateMode).toBe('fine-grained')
+    expect(declaredInput.portable[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('fine-grained')
+    expect(invalidInput.type.updateMode).toBe('rerender')
+    expect(invalidInput.portable[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('unsupported-mode')
   })
 
   it('delegates Vapor scope allocation to the injected reactive facade kernel', () => {

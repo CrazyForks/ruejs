@@ -244,4 +244,5 @@ export const TransitionGroup: FC<TransitionGroupProps> = /*#__PURE__*/ markBuilt
     return h(containerTag, containerProps as any, props.children as any)
   },
   'TransitionGroup',
+  '__rue_component_render_reactive_factory__',
 )

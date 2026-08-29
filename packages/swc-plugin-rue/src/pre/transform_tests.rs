@@ -160,3 +160,54 @@ _$vaporWithHookId("same", () => ref(2));
     super_call.visit_mut_with(&mut HookIdDeduper::default());
     assert!(matches!(super_call.callee, Callee::Super(_)));
 }
+
+#[test]
+fn injects_component_render_marker_only_for_setup_render_control() {
+    let src = r#"
+const Plain: FC = () => {
+  return vapor(() => <input value={label.get()} />)
+}
+const EarlyReturn: FC = () => {
+  if (active.get()) return <input value="active" />
+  return <input value="idle" />
+}
+const AssignedBranch: FC = () => {
+  let view
+  if (active.get()) view = <p>active</p>
+  else view = <p>idle</p>
+  return view
+}
+function FunctionBranch(): JSX.Element {
+  if (active.get()) return <strong>active</strong>
+  return <strong>idle</strong>
+}
+"#;
+    let (mut module, cm) = parse_module(src);
+
+    module.visit_mut_with(&mut PreTransform::default());
+    let out = normalize(&emit_module(&module, cm));
+
+    let plain = out.split("const EarlyReturn").next().expect("plain component output");
+    let early = out
+        .split("const EarlyReturn")
+        .nth(1)
+        .expect("early-return component output")
+        .split("const AssignedBranch")
+        .next()
+        .expect("early-return body");
+    let assigned = out
+        .split("const AssignedBranch")
+        .nth(1)
+        .expect("assigned-branch component output")
+        .split("function FunctionBranch")
+        .next()
+        .expect("assigned-branch body");
+
+    assert!(!plain.contains("_$vaporMarkComponentRenderReactive()"), "{plain}");
+    assert!(!plain.contains("const Plain: FC = _$vaporMarkComponentRenderReactive"), "{plain}");
+    assert!(early.contains("_$vaporMarkComponentRenderReactive(()=>"), "{early}");
+    assert!(!early.contains("_$vaporMarkComponentRenderReactive()"), "{early}");
+    assert!(assigned.contains("_$vaporMarkComponentRenderReactive(()=>"), "{assigned}");
+    assert!(!assigned.contains("_$vaporMarkComponentRenderReactive()"), "{assigned}");
+    assert!(out.contains("_$vaporMarkComponentRenderReactive(FunctionBranch)"), "{out}");
+}

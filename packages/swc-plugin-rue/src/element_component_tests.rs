@@ -97,8 +97,8 @@ fn lowers_single_expr_children_for_plain_jsx_call_and_empty_cases() {
 
     assert!(call_lowered.stmts.is_empty());
     assert!(!call_lowered.is_function);
-    assert!(call_out.contains("useMemo(()=>vapor(()=>{"));
-    assert!(call_out.contains("_$createElement(\"span\",_root)"));
+    assert!(call_out.contains("useMemo(()=>_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(call_out.contains("_$compiledCreateElement(\"span\",__rue_parent_context)"));
 
     let mut empty_vt = new_vt();
     let empty = parse_jsx_element("<Box>{null}</Box>");
@@ -206,6 +206,15 @@ fn builds_direct_render_and_dynamic_component_anchor_paths() {
     assert!(component_out.contains("watchEffect(()=>{"));
     assert!(component_out.contains("_$createComponent(Box,{title:title})"));
     assert!(component_out.contains("renderAnchor(__slot2,root,_list1)"));
+}
+
+#[test]
+fn component_jsx_uses_the_compiled_component_helper_without_h() {
+    let component = parse_jsx_element("<Panel title={title} />");
+    let output = compact(&emit_expr(build_component_mount_expr(&component)));
+
+    assert!(output.contains("_$createComponent(Panel,{title:title})"), "{output}");
+    assert!(!output.contains("h("), "{output}");
 }
 
 #[test]
@@ -320,10 +329,10 @@ fn rewrites_transition_group_children_maps_keys_and_nested_returns() {
     assert!(host.children.is_empty());
     assert!(host.opening.self_closing);
     assert!(mount.contains("_$createComponent(TransitionGroup,{children:["));
-    assert!(mount.contains("_$vaporWithKey(vapor(()=>{"));
+    assert!(mount.contains("_$vaporWithKey(_$compiledRoot((__rue_parent_context)=>{"));
     assert!(mount.contains("\"first\""));
     assert!(mount.contains("items.map((item)=>{"));
-    assert!(mount.contains("return_$vaporWithKey(vapor(()=>{"));
+    assert!(mount.contains("return_$vaporWithKey(_$compiledRoot((__rue_parent_context)=>{"));
     assert!(mount.contains("item.id"));
     assert!(mount.contains("err.id"));
     assert!(mount.contains("item.finalKey"));
@@ -509,7 +518,7 @@ fn covers_additional_component_slot_and_transition_group_edges() {
 
     assert!(rewrite.stmts.is_empty());
     assert!(mount.contains("children:[\"lead\",ok?_$vaporWithKey"));
-    assert!(mount.contains(":vapor(()=>{"));
+    assert!(mount.contains(":_$compiledRoot((__rue_parent_context)=>{"));
     assert!(mount.contains("items.map((item)=>_$vaporWithKey(vapor(()=>{"));
     assert!(mount.contains("item.id"));
     assert!(!mount.contains("ignored"));
@@ -805,7 +814,7 @@ fn hardens_remaining_transition_and_default_child_edges() {
     let mixed_out = compact(&emit_expr(mixed_expr));
 
     assert!(mixed_out.contains("[\"lead\""));
-    assert!(mixed_out.contains("_$vaporWithKey(vapor(()=>{"));
+    assert!(mixed_out.contains("_$vaporWithKey(_$compiledRoot((__rue_parent_context)=>{"));
     assert!(mixed_out.contains("id"));
     assert!(!mixed_out.contains("items"));
 
@@ -974,7 +983,7 @@ fn hardens_slot_empty_alt_array_fallback_and_empty_named_slots() {
     let logical_or_stmts = compact(&emit_stmts(logical_or_lowered.stmts));
     assert!(logical_or_stmts.contains("const__child"));
     assert!(logical_or_stmts.contains("_$createDocumentFragment"));
-    assert!(logical_or_stmts.contains("ok||vapor(()=>{"));
+    assert!(logical_or_stmts.contains("ok||_$compiledRoot((__rue_parent_context)=>{"));
     assert!(logical_or_stmts.contains("renderAnchor(__slot,_root"));
 
     let mut named_alt_vt = new_vt();
@@ -1160,7 +1169,7 @@ fn hardens_nullish_slot_fallbacks_and_empty_key_attrs() {
     assert!(stmts.contains("const__child"));
     assert!(stmts.contains("_$createDocumentFragment"));
     assert!(stmts.contains("content??"));
-    assert!(stmts.contains("_$createElement(\"span\",_root)"));
+    assert!(stmts.contains("_$compiledCreateElement(\"span\",__rue_parent_context)"));
     assert!(expr.contains("__child"));
 
     let empty_key = parse_jsx_element("<li key />");
@@ -1346,7 +1355,7 @@ fn hardens_slot_lowering_static_false_and_nullish_slot_edges() {
 
     assert!(stmts_out.contains("provided??"));
     assert!(stmts_out.contains("_$createDocumentFragment"));
-    assert!(stmts_out.contains("_$createElement(\"span\",_root)"));
+    assert!(stmts_out.contains("_$compiledCreateElement(\"span\",_root)"));
     assert!(expr_out.contains("__child"));
 }
 

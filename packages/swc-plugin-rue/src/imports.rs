@@ -279,6 +279,43 @@ fn runtime_subpath_import_locals(m: &Module) -> HashSet<String> {
         .collect()
 }
 
+const COMPILED_REACTIVE_GRAPH_EXPORTS: &[&str] = &[
+    "signal",
+    "effect",
+    "batch",
+    "untrack",
+    "onCleanup",
+    "createOwner",
+    "runWithOwner",
+    "disposeOwner",
+    "createSelector",
+    "setReactiveScheduling",
+    "_$compiledRoot",
+    "_$reconcileKeyed",
+];
+
+fn has_explicit_compiled_reactive_graph_import(m: &Module) -> bool {
+    m.body.iter().any(|item| {
+        let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
+            return false;
+        };
+        if decl.src.value.as_str() != Some("@rue-js/rue/compiled") {
+            return false;
+        }
+        decl.specifiers.iter().any(|specifier| {
+            let ImportSpecifier::Named(named) = specifier else {
+                return false;
+            };
+            let export_name = named
+                .imported
+                .as_ref()
+                .map(module_export_name_to_string)
+                .unwrap_or_else(|| named.local.sym.to_string());
+            !named.is_type_only && COMPILED_REACTIVE_GRAPH_EXPORTS.contains(&export_name.as_str())
+        })
+    })
+}
+
 fn sort_named_specs(specs: &mut [NamedImportSpec], rank: &HashMap<&str, usize>) {
     specs.sort_by(|a, b| {
         let a_rank = rank.get(a.export_name()).cloned().unwrap_or(usize::MAX);
@@ -307,6 +344,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
     let vapor_import_source =
         Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue/vapor").into(), raw: None };
 
+    let explicit_compiled_reactive_graph = has_explicit_compiled_reactive_graph_import(m);
     let mut collector = RuntimeUseCollector::new();
     m.visit_with(&mut collector);
     if collector.used_capabilities.contains("effect")
@@ -479,8 +517,13 @@ pub fn ensure_runtime_imports(m: &mut Module) {
 
     let mut compiled_specs = Vec::new();
     let mut vapor_specs = Vec::new();
+    // An explicit compiled reactive import selects that graph for generated compiled-tier
+    // effects and owners. Vapor-only DOM/hook helpers remain on the Vapor entry. Without this
+    // rule a compiled signal and a Vapor list effect silently use different dependency graphs.
+    let shared_runtime_tier =
+        if explicit_compiled_reactive_graph { RuntimeTier::Compiled } else { module_tier };
     for spec in helper_specs {
-        let tier = runtime_import_tier(spec.export_name(), module_tier);
+        let tier = runtime_import_tier(spec.export_name(), shared_runtime_tier);
         match tier {
             Some(RuntimeTier::Compiled) => compiled_specs.push(spec),
             Some(RuntimeTier::Vapor) => vapor_specs.push(spec),

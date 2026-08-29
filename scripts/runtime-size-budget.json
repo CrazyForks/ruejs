@@ -13,6 +13,9 @@
       "forbidVaporRuntime": true,
       "forbidWasm": true,
       "forbidSSRRenderer": true,
+      "forbidAutomaticJsxRuntime": true,
+      "forbidCompatPatch": true,
+      "forbidCompatTokens": ["head-record", "stable-host"],
       "forbidModules": {
         "fullFacade": [
           "packages/runtime-vapor/dist/index.js",
@@ -33,7 +36,9 @@
           "packages/runtime-vapor/dist/reactive-kernel/computed.js",
           "packages/runtime-vapor/dist/js-reactive/hooks/computed.js"
         ],
-        "vaporHelpers": ["packages/runtime/src/vapor-helpers.ts"]
+        "vaporHelpers": ["packages/runtime/src/vapor-helpers.ts"],
+        "compatPatch": ["packages/runtime-vapor/dist/js-runtime/mount-compat.js"],
+        "automaticJsxRuntime": ["packages/jsx-runtime/", "packages/jsx-dev-runtime/"]
       }
     },
     "vapor-core": {
@@ -48,6 +53,56 @@
       "forbidDefaultRuntime": true,
       "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
       "forbidSSRRenderer": true
+    },
+    "compiled-component": {
+      "measurement": "absolute",
+      "max": {
+        "min": 140470,
+        "gzip": 40461,
+        "brotli": 35773
+      },
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
+      "forbidDefaultRuntime": true,
+      "forbidSSRRenderer": true,
+      "forbidAutomaticJsxRuntime": true,
+      "forbidCompatPatch": true,
+      "forbidCompatTokens": ["head-record", "stable-host"],
+      "forbidModules": {
+        "compatPatch": ["packages/runtime-vapor/dist/js-runtime/mount-compat.js"],
+        "defaultRuntime": [
+          "packages/rue/dist/rue.runtime.esm-bundler.js",
+          "packages/runtime/dist/runtime.esm-bundler.js"
+        ],
+        "automaticJsxRuntime": ["packages/jsx-runtime/", "packages/jsx-dev-runtime/"]
+      }
+    },
+    "h-only": {
+      "measurement": "absolute",
+      "max": {
+        "min": 147751,
+        "gzip": 42869,
+        "brotli": 37758
+      },
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
+      "forbidSSRRenderer": true,
+      "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
+      "requireCompatRenderer": true
+    },
+    "jsx-runtime-only": {
+      "measurement": "absolute",
+      "max": {
+        "min": 147360,
+        "gzip": 42746,
+        "brotli": 37619
+      },
+      "requireReactiveKernel": true,
+      "forbidWasm": true,
+      "forbidSSRRenderer": true,
+      "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
+      "requireCompatRenderer": true,
+      "requireAutomaticJsxRuntime": true
     },
     "vapor-app": {
       "measurement": "absolute",

@@ -190,6 +190,16 @@ pub(crate) fn is_compiled_scalar_element(vt: &VaporTransform, element: &JSXEleme
         && compiled_element_has_binding(vt, element, &shadowed_names)
 }
 
+pub(crate) fn is_compiled_safe_element(vt: &VaporTransform, element: &JSXElement) -> bool {
+    let shadowed_names = vt.current_scalar_constructor_shadows();
+    compiled_scalar_element_is_safe(vt, element, &shadowed_names)
+}
+
+pub(crate) fn is_compiled_safe_fragment(vt: &VaporTransform, fragment: &JSXFragment) -> bool {
+    let shadowed_names = vt.current_scalar_constructor_shadows();
+    fragment.children.iter().all(|child| compiled_child_is_safe(vt, child, &shadowed_names))
+}
+
 fn append_direct(parent: &Ident, child: Expr, stmts: &mut Vec<Stmt>) {
     stmts.push(Stmt::Expr(ExprStmt {
         span: DUMMY_SP,
@@ -305,6 +315,37 @@ pub(crate) fn compiled_scalar_element_to_block(
     emit_compiled_children(vt, &root, &element.children, &mut stmts);
     stmts.push(crate::emit::return_root(root));
     BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts }
+}
+
+/// Build a safe Fragment setup body without pulling in the Vapor DOM layer.
+pub(crate) fn compiled_fragment_to_block(
+    vt: &mut VaporTransform,
+    fragment: &JSXFragment,
+) -> BlockStmt {
+    let root = crate::emit::ident("_root");
+    let create =
+        crate::emit::call_member(crate::emit::ident("document"), "createDocumentFragment", vec![]);
+    let mut stmts = vec![crate::emit::const_decl(root.clone(), create)];
+    emit_compiled_children(vt, &root, &fragment.children, &mut stmts);
+    stmts.push(crate::emit::return_root(root));
+    BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts }
+}
+
+pub(crate) fn compiled_block_to_root_expr(block: BlockStmt) -> Expr {
+    let setup = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![Pat::Ident(BindingIdent {
+            id: crate::emit::ident("__rue_parent_context"),
+            type_ann: None,
+        })],
+        body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    crate::emit::call_ident("_$compiledRoot", vec![setup])
 }
 
 #[cfg(test)]

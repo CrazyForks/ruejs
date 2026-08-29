@@ -348,7 +348,6 @@ export class ReactiveEffectRuntime {
     for (const id of effectIds) {
       const record = this.#effects.get(id)
       if (record === undefined) continue
-
       if (record.computed !== undefined) {
         this.invalidateComputed(record.node, event)
         continue

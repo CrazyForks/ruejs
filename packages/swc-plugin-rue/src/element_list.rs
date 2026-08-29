@@ -1208,10 +1208,7 @@ impl VisitMut for CompiledListDomLowering {
     }
 }
 
-fn lower_compiled_list_events(stmts: &mut [Stmt], owner: &Ident) -> bool {
-    let mut found = false;
-    let mut event_index = 0usize;
-
+fn lower_compiled_list_events(stmts: &mut [Stmt]) {
     for stmt in stmts {
         let Stmt::Expr(expr_stmt) = stmt else {
             continue;
@@ -1229,58 +1226,11 @@ fn lower_compiled_list_events(stmts: &mut [Stmt], owner: &Ident) -> bool {
         let target = call.args[0].expr.as_ref().clone();
         let event_name = call.args[1].expr.as_ref().clone();
         let handler = call.args[2].expr.as_ref().clone();
-        let listener = ident(&format!("{}_event{}", owner.sym, event_index));
-        event_index += 1;
-
-        let mut listener_args = vec![event_name, Expr::Ident(listener.clone())];
+        let mut listener_args = vec![event_name, handler];
         listener_args.extend(call.args.iter().skip(3).map(|arg| arg.expr.as_ref().clone()));
-        let add =
-            compiled_call_member_expr(target.clone(), "addEventListener", listener_args.clone());
-        let remove = compiled_call_member_expr(target, "removeEventListener", listener_args);
-        let setup = vec![
-            const_decl(listener, handler),
-            Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(add) }),
-            Stmt::Expr(ExprStmt {
-                span: DUMMY_SP,
-                expr: Box::new(call_ident(
-                    "onCleanup",
-                    vec![Expr::Arrow(ArrowExpr {
-                        span: DUMMY_SP,
-                        params: vec![],
-                        body: Box::new(BlockStmtOrExpr::Expr(Box::new(remove))),
-                        is_async: false,
-                        is_generator: false,
-                        type_params: None,
-                        return_type: None,
-                        ctxt: SyntaxContext::empty(),
-                    })],
-                )),
-            }),
-        ];
-        expr_stmt.expr = Box::new(call_ident(
-            "runWithOwner",
-            vec![
-                Expr::Ident(owner.clone()),
-                Expr::Arrow(ArrowExpr {
-                    span: DUMMY_SP,
-                    params: vec![],
-                    body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-                        span: DUMMY_SP,
-                        ctxt: SyntaxContext::empty(),
-                        stmts: setup,
-                    })),
-                    is_async: false,
-                    is_generator: false,
-                    type_params: None,
-                    return_type: None,
-                    ctxt: SyntaxContext::empty(),
-                }),
-            ],
-        ));
-        found = true;
+        expr_stmt.expr =
+            Box::new(compiled_call_member_expr(target, "addEventListener", listener_args));
     }
-
-    found
 }
 
 fn stmt_appends_to_ident(stmt: &Stmt, parent: &Ident) -> bool {
@@ -1316,17 +1266,18 @@ fn empty_arrow() -> Expr {
     })
 }
 
-fn dispose_compiled_list_owners(owners: &[Ident]) -> Expr {
-    if owners.is_empty() {
+fn dispose_compiled_list_effects(effects: &[Ident]) -> Expr {
+    if effects.is_empty() {
         return empty_arrow();
     }
-    if owners.len() == 1 {
+    if effects.len() == 1 {
         return Expr::Arrow(ArrowExpr {
             span: DUMMY_SP,
             params: Vec::new(),
-            body: Box::new(BlockStmtOrExpr::Expr(Box::new(call_ident(
-                "disposeOwner",
-                vec![Expr::Ident(owners[0].clone())],
+            body: Box::new(BlockStmtOrExpr::Expr(Box::new(compiled_call_member_expr(
+                Expr::Ident(effects[0].clone()),
+                "dispose",
+                Vec::new(),
             )))),
             is_async: false,
             is_generator: false,
@@ -1341,14 +1292,15 @@ fn dispose_compiled_list_owners(owners: &[Ident]) -> Expr {
         body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
-            stmts: owners
+            stmts: effects
                 .iter()
-                .map(|owner| {
+                .map(|effect| {
                     Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
-                        expr: Box::new(call_ident(
-                            "disposeOwner",
-                            vec![Expr::Ident(owner.clone())],
+                        expr: Box::new(compiled_call_member_expr(
+                            Expr::Ident(effect.clone()),
+                            "dispose",
+                            Vec::new(),
                         )),
                     })
                 })
@@ -2405,18 +2357,16 @@ pub(crate) fn try_build_list_from_map(
                         }
                         let row_root_ident = ident(&format!("_el{}", vt.next_el + 1));
                         build_element(vt, &compiled_row_element, &row_parent, &mut child_body);
-                        let row_owner_ident = compiled_direct_row
-                            .then(|| fresh_ident_avoiding("_$rowOwner", &shadowed_names));
-                        let row_has_events = row_owner_ident.as_ref().is_some_and(|owner_ident| {
-                            lower_compiled_list_events(&mut child_body, owner_ident)
-                        });
+                        if compiled_direct_row {
+                            lower_compiled_list_events(&mut child_body);
+                        }
                         if row_mount_mode.direct_mount() {
                             use_ref_cleanup_registrar = crate::vapor::bind_list_row_ref_cleanups(
                                 &mut child_body,
                                 &ref_cleanup_registrar_ident,
                             );
                         }
-                        let mut row_has_selector_effect = false;
+                        let mut compiled_row_effect_ident = None;
                         if let Some((selector_ident, source)) = selector_plan.as_ref() {
                             let selector_effect_stmts =
                                 crate::vapor::take_list_row_selector_effects(
@@ -2426,9 +2376,6 @@ pub(crate) fn try_build_list_from_map(
                             if !selector_effect_stmts.is_empty() {
                                 compiled_selector_decl =
                                     Some((selector_ident.clone(), source.clone()));
-                                let owner_ident = row_owner_ident
-                                    .as_ref()
-                                    .expect("compiled selector rows have a planned row owner");
                                 let effect_call = call_ident(
                                     "effect",
                                     vec![Expr::Arrow(ArrowExpr {
@@ -2446,42 +2393,12 @@ pub(crate) fn try_build_list_from_map(
                                         ctxt: SyntaxContext::empty(),
                                     })],
                                 );
-                                child_body.push(Stmt::Expr(ExprStmt {
-                                    span: DUMMY_SP,
-                                    expr: Box::new(call_ident(
-                                        "runWithOwner",
-                                        vec![
-                                            Expr::Ident(owner_ident.clone()),
-                                            Expr::Arrow(ArrowExpr {
-                                                span: DUMMY_SP,
-                                                params: vec![],
-                                                body: Box::new(BlockStmtOrExpr::Expr(Box::new(
-                                                    effect_call,
-                                                ))),
-                                                is_async: false,
-                                                is_generator: false,
-                                                type_params: None,
-                                                return_type: None,
-                                                ctxt: SyntaxContext::empty(),
-                                            }),
-                                        ],
-                                    )),
-                                }));
-                                row_has_selector_effect = true;
+                                let effect_ident =
+                                    fresh_ident_avoiding("_$rowEffect", &shadowed_names);
+                                child_body.push(const_decl(effect_ident.clone(), effect_call));
+                                compiled_row_effect_ident = Some(effect_ident);
                             }
                         }
-                        let compiled_row_owner_ident = if row_has_events || row_has_selector_effect
-                        {
-                            let owner_ident = row_owner_ident
-                                .expect("owned compiled rows have a planned row owner");
-                            child_body.insert(
-                                0,
-                                const_decl(owner_ident.clone(), call_ident("createOwner", vec![])),
-                            );
-                            Some(owner_ident)
-                        } else {
-                            None
-                        };
                         if coalesce_row_bindings {
                             compiled_row_patch_ident =
                                 crate::vapor::coalesce_list_row_binding_effects(
@@ -2559,8 +2476,8 @@ pub(crate) fn try_build_list_from_map(
                                     patch_ident
                                 });
                             render_item_stmts.extend(child_body);
-                            let dispose_owners: Vec<Ident> =
-                                compiled_row_owner_ident.iter().cloned().collect();
+                            let dispose_effects: Vec<Ident> =
+                                compiled_row_effect_ident.iter().cloned().collect();
                             render_item_stmts.push(Stmt::Return(ReturnStmt {
                                 span: DUMMY_SP,
                                 arg: Some(Box::new(Expr::Object(ObjectLit {
@@ -2581,8 +2498,8 @@ pub(crate) fn try_build_list_from_map(
                                         PropOrSpread::Prop(Box::new(Prop::KeyValue(
                                             KeyValueProp {
                                                 key: PropName::Ident(ident_name("dispose")),
-                                                value: Box::new(dispose_compiled_list_owners(
-                                                    &dispose_owners,
+                                                value: Box::new(dispose_compiled_list_effects(
+                                                    &dispose_effects,
                                                 )),
                                             },
                                         ))),

@@ -41,10 +41,10 @@ export default HelloWorld
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { ref, _$vaporWithHookId, useSetup, vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper } from "@rue-js/rue/vapor";
+import { ref, _$vaporWithHookId, _$vaporMarkComponentRenderReactive, useSetup, vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper } from "@rue-js/rue/vapor";
 import { type FC } from '@rue-js/rue';
 const _$getTemplate1 = _$template("<div>hello</div>");
-const HelloWorld: FC = ()=>{
+const HelloWorld: FC = _$vaporMarkComponentRenderReactive(()=>{
     const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             console.log('--------start');
             const x = _$vaporWithHookId("ref:1:0", ()=>ref(0));
@@ -102,7 +102,7 @@ const HelloWorld: FC = ()=>{
         });
         return _root;
     });
-};
+});
 export default HelloWorld;
 "##;
 

@@ -149,6 +149,50 @@ fn detects_component_render_shapes_and_boundaries() {
 }
 
 #[test]
+fn distinguishes_plain_vapor_returns_from_setup_render_control() {
+    let plain = parse_fn_decl(
+        "function Plain(): JSX.Element { return vapor(() => <input value={label.get()} />); }",
+    );
+    let plain_block = plain.function.body.expect("plain body");
+    assert!(!block_has_reactive_render_control(&plain_block));
+    assert!(
+        !arrow_has_reactive_render_control(&parse_arrow(
+            "() => { return vapor(() => <input value={label.get()} />); }"
+        )),
+        "a direct Vapor setup delegates reactive bindings to its local effects"
+    );
+
+    let early_return = parse_arrow(
+        "() => { if (active.get()) return <input value='active' />; return <input value='idle' />; }",
+    );
+    assert!(
+        arrow_has_reactive_render_control(&early_return),
+        "an early render return is setup-stage render control"
+    );
+
+    let assigned_branch = parse_arrow(
+        "() => { let view; if (active.get()) { view = <p>active</p>; } else { view = <p>idle</p>; } return view; }",
+    );
+    assert!(arrow_has_reactive_render_control(&assigned_branch));
+
+    let switched = parse_arrow(
+        "() => { switch (mode.get()) { case 'a': return <p>a</p>; default: return <p>b</p>; } }",
+    );
+    assert!(arrow_has_reactive_render_control(&switched));
+
+    let selected = parse_arrow("() => { return active.get() ? <p>active</p> : <p>idle</p>; }");
+    assert!(arrow_has_reactive_render_control(&selected));
+
+    let lowered_anchor = parse_arrow(
+        "() => { const view = active.get() ? <p>active</p> : <p>idle</p>; return <div>{view}</div>; }",
+    );
+    assert!(
+        !arrow_has_reactive_render_control(&lowered_anchor),
+        "a JSX variable initializer is owned by its generated fine-grained anchor"
+    );
+}
+
+#[test]
 fn rewrites_props_destructure_in_arrow_and_function_bodies() {
     let mut arrow =
         parse_arrow("({ foo = 1, bar: baz, ...rest }) => <div>{foo}{baz}{rest.qux}</div>");

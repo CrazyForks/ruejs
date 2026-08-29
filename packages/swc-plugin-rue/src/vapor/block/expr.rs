@@ -15,7 +15,7 @@ use super::super::VaporTransform;
 /// - JSXElement / JSXFragment → 编译为 `vapor(()=>{...})`，统一直接返回 `DocumentFragment`
 /// - Cond/逻辑表达式 → 递归规范分支中的 JSX；空值统一回退为 ""
 /// - 保持非 JSX 表达式原样，以减少不必要的包装与提升性能
-fn make_vapor_slot_expr(child_body: Vec<Stmt>) -> Expr {
+fn make_vapor_slot_expr(child_body: Vec<Stmt>, compiled_anchor: bool) -> Expr {
     let arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
         params: vec![],
@@ -30,10 +30,24 @@ fn make_vapor_slot_expr(child_body: Vec<Stmt>) -> Expr {
         return_type: None,
         ctxt: SyntaxContext::empty(),
     });
-    call_ident("vapor", vec![arrow])
+    let mut args = vec![arrow];
+    if compiled_anchor {
+        args.push(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })));
+    }
+    call_ident("vapor", args)
 }
 
 fn jsx_element_to_slot_value_expr(this: &mut VaporTransform, jsx_el: &JSXElement) -> Expr {
+    if !this.current_function_is_async()
+        && crate::element_children::is_compiled_safe_element(this, jsx_el)
+    {
+        let block = crate::element_children::compiled_scalar_element_to_block(this, jsx_el);
+        let compiled_expr = crate::element_children::compiled_block_to_root_expr(block);
+        return match crate::element_expr::extract_reactive_jsx_key_expr(jsx_el) {
+            Some(key_expr) => call_ident("_$vaporWithKey", vec![compiled_expr, key_expr]),
+            None => compiled_expr,
+        };
+    }
     // 将 JSXElement 编译为 `vapor(()=>{...})`，返回可挂载片段根：
     // - child_root：DocumentFragment 承载内部构造
     // - build_element：将 JSX 构建到 child_root 下
@@ -49,7 +63,8 @@ fn jsx_element_to_slot_value_expr(this: &mut VaporTransform, jsx_el: &JSXElement
     // 返回统一的可挂载槽值
     child_body.push(return_root(child_root.clone()));
     // vapor 包裹以形成可执行块体
-    let vapor_expr = make_vapor_slot_expr(child_body);
+    let vapor_expr =
+        make_vapor_slot_expr(child_body, !crate::utils::is_component(&jsx_el.opening.name));
     match crate::element_expr::extract_reactive_jsx_key_expr(jsx_el) {
         Some(key_expr) => call_ident("_$vaporWithKey", vec![vapor_expr, key_expr]),
         None => vapor_expr,
@@ -57,6 +72,12 @@ fn jsx_element_to_slot_value_expr(this: &mut VaporTransform, jsx_el: &JSXElement
 }
 
 fn jsx_fragment_to_slot_value_expr(this: &mut VaporTransform, frag: &JSXFragment) -> Expr {
+    if !this.current_function_is_async()
+        && crate::element_children::is_compiled_safe_fragment(this, frag)
+    {
+        let block = crate::element_children::compiled_fragment_to_block(this, frag);
+        return crate::element_children::compiled_block_to_root_expr(block);
+    }
     let child_root = ident("_root");
     let mut child_body: Vec<Stmt> =
         vec![const_decl(child_root.clone(), call_ident("_$createDocumentFragment", vec![]))];
@@ -70,7 +91,7 @@ fn jsx_fragment_to_slot_value_expr(this: &mut VaporTransform, frag: &JSXFragment
         crate::vapor::flatten_once_watch_effects(&mut child_body);
     }
     child_body.push(return_root(child_root.clone()));
-    make_vapor_slot_expr(child_body)
+    make_vapor_slot_expr(child_body, true)
 }
 
 fn jsxish_to_slot_value_expr(this: &mut VaporTransform, expr: &Expr) -> Option<Expr> {

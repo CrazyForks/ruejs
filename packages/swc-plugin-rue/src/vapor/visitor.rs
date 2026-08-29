@@ -170,17 +170,7 @@ impl VisitMut for VaporTransform {
                                 self,
                                 el.as_ref(),
                             );
-                            let setup = Expr::Arrow(ArrowExpr {
-                                span: DUMMY_SP,
-                                params: vec![vapor_parent_param()],
-                                body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
-                                is_async: false,
-                                is_generator: false,
-                                type_params: None,
-                                return_type: None,
-                                ctxt: SyntaxContext::empty(),
-                            });
-                            **expr = call_ident("_$compiledRoot", vec![setup]);
+                            **expr = crate::element_children::compiled_block_to_root_expr(block);
                         } else {
                             // 将 JSXElement 编译为块体，并用 vapor(() => {block}) 包裹
                             let block = self.jsx_to_block(el.as_ref());
@@ -201,20 +191,27 @@ impl VisitMut for VaporTransform {
                     }
                     Expr::JSXFragment(frag) => {
                         log::debug("rue-swc: arrow JSXFragment");
-                        // 将片段编译为块体，并用 vapor(() => {block}) 包裹
-                        let block = self.jsx_fragment_to_block(frag);
-                        let func = Expr::Arrow(ArrowExpr {
-                            span: DUMMY_SP,
-                            params: vec![vapor_parent_param()],
-                            body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
-                            is_async: false,
-                            is_generator: false,
-                            type_params: None,
-                            return_type: None,
-                            ctxt: SyntaxContext::empty(),
-                        });
-                        let call = call_ident("vapor", vec![func]);
-                        **expr = call;
+                        if !self.current_function_is_async()
+                            && crate::element_children::is_compiled_safe_fragment(self, frag)
+                        {
+                            let block =
+                                crate::element_children::compiled_fragment_to_block(self, frag);
+                            **expr = crate::element_children::compiled_block_to_root_expr(block);
+                        } else {
+                            // 将片段编译为块体，并用 vapor(() => {block}) 包裹
+                            let block = self.jsx_fragment_to_block(frag);
+                            let func = Expr::Arrow(ArrowExpr {
+                                span: DUMMY_SP,
+                                params: vec![vapor_parent_param()],
+                                body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
+                                is_async: false,
+                                is_generator: false,
+                                type_params: None,
+                                return_type: None,
+                                ctxt: SyntaxContext::empty(),
+                            });
+                            **expr = call_ident("vapor", vec![func]);
+                        }
                         self.did_transform = true;
                     }
                     _ => {
@@ -267,17 +264,7 @@ impl VisitMut for VaporTransform {
                             self,
                             el.as_ref(),
                         );
-                        let setup = Expr::Arrow(ArrowExpr {
-                            span: DUMMY_SP,
-                            params: vec![vapor_parent_param()],
-                            body: Box::new(BlockStmtOrExpr::BlockStmt(block)),
-                            is_async: false,
-                            is_generator: false,
-                            type_params: None,
-                            return_type: None,
-                            ctxt: SyntaxContext::empty(),
-                        });
-                        **expr = call_ident("_$compiledRoot", vec![setup]);
+                        **expr = crate::element_children::compiled_block_to_root_expr(block);
                     } else {
                         // 将返回的 JSX 编译为块体，并用 vapor 包裹替换原返回值
                         let body_block = self.jsx_to_block(el.as_ref());
@@ -297,20 +284,26 @@ impl VisitMut for VaporTransform {
                 }
                 Expr::JSXFragment(frag) => {
                     log::debug("rue-swc: nested return JSXFragment");
-                    // 将返回的片段编译为块体，并用 vapor 包裹替换原返回值
-                    let body_block = self.jsx_fragment_to_block(frag);
-                    let func = Expr::Arrow(ArrowExpr {
-                        span: DUMMY_SP,
-                        params: vec![vapor_parent_param()],
-                        body: Box::new(BlockStmtOrExpr::BlockStmt(body_block)),
-                        is_async: false,
-                        is_generator: false,
-                        type_params: None,
-                        return_type: None,
-                        ctxt: SyntaxContext::empty(),
-                    });
-                    let call = call_ident("vapor", vec![func]);
-                    **expr = call;
+                    if !self.current_function_is_async()
+                        && crate::element_children::is_compiled_safe_fragment(self, frag)
+                    {
+                        let block = crate::element_children::compiled_fragment_to_block(self, frag);
+                        **expr = crate::element_children::compiled_block_to_root_expr(block);
+                    } else {
+                        // 将返回的片段编译为块体，并用 vapor 包裹替换原返回值
+                        let body_block = self.jsx_fragment_to_block(frag);
+                        let func = Expr::Arrow(ArrowExpr {
+                            span: DUMMY_SP,
+                            params: vec![vapor_parent_param()],
+                            body: Box::new(BlockStmtOrExpr::BlockStmt(body_block)),
+                            is_async: false,
+                            is_generator: false,
+                            type_params: None,
+                            return_type: None,
+                            ctxt: SyntaxContext::empty(),
+                        });
+                        **expr = call_ident("vapor", vec![func]);
+                    }
                     self.did_transform = true;
                 }
                 _ => {}

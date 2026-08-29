@@ -38,7 +38,7 @@ pub(crate) fn is_unshadowed_global_scalar_call(
   - 其它表达式保持原样；
 - contains_jsx_in_expr：用于快速判断表达式是否包含 JSX，以决定走“插槽渲染”或“文本渲染”路径。
 */
-fn make_vapor_expr_from_child_body(child_body: Vec<Stmt>) -> Expr {
+fn make_vapor_expr_from_child_body(child_body: Vec<Stmt>, compiled_anchor: bool) -> Expr {
     let arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
         params: vec![],
@@ -53,7 +53,11 @@ fn make_vapor_expr_from_child_body(child_body: Vec<Stmt>) -> Expr {
         return_type: None,
         ctxt: SyntaxContext::empty(),
     });
-    call_ident("vapor", vec![arrow])
+    let mut args = vec![arrow];
+    if compiled_anchor {
+        args.push(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })));
+    }
+    call_ident("vapor", args)
 }
 
 struct ReactiveKeyDetector {
@@ -109,6 +113,16 @@ pub(crate) fn extract_reactive_jsx_key_expr(jsx_el: &JSXElement) -> Option<Expr>
 }
 
 fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Expr {
+    if !vt.current_function_is_async()
+        && crate::element_children::is_compiled_safe_element(vt, jsx_el)
+    {
+        let block = crate::element_children::compiled_scalar_element_to_block(vt, jsx_el);
+        let compiled_expr = crate::element_children::compiled_block_to_root_expr(block);
+        return match extract_reactive_jsx_key_expr(jsx_el) {
+            Some(key_expr) => call_ident("_$vaporWithKey", vec![compiled_expr, key_expr]),
+            None => compiled_expr,
+        };
+    }
     let child_root = ident("_root");
     let mut child_body: Vec<Stmt> =
         vec![const_decl(child_root.clone(), call_ident("_$createDocumentFragment", vec![]))];
@@ -117,7 +131,13 @@ fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Exp
         crate::vapor::flatten_once_watch_effects(&mut child_body);
     }
     child_body.push(return_root(child_root.clone()));
-    let vapor_expr = make_vapor_expr_from_child_body(child_body);
+    // Component setup can synchronously restore state from onErrorCaptured. Keep its
+    // historical deferred replacement boundary so that recovery schedules after the
+    // failing render; native compiled branches can replace their stable anchor in place.
+    let vapor_expr = make_vapor_expr_from_child_body(
+        child_body,
+        !crate::utils::is_component(&jsx_el.opening.name),
+    );
     match extract_reactive_jsx_key_expr(jsx_el) {
         Some(key_expr) => call_ident("_$vaporWithKey", vec![vapor_expr, key_expr]),
         None => vapor_expr,
@@ -125,6 +145,12 @@ fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Exp
 }
 
 fn jsx_fragment_to_slot_expr(vt: &mut VaporTransform, frag: &JSXFragment) -> Expr {
+    if !vt.current_function_is_async()
+        && crate::element_children::is_compiled_safe_fragment(vt, frag)
+    {
+        let block = crate::element_children::compiled_fragment_to_block(vt, frag);
+        return crate::element_children::compiled_block_to_root_expr(block);
+    }
     let child_root = ident("_root");
     let mut child_body: Vec<Stmt> =
         vec![const_decl(child_root.clone(), call_ident("_$createDocumentFragment", vec![]))];
@@ -138,7 +164,7 @@ fn jsx_fragment_to_slot_expr(vt: &mut VaporTransform, frag: &JSXFragment) -> Exp
         crate::vapor::flatten_once_watch_effects(&mut child_body);
     }
     child_body.push(return_root(child_root.clone()));
-    make_vapor_expr_from_child_body(child_body)
+    make_vapor_expr_from_child_body(child_body, true)
 }
 
 fn jsx_expr_to_slot_expr(vt: &mut VaporTransform, inner: &Expr) -> Option<Expr> {

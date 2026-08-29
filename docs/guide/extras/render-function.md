@@ -2,6 +2,8 @@
 
 Rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 UI。对绝大多数应用代码来说，普通 JSX 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。
 
+`h()`/`render` 使用默认入口的 rerender 兼容协议：同身份组件更新时可以重新执行渲染函数，并使用通用 Element / Fragment patch 保留 DOM 语义。这个兼容 renderer 是手写渲染函数的独立 bundle 成本；编译组件使用 fine-grained helper，同身份 props 更新只同步响应式 props 并触发局部 effect，不会自动携带这套 compat patch。
+
 > 如果你还没建立 Rue 渲染机制的整体图景，请先阅读[渲染机制](/guide/guide/extras/rendering-mechanism)。
 
 ## 基本用法 {#basic-usage}
@@ -11,6 +13,8 @@ Rue 依然支持手写渲染函数，但它们更适合作为显式边界来使�
 <span id="creating-vnodes"></span>
 
 `h()` 创建的是公开渲染输出。编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 `h()`。
+
+更严格地说，经过 Rue SWC 的 JSX 不会生成 `h()`、`jsx`、`jsxs` 或 `jsxDEV` 调用，也不会导入 `@rue-js/jsx-runtime`；它会按已证明的能力直接选择 compiled 或 Vapor 子入口。`@rue-js/jsx-runtime` 仍为没有经过 Rue SWC 的 automatic JSX transform 提供兼容性，它和手写 `h()` 一样会加载通用 renderer。若目标是 compiled-only 体积，请确保源码经过 Rue SWC，而不是仅把 TypeScript 的 `jsxImportSource` 指向 Rue。
 
 ```tsx
 import { h } from '@rue-js/rue'

@@ -32,6 +32,23 @@ describe('runtime size audit', () => {
         input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor'] }],
       },
       {
+        name: 'compiled-component',
+        input: [
+          {
+            entry: '@rue-js/rue/vapor',
+            imports: ['vapor', '_$createComponent', 'renderAnchor'],
+          },
+        ],
+      },
+      {
+        name: 'h-only',
+        input: [{ entry: '@rue-js/rue', imports: ['h', 'render'] }],
+      },
+      {
+        name: 'jsx-runtime-only',
+        input: [{ entry: '@rue-js/jsx-runtime', imports: ['jsx'] }],
+      },
+      {
         name: 'vapor-app',
         input: [{ entry: '@rue-js/rue/vapor', imports: ['vapor', 'useApp'] }],
       },
@@ -126,16 +143,16 @@ describe('runtime size audit', () => {
     expect(report.presets['vapor-core'].deltaFromVaporCore).toBeNull()
     expect(report.presets['vapor-app'].deltaFromVaporCore).toBeNull()
     expect(report.presets['keep-alive'].deltaFromVaporCore).toEqual({
-      raw: 300,
-      min: 240,
-      gzip: 150,
-      brotli: 120,
+      raw: 600,
+      min: 480,
+      gzip: 300,
+      brotli: 240,
     })
     expect(report.presets['all-builtins'].deltaFromVaporCore).toEqual({
-      raw: 700,
-      min: 560,
-      gzip: 350,
-      brotli: 280,
+      raw: 1000,
+      min: 800,
+      gzip: 500,
+      brotli: 400,
     })
   })
 
@@ -328,6 +345,9 @@ describe('runtime size audit', () => {
       forbidVaporRuntime: true,
       forbidWasm: true,
       forbidSSRRenderer: true,
+      forbidAutomaticJsxRuntime: true,
+      forbidCompatPatch: true,
+      forbidCompatTokens: ['head-record', 'stable-host'],
       forbidModules: {
         fullFacade: [
           'packages/runtime-vapor/dist/index.js',
@@ -349,8 +369,118 @@ describe('runtime size audit', () => {
           'packages/runtime-vapor/dist/js-reactive/hooks/computed.js',
         ],
         vaporHelpers: ['packages/runtime/src/vapor-helpers.ts'],
+        compatPatch: ['packages/runtime-vapor/dist/js-runtime/mount-compat.js'],
+        automaticJsxRuntime: ['packages/jsx-runtime/', 'packages/jsx-dev-runtime/'],
       },
     })
+  })
+
+  it('defines independent compiled-component, h-only, and jsx-runtime-only budgets without raising existing limits', () => {
+    const budget = JSON.parse(
+      readFileSync(path.resolve('scripts/runtime-size-budget.json'), 'utf8'),
+    )
+
+    expect(budget.presets['compiled-component']).toEqual({
+      measurement: 'absolute',
+      max: { min: 140470, gzip: 40461, brotli: 35773 },
+      requireReactiveKernel: true,
+      forbidWasm: true,
+      forbidDefaultRuntime: true,
+      forbidSSRRenderer: true,
+      forbidAutomaticJsxRuntime: true,
+      forbidCompatPatch: true,
+      forbidCompatTokens: ['head-record', 'stable-host'],
+      forbidModules: {
+        compatPatch: ['packages/runtime-vapor/dist/js-runtime/mount-compat.js'],
+        defaultRuntime: [
+          'packages/rue/dist/rue.runtime.esm-bundler.js',
+          'packages/runtime/dist/runtime.esm-bundler.js',
+        ],
+        automaticJsxRuntime: ['packages/jsx-runtime/', 'packages/jsx-dev-runtime/'],
+      },
+    })
+    expect(budget.presets['h-only']).toEqual({
+      measurement: 'absolute',
+      max: { min: 147751, gzip: 42869, brotli: 37758 },
+      requireReactiveKernel: true,
+      forbidWasm: true,
+      forbidSSRRenderer: true,
+      forbidBuiltins: ['KeepAlive', 'Suspense', 'Transition', 'TransitionGroup'],
+      requireCompatRenderer: true,
+    })
+    expect(budget.presets['jsx-runtime-only']).toEqual({
+      measurement: 'absolute',
+      max: { min: 147360, gzip: 42746, brotli: 37619 },
+      requireReactiveKernel: true,
+      forbidWasm: true,
+      forbidSSRRenderer: true,
+      forbidBuiltins: ['KeepAlive', 'Suspense', 'Transition', 'TransitionGroup'],
+      requireCompatRenderer: true,
+      requireAutomaticJsxRuntime: true,
+    })
+  })
+
+  it('reports compat patch, legacy token, and automatic JSX runtime budget failures', () => {
+    const report = {
+      presets: {
+        'compiled-component': {
+          min: 100,
+          sources: {
+            defaultRuntime: false,
+            compatRenderer: true,
+            compatPatch: true,
+            compatModules: ['packages/runtime-vapor/dist/js-runtime/mount-compat.js'],
+            compatTokens: ['head-record'],
+            automaticJsxRuntime: true,
+            jsxRuntimeModules: ['packages/jsx-runtime/src/index.ts'],
+            allModules: ['packages/runtime-vapor/dist/js-runtime/mount-compat.js'],
+          },
+        },
+        'jsx-runtime-only': {
+          min: 100,
+          sources: {
+            automaticJsxRuntime: false,
+          },
+        },
+      },
+    }
+    const budget = {
+      presets: {
+        'compiled-component': {
+          max: { min: 100 },
+          forbidCompatPatch: true,
+          forbidCompatTokens: ['head-record', 'stable-host'],
+          forbidAutomaticJsxRuntime: true,
+        },
+        'jsx-runtime-only': {
+          max: { min: 100 },
+          requireAutomaticJsxRuntime: true,
+        },
+      },
+    }
+
+    expect(() => checkRuntimeSizeBudget(report, budget)).toThrowError(
+      expect.objectContaining({
+        failures: [
+          expect.objectContaining({
+            dimension: 'sources.compatPatch',
+            actual: 'packages/runtime-vapor/dist/js-runtime/mount-compat.js',
+          }),
+          expect.objectContaining({
+            dimension: 'sources.compatTokens',
+            actual: 'head-record',
+          }),
+          expect.objectContaining({
+            dimension: 'sources.automaticJsxRuntime',
+            actual: 'packages/jsx-runtime/src/index.ts',
+          }),
+          expect.objectContaining({
+            dimension: 'sources.automaticJsxRuntime.required',
+            actual: false,
+          }),
+        ],
+      }),
+    )
   })
 
   it('reports every forbidden compiled-core module group with its matching module ids', () => {

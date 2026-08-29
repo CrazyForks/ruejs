@@ -1,9 +1,10 @@
 import { createRuntimeEntry } from './runtime-entry.js'
+import { createVaporRue } from './js-runtime/create-vapor-rue.js'
 import { buildDefaultExport } from './vapor-bridge.js'
 import * as sharedRuntime from './reactive.node.js'
 import sharedRuntimeWithJsHooks from './reactive.node.js'
 
-export const createRue = createRuntimeEntry(sharedRuntimeWithJsHooks, {
+export const createRue = createRuntimeEntry(sharedRuntimeWithJsHooks, createVaporRue, {
   entry: 'node:vapor',
   kernel: 'typescript',
 })
