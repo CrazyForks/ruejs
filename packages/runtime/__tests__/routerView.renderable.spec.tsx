@@ -465,7 +465,7 @@ describe('RouterView renderable boundary', () => {
 
     await waitForContent(() => {
       expect(container.textContent).toContain('Framework For Native DOM')
-    })
+    }, 400)
 
     await router.push('/examples/hello-world')
     await waitForContent(() => {

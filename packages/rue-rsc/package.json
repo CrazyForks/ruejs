@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/rsc",
-  "version": "0.8.18",
+  "version": "0.8.19",
   "description": "Rue-owned RSC runtime and Vite integration.",
   "keywords": [
     "rsc",
