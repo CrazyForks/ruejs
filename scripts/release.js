@@ -9,6 +9,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { exec } from './utils.js'
 import { parseArgs } from 'node:util'
+import { getPackageRoot, getReleasePackages, updateVersions } from './update-version.js'
 
 /**
  * @typedef {{
@@ -84,23 +85,7 @@ const skipBuild = args.skipBuild
 const skipPrompts = args.skipPrompts
 const skipGit = args.skipGit
 
-const packagesDir = path.resolve(__dirname, '../packages')
-const packages = fs.readdirSync(packagesDir).filter(p => {
-  const pkgRoot = path.resolve(packagesDir, p)
-  if (!fs.statSync(pkgRoot).isDirectory()) {
-    return false
-  }
-
-  const pkgPath = path.resolve(pkgRoot, 'package.json')
-  if (!fs.existsSync(pkgPath)) {
-    return false
-  }
-
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-  return !pkg.private
-})
-
-const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
+const packages = getReleasePackages()
 
 /** @type {string[]} */
 const skippedPackages = []
@@ -138,7 +123,7 @@ const dryRun = async (
   /** @type {import('node:child_process').SpawnOptions} */ opts = {},
 ) => console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
-const getPkgRoot = (/** @type {string} */ pkg) => path.resolve(__dirname, '../packages/' + pkg)
+const getPkgRoot = getPackageRoot
 const step = (/** @type {string} */ msg) => console.log(pico.cyan(msg))
 const releaseVerificationPackages = [
   {
@@ -278,7 +263,7 @@ async function main() {
 
   // update all package versions and inter-dependencies
   step('\nUpdating cross dependencies...')
-  updateVersions(targetVersion, keepThePackageName)
+  updateVersions(targetVersion, packages)
   versionUpdated = true
 
   // generate changelog
@@ -506,31 +491,6 @@ async function getBranch() {
   return (await exec('git', ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout
 }
 
-/**
- * @param {string} version
- * @param {(pkgName: string) => string} getNewPackageName
- */
-function updateVersions(version, getNewPackageName = keepThePackageName) {
-  // 1. update root package.json
-  updatePackage(path.resolve(__dirname, '..'), version, getNewPackageName)
-  // 2. update all packages
-  packages.forEach(p => updatePackage(getPkgRoot(p), version, getNewPackageName))
-}
-
-/**
- * @param {string} pkgRoot
- * @param {string} version
- * @param {(pkgName: string) => string} getNewPackageName
- */
-function updatePackage(pkgRoot, version, getNewPackageName) {
-  const pkgPath = path.resolve(pkgRoot, 'package.json')
-  /** @type {Package} */
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-  pkg.name = getNewPackageName(pkg.name)
-  pkg.version = version
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
-}
-
 async function buildPackages() {
   step('\nBuilding all packages...')
   if (!skipBuild) {
@@ -622,7 +582,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
 async function publishOnly() {
   const targetVersion = positionals[0]
   if (targetVersion) {
-    updateVersions(targetVersion)
+    updateVersions(targetVersion, packages)
   }
   await buildPackages()
   await publishPackages(currentVersion)
@@ -636,7 +596,7 @@ async function runRelease() {
   } catch (err) {
     if (versionUpdated && !isCheckOnly) {
       // revert to current version on failed releases
-      updateVersions(currentVersion)
+      updateVersions(currentVersion, packages)
     }
     throw err
   } finally {
