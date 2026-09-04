@@ -98,9 +98,10 @@ export default Demo
     assert!(
         out.contains(&utils::normalize("import { Template"))
             || out.contains(&utils::normalize(", Template,"))
-            || out.contains(&utils::normalize(", Template } from \"@rue-js/rue/vapor\";"))
+            || out.contains(&utils::normalize(", Template } from \"@rue-js/rue/internal\";"))
     );
     assert!(out.contains("__rue_slots"));
-    assert!(out.contains("renderAnchor"));
-    assert!(out.contains("_$vaporKeyedList"));
+    assert!(out.contains("_$compiledBranch"), "{out}");
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert!(!out.contains("_$compiledKeyedList"), "{out}");
 }

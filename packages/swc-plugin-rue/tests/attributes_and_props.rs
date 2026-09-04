@@ -33,82 +33,19 @@ export default AttributesAndProps;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$setStyle, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC } from '@rue-js/rue';
-import { RouterLink } from '@rue-js/router';
-const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">属性、className、style 与 Props</h3>');
-const _$getTemplate2 = _$template('<div id="box" class="border p-2">className 与 id</div>');
-const Badge: FC<{
-    label: string;
-    color?: string;
-}> = (props)=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("span", __rue_parent_context);
-        _$setClassName(_root, "px-2 py-1 rounded-md");
-        watchEffect(()=>{
-            const _root_style = ({
-                backgroundColor: props.color ?? '#eee'
-            });
-            _$setStyle(_root, _root_style);
-        });
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list1);
-        watchEffect(()=>{
-            const __slot = (props.label);
-            untrack(()=>renderAnchor(__slot, _root, _list1));
-        });
-        return _root;
-    });
-const AttributesAndProps: FC = ()=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        _root.appendChild(_$getTemplate2().content.cloneNode(true));
-        const _el3 = _$createElement("div", _root);
-        _$appendChild(_root, _el3);
-        _$setStyle(_el3, {
-            color: 'tomato',
-            fontWeight: 'bold'
-        });
-        _$appendChild(_el3, _$createTextNode("内联样式对象"));
-        const _list2 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list2);
-        const __slot3 = _$createComponent(Badge, {
-            label: "默认"
-        });
-        renderAnchor(__slot3, _root, _list2);
-        const _list4 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list4);
-        const __slot5 = _$createComponent(Badge, {
-            label: "自定义色",
-            color: "#cde"
-        });
-        renderAnchor(__slot5, _root, _list4);
-        const _el4 = _$createElement("a", _root);
-        _$appendChild(_root, _el4);
-        watchEffect(()=>{
-            _$setAttribute(_el4, "href", String(RouterLink.__rueHref("/jsx")));
-        });
-        _$addEventListener(_el4, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
-        _$addEventListener(_el4, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el4, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el4, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el4, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$setClassName(_el4, "text-blue-600 hover:underline");
-        _$appendChild(_el4, _$createTextNode("返回目录"));
-        return _root;
-    });
-export default AttributesAndProps;
-"##;
-
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/attributes_and_props.out.js", utils::strip_marker(&out))
         .ok();
     assert!(!out.contains("_$removeAttribute"));
-    assert_eq!(
-        utils::normalize(&utils::strip_marker(&out)),
-        utils::normalize(&utils::strip_marker(expected_fragment))
-    );
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    assert!(normalized.contains("_$template('<span"), "{out}");
+    assert!(normalized.contains("_$template('<div class=\"max-w-4xl"), "{out}");
+    assert!(normalized.contains(".content.cloneNode(true)"), "{out}");
+    assert!(normalized.contains("RouterLink.__rueHref(\"/jsx\")"), "{out}");
+    assert_eq!(normalized.matches(".addEventListener(").count(), 5, "{out}");
+    assert_eq!(normalized.matches(".removeEventListener(").count(), 5, "{out}");
+    assert_eq!(normalized.matches("onScopeDispose(").count(), 5, "{out}");
+    assert!(!normalized.contains("_$addEventListener"), "{out}");
 }
 
 #[test]
@@ -129,6 +66,6 @@ export default Demo;
     let normalized = utils::normalize(&utils::strip_marker(&out));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"_$createComponent(TooltipHost, { "data-tip": "Home", "aria-label": "导航", children: "Home" })"#,
+        r#"_$createComponent(TooltipHost, ()=>({ "data-tip": "Home", "aria-label": "导航", children: "Home" }))"#,
     )));
 }

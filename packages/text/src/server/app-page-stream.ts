@@ -91,6 +91,7 @@ type AppPageRscErrorTracker = {
    * synchronously inside a route-level Suspense boundary (loading.tsx).
    */
   getCapturedSpecialError: () => unknown
+  waitForSpecialError: (timeoutMs: number) => Promise<unknown>
   onRenderError: (error: unknown, requestInfo: unknown, errorContext: unknown) => unknown
 }
 
@@ -339,6 +340,10 @@ export function createAppPageRscErrorTracker(
 ): AppPageRscErrorTracker {
   let capturedError: unknown = null
   let capturedSpecialError: unknown = null
+  let resolveCapturedSpecialError: ((error: unknown) => void) | null = null
+  const capturedSpecialErrorPromise = new Promise<unknown>(resolve => {
+    resolveCapturedSpecialError = resolve
+  })
 
   const shouldReplaceCapturedError = (textError: unknown): boolean => {
     if (capturedError === null) return true
@@ -357,6 +362,21 @@ export function createAppPageRscErrorTracker(
     getCapturedSpecialError() {
       return capturedSpecialError
     },
+    async waitForSpecialError(timeoutMs) {
+      if (capturedSpecialError !== null || timeoutMs <= 0) return capturedSpecialError
+
+      let timeoutId: ReturnType<typeof setTimeout> | null = null
+      try {
+        return await Promise.race([
+          capturedSpecialErrorPromise,
+          new Promise<null>(resolve => {
+            timeoutId = setTimeout(() => resolve(null), timeoutMs)
+          }),
+        ])
+      } finally {
+        if (timeoutId !== null) clearTimeout(timeoutId)
+      }
+    },
     onRenderError(error, requestInfo, errorContext) {
       if (error && typeof error === 'object' && 'digest' in error) {
         // Errors with a digest are signal throws (TEXT_REDIRECT,
@@ -366,6 +386,8 @@ export function createAppPageRscErrorTracker(
         // body for routes with a route-level Suspense boundary.
         if (capturedSpecialError === null) {
           capturedSpecialError = error
+          resolveCapturedSpecialError?.(error)
+          resolveCapturedSpecialError = null
         }
       } else if (shouldReplaceCapturedError(error)) {
         capturedError = error

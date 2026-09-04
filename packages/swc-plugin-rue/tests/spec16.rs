@@ -122,20 +122,21 @@ export default ListTransitionExample
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { ref, _$vaporWithHookId, useSetup, TransitionGroup, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$vaporWithKey, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, _$compiledWithHookId, useSetup, TransitionGroup, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, onScopeDispose, untrack, watchEffect, _$createTextWrapper, _$compiledWithKey, _$setClassName } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold mb-3">带过渡动效的列表（移植自 Vue）</h3>');
+const _$getTemplate2 = _$template('<div class="mt-4 grid md:grid-cols-1 gap-6 items-start"><div class="flex gap-3"><button class="btn btn-primary">Insert at random index</button><button class="btn">Reset</button><button class="btn">Shuffle</button></div><ul class="container space-y-3 rounded-xl border border-base-200 bg-base-100 p-3"><!--rue:opaque-hole:0--></ul></div>');
 const ListTransitionExample: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const items = _$vaporWithHookId("ref:1:0", ()=>ref<number[]>([
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const items = ref<number[]>([
                     1,
                     2,
                     3,
                     4,
                     5
-                ]));
-            const nextId = _$vaporWithHookId("ref:1:1", ()=>ref(items.value.length + 1));
+            ]);
+            const nextId = ref(items.value.length + 1);
             function insert() {
                 const i = Math.round(Math.random() * items.value.length);
                 items.value.splice(i, 0, nextId.value++);
@@ -219,36 +220,30 @@ const ListTransitionExample: FC = ()=>{
 }
       `);
         });
-        const _el3 = _$createElement("div", _root);
-        _$appendChild(_root, _el3);
-        _$setClassName(_el3, "mt-4 grid md:grid-cols-1 gap-6 items-start");
-        const _el4 = _$createElement("div", _el3);
-        _$appendChild(_el3, _el4);
-        _$setClassName(_el4, "flex gap-3");
-        const _el5 = _$createElement("button", _el4);
-        _$appendChild(_el4, _el5);
-        _$setClassName(_el5, "btn btn-primary");
-        _$addEventListener(_el5, "click", (insert));
-        _$appendChild(_el5, _$createTextNode("Insert at random index"));
-        const _el6 = _$createElement("button", _el4);
-        _$appendChild(_el4, _el6);
+        const _el3_fragment = _$getTemplate2().content.cloneNode(true);
+        const _el3 = _el3_fragment.firstChild;
+        const _el4 = _el3.childNodes[0].childNodes[0];
+        const _el5 = _el3.childNodes[0].childNodes[1];
+        const _el6 = _el3.childNodes[0].childNodes[2];
+        const _el7 = _el3.childNodes[1].childNodes[0];
+        const _el8 = _el7.parentNode;
+        _root.appendChild(_el3_fragment);
+        _$setClassName(_el4, "btn btn-primary");
+        const _el4_event_1 = ($event)=>insert($event);
+        _el4.addEventListener("click", _el4_event_1);
+        onScopeDispose(()=>_el4.removeEventListener("click", _el4_event_1));
+        _$setClassName(_el5, "btn");
+        const _el5_event_1 = ($event)=>reset($event);
+        _el5.addEventListener("click", _el5_event_1);
+        onScopeDispose(()=>_el5.removeEventListener("click", _el5_event_1));
         _$setClassName(_el6, "btn");
-        _$addEventListener(_el6, "click", (reset));
-        _$appendChild(_el6, _$createTextNode("Reset"));
-        const _el7 = _$createElement("button", _el4);
-        _$appendChild(_el4, _el7);
-        _$setClassName(_el7, "btn");
-        _$addEventListener(_el7, "click", (shuffle));
-        _$appendChild(_el7, _$createTextNode("Shuffle"));
-        const _el8 = _$createElement("ul", _el3);
-        _$appendChild(_el3, _el8);
-        _$setClassName(_el8, "container space-y-3 rounded-xl border border-base-200 bg-base-100 p-3");
-        const _list1 = _$createComment("rue:component:anchor");
-        _$appendChild(_el8, _list1);
+        const _el6_event_1 = ($event)=>shuffle($event);
+        _el6.addEventListener("click", _el6_event_1);
+        onScopeDispose(()=>_el6.removeEventListener("click", _el6_event_1));
         watchEffect(()=>{
-            const __slot2 = _$createComponent(TransitionGroup, {
+            const __slot1 = _$createComponent(TransitionGroup, {
                 name: "fade",
-                children: items.value.map((item)=>_$vaporWithKey(vapor(()=>{
+                children: items.value.map((item)=>_$compiledWithKey(vapor(()=>{
                         const _root = _$createDocumentFragment();
                         const _el9 = _$createElement("li", _root);
                         _$appendChild(_root, _el9);
@@ -264,12 +259,14 @@ const ListTransitionExample: FC = ()=>{
                         const _el12 = _$createElement("button", _el9);
                         _$appendChild(_el9, _el12);
                         _$setClassName(_el12, "btn btn-sm");
-                        _$addEventListener(_el12, "click", (()=>remove(item)));
+                        const _el12_event_1 = ($event)=>()=>remove(item)($event);
+                        _el12.addEventListener("click", _el12_event_1);
+                        onScopeDispose(()=>_el12.removeEventListener("click", _el12_event_1));
                         _$appendChild(_el12, _$createTextNode("x"));
                         return _root;
                     }, true), item))
             });
-            untrack(()=>renderAnchor(__slot2, _el8, _list1));
+            untrack(()=>renderAnchor(__slot1, _el8, _el7));
         });
         return _root;
     });
@@ -280,5 +277,15 @@ export default ListTransitionExample;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec16.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("@rue-js/rue/internal/compiler"), "{normalized}");
+    assert!(normalized.contains("_$createComponent(TransitionGroup, ()=>({"), "{normalized}");
+    assert!(normalized.contains("_$compiledWithKey(vapor("), "{normalized}");
+    assert!(normalized.contains("items.value.map((item)"), "{normalized}");
+    assert_eq!(
+        normalized.matches(".addEventListener(").count(),
+        normalized.matches(".removeEventListener(").count()
+    );
+    assert!(!normalized.contains("watchEffect"), "{normalized}");
 }

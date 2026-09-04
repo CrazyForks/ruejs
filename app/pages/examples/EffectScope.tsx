@@ -19,6 +19,11 @@ import Code from '../site/components/Code'
 
 const formatTime = () => new Date().toLocaleTimeString()
 
+interface ScopeLog {
+  id: number
+  text: string
+}
+
 const demoCode = `import {
   type EffectScope,
   type FC,
@@ -122,31 +127,39 @@ const EffectScopeDemo: FC = () => {
   const heartbeat = ref(0)
   const scopedText = ref('scope 尚未启动')
   const scopeState = ref<'idle' | 'active' | 'stopped'>('idle')
-  const logs = ref<string[]>(['点击“启动 scope”，创建一组可批量停止的响应式副作用'])
+  const logs = ref<ScopeLog[]>([
+    { id: 0, text: '点击“启动 scope”，创建一组可批量停止的响应式副作用' },
+  ])
   const ownerScope = getCurrentScope()
   let scope: EffectScope | undefined
+  let nextLogId = 1
+  let clearScopeTimer: (() => void) | undefined
 
   const pushLog = (message: string) => {
     logs.value = [
-      `${formatTime()} ${message}`,
-      ...logs.value.filter(item => !item.includes('点击“启动 scope”')),
+      { id: nextLogId++, text: `${formatTime()} ${message}` },
+      ...logs.value.filter(item => !item.text.includes('点击“启动 scope”')),
     ].slice(0, 7)
   }
 
+  const stopActiveScope = () => {
+    if (!scope?.active) return false
+    scope.stop()
+    clearScopeTimer?.()
+    return true
+  }
+
   const stopScope = (reason = 'scope.stop(): scoped effects 已停止') => {
-    if (!scope?.active) {
+    if (!stopActiveScope()) {
       pushLog('当前没有 active scope')
       return
     }
 
-    scope.stop()
     pushLog(reason)
   }
 
   const startScope = () => {
-    if (scope?.active) {
-      scope.stop()
-    }
+    stopActiveScope()
 
     const nextScope = ownerScope?.active ? ownerScope.run(() => effectScope()) : effectScope(true)
     if (!nextScope) {
@@ -175,11 +188,12 @@ const EffectScopeDemo: FC = () => {
         heartbeat.value += 1
       }, 1000)
 
-      onScopeDispose(() => {
+      clearScopeTimer = () => {
         clearInterval(timer)
+        clearScopeTimer = undefined
         scopeState.value = 'stopped'
         pushLog('onScopeDispose: interval 已清理')
-      })
+      }
     })
   }
 
@@ -188,9 +202,7 @@ const EffectScopeDemo: FC = () => {
   }
 
   onScopeDispose(() => {
-    if (scope?.active) {
-      scope.stop()
-    }
+    stopActiveScope()
   })
 
   const stateLabel =
@@ -279,8 +291,8 @@ const EffectScopeDemo: FC = () => {
                 <h3 className="font-semibold">运行记录</h3>
                 <div className="mt-3 space-y-2">
                   {logs.value.map(item => (
-                    <p className="rounded-box bg-base-100 px-3 py-2 text-sm" key={item}>
-                      {item}
+                    <p className="rounded-box bg-base-100 px-3 py-2 text-sm" key={item.id}>
+                      {item.text}
                     </p>
                   ))}
                 </div>

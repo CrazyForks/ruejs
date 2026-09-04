@@ -58,12 +58,14 @@ const VMemoAndRMemo: FC = () => {
   return (
     <div className="grid gap-4">
       {rows.map(row => (
+        // 依赖项是“这一行当前是否选中”，v-memo 缓存整行渲染结果。
         <div key={row.id} v-memo={[row.id === selectedId.value]} className="alert">
           <span>{row.name}</span>
           <span>selected: {row.id === selectedId.value ? 'yes' : 'no'}</span>
           <span>refresh: {refreshCount.value}</span>
         </div>
       ))}
+      {/* selectedId 变化时刷新；只改 refreshCount 时复用缓存。 */}
       <p r-memo={[selectedId.value]} className="badge badge-outline">
         selected id: {selectedId.value}
         <span>refresh: {refreshCount.value}</span>
@@ -82,6 +84,21 @@ export default VMemoAndRMemo;`}
           <div className="card bg-base-100 shadow">
             <div className="card-body grid gap-6">
               <section className="space-y-3">
+                <div className="rounded-box bg-base-200 p-4 text-sm leading-6">
+                  <p>
+                    每行的 <code>v-memo</code> 依赖是 <code>[row.id === selectedId.value]</code>
+                    ，缓存的是该行的整个渲染结果。
+                  </p>
+                  <p>
+                    点击“无关刷新”只改变 <code>refreshCount</code>
+                    ，布尔依赖没有变，所以各行继续复用缓存；
+                    切换选中项时，只有旧选中行和新选中行会刷新。
+                  </p>
+                  <p>
+                    下方独立的 <code>r-memo</code> 依赖 <code>[selectedId.value]</code>
+                    ：选择变化时刷新，无关刷新时复用缓存。
+                  </p>
+                </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-xl font-semibold">v-memo / r-memo</h2>
                   <div className="join">
@@ -104,7 +121,7 @@ export default VMemoAndRMemo;`}
                         refreshCount.value += 1
                       }}
                     >
-                      刷新
+                      无关刷新
                     </button>
                   </div>
                 </div>

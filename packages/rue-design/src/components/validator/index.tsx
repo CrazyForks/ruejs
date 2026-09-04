@@ -180,7 +180,16 @@ const Root: FC<ValidatorProps> = ({
 
   if (resolvedHost === 'textarea') {
     return (
-      <textarea {...rest} className={cls}>
+      <textarea
+        {...rest}
+        className={cls}
+        ref={(element: HTMLTextAreaElement | null) => {
+          if (!element) return
+          Promise.resolve().then(() => {
+            element.value = element.value.trim()
+          })
+        }}
+      >
         {children}
       </textarea>
     )
@@ -362,7 +371,7 @@ type ValidatorCompound = FC<ValidatorProps> & {
   Field: FC<ValidatorFieldProps>
 }
 
-const ValidatorCompound: ValidatorCompound = Object.assign(Root, {
+const ValidatorCompound: ValidatorCompound = /*#__PURE__*/ Object.assign(Root, {
   Hint,
   Field,
 })

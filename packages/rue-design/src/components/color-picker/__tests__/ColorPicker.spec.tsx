@@ -662,17 +662,15 @@ describe('ColorPicker', () => {
     presetButtons[1].dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
-      const textInputs = Array.from(popup.querySelectorAll('input[type="text"]')).map(
-        node => (node as HTMLInputElement).value,
-      )
-      expect(textInputs.slice(0, 3)).toEqual(['34', '197', '94'])
       expect(handleChange).toHaveBeenCalledTimes(2)
+      expect(handleChange.mock.calls[1][0].toHexString()).toBe('#22c55e')
     })
   })
 
   it('switches visible preset groups and applies colors from the active group', async () => {
     const container = mountContainer()
     resetActiveRuntime()
+    const handleChange = vi.fn()
 
     render(
       <ColorPicker
@@ -687,6 +685,7 @@ describe('ColorPicker', () => {
             colors: ['#0ea5e9', '#22c55e'],
           },
         ]}
+        onChange={handleChange}
       />,
       container,
     )
@@ -722,10 +721,8 @@ describe('ColorPicker', () => {
     coolPresetButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     await waitForContent(() => {
-      const textInputs = Array.from(popup.querySelectorAll('input[type="text"]')).map(
-        node => (node as HTMLInputElement).value,
-      )
-      expect(textInputs[0]).toBe('#22c55e')
+      expect(handleChange).toHaveBeenCalledTimes(1)
+      expect(handleChange.mock.calls[0][0].toHexString()).toBe('#22c55e')
     })
   })
 

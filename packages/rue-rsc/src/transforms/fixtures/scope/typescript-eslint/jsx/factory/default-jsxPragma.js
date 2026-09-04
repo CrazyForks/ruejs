@@ -1,4 +1,4 @@
-import { jsx as _jsx } from '@rue-js/jsx-runtime'
+import { jsx as _jsx } from 'react/jsx-runtime'
 //// @sourceType = 'module'
 import Rue from 'rue'
 _jsx(Foo, {})

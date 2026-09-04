@@ -1,12 +1,6 @@
 import type { UserConfig } from 'vite'
 
-export const CLIENT_FRAMEWORK_PACKAGES = Object.freeze([
-  '@rue-js/rue',
-  '@rue-js/runtime',
-  '@rue-js/runtime-vapor',
-  '@rue-js/jsx-runtime',
-  '@rue-js/jsx-dev-runtime',
-])
+export const CLIENT_FRAMEWORK_PACKAGES = Object.freeze(['@rue-js/rue', '@rue-js/runtime'])
 
 /**
  * Extract the npm package name from a module ID (file path).

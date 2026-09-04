@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import Typography from '..'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
@@ -17,7 +17,12 @@ afterEach(() => {
 describe('Typography', () => {
   it('renders root wrapper with base class', async () => {
     const c = mountContainer()
-    render(h(Typography, { as: 'section', className: 'space-y-3' }, 'Content'), c)
+    render(
+      <Typography as={'section'} className={'space-y-3'}>
+        {'Content'}
+      </Typography>,
+      c,
+    )
 
     await waitForContent(() => {
       const el = c.querySelector('section.rue-typography') as HTMLElement
@@ -31,12 +36,18 @@ describe('Typography', () => {
   it('renders compound semantic subcomponents', async () => {
     const c = mountContainer()
     render(
-      h(Typography, null, [
-        h(Typography.Text, { type: 'warning', code: true, italic: true }, 'npm create rue'),
-        h(Typography.Link, { href: 'https://rue.dev', strong: true }, 'Rue Link'),
-        h(Typography.Title, { level: 3 }, 'Typography Title'),
-        h(Typography.Paragraph, { mark: true }, 'Typography paragraph content'),
-      ]),
+      <Typography>
+        {[
+          <Typography.Text type={'warning'} code={true} italic={true}>
+            {'npm create rue'}
+          </Typography.Text>,
+          <Typography.Link href={'https://rue.dev'} strong={true}>
+            {'Rue Link'}
+          </Typography.Link>,
+          <Typography.Title level={3}>{'Typography Title'}</Typography.Title>,
+          <Typography.Paragraph mark={true}>{'Typography paragraph content'}</Typography.Paragraph>,
+        ]}
+      </Typography>,
       c,
     )
 
@@ -59,10 +70,14 @@ describe('Typography', () => {
     const c = mountContainer()
     resetActiveRuntime()
     render(
-      h('div', null, [
-        h(Typography.Link, { href: 'https://rue.dev', target: '_blank' }, 'Docs'),
-        h(Typography.Link, { href: 'https://rue.dev', disabled: true }, 'Disabled'),
-      ]),
+      <div>
+        <Typography.Link href="https://rue.dev" target="_blank">
+          Docs
+        </Typography.Link>
+        <Typography.Link href="https://rue.dev" disabled>
+          Disabled
+        </Typography.Link>
+      </div>,
       c,
     )
 

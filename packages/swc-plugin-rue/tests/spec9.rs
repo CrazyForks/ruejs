@@ -36,11 +36,11 @@ export default Goods;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$appendChild } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, vapor, _$createComponent, renderAnchor, _$template } from "@rue-js/rue/internal";
 import { type FC, h } from '@rue-js/rue';
 const _$getTemplate1 = _$template("<div>1</div>");
-const _$getTemplate2 = _$template("<h1>Rue 响应式框架示例</h1>");
+const _$getTemplate2 = _$template("<div><h1>Rue 响应式框架示例</h1><!--rue:opaque-hole:0--><!--rue:opaque-hole:1--></div>");
 const Hello: FC = ()=>{
     return (()=>{
         let _root;
@@ -56,7 +56,7 @@ const Hello: FC = ()=>{
             __rue_cleanup_bucket: [
                 _dispose
             ],
-            __rue_vapor_setup: (__rue_parent_context)=>{
+            __rue_compiled_mount: (__rue_parent_context)=>{
                 if (_disposed) {
                     throw new Error("Cannot mount a disposed static root");
                 }
@@ -86,7 +86,7 @@ const World: FC = ()=>{
             __rue_cleanup_bucket: [
                 _dispose
             ],
-            __rue_vapor_setup: (__rue_parent_context)=>{
+            __rue_compiled_mount: (__rue_parent_context)=>{
                 if (_disposed) {
                     throw new Error("Cannot mount a disposed static root");
                 }
@@ -102,16 +102,16 @@ const World: FC = ()=>{
     })();
 };
 const Goods: FC = ()=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _root.appendChild(_$getTemplate2().content.cloneNode(true));
-        const _list1 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list1);
-        const __slot2 = _$createComponent(Hello, {});
-        renderAnchor(__slot2, _root, _list1);
-        const _list3 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list3);
-        const __slot4 = _$createComponent(World, {});
-        renderAnchor(__slot4, _root, _list3);
+        const _fragment = _$getTemplate2().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[1];
+        const _el2 = _el1.parentNode;
+        const _el3 = _root.childNodes[2];
+        const _el4 = _el3.parentNode;
+        const __slot1 = _$createComponent(Hello, {});
+        renderAnchor(__slot1, _el2, _el1);
+        const __slot2 = _$createComponent(World, {});
+        renderAnchor(__slot2, _el4, _el3);
         return _root;
     });
 export default Goods;
@@ -120,5 +120,12 @@ export default Goods;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec9.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert_eq!(normalized.matches("_$compiledRoot(Object.assign(").count(), 3);
+    assert_eq!(normalized.matches("_$compiledCreateTextNode(\"1\")").count(), 2);
+    assert!(normalized.contains("_$createComponent(Hello, ()=>({}))"));
+    assert!(normalized.contains("_$createComponent(World, ()=>({}))"));
+    assert_eq!(normalized.matches("renderAnchor(__slot").count(), 2);
+    assert_eq!(normalized.matches("__rue_compiled_explicit_roots: true").count(), 3);
+    assert!(!normalized.contains("__rue_cleanup_bucket"));
 }

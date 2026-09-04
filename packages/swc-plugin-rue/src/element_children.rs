@@ -5,6 +5,22 @@ use swc_core::ecma::visit::{Visit, VisitWith};
 use crate::log;
 use crate::vapor::VaporTransform;
 
+#[derive(Clone, Copy)]
+enum CompiledListSafety {
+    Probing,
+    Resolved(bool),
+}
+
+thread_local! {
+    static COMPILED_LIST_SAFETY_CACHE: std::cell::RefCell<
+        std::collections::HashMap<(u32, u32), CompiledListSafety>,
+    > = std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+pub(crate) fn reset_compiled_list_safety_cache() {
+    COMPILED_LIST_SAFETY_CACHE.with(|cache| cache.borrow_mut().clear());
+}
+
 /*
 元素子节点编译：
 - 目标：将 JSXElement 的 children 编译为原生 DOM 操作并附加到父元素；
@@ -27,7 +43,45 @@ pub fn emit_element_children(
     // - 逐一检查当前文本及其前后邻居，配合下方空白处理策略决定：
     //   1) 仅空白是否需要插入一个空格（使用 `$createTextNode(" ")` + `$appendChild`）
     //   2) 含可见字符的首尾空白在行内拼接或块级场景中的保留/修剪
-    for (i, c) in children.iter().enumerate() {
+    let mut i = 0;
+    while i < children.len() {
+        let c = &children[i];
+        if let JSXElementChild::JSXExprContainer(_) = c {
+            let mut group_end = i;
+            let mut exprs = Vec::new();
+            let mut cursor = i;
+            while cursor < children.len() {
+                match &children[cursor] {
+                    JSXElementChild::JSXText(text)
+                        if crate::text::normalize_text(&text.value).trim().is_empty() => {}
+                    JSXElementChild::JSXExprContainer(container) => {
+                        let JSXExpr::Expr(expr) = &container.expr else {
+                            break;
+                        };
+                        exprs.push(crate::utils::unwrap_expr(expr.as_ref()));
+                        group_end = cursor;
+                    }
+                    _ => break,
+                }
+                cursor += 1;
+            }
+            if let Some(branch) =
+                crate::element_expr::try_make_compiled_literal_sibling_branch_expr(vt, &exprs)
+            {
+                let branch_ident = vt.next_el_ident();
+                stmts.push(crate::emit::const_decl(branch_ident.clone(), branch));
+                stmts.push(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(call_member_expr(
+                        Expr::Ident(branch_ident),
+                        "__rue_compiled_mount",
+                        vec![Expr::Ident(el_ident.clone())],
+                    )),
+                }));
+                i = group_end + 1;
+                continue;
+            }
+        }
         match c {
             JSXElementChild::JSXText(t) => {
                 let txt = crate::text::normalize_text(&t.value);
@@ -55,6 +109,7 @@ pub fn emit_element_children(
             }
             JSXElementChild::JSXSpreadChild(_) => {}
         }
+        i += 1;
     }
 }
 
@@ -81,14 +136,38 @@ fn compiled_child_is_safe(
         JSXElementChild::JSXExprContainer(container) => match &container.expr {
             JSXExpr::JSXEmptyExpr(_) => true,
             JSXExpr::Expr(expr) => match crate::utils::unwrap_expr(expr.as_ref()) {
+                expr if crate::element_expr::is_compiled_slot_source_expr(expr) => true,
                 Expr::Call(call) if compiled_list_call_is_safe(vt, call) => true,
                 // A generic `.get()` has no return-type proof and may yield a Vapor renderable.
-                Expr::Call(call) if crate::element_expr::is_accessor_get_call_expr(call) => false,
-                expr => crate::vapor::is_compiled_scalar_expr_with_shadows(expr, shadowed_names),
+                Expr::Call(call) if crate::element_expr::is_accessor_get_call_expr(call) => {
+                    crate::compiled_component::is_static_prop_get_call(call)
+                        || crate::vapor::is_compiled_reactive_scalar_expr(
+                            vt,
+                            expr.as_ref(),
+                            shadowed_names,
+                        )
+                }
+                expr if crate::vapor::is_compiled_reactive_scalar_expr(
+                    vt,
+                    expr,
+                    shadowed_names,
+                ) =>
+                {
+                    true
+                }
+                // Row-local derived members and synchronous formatter calls are emitted by
+                // `emit_element_expr_container_child` as either a compiled text effect or a
+                // nested render anchor. Rejecting them here forces the enclosing `map()` back
+                // to the Vapor path, which recreates every row whenever any row-local reactive
+                // dependency changes.
+                Expr::Member(_) | Expr::Call(_) if reads_compiled_row_signal(vt, expr) => true,
+                expr => crate::element_expr::is_compiled_branch_expr(vt, expr),
             },
         },
         JSXElementChild::JSXElement(element) => {
-            compiled_scalar_element_is_safe(vt, element, shadowed_names)
+            crate::element_component::is_compiled_component_element(vt, element)
+                || crate::element_component::is_compiled_opaque_component_element(element)
+                || compiled_scalar_element_is_safe(vt, element, shadowed_names)
         }
         JSXElementChild::JSXSpreadChild(_) => false,
     }
@@ -105,8 +184,45 @@ fn compiled_scalar_element_is_safe(
         return true;
     }
     compiled_tag_name(element).is_some()
-        && crate::attrs::attrs_support_compiled_scalar(&element.opening, shadowed_names)
+        && crate::attrs::attrs_support_compiled_scalar(vt, &element.opening, shadowed_names)
         && element.children.iter().all(|child| compiled_child_is_safe(vt, child, shadowed_names))
+}
+
+struct CompiledRowSignalRead<'a> {
+    vt: &'a VaporTransform,
+    found: bool,
+}
+
+impl Visit for CompiledRowSignalRead<'_> {
+    fn visit_cond_expr(&mut self, _: &CondExpr) {
+        // Defaulted/destructured callback parameters are represented as conditionals and
+        // retain their existing fallback path; this exception is only for direct row reads.
+    }
+
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        if self.found {
+            return;
+        }
+        if call.args.is_empty()
+            && let Callee::Expr(callee) = &call.callee
+            && let Expr::Member(member) = crate::utils::unwrap_expr(callee.as_ref())
+            && let Expr::Ident(object) = crate::utils::unwrap_expr(member.obj.as_ref())
+            && object.sym.starts_with("_$row")
+            && matches!(&member.prop, MemberProp::Ident(prop) if prop.sym == *"get")
+            && self.vt.reactive_kind(object.sym.as_ref())
+                == Some(crate::reactive_provenance::ReactiveKind::Signal)
+        {
+            self.found = true;
+            return;
+        }
+        call.visit_children_with(self);
+    }
+}
+
+fn reads_compiled_row_signal(vt: &VaporTransform, expr: &Expr) -> bool {
+    let mut collector = CompiledRowSignalRead { vt, found: false };
+    expr.visit_with(&mut collector);
+    collector.found
 }
 
 #[derive(Default)]
@@ -127,7 +243,20 @@ impl Visit for VaporCapabilityDetector {
     }
 }
 
-fn compiled_list_call_is_safe(vt: &VaporTransform, call: &CallExpr) -> bool {
+pub(crate) fn compiled_list_call_is_safe(vt: &VaporTransform, call: &CallExpr) -> bool {
+    let cache_key = (call.span.lo.0, call.span.hi.0);
+    if let Some(cached) =
+        COMPILED_LIST_SAFETY_CACHE.with(|cache| cache.borrow().get(&cache_key).copied())
+    {
+        return match cached {
+            // Probe lowering checks the row JSX through this same predicate.
+            // The completed probe below still rejects emitted Vapor helpers.
+            CompiledListSafety::Probing => true,
+            CompiledListSafety::Resolved(safe) => safe,
+        };
+    }
+    COMPILED_LIST_SAFETY_CACHE
+        .with(|cache| cache.borrow_mut().insert(cache_key, CompiledListSafety::Probing));
     let mut probe = vt.clone();
     let mut stmts = Vec::new();
     if !crate::element_list::try_build_list_from_map(
@@ -136,58 +265,20 @@ fn compiled_list_call_is_safe(vt: &VaporTransform, call: &CallExpr) -> bool {
         call,
         &mut stmts,
     ) {
+        COMPILED_LIST_SAFETY_CACHE.with(|cache| {
+            cache.borrow_mut().insert(cache_key, CompiledListSafety::Resolved(false));
+        });
         return false;
     }
+    let emitted = !stmts.is_empty();
     let block = BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts };
     let mut detector = VaporCapabilityDetector::default();
     block.visit_with(&mut detector);
-    !detector.found
-}
-
-fn compiled_child_has_binding(
-    vt: &VaporTransform,
-    child: &JSXElementChild,
-    shadowed_names: &std::collections::HashSet<String>,
-) -> bool {
-    match child {
-        JSXElementChild::JSXExprContainer(container) => match &container.expr {
-            JSXExpr::Expr(expr) => match crate::utils::unwrap_expr(expr.as_ref()) {
-                Expr::Call(call) if compiled_list_call_is_safe(vt, call) => true,
-                expr => {
-                    !crate::utils::is_static_empty_like(expr)
-                        && crate::utils::get_static_text_literal_expr(expr).is_none()
-                        && crate::vapor::is_compiled_scalar_expr_with_shadows(expr, shadowed_names)
-                }
-            },
-            JSXExpr::JSXEmptyExpr(_) => false,
-        },
-        JSXElementChild::JSXElement(element) => {
-            compiled_element_has_binding(vt, element, shadowed_names)
-        }
-        JSXElementChild::JSXFragment(fragment) => fragment
-            .children
-            .iter()
-            .any(|child| compiled_child_has_binding(vt, child, shadowed_names)),
-        JSXElementChild::JSXText(_) | JSXElementChild::JSXSpreadChild(_) => false,
-    }
-}
-
-fn compiled_element_has_binding(
-    vt: &VaporTransform,
-    element: &JSXElement,
-    shadowed_names: &std::collections::HashSet<String>,
-) -> bool {
-    crate::attrs::attrs_have_compiled_scalar(&element.opening, shadowed_names)
-        || element
-            .children
-            .iter()
-            .any(|child| compiled_child_has_binding(vt, child, shadowed_names))
-}
-
-pub(crate) fn is_compiled_scalar_element(vt: &VaporTransform, element: &JSXElement) -> bool {
-    let shadowed_names = vt.current_scalar_constructor_shadows();
-    compiled_scalar_element_is_safe(vt, element, &shadowed_names)
-        && compiled_element_has_binding(vt, element, &shadowed_names)
+    let safe = emitted && !detector.found;
+    COMPILED_LIST_SAFETY_CACHE.with(|cache| {
+        cache.borrow_mut().insert(cache_key, CompiledListSafety::Resolved(safe));
+    });
+    safe
 }
 
 pub(crate) fn is_compiled_safe_element(vt: &VaporTransform, element: &JSXElement) -> bool {
@@ -236,7 +327,45 @@ fn emit_compiled_children(
     children: &[JSXElementChild],
     stmts: &mut Vec<Stmt>,
 ) {
-    for (index, child) in children.iter().enumerate() {
+    let mut index = 0;
+    while index < children.len() {
+        let child = &children[index];
+        if let JSXElementChild::JSXExprContainer(_) = child {
+            let mut group_end = index;
+            let mut exprs = Vec::new();
+            let mut cursor = index;
+            while cursor < children.len() {
+                match &children[cursor] {
+                    JSXElementChild::JSXText(text)
+                        if crate::text::normalize_text(&text.value).trim().is_empty() => {}
+                    JSXElementChild::JSXExprContainer(container) => {
+                        let JSXExpr::Expr(expr) = &container.expr else {
+                            break;
+                        };
+                        exprs.push(crate::utils::unwrap_expr(expr.as_ref()));
+                        group_end = cursor;
+                    }
+                    _ => break,
+                }
+                cursor += 1;
+            }
+            if let Some(branch) =
+                crate::element_expr::try_make_compiled_literal_sibling_branch_expr(vt, &exprs)
+            {
+                let branch_ident = vt.next_el_ident();
+                stmts.push(crate::emit::const_decl(branch_ident.clone(), branch));
+                stmts.push(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(call_member_expr(
+                        Expr::Ident(branch_ident),
+                        "__rue_compiled_mount",
+                        vec![Expr::Ident(parent.clone())],
+                    )),
+                }));
+                index = group_end + 1;
+                continue;
+            }
+        }
         match child {
             JSXElementChild::JSXText(text) => {
                 let normalized = crate::text::normalize_text(&text.value);
@@ -255,23 +384,94 @@ fn emit_compiled_children(
             }
             JSXElementChild::JSXExprContainer(container) => {
                 if let JSXExpr::Expr(expr) = &container.expr
+                    && crate::element_expr::is_compiled_slot_source_expr(expr.as_ref())
+                {
+                    let anchor = vt.next_el_ident();
+                    stmts.push(crate::emit::const_decl(
+                        anchor.clone(),
+                        crate::emit::call_ident(
+                            "_$compiledCreateComment",
+                            vec![crate::emit::string_expr("rue:compiled-slot")],
+                        ),
+                    ));
+                    append_direct(parent, Expr::Ident(anchor.clone()), stmts);
+                    crate::element_slot::render_between_for_slot_at(
+                        vt,
+                        parent,
+                        &anchor,
+                        expr.as_ref(),
+                        stmts,
+                    );
+                    index += 1;
+                    continue;
+                }
+                let list_stmt_start = stmts.len();
+                if let JSXExpr::Expr(expr) = &container.expr
                     && let Expr::Call(call) = crate::utils::unwrap_expr(expr.as_ref())
                     && crate::element_list::try_build_list_from_map(vt, parent, call, stmts)
+                    && stmts.len() > list_stmt_start
                 {
+                    index += 1;
                     continue;
                 }
                 if let JSXExpr::Expr(expr) = &container.expr
                     && emit_compiled_static_expr_child(parent, expr.as_ref(), stmts)
                 {
+                    index += 1;
                     continue;
                 }
-                let _ = crate::vapor::emit_compiled_text_binding(vt, parent, container, stmts);
+                if let JSXExpr::Expr(expr) = &container.expr
+                    && let Some(branch) = crate::element_expr::try_make_compiled_branch_expr(
+                        vt,
+                        crate::utils::unwrap_expr(expr.as_ref()),
+                    )
+                {
+                    let branch_ident = vt.next_el_ident();
+                    stmts.push(crate::emit::const_decl(branch_ident.clone(), branch));
+                    stmts.push(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::new(call_member_expr(
+                            Expr::Ident(branch_ident),
+                            "__rue_compiled_mount",
+                            vec![Expr::Ident(parent.clone())],
+                        )),
+                    }));
+                    index += 1;
+                    continue;
+                }
+                if crate::vapor::emit_compiled_text_binding(vt, parent, container, stmts).is_none()
+                    && let JSXExpr::Expr(expr) = &container.expr
+                {
+                    let anchor = vt.next_el_ident();
+                    stmts.push(crate::emit::const_decl(
+                        anchor.clone(),
+                        crate::emit::call_ident(
+                            "_$compiledCreateComment",
+                            vec![crate::emit::string_expr("rue:compiled-slot")],
+                        ),
+                    ));
+                    append_direct(parent, Expr::Ident(anchor.clone()), stmts);
+                    crate::element_slot::render_between_for_slot_at(
+                        vt,
+                        parent,
+                        &anchor,
+                        expr.as_ref(),
+                        stmts,
+                    );
+                }
             }
             JSXElementChild::JSXElement(element) => {
-                emit_compiled_element(vt, element, parent, stmts)
+                if !crate::element_component::try_build_compiled_component_element(
+                    vt, element, parent, stmts,
+                ) && !crate::element_component::try_build_compiled_opaque_component_element(
+                    vt, element, parent, stmts,
+                ) {
+                    emit_compiled_element(vt, element, parent, stmts);
+                }
             }
             JSXElementChild::JSXSpreadChild(_) => {}
         }
+        index += 1;
     }
 }
 
@@ -296,11 +496,236 @@ fn emit_compiled_element(
     emit_compiled_children(vt, &target, &element.children, stmts);
 }
 
+fn member_expr(object: Expr, property: &str) -> Expr {
+    Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(object),
+        prop: MemberProp::Ident(crate::emit::ident_name(property)),
+    })
+}
+
+fn call_member_expr(object: Expr, property: &str, args: Vec<Expr>) -> Expr {
+    Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(member_expr(object, property))),
+        args: args
+            .into_iter()
+            .map(|expr| ExprOrSpread { spread: None, expr: Box::new(expr) })
+            .collect(),
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
+fn child_node_path(root: &Ident, path: &[usize]) -> Expr {
+    path.iter().fold(Expr::Ident(root.clone()), |node, index| {
+        Expr::Member(MemberExpr {
+            span: DUMMY_SP,
+            obj: Box::new(member_expr(node, "childNodes")),
+            prop: MemberProp::Computed(ComputedPropName {
+                span: DUMMY_SP,
+                expr: Box::new(Expr::Lit(Lit::Num(Number {
+                    span: DUMMY_SP,
+                    value: *index as f64,
+                    raw: None,
+                }))),
+            }),
+        })
+    })
+}
+
+fn adjacent_sibling_paths(left: &[usize], right: &[usize]) -> bool {
+    left.len() == right.len()
+        && !left.is_empty()
+        && left[..left.len() - 1] == right[..right.len() - 1]
+        && right[right.len() - 1] == left[left.len() - 1] + 1
+}
+
+fn compiled_dynamic_template_to_block(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+) -> Option<BlockStmt> {
+    let (template_id, holes, targets) = crate::vapor::template::marked_dynamic_template(element)?;
+    let fragment = crate::emit::ident("_fragment");
+    let root = crate::emit::ident("_root");
+    let mut stmts = vec![
+        crate::emit::const_decl(
+            fragment.clone(),
+            crate::vapor::template::clone_template_expr(template_id),
+        ),
+        crate::emit::const_decl(root.clone(), member_expr(Expr::Ident(fragment), "firstChild")),
+    ];
+    let targets = targets
+        .into_iter()
+        .map(|target| {
+            let ident = vt.next_el_ident();
+            stmts
+                .push(crate::emit::const_decl(ident.clone(), child_node_path(&root, &target.path)));
+            (target, ident)
+        })
+        .collect::<Vec<_>>();
+    let anchors = holes
+        .iter()
+        .map(|hole| {
+            let anchor = vt.next_el_ident();
+            stmts.push(crate::emit::const_decl(anchor.clone(), child_node_path(&root, &hole.path)));
+            let parent = vt.next_el_ident();
+            stmts.push(crate::emit::const_decl(
+                parent.clone(),
+                member_expr(Expr::Ident(anchor.clone()), "parentNode"),
+            ));
+            (hole, parent, anchor)
+        })
+        .collect::<Vec<_>>();
+
+    for (target, ident) in targets {
+        crate::attrs::emit_compiled_attrs_for(vt, &mut stmts, &ident, target.opening);
+    }
+    let mut anchor_index = 0;
+    while anchor_index < anchors.len() {
+        let (hole, parent, anchor) = &anchors[anchor_index];
+        let expected_index = anchor_index;
+        if hole.index != expected_index {
+            return None;
+        }
+        if matches!(hole.source, crate::vapor::template::MarkedHoleSource::Expression(_)) {
+            let mut group_end = anchor_index;
+            let mut exprs = Vec::new();
+            while group_end < anchors.len() {
+                let candidate = anchors[group_end].0;
+                if group_end > anchor_index
+                    && !adjacent_sibling_paths(
+                        anchors[group_end - 1].0.path.as_slice(),
+                        candidate.path.as_slice(),
+                    )
+                {
+                    break;
+                }
+                let crate::vapor::template::MarkedHoleSource::Expression(container) =
+                    &candidate.source
+                else {
+                    break;
+                };
+                let JSXExpr::Expr(expr) = &container.expr else {
+                    break;
+                };
+                exprs.push(crate::utils::unwrap_expr(expr.as_ref()));
+                group_end += 1;
+            }
+            if let Some(branch) =
+                crate::element_expr::try_make_compiled_literal_sibling_branch_expr(vt, &exprs)
+            {
+                let reader = crate::element_expr::compiled_branch_reader_from_handle(&branch)
+                    .expect("literal sibling branch must expose a reader");
+                crate::element_slot::render_compiled_branch_for_slot_at(
+                    vt, parent, anchor, &reader, &mut stmts,
+                );
+                for (_, extra_parent, extra_anchor) in
+                    anchors.iter().take(group_end).skip(anchor_index + 1)
+                {
+                    stmts.push(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::new(call_member_expr(
+                            Expr::Ident(extra_parent.clone()),
+                            "removeChild",
+                            vec![Expr::Ident(extra_anchor.clone())],
+                        )),
+                    }));
+                }
+                anchor_index = group_end;
+                continue;
+            }
+        }
+        match &hole.source {
+            crate::vapor::template::MarkedHoleSource::Expression(container) => {
+                if let JSXExpr::Expr(expr) = &container.expr
+                    && !crate::vapor::is_compiled_reactive_scalar_expr(
+                        vt,
+                        expr.as_ref(),
+                        &vt.current_scalar_constructor_shadows(),
+                    )
+                    && let Some(branch) =
+                        crate::element_expr::try_make_compiled_branch_reader(vt, expr.as_ref())
+                {
+                    crate::element_slot::render_compiled_branch_for_slot_at(
+                        vt, parent, anchor, &branch, &mut stmts,
+                    );
+                    anchor_index += 1;
+                    continue;
+                }
+                let list_stmt_start = stmts.len();
+                if let JSXExpr::Expr(expr) = &container.expr
+                    && let Expr::Call(call) = crate::utils::unwrap_expr(expr.as_ref())
+                    && crate::element_list::try_build_list_from_map_at(
+                        vt, parent, anchor, call, &mut stmts,
+                    )
+                    && stmts.len() > list_stmt_start
+                {
+                    anchor_index += 1;
+                    continue;
+                }
+                if let JSXExpr::Expr(expr) = &container.expr
+                    && (crate::element_expr::is_compiled_slot_source_expr(expr.as_ref())
+                        || !crate::vapor::is_compiled_reactive_scalar_expr(
+                            vt,
+                            expr.as_ref(),
+                            &vt.current_scalar_constructor_shadows(),
+                        ))
+                {
+                    crate::element_slot::render_between_for_slot_at(
+                        vt,
+                        parent,
+                        anchor,
+                        expr.as_ref(),
+                        &mut stmts,
+                    );
+                    anchor_index += 1;
+                    continue;
+                }
+                let text = vt.next_el_ident();
+                stmts.push(crate::emit::const_decl(
+                    text.clone(),
+                    crate::emit::call_ident(
+                        "_$compiledCreateTextNode",
+                        vec![crate::emit::string_expr("")],
+                    ),
+                ));
+                stmts.push(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(call_member_expr(
+                        Expr::Ident(parent.clone()),
+                        "insertBefore",
+                        vec![Expr::Ident(text.clone()), Expr::Ident(anchor.clone())],
+                    )),
+                }));
+                stmts.push(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(call_member_expr(
+                        Expr::Ident(parent.clone()),
+                        "removeChild",
+                        vec![Expr::Ident(anchor.clone())],
+                    )),
+                }));
+                crate::vapor::emit_compiled_text_effect(vt, &text, container, &mut stmts)?;
+            }
+            crate::vapor::template::MarkedHoleSource::OpaqueElement(element) => {
+                crate::elements::build_element_at(vt, element, parent, anchor, &mut stmts);
+            }
+        }
+        anchor_index += 1;
+    }
+    stmts.push(crate::emit::return_root(root));
+    Some(BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts })
+}
+
 /// Build the setup body consumed by `_$compiledRoot`.
 pub(crate) fn compiled_scalar_element_to_block(
     vt: &mut VaporTransform,
     element: &JSXElement,
 ) -> BlockStmt {
+    if let Some(block) = compiled_dynamic_template_to_block(vt, element) {
+        return block;
+    }
     let root = crate::emit::ident("_root");
     let tag = compiled_tag_name(element).expect("compiled root must have a native HTML tag");
     let create = crate::emit::call_ident(
@@ -323,16 +748,52 @@ pub(crate) fn compiled_fragment_to_block(
     fragment: &JSXFragment,
 ) -> BlockStmt {
     let root = crate::emit::ident("_root");
-    let create =
-        crate::emit::call_member(crate::emit::ident("document"), "createDocumentFragment", vec![]);
+    let create = crate::emit::call_ident("_$createDocumentFragment", vec![]);
     let mut stmts = vec![crate::emit::const_decl(root.clone(), create)];
     emit_compiled_children(vt, &root, &fragment.children, &mut stmts);
     stmts.push(crate::emit::return_root(root));
     BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts }
 }
 
-pub(crate) fn compiled_block_to_root_expr(block: BlockStmt) -> Expr {
-    let setup = Expr::Arrow(ArrowExpr {
+fn object_prop(name: &str, value: Expr) -> PropOrSpread {
+    PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+        key: PropName::Ident(crate::emit::ident_name(name)),
+        value: Box::new(value),
+    })))
+}
+
+fn is_document_fragment_decl(stmt: &Stmt, root: &Ident) -> bool {
+    let Stmt::Decl(Decl::Var(decl)) = stmt else {
+        return false;
+    };
+    decl.decls.iter().any(|declarator| {
+        let Pat::Ident(binding) = &declarator.name else {
+            return false;
+        };
+        let Some(init) = &declarator.init else {
+            return false;
+        };
+        binding.id.sym == root.sym
+            && matches!(
+                init.as_ref(),
+                Expr::Call(CallExpr {
+                    callee: Callee::Expr(callee),
+                    ..
+                }) if matches!(
+                    callee.as_ref(),
+                    Expr::Member(MemberExpr {
+                        obj,
+                        prop: MemberProp::Ident(property),
+                        ..
+                    }) if matches!(obj.as_ref(), Expr::Ident(object) if object.sym == *"document")
+                        && property.sym == *"createDocumentFragment"
+                )
+            )
+    })
+}
+
+fn setup_arrow(block: BlockStmt) -> Expr {
+    Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
         params: vec![Pat::Ident(BindingIdent {
             id: crate::emit::ident("__rue_parent_context"),
@@ -344,7 +805,72 @@ pub(crate) fn compiled_block_to_root_expr(block: BlockStmt) -> Expr {
         type_params: None,
         return_type: None,
         ctxt: SyntaxContext::empty(),
+    })
+}
+
+fn explicit_compiled_setup(mut block: BlockStmt) -> Result<Expr, BlockStmt> {
+    let Some(Stmt::Return(ReturnStmt { arg: Some(host), .. })) = block.stmts.last() else {
+        return Err(block);
+    };
+    let Expr::Ident(root) = host.as_ref() else {
+        return Err(block);
+    };
+    let root = root.clone();
+    let is_fragment = block.stmts.iter().any(|stmt| is_document_fragment_decl(stmt, &root));
+    let roots_ident = crate::emit::ident("__rue_roots");
+    let roots = if is_fragment {
+        block.stmts.insert(
+            block.stmts.len() - 1,
+            crate::emit::const_decl(
+                roots_ident.clone(),
+                call_member_expr(
+                    Expr::Ident(crate::emit::ident("Array")),
+                    "from",
+                    vec![member_expr(Expr::Ident(root.clone()), "childNodes")],
+                ),
+            ),
+        );
+        Expr::Ident(roots_ident)
+    } else {
+        Expr::Array(ArrayLit {
+            span: DUMMY_SP,
+            elems: vec![Some(ExprOrSpread {
+                spread: None,
+                expr: Box::new(Expr::Ident(root.clone())),
+            })],
+        })
+    };
+    *block.stmts.last_mut().expect("checked final return") = Stmt::Return(ReturnStmt {
+        span: DUMMY_SP,
+        arg: Some(Box::new(Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![
+                object_prop("__rue_compiled_host", Expr::Ident(root)),
+                object_prop("__rue_compiled_roots", roots),
+            ],
+        }))),
     });
+    Ok(setup_arrow(block))
+}
+
+pub(crate) fn compiled_block_to_root_expr(block: BlockStmt) -> Expr {
+    let setup = match explicit_compiled_setup(block) {
+        Ok(setup) => call_member_expr(
+            Expr::Ident(crate::emit::ident("Object")),
+            "assign",
+            vec![
+                setup,
+                Expr::Object(ObjectLit {
+                    span: DUMMY_SP,
+                    props: vec![object_prop(
+                        "__rue_compiled_explicit_roots",
+                        Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+                    )],
+                }),
+            ],
+        ),
+        Err(block) => setup_arrow(block),
+    };
     crate::emit::call_ident("_$compiledRoot", vec![setup])
 }
 

@@ -1,7 +1,7 @@
 //! js-framework-benchmark row-shape resource-budget regressions.
 //!
-//! These tests intentionally stay ignored until the single-root list codegen
-//! optimization lands. Run them explicitly to capture the current baseline.
+//! These tests protect the single-root keyed-row codegen budget used by the
+//! benchmark implementation.
 
 use swc_plugin_rue::apply;
 
@@ -85,7 +85,7 @@ const App: FC = () => {
 fn transform_signal_benchmark_row() -> String {
     let source = r##"
 import type { FC } from '@rue-js/rue';
-import { signal } from '@rue-js/rue/compiled';
+import { signal } from '@rue-js/rue/internal';
 
 type Row = { id: number; label: string };
 
@@ -142,26 +142,28 @@ fn benchmark_row_codegen_stays_within_effect_budget() {
         "benchmark row must use the compiled keyed core: {output}"
     );
     assert!(
-        !output.contains("_$vaporKeyedList"),
+        !output.contains("_$compiledKeyedList"),
         "benchmark row must not retain the generic list helper: {output}"
     );
     assert!(
-        output.contains("return { node:")
-            && output.contains("patch:")
-            && output.contains("dispose:"),
-        "benchmark mount must return the compiled node/patch/dispose record: {output}"
+        output.contains("_$mountCompiledKeyedRow")
+            && output.contains("_$mountCompiledSlotFactory")
+            && output.contains("__rue_compiled_host:"),
+        "benchmark mount must use the compiled keyed-row/root protocol: {output}"
     );
     assert!(
-        output.contains(".addEventListener(") && !output.contains(".removeEventListener("),
-        "benchmark events must be direct and DOM-owned: {output}"
+        output.contains(".addEventListener(")
+            && output.matches(".addEventListener(").count()
+                == output.matches(".removeEventListener(").count(),
+        "benchmark events must be direct and owner-cleaned: {output}"
     );
     assert!(
-        output.contains("dispose: ()=>_$rowEffect.dispose()"),
-        "benchmark selector must dispose its direct effect handle: {output}"
+        output.contains("onOwnerCleanup("),
+        "benchmark event resources must be disposed with the row owner: {output}"
     );
     assert!(
-        output.contains(".textContent ="),
-        "benchmark row-local text must use direct text writes instead of renderAnchor wrappers: {output}"
+        output.contains("_$compiledText("),
+        "benchmark row-local text must use the compiled text binding: {output}"
     );
     assert!(
         !output.contains("_$createTextWrapper("),
@@ -190,10 +192,10 @@ fn signal_benchmark_row_uses_the_same_direct_root_budget() {
         "signal.get() bindings must use the compiled keyed core: {output}"
     );
     assert!(
-        output.contains("return { node:")
-            && output.contains("patch:")
-            && output.contains("dispose:"),
-        "signal.get() mount must return node/patch/dispose: {output}"
+        output.contains("_$mountCompiledKeyedRow")
+            && output.contains("_$mountCompiledSlotFactory")
+            && output.contains("__rue_compiled_host:"),
+        "signal.get() mount must use the compiled keyed-row/root protocol: {output}"
     );
     assert!(
         output.contains("selected.get()"),
@@ -208,7 +210,7 @@ fn signal_benchmark_row_uses_the_same_direct_root_budget() {
         "signal benchmark rows must not register per-row anchors: {output}"
     );
     assert!(
-        !output.contains("watchEffect(") && !output.contains("_$vaporKeyedList"),
+        !output.contains("watchEffect(") && !output.contains("_$compiledKeyedList"),
         "signal benchmark must stay off the Vapor list path: {output}"
     );
 }
@@ -216,6 +218,11 @@ fn signal_benchmark_row_uses_the_same_direct_root_budget() {
 #[test]
 fn signal_benchmark_stays_on_native_signal_apis() {
     let output = transform_signal_benchmark_row();
+
+    assert!(
+        !output.contains("vapor("),
+        "compiled signal benchmark must not call the Vapor renderer: {output}"
+    );
 
     assert!(
         output.contains("signal<Row[]>([])"),
@@ -239,7 +246,7 @@ fn signal_benchmark_stays_on_native_signal_apis() {
 
     let compiled_import = output
         .lines()
-        .find(|line| line.contains("@rue-js/rue/compiled"))
+        .find(|line| line.contains("@rue-js/rue/internal"))
         .expect("compiled runtime import");
     for helper in ["signal", "effect", "_$reconcileKeyed", "createSelector"] {
         assert!(

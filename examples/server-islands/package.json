@@ -6,7 +6,6 @@
     "dev": "node server.mjs"
   },
   "dependencies": {
-    "@rue-js/jsx-runtime": "workspace:*",
     "@rue-js/rue": "workspace:*",
     "@rue-js/runtime": "workspace:*",
     "@rue-js/server-renderer": "workspace:*",

@@ -30,7 +30,7 @@
   "exports": {
     ".": {
       "types": "./dist/i18n.d.ts",
-      "development": "./src/index.ts",
+      "development": "./src/index.tsx",
       "module": "./dist/i18n.esm-bundler.js",
       "import": "./dist/i18n.esm-bundler.js"
     },
@@ -44,6 +44,7 @@
   },
   "buildOptions": {
     "name": "RueI18n",
+    "rueTransform": true,
     "formats": [
       "esm-bundler"
     ]

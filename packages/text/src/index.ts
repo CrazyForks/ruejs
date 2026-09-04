@@ -1,5 +1,5 @@
 import type { Plugin, PluginOption, UserConfig, ViteDevServer } from 'vite'
-import { loadEnv, parseAst, transformWithOxc } from 'vite'
+import { loadEnv, parseAst } from 'vite'
 import { pagesRouter, apiRouter, invalidateRouteCache, matchRoute } from './routing/pages-router.js'
 import { generateServerEntry as _generateServerEntry } from './entries/pages-server-entry.js'
 import { generateClientEntry as _generateClientEntry } from './entries/pages-client-entry.js'
@@ -172,19 +172,14 @@ const RUE_FRAMEWORK_DEDUPE = Object.freeze([
   '@rue-js/rue',
   '@rue-js/runtime',
   '@rue-js/server-renderer',
-  '@rue-js/jsx-runtime',
-  '@rue-js/jsx-dev-runtime',
 ])
 const RUE_NODE_RUNTIME_EXTERNALS = Object.freeze([
   '@rue-js/rue',
+  '@rue-js/rue/internal',
   '@rue-js/rue/server-renderer',
-  '@rue-js/rue/vapor',
   '@rue-js/runtime',
+  '@rue-js/runtime/internal',
   '@rue-js/runtime/server',
-  '@rue-js/runtime/vapor',
-  '@rue-js/runtime-vapor',
-  '@rue-js/runtime-vapor/reactive',
-  '@rue-js/runtime-vapor/vapor',
   '@rue-js/server-renderer',
 ])
 type VitePluginRueModule = typeof import('@rue-js/vite-plugin-rue')
@@ -199,8 +194,6 @@ function compactStringEntries(entries: readonly unknown[]): string[] {
 function isRueCompatRscRuntimeOptimizeDep(entry: string): boolean {
   return (
     entry === REMOVED_JSX_RUNTIME_PACKAGE ||
-    entry === `${REMOVED_JSX_RUNTIME_PACKAGE}/jsx-runtime` ||
-    entry === `${REMOVED_JSX_RUNTIME_PACKAGE}/jsx-dev-runtime` ||
     entry === REMOVED_DOM_RUNTIME_PACKAGE ||
     entry === `${REMOVED_DOM_RUNTIME_PACKAGE}/client` ||
     entry === `${REMOVED_DOM_RUNTIME_PACKAGE}/server` ||
@@ -220,6 +213,7 @@ function shouldRunCommonjsTransform(id: string): boolean | undefined {
 function createLazyRuePlugin(
   resolvedRuePath: string,
   options: RueVitePluginOptions | (() => RueVitePluginOptions | undefined) | undefined,
+  enforce: 'pre' | undefined,
 ): Plugin {
   let delegatePromise: Promise<Plugin> | null = null
 
@@ -239,7 +233,7 @@ function createLazyRuePlugin(
 
   return {
     name: '@rue-js/vite-plugin-rue',
-    enforce: 'pre',
+    enforce,
     apply() {
       return true
     },
@@ -252,7 +246,40 @@ function createLazyRuePlugin(
       const hook = delegate.transform
       const handler = typeof hook === 'function' ? hook : hook?.handler
       if (!handler) return null
-      return handler.call(this, code, id, options)
+      const cleanId = id.split('?')[0]
+      const queryIndex = id.indexOf('?')
+      const delegateId = /\.m?js$/.test(cleanId)
+        ? queryIndex < 0
+          ? `${id}.jsx`
+          : `${id.slice(0, queryIndex)}.jsx${id.slice(queryIndex)}`
+        : id
+      return handler.call(this, code, delegateId, options)
+    },
+  }
+}
+
+function createCompiledShimJsxLoader(shimsDir: string, resolvedRuePath: string | null): Plugin {
+  const normalizedShimsDir = normalizePath(shimsDir) + '/'
+  let rueModulePromise: Promise<VitePluginRueModule> | null = null
+
+  return {
+    name: 'text:compiled-shim-jsx-loader',
+    enforce: 'pre',
+    async load(id) {
+      const cleanId = id.split('?')[0]
+      if (!cleanId.endsWith('.js')) return null
+      if (!normalizePath(cleanId).startsWith(normalizedShimsDir)) return null
+      if (!resolvedRuePath || !fs.existsSync(cleanId)) return null
+      rueModulePromise ??= import(
+        pathToFileURL(resolvedRuePath).href
+      ) as Promise<VitePluginRueModule>
+      const rueModule = await rueModulePromise
+      const code = fs.readFileSync(cleanId, 'utf8')
+      return rueModule.compileRueStatic(code, {
+        id: `${cleanId}.jsx`,
+        target: this.environment?.name === 'client' ? 'client' : 'server',
+        production: this.environment?.mode === 'build',
+      })
     },
   }
 }
@@ -641,10 +668,6 @@ function readLeadingRscDirective(code: string): 'use client' | 'use server' | nu
     if (code[i] === '\n') i++
   }
   return null
-}
-
-function hasRscDirective(code: string): boolean {
-  return readLeadingRscDirective(code) !== null
 }
 
 function hasUseClientDirective(code: string): boolean {
@@ -1184,33 +1207,15 @@ export default function text(options: TextOptions = {}): PluginOption[] {
   registerRueClientRuntimeAlias('@rue-js/rue', '@rue-js/rue/dist/rue.runtime.esm-browser.js')
   registerRueClientRuntimeAlias('@rue-js/runtime', '@rue-js/runtime/dist/runtime.esm-browser.js')
   registerRueClientRuntimeAlias(
-    '@rue-js/runtime-vapor',
-    '@rue-js/runtime/dist/runtime.esm-browser.js',
-  )
-  rueClientRuntimeAliases.set(
-    '@rue-js/runtime-vapor/reactive',
-    resolveShimModulePath(shimsDir, 'rue-runtime-vapor-reactive-browser'),
+    '@rue-js/rue/internal',
+    '@rue-js/rue/dist/rue.internal.esm-bundler.js',
   )
   registerRueClientRuntimeAlias(
-    '@rue-js/runtime-vapor/vapor',
-    '@rue-js/runtime/dist/runtime.esm-browser.js',
+    '@rue-js/runtime/internal',
+    '@rue-js/runtime/dist/runtime.internal.esm-bundler.js',
   )
   try {
-    const rueBrowserRuntime = nodeRuntimeRequire.resolve(
-      '@rue-js/runtime/dist/runtime.esm-browser.js',
-    )
     const rueBrowserRequireShim = resolveShimModulePath(shimsDir, 'rue-runtime-browser-require')
-    for (const runtimeVaporDir of [
-      path.resolve(__dirname, 'runtime-vapor/dist'),
-      path.resolve(__dirname, '../dist/runtime-vapor/dist'),
-    ]) {
-      for (const entryFile of ['index.node.js', 'reactive.node.js', 'vapor.node.js']) {
-        const runtimeFile = path.join(runtimeVaporDir, entryFile)
-        if (fs.existsSync(runtimeFile)) {
-          registerRueClientResolvedAlias(runtimeFile, rueBrowserRuntime)
-        }
-      }
-    }
     for (const runtimeDir of [
       path.resolve(__dirname, 'runtime'),
       path.resolve(__dirname, '../dist/runtime'),
@@ -1227,20 +1232,6 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     '@rue-js/server-renderer',
     resolveShimModulePath(shimsDir, 'server-renderer-client'),
   )
-  const registerRuntimeVaporNodeArtifacts = (runtimeVaporDir: string) => {
-    for (const entryFile of ['index.node.js', 'reactive.node.js', 'vapor.node.js']) {
-      const runtimeFile = path.join(runtimeVaporDir, entryFile)
-      if (fs.existsSync(runtimeFile)) {
-        registerRueServerRuntimeAlias(runtimeFile, runtimeFile)
-      }
-    }
-  }
-  try {
-    const runtimeVaporDir = path.dirname(nodeRuntimeRequire.resolve('@rue-js/runtime-vapor'))
-    registerRuntimeVaporNodeArtifacts(runtimeVaporDir)
-  } catch {}
-  registerRuntimeVaporNodeArtifacts(path.resolve(__dirname, 'runtime-vapor/dist'))
-  registerRuntimeVaporNodeArtifacts(path.resolve(__dirname, '../dist/runtime-vapor/dist'))
   const addRueServerSourceAlias = (
     packageName: string,
     sourceRelativePath: string,
@@ -1255,11 +1246,11 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     } catch {}
   }
   addRueServerSourceAlias('@rue-js/rue', 'src/index.ts', '@rue-js/rue')
+  addRueServerSourceAlias('@rue-js/rue', 'src/internal.ts', '@rue-js/rue/internal')
   addRueServerSourceAlias('@rue-js/rue', 'src/server-renderer.ts', '@rue-js/rue/server-renderer')
-  addRueServerSourceAlias('@rue-js/rue', 'src/vapor.ts', '@rue-js/rue/vapor')
   addRueServerSourceAlias('@rue-js/runtime', 'src/index.ts', '@rue-js/runtime')
+  addRueServerSourceAlias('@rue-js/runtime', 'src/internal.ts', '@rue-js/runtime/internal')
   addRueServerSourceAlias('@rue-js/runtime', 'src/server.ts', '@rue-js/runtime/server')
-  addRueServerSourceAlias('@rue-js/runtime', 'src/vapor.ts', '@rue-js/runtime/vapor')
   addRueServerSourceAlias('@rue-js/server-renderer', 'src/index.ts', '@rue-js/server-renderer')
   const externalizeRueServerRuntime = (id: string, importer?: string) => {
     const normalizedId = normalizeRueServerRuntimeId(id)
@@ -1360,22 +1351,8 @@ export default function text(options: TextOptions = {}): PluginOption[] {
 
   const rueOptions: RueVitePluginOptions | undefined =
     options.rue && typeof options.rue === 'object' ? options.rue : undefined
-  let rueTransformRoot = earlyBaseDir
-  let rueTransformBaseDir = earlyBaseDir
   const getMergedRueOptions = (): RueVitePluginOptions => {
-    const textRouteRueExcludes = [
-      path.join(rueTransformRoot, 'app'),
-      path.join(rueTransformRoot, 'components'),
-      path.join(rueTransformRoot, 'pages'),
-      path.join(rueTransformRoot, 'src', 'app'),
-      path.join(rueTransformRoot, 'src', 'components'),
-      path.join(rueTransformRoot, 'src', 'pages'),
-      path.join(rueTransformBaseDir, 'app'),
-      path.join(rueTransformBaseDir, 'components'),
-      path.join(rueTransformBaseDir, 'pages'),
-      path.resolve(__dirname),
-      path.resolve(__dirname, '../../rue-rsc/src'),
-    ]
+    const textRouteRueExcludes = [path.resolve(__dirname, '../../rue-rsc/src')]
     return {
       ...rueOptions,
       exclude: [...new Set([...(rueOptions?.exclude ?? []), ...textRouteRueExcludes])],
@@ -1392,7 +1369,7 @@ export default function text(options: TextOptions = {}): PluginOption[] {
           ' @rue-js/vite-plugin-rue',
       )
     }
-    ruePlugin = createLazyRuePlugin(resolvedRuePath, getMergedRueOptions)
+    ruePlugin = createLazyRuePlugin(resolvedRuePath, getMergedRueOptions, 'pre')
   }
 
   const imageImportDimCache = new Map<string, { width: number; height: number }>()
@@ -1421,9 +1398,7 @@ export default function text(options: TextOptions = {}): PluginOption[] {
           const mdxFactory = (mdxRollup.default ?? mdxRollup) as (
             options: Record<string, unknown>,
           ) => Plugin
-          const mdxOpts: Record<string, unknown> = {
-            jsxImportSource: '@rue-js',
-          }
+          const mdxOpts: Record<string, unknown> = { jsx: true }
           if (textConfig.mdx) {
             if (textConfig.mdx.remarkPlugins) mdxOpts.remarkPlugins = textConfig.mdx.remarkPlugins
             if (textConfig.mdx.rehypePlugins) mdxOpts.rehypePlugins = textConfig.mdx.rehypePlugins
@@ -1508,8 +1483,9 @@ export default function text(options: TextOptions = {}): PluginOption[] {
         )
       },
     } satisfies Plugin,
+    createCompiledShimJsxLoader(shimsDir, resolvedRuePath),
     // Rue JSX/TSX transform for route and component modules.
-    ...(ruePlugin ? [ruePlugin] : []),
+    ...(!earlyAppDirExists && ruePlugin ? [ruePlugin] : []),
     {
       name: 'text:app-cjs-interop',
       enforce: 'post' as const,
@@ -1543,72 +1519,6 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     // Transform CJS require()/module.exports to ESM before other plugins
     // analyze imports (RSC directive scanning, shim resolution, etc.)
     commonjs({ filter: shouldRunCommonjsTransform }),
-    // Enable JSX in plain .js files. Text.js allows JSX in .js files
-    // (Babel/SWC handle it transparently), but Vite 8's built-in `vite:oxc`
-    // plugin excludes .js files by default (`exclude: /\.js$/`) AND infers
-    // `lang: "js"` from the extension (which disables JSX parsing).
-    //
-    // We can't fix both issues via config alone:
-    //  - Setting `oxc.exclude: []` bypasses the filter, but `lang` is still
-    //    inferred as "js" from the extension, causing parse errors.
-    //  - Setting `oxc.lang: "jsx"` globally breaks TypeScript files (OXC
-    //    can't parse TS type annotations with `lang: "jsx"`).
-    //
-    // Solution: use `enforce: "pre"` so this plugin's transform runs before
-    // `vite:oxc`. We transform `.js` files with `lang: "jsx"` using Vite's
-    // exported `transformWithOxc`. When `vite:oxc` later processes the
-    // output, the JSX has already been compiled to createElement calls.
-    //
-    // For files inside `node_modules`, we only re-transform `.js`/`.mjs`
-    // modules that begin with a `"use client"` or `"use server"`
-    // directive. Third-party Text.js client libraries routinely ship plain
-    // `.js` files containing `"use client"` + JSX (Text.js's SWC pipeline
-    // compiles JSX in `.js` transparently). Without this, `@vitejs/plugin-rsc`'s
-    // `rsc:use-client` analysis pass parses those files via rolldown/oxc with
-    // `lang: "js"` and fails with `RolldownError: Unexpected JSX expression`.
-    //
-    // We limit the node_modules transform to directive-bearing files to:
-    //   1. avoid re-parsing every `.js` in `node_modules` (build perf), and
-    //   2. avoid forcibly applying `lang: "jsx"` to library code that may use
-    //      syntax incompatible with the JSX-enabled OXC parser.
-    ...(viteMajorVersion >= 8
-      ? [
-          {
-            name: 'text:jsx-in-js',
-            enforce: 'pre' as const,
-            async transform(code: string, id: string) {
-              // Only handle .js/.mjs files.
-              // TypeScript (.ts/.tsx/.jsx) files are handled by vite:oxc.
-              const cleanId = id.split('?')[0]
-              if (!/\.(m?js)$/.test(cleanId)) return
-
-              // Inside node_modules, restrict the JSX transform to files that
-              // carry an RSC directive. `@vitejs/plugin-rsc` only parses
-              // such modules (and only those failures have been observed in
-              // the wild). The cheap `includes` check avoids any work for the
-              // vast majority of `.js` files in `node_modules`.
-              if (cleanId.includes('/node_modules/')) {
-                if (!code.includes('use client') && !code.includes('use server')) {
-                  return
-                }
-                if (!hasRscDirective(code)) {
-                  return
-                }
-              }
-
-              const result = await transformWithOxc(code, id, {
-                lang: 'jsx',
-                jsx: { runtime: 'automatic' as const, importSource: '@rue-js' },
-                sourcemap: true,
-              })
-              return {
-                code: result.code,
-                map: result.map,
-              }
-            },
-          } satisfies Plugin,
-        ]
-      : []),
     // Allow `import 'server-only'` from middleware (and any module reachable
     // from it) in non-RSC environments. Registered before `text:config` so
     // its `enforce: "pre"` resolveId runs ahead of @vitejs/plugin-rsc's
@@ -1689,9 +1599,6 @@ export default function text(options: TextOptions = {}): PluginOption[] {
             baseDir = root
           }
         }
-        rueTransformRoot = root
-        rueTransformBaseDir = baseDir
-
         pagesDir = path.join(baseDir, 'pages')
         appDir = path.join(baseDir, 'app')
         hasPagesDir = fs.existsSync(pagesDir)
@@ -1913,8 +1820,6 @@ export default function text(options: TextOptions = {}): PluginOption[] {
             // server-only / client-only marker packages
             'server-only': path.join(shimsDir, 'server-only'),
             'client-only': path.join(shimsDir, 'client-only'),
-            '@rue-js/jsx-runtime': path.join(shimsDir, 'jsx-runtime-compat'),
-            '@rue-js/jsx-dev-runtime': path.join(shimsDir, 'jsx-dev-runtime-compat'),
             'text/error-boundary': path.join(shimsDir, 'error-boundary'),
             'text/layout-segment-context': path.join(shimsDir, 'layout-segment-context'),
             'text/metadata': path.join(shimsDir, 'metadata'),
@@ -2258,23 +2163,6 @@ export default function text(options: TextOptions = {}): PluginOption[] {
           // NOTE: top-level optimizeDeps is now set below (after capturing
           // incoming values from earlier plugins) so both Pages Router and
           // App Router builds merge correctly.
-          // Enable JSX in .js files. Text.js allows JSX in plain .js
-          // files (Babel/SWC handle it transparently), but Vite 8's OXC
-          // transform defaults exclude .js files (both via the filter
-          // `exclude: /\.js$/` and by inferring `lang: "js"` from the
-          // extension, which disables JSX parsing).
-          //
-          // We leave the OXC filter defaults alone (letting `.js` files be
-          // excluded from `vite:oxc`) and instead handle `.js` files in a
-          // separate `text:jsx-in-js` plugin that runs before `vite:oxc`.
-          // That plugin transforms `.js` files with OXC using `lang: "jsx"`
-          // so JSX syntax is parsed correctly, while TypeScript files
-          // continue to use `vite:oxc`'s default `lang` inference.
-          //
-          // Vite 7 uses `esbuild` for transforms, Vite 8+ uses `oxc`.
-          ...(viteMajorVersion >= 8
-            ? { oxc: { jsx: { runtime: 'automatic', importSource: '@rue-js' } } }
-            : { esbuild: { jsx: 'automatic', jsxImportSource: '@rue-js' } }),
           // Define env vars for client bundle
           define: defines,
           // Set base path if configured.
@@ -2813,7 +2701,7 @@ export default function text(options: TextOptions = {}): PluginOption[] {
         // direct @vercel/og imports in metadata routes, and \0-prefixed
         // re-imports from @vitejs/plugin-rsc.
         filter: {
-          id: /(?:text\/|virtual:text-|^r(?:eact|ue)$|^text-intl(?:\/server)?$|^@vercel\/og(?:\.js)?$|^@rue-js\/(?:(?:rue|runtime)(?:\/(?:server-renderer|server|vapor|reactive))?|runtime-vapor(?:\/(?:vapor|reactive))?|server-renderer)$|(?:^|[/\\])(?:index|reactive|vapor)\.node\.js$|(?:^|[/\\])runtime[/\\]index\.js$|packages\/(?:rue|runtime|server-renderer)\/src\/(?:index|server-renderer|server|vapor)\.ts$|packages\/(?:runtime-vapor|text\/dist\/runtime-vapor)\/(?:index|reactive|vapor)\.node\.js$)/,
+          id: /(?:text\/|virtual:text-|^r(?:eact|ue)$|^text-intl(?:\/server)?$|^@vercel\/og(?:\.js)?$|^@rue-js\/(?:(?:rue|runtime)(?:\/(?:internal|server-renderer|server))?|server-renderer)$|(?:^|[/\\])runtime[/\\]index\.js$|packages\/(?:rue|runtime|server-renderer)\/src\/(?:index|internal|server-renderer|server)\.ts$)/,
         },
         handler(id, importer) {
           // Strip \0 prefix if present — @vitejs/plugin-rsc's generated
@@ -5058,8 +4946,23 @@ export default function text(options: TextOptions = {}): PluginOption[] {
     },
   ]
 
-  // Append auto-injected RSC plugins if applicable
-  plugins.push(...rueRscPlugins)
+  // Keep the directive scan ahead of JSX lowering, then let the client-reference
+  // transform consume the compiler-only JavaScript output.
+  if (earlyAppDirExists && ruePlugin) {
+    const directiveScanIndex = rueRscPlugins.findIndex(
+      plugin =>
+        plugin && typeof plugin === 'object' && plugin.name === 'rsc:use-client/scan-directive',
+    )
+    if (directiveScanIndex >= 0) {
+      plugins.push(...rueRscPlugins.slice(0, directiveScanIndex + 1))
+      plugins.push(ruePlugin)
+      plugins.push(...rueRscPlugins.slice(directiveScanIndex + 1))
+    } else {
+      plugins.push(ruePlugin, ...rueRscPlugins)
+    }
+  } else {
+    plugins.push(...rueRscPlugins)
+  }
   if (earlyAppDirExists) {
     plugins.push(createRscClientReferenceLoadersPlugin())
   }

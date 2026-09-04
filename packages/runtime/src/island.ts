@@ -1,10 +1,10 @@
 import {
-  h,
+  createCompiledComponent,
   render,
   renderAnchor,
   type ComponentInstance,
   type ComponentProps,
-  type RenderableInput,
+  type RenderInput,
 } from './rue'
 import {
   applyDomProps,
@@ -30,6 +30,21 @@ import {
   type RueIslandManifest,
   type RueIslandManifestEntry,
 } from './island-protocol'
+import {
+  adoptHydratedNode,
+  withDOMHostOperations as withHydrationDOMHostOperations,
+  withHydrationStaging,
+} from './compiler-runtime/dom.hydrate'
+import { withHydrationDOMMutations } from './compiler-runtime/dom.browser'
+export {
+  appendChild as _$compiledAppendChild,
+  createComment as _$compiledCreateComment,
+  createElement as _$compiledCreateElement,
+  createTextNode as _$compiledCreateTextNode,
+  insertBefore as _$compiledInsertBefore,
+  removeChild as _$compiledRemoveChild,
+  template as _$template,
+} from './compiler-runtime/dom.hydrate'
 
 export * from './island-protocol'
 
@@ -69,7 +84,7 @@ export interface RueIslandLoaderOptions {
   ) => Promise<RueIslandClientModule> | RueIslandClientModule
   hydrateRoot?: (
     container: Element,
-    value: RenderableInput,
+    value: RenderInput,
     options?: HydrateRootOptions,
   ) => RueRootHandle | void
   onError?: (error: unknown, island: Element, manifest?: RueIslandManifestEntry) => void
@@ -179,6 +194,11 @@ const getElementHeadRecord = (value: unknown): RueElementHeadRecord | null => {
 
   return record as RueElementHeadRecord
 }
+
+const isCompiledNativeElementHandle = (value: unknown): boolean =>
+  value != null &&
+  typeof value === 'object' &&
+  typeof (value as Record<string, unknown>).__rue_compiled_component_factory__ === 'string'
 
 const normalizeHydrationChildren = (value: unknown): unknown[] => {
   if (value === null || value === undefined || typeof value === 'boolean') {
@@ -335,12 +355,26 @@ class HydrationDOMAdapter implements DOMAdapter {
   private readonly cleanupCallbacks: Array<() => void> = []
   private readonly observedParents = new Set<ParentNode>()
   private readonly predictedAdoptionTargets = new WeakMap<object, Node>()
+  private readonly initialNodes: Set<Node>
+  private readonly initialTreeNodes = new WeakSet<Node>()
+  private readonly nativeListenerRecords: Array<{
+    target: EventTarget
+    type: string
+    listener: EventListenerOrEventListenerObject
+  }> = []
 
   constructor(
     private readonly base: DOMAdapter,
     private readonly container: Element,
     private readonly rootAnchor: Node,
-  ) {}
+  ) {
+    this.initialNodes = new Set(Array.from(container.childNodes))
+    const remember = (node: Node) => {
+      this.initialTreeNodes.add(node)
+      for (const child of Array.from(node.childNodes)) remember(child)
+    }
+    for (const node of this.initialNodes) remember(node)
+  }
 
   createComment(data: string): DomNodeLike {
     return this.base.createComment(data)
@@ -364,7 +398,7 @@ class HydrationDOMAdapter implements DOMAdapter {
     if (candidate && isTextNode(candidate)) {
       this.markAdoptedNode(candidate, parent)
       this.predictedAdoptionTargets.set(fresh as unknown as object, candidate)
-      return fresh
+      return candidate as unknown as DomTextLike
     }
 
     return fresh
@@ -373,18 +407,26 @@ class HydrationDOMAdapter implements DOMAdapter {
   createElement(tag: string, parent?: DomElementLike | null): DomElementLike {
     const fresh = this.base.createElement(tag, parent)
     const explicitParent = this.asParentNode(parent)
+    const isRootStaging =
+      explicitParent != null &&
+      (explicitParent as unknown as { __rue_hydrated_adopted?: boolean }).__rue_hydrated_adopted ===
+        true
+    if (isRootStaging) {
+      this.predictedAdoptionTargets.set(explicitParent as unknown as object, this.container)
+    }
     const resolvedExplicitParent = explicitParent
       ? this.resolvePredictedParent(explicitParent)
       : null
     if (explicitParent && resolvedExplicitParent !== explicitParent) {
       this.observeHydrationParent(resolvedExplicitParent)
-      return fresh
     }
     const activeAnchor = this.resolveActiveAnchor()
-    const parentNode = explicitParent ?? activeAnchor?.parentNode ?? null
+    const parentNode = resolvedExplicitParent ?? activeAnchor?.parentNode ?? null
     const anchor = parentNode
       ? explicitParent
-        ? this.resolveAnchorForParent(parentNode)
+        ? isRootStaging
+          ? this.rootAnchor
+          : this.resolveAnchorForParent(parentNode)
         : activeAnchor
       : null
     if (parentNode && anchor) {
@@ -397,7 +439,7 @@ class HydrationDOMAdapter implements DOMAdapter {
       )
       if (adopted && isElementNode(adopted)) {
         this.predictedAdoptionTargets.set(fresh as unknown as object, adopted)
-        return fresh
+        return adopted as unknown as DomElementLike
       }
     }
 
@@ -426,6 +468,7 @@ class HydrationDOMAdapter implements DOMAdapter {
     )
     if (adopted && isElementNode(adopted)) {
       this.predictedAdoptionTargets.set(fresh as unknown as object, adopted)
+      return adopted as unknown as DomElementLike
     }
     return fresh
   }
@@ -455,23 +498,37 @@ class HydrationDOMAdapter implements DOMAdapter {
 
   appendChild(parent: DomNodeLike, child: DomNodeLike): void {
     this.observeParent(parent)
-    this.base.appendChild(parent, child)
+    this.base.appendChild(
+      this.resolvePredictedAdoptionTarget(parent),
+      this.resolvePredictedAdoptionTarget(child),
+    )
     this.rememberAnchor(child)
   }
 
   removeChild(parent: DomNodeLike, child: DomNodeLike): void {
-    this.base.removeChild(parent, child)
+    this.base.removeChild(
+      this.resolvePredictedAdoptionTarget(parent),
+      this.resolvePredictedAdoptionTarget(child),
+    )
   }
 
   insertBefore(parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null): void {
     this.observeParent(parent)
-    this.base.insertBefore(parent, child, ref)
+    this.base.insertBefore(
+      this.resolvePredictedAdoptionTarget(parent),
+      this.resolvePredictedAdoptionTarget(child),
+      this.resolvePredictedAdoptionTarget(ref),
+    )
     this.rememberAnchor(child)
   }
 
   replaceChild(parent: DomNodeLike, newChild: DomNodeLike, oldChild: DomNodeLike): void {
     this.observeParent(parent)
-    this.base.replaceChild(parent, newChild, oldChild)
+    this.base.replaceChild(
+      this.resolvePredictedAdoptionTarget(parent),
+      this.resolvePredictedAdoptionTarget(newChild),
+      this.resolvePredictedAdoptionTarget(oldChild),
+    )
     this.rememberAnchor(newChild)
   }
 
@@ -545,6 +602,26 @@ class HydrationDOMAdapter implements DOMAdapter {
   }
 
   commitStatus(): HydrationDOMAdapterCommit {
+    this.reconcileMixedHydrationChildren(this.container)
+    if (!this.adoptedRoot && !this.failureMessage) {
+      const hydratableRoots = getHydratableChildNodes(this.container, { ignoreWhitespace: true })
+      const clientRoots = hydratableRoots.filter(
+        node => node !== this.rootAnchor && !this.initialNodes.has(node),
+      )
+      const serverRoots = hydratableRoots.filter(
+        node => this.initialNodes.has(node) && !isIslandPropsScriptNode(node),
+      )
+      if (
+        clientRoots.length === 1 &&
+        serverRoots.length === 1 &&
+        adoptHydratedNode(serverRoots[0], clientRoots[0])
+      ) {
+        this.markAdoptedNode(serverRoots[0], this.container)
+        clientRoots[0].parentNode?.removeChild(clientRoots[0])
+      } else if (clientRoots.length === 1 && serverRoots.length === 1) {
+        this.markFailure('Rue hydrateRoot SSR root structure did not match the client element.')
+      }
+    }
     if (!this.adoptedRoot && !this.failureMessage) {
       this.failureMessage = 'Rue hydrateRoot expected exactly one SSR node to adopt.'
     }
@@ -564,6 +641,49 @@ class HydrationDOMAdapter implements DOMAdapter {
   cleanup() {
     for (const cleanup of this.cleanupCallbacks.splice(0).reverse()) {
       cleanup()
+    }
+  }
+
+  recordNativeListeners(
+    records: Array<{
+      target: EventTarget
+      type: string
+      listener: EventListenerOrEventListenerObject
+    }>,
+  ) {
+    this.nativeListenerRecords.push(...records)
+  }
+
+  transferNativeListeners() {
+    for (const { target, type, listener } of this.nativeListenerRecords) {
+      const adopted = (target as EventTarget & { __rue_hydrated_adopted_target?: EventTarget })
+        .__rue_hydrated_adopted_target
+      if (!adopted || adopted === target) continue
+      adopted.addEventListener(type, listener)
+      this.cleanupCallbacks.push(() => adopted.removeEventListener(type, listener))
+    }
+  }
+
+  private reconcileMixedHydrationChildren(parent: ParentNode) {
+    const children = Array.from(parent.childNodes)
+    for (const clientNode of children) {
+      if (this.initialTreeNodes.has(clientNode) || isRueHydrationComment(clientNode)) continue
+      const serverNode = children.find(
+        candidate =>
+          candidate !== clientNode &&
+          this.initialTreeNodes.has(candidate) &&
+          candidate.nodeType === clientNode.nodeType &&
+          (candidate.nodeType !== Node.ELEMENT_NODE ||
+            (candidate as Element).tagName === (clientNode as Element).tagName),
+      )
+      if (serverNode && adoptHydratedNode(serverNode, clientNode)) {
+        this.markAdoptedNode(serverNode, parent)
+        clientNode.parentNode?.removeChild(clientNode)
+      }
+    }
+    for (const child of Array.from(parent.childNodes)) {
+      if ('childNodes' in child)
+        this.reconcileMixedHydrationChildren(child as unknown as ParentNode)
     }
   }
 
@@ -715,7 +835,7 @@ const createAdoptedRootHandle = (
 
 const tryAdoptHydrationRoot = (
   container: Element,
-  value: RenderableInput,
+  value: RenderInput,
   options: HydrateRootOptions,
 ): RueRootHandle | null => {
   const record = getElementHeadRecord(value)
@@ -760,7 +880,7 @@ const createRendererAdoptedRootHandle = (
       }
       mounted = false
       renderAnchor(
-        null as unknown as RenderableInput,
+        null as unknown as RenderInput,
         container as unknown as DomElementLike,
         anchor as unknown as DomNodeLike,
       )
@@ -777,7 +897,7 @@ const cleanupRendererHydrationAttempt = (
   cleanup: () => void = () => {},
 ) => {
   renderAnchor(
-    null as unknown as RenderableInput,
+    null as unknown as RenderInput,
     container as unknown as DomElementLike,
     anchor as unknown as DomNodeLike,
   )
@@ -787,27 +907,46 @@ const cleanupRendererHydrationAttempt = (
 
 const tryAdoptHydrationRootWithRenderer = (
   container: Element,
-  value: RenderableInput,
+  value: RenderInput,
   options: HydrateRootOptions,
 ): RueRootHandle | null => {
   const previousAdapter = getDOMAdapter()
   const anchor = previousAdapter.createComment(RUE_HYDRATION_ROOT_ANCHOR) as unknown as Node
   const hydrationAdapter = new HydrationDOMAdapter(previousAdapter, container, anchor)
 
-  setDOMAdapter(hydrationAdapter)
   try {
     hydrationAdapter.appendChild(
       container as unknown as DomNodeLike,
       anchor as unknown as DomNodeLike,
     )
-    renderAnchor(value, container as unknown as DomElementLike, anchor as unknown as DomNodeLike)
+    const nativeAddEventListener = EventTarget.prototype.addEventListener
+    const nativeListeners: Array<{
+      target: EventTarget
+      type: string
+      listener: EventListenerOrEventListenerObject
+    }> = []
+    EventTarget.prototype.addEventListener = function (type, listener, options) {
+      if (listener != null) nativeListeners.push({ target: this, type, listener })
+      return nativeAddEventListener.call(this, type, listener, options)
+    }
+    try {
+      withHydrationDOMHostOperations(container, () =>
+        withHydrationStaging(() =>
+          renderAnchor(
+            value,
+            container as unknown as DomElementLike,
+            anchor as unknown as DomNodeLike,
+          ),
+        ),
+      )
+    } finally {
+      EventTarget.prototype.addEventListener = nativeAddEventListener
+      hydrationAdapter.recordNativeListeners(nativeListeners)
+    }
   } catch (error) {
-    setDOMAdapter(previousAdapter)
     cleanupRendererHydrationAttempt(container, anchor, () => hydrationAdapter.cleanup())
     throw error
   }
-  setDOMAdapter(previousAdapter)
-
   removeDirectIslandPropsScripts(container)
   const commit = hydrationAdapter.commitStatus()
   if (!commit.ok) {
@@ -816,16 +955,22 @@ const tryAdoptHydrationRootWithRenderer = (
     return null
   }
 
+  hydrationAdapter.transferNativeListeners()
+
   return createRendererAdoptedRootHandle(container, anchor, () => hydrationAdapter.cleanup())
 }
 
 export const hydrateRoot = (
   container: Element,
-  value: RenderableInput,
+  value: RenderInput,
   options: HydrateRootOptions = {},
 ): RueRootHandle => {
   if (options.replace === false && container.firstChild) {
-    if (options.adoptComponents === true || getElementHeadRecord(value)) {
+    if (
+      options.adoptComponents === true ||
+      getElementHeadRecord(value) ||
+      isCompiledNativeElementHandle(value)
+    ) {
       const adopted = tryAdoptHydrationRootWithRenderer(container, value, options)
       if (adopted) {
         return adopted
@@ -841,7 +986,7 @@ export const hydrateRoot = (
   render(value, container as unknown as DomElementLike)
   return {
     unmount() {
-      render(null as unknown as RenderableInput, container as unknown as DomElementLike)
+      render(null as unknown as RenderInput, container as unknown as DomElementLike)
     },
   }
 }
@@ -951,7 +1096,7 @@ export const mountRueIsland = async (
   context: RueIslandMountContext,
   hydrateRootImpl: (
     container: Element,
-    value: RenderableInput,
+    value: RenderInput,
     options?: HydrateRootOptions,
   ) => RueRootHandle | void = hydrateRoot,
 ) => {
@@ -968,12 +1113,12 @@ export const mountRueIsland = async (
     throw new TypeError('Rue island module must export a component, hydrate(), or mount().')
   }
 
-  const vnode = h(component, context.props)
+  const vnode = createCompiledComponent(component, context.props)
   if (context.strategy === 'only') {
-    render(vnode as RenderableInput, island as unknown as DomElementLike)
+    render(vnode as RenderInput, island as unknown as DomElementLike)
     return undefined
   }
-  return hydrateRootImpl(island, vnode as RenderableInput, {
+  return hydrateRootImpl(island, vnode as RenderInput, {
     adoptComponents: module.adopt === true,
     replace: false,
   })

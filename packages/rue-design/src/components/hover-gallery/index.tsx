@@ -208,29 +208,48 @@ const HoverGallery: FC<HoverGalleryProps> = ({
   const guideGridTemplateColumns = `repeat(${guideCount}, minmax(0, 1fr))`
 
   if (!showGuide || guideCount === 0) {
+    const directChildren = !items?.length
     if (as === 'div') {
       return (
         <div {...rest} className={galleryClassName}>
-          {normalizedItems.map(item =>
-            item.type === 'image' ? (
-              <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
-            ) : (
-              item.node
-            ),
-          )}
+          {directChildren
+            ? children
+            : normalizedItems.map(item =>
+                item.type === 'image' ? (
+                  <img
+                    key={item.key}
+                    src={item.src}
+                    alt={item.alt ?? ''}
+                    className={item.className}
+                  />
+                ) : (
+                  <span key={item.key} style={{ display: 'contents' }}>
+                    {item.node}
+                  </span>
+                ),
+              )}
         </div>
       )
     }
 
     return (
       <figure {...rest} className={galleryClassName}>
-        {normalizedItems.map(item =>
-          item.type === 'image' ? (
-            <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
-          ) : (
-            item.node
-          ),
-        )}
+        {directChildren
+          ? children
+          : normalizedItems.map(item =>
+              item.type === 'image' ? (
+                <img
+                  key={item.key}
+                  src={item.src}
+                  alt={item.alt ?? ''}
+                  className={item.className}
+                />
+              ) : (
+                <span key={item.key} style={{ display: 'contents' }}>
+                  {item.node}
+                </span>
+              ),
+            )}
       </figure>
     )
   }
@@ -243,7 +262,9 @@ const HoverGallery: FC<HoverGalleryProps> = ({
             item.type === 'image' ? (
               <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
             ) : (
-              item.node
+              <span key={item.key} style={{ display: 'contents' }}>
+                {item.node}
+              </span>
             ),
           )}
         </div>
@@ -253,7 +274,9 @@ const HoverGallery: FC<HoverGalleryProps> = ({
             item.type === 'image' ? (
               <img key={item.key} src={item.src} alt={item.alt ?? ''} className={item.className} />
             ) : (
-              item.node
+              <span key={item.key} style={{ display: 'contents' }}>
+                {item.node}
+              </span>
             ),
           )}
         </figure>

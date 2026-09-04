@@ -7,14 +7,12 @@ pageClass: api
 :::info 注册和使用
 内置组件可以直接在 JSX/TSX 中使用，无需注册。它们也是可 tree-shake 的：只有在被使用时才会包含在构建中。
 
-在[渲染函数](/guide/guide/extras/render-function)中使用它们时，需要显式导入。例如：
+在 TSX 中使用它们时，需要显式导入。例如：
 
-```js
-import { h, Transition } from '@rue-js/rue'
+```tsx
+import { Transition } from '@rue-js/rue'
 
-h(Transition, {
-  /* props */
-})
+const View = () => <Transition mode="out-in">{/* content */}</Transition>
 ```
 
 :::

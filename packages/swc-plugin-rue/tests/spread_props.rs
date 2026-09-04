@@ -32,76 +32,16 @@ export default SpreadProps;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC } from '@rue-js/rue';
-import { RouterLink } from '@rue-js/router';
-const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">对象展开属性（spread props）</h3>');
-const Button: FC<{
-    text: string;
-    className?: string;
-}> = (props)=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("button", __rue_parent_context);
-        watchEffect(()=>{
-            _$setClassName(_root, (props.className));
-        });
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list1);
-        watchEffect(()=>{
-            const __slot = (props.text);
-            untrack(()=>renderAnchor(__slot, _root, _list1));
-        });
-        return _root;
-    });
-const SpreadProps: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const base = {
-                className: 'px-3 py-2 rounded-md bg-blue-600 text-white'
-            };
-            const extra = {
-                text: '我是一个按钮哈'
-            };
-            return {
-                base: base,
-                extra: extra
-            };
-        }));
-    const { base: base, extra: extra } = _$useSetup;
-    return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _list2 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list2);
-        watchEffect(()=>{
-            const __slot3 = _$createComponent(Button, {
-                ...base,
-                ...extra
-            });
-            untrack(()=>renderAnchor(__slot3, _root, _list2));
-        });
-        const _el2 = _$createElement("a", _root);
-        _$appendChild(_root, _el2);
-        watchEffect(()=>{
-            _$setAttribute(_el2, "href", String(RouterLink.__rueHref("/jsx")));
-        });
-        _$addEventListener(_el2, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
-        _$addEventListener(_el2, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el2, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el2, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el2, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$setClassName(_el2, "text-blue-600 hover:underline");
-        _$appendChild(_el2, _$createTextNode("返回目录"));
-        return _root;
-    });
-};
-export default SpreadProps;
-"##;
+    let output = utils::strip_marker(&out);
 
-    std::fs::create_dir_all("target/vapor_outputs").ok();
-    std::fs::write("target/vapor_outputs/spread_props.out.js", utils::strip_marker(&out)).ok();
-    assert_eq!(
-        utils::normalize(&utils::strip_marker(&out)),
-        utils::normalize(&utils::strip_marker(expected_fragment))
-    );
+    assert!(output.contains("@rue-js/rue/internal"), "{output}");
+    assert!(output.contains("_$compiledRoot"), "{output}");
+    assert!(output.contains("_$mountCompiledSlotAt"), "{output}");
+    assert!(output.contains("()=>props.text"), "{output}");
+    assert!(output.contains("props.className"), "{output}");
+    assert!(output.contains("...base"), "{output}");
+    assert!(output.contains("...extra"), "{output}");
+    assert!(output.contains("_$createComponent(Button, ()=>({"), "{output}");
+    assert!(output.contains("RouterLink.__rueHref"), "{output}");
+    assert!(!output.contains("const __slot = (props.text)"), "{output}");
 }

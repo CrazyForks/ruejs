@@ -90,7 +90,6 @@ async function run() {
     const resolvedTargets = targets.length
       ? fuzzyMatchTarget(targets, buildAllMatching)
       : allTargets
-    await ensureRuntimeVaporBuilt(resolvedTargets)
     await ensureSwcPluginRueBuilt(resolvedTargets)
     await buildAll(resolvedTargets)
     await checkAllSizes(resolvedTargets)
@@ -114,27 +113,6 @@ async function run() {
  * @param {Array<string>} targets
  * @returns {Promise<void>}
  */
-async function ensureRuntimeVaporBuilt(targets) {
-  if (!targets.some(target => target === 'runtime' || target === 'rue')) {
-    return
-  }
-
-  const requiredArtifacts = [
-    'packages/runtime-vapor/dist/index.js',
-    'packages/runtime-vapor/dist/index.node.js',
-    'packages/runtime-vapor/dist/reactive-kernel/index.js',
-  ]
-
-  if (requiredArtifacts.every(filePath => fs.existsSync(path.resolve(filePath)))) {
-    return
-  }
-
-  console.log(pico.cyan('\nBuilding @rue-js/runtime-vapor TypeScript artifacts...'))
-  await exec('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-ts'], {
-    stdio: 'inherit',
-  })
-}
-
 /**
  * @param {Array<string>} targets
  * @returns {Promise<void>}

@@ -22,13 +22,13 @@ const invokeTransform = async (source: string, id: string) => {
 }
 
 const expectConditionalMapLowering = (code: string) => {
-  expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
-  expect(code).toMatch(/const __slot = showList\.value \? vapor\(\(\)=>\{/)
-  expect(code).toMatch(/const _map\d+_current = items\.get\(\) \|\| \[\];/)
-  expect(code).toContain('_$vaporKeyedList({')
-  expect(code).toContain('getKey: (item, idx)=>item.id')
+  expect(code).toContain('/* RUE_TRANSFORMED */')
+  expect(code).toContain('@rue-js/rue/internal')
+  expect(code).toMatch(/const __slot = showList\.value \? items\.get\(\)\.map/)
   expect(code).toContain('const label = item.label.toUpperCase();')
-  expect(code).toMatch(/render(?:Between|Anchor)\(__slot, parent, start(?:, end)?\);/)
+  expect(code).toContain('renderAnchor(__slot,')
+  expect(code).not.toContain('@rue-js/runtime-vapor')
+  expect(code).not.toContain('@rue-js/rue/vapor')
   expect(code).not.toContain('_jsxDEV(')
 }
 
@@ -102,6 +102,6 @@ describe('vite-plugin-rue conditional map slot transform', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expectConditionalMapLowering(code)
-    expect(code).toMatch(/\},\s*true\)\s*:\s*"";/)
+    expect(code).toContain('}) : "";')
   })
 })

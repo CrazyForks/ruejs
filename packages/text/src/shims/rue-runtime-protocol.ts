@@ -1,6 +1,5 @@
 import {
   Component,
-  Fragment,
   Suspense,
   createContext,
   useCallback,
@@ -36,7 +35,7 @@ export type RueRuntimeExportKey =
 
 const RUE_RUNTIME_EXPORTS: Partial<Record<RueRuntimeExportKey, unknown>> = {
   Component,
-  Fragment,
+  Fragment: 'fragment',
   Suspense,
   createContext,
   startTransition(callback: () => void) {
@@ -71,7 +70,7 @@ export function readRueComponentBase(): new (...args: unknown[]) => unknown {
 }
 
 export function readRueFragment(): unknown {
-  return Fragment
+  return 'fragment'
 }
 
 export function readRueSuspense(): unknown {

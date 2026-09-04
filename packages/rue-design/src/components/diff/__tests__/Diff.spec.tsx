@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+
 import Diff from '..'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
@@ -18,7 +19,7 @@ describe('Diff', () => {
     const container = mountContainer()
     resetActiveRuntime()
 
-    render(h(Diff, null, 'x'), container)
+    render(<Diff>{'x'}</Diff>, container)
 
     await waitForContent(() => {
       const element = container.querySelector('.diff') as HTMLElement
@@ -32,7 +33,12 @@ describe('Diff', () => {
     const container = mountContainer()
     resetActiveRuntime()
 
-    render(h(Diff, { className: 'rounded-field aspect-16/9', tabIndex: 0 }, 'y'), container)
+    render(
+      <Diff className={'rounded-field aspect-16/9'} tabIndex={0}>
+        {'y'}
+      </Diff>,
+      container,
+    )
 
     await waitForContent(() => {
       const element = container.querySelector('figure.diff') as HTMLElement
@@ -51,13 +57,15 @@ describe('Diff', () => {
     resetActiveRuntime()
 
     render(
-      h(
-        Diff,
-        null,
-        h(Diff.Item1, { role: 'img', tabIndex: 0 }, h('div', { id: 'a' }, 'A')),
-        h(Diff.Item2, { role: 'img' }, h('div', { id: 'b' }, 'B')),
-        h(Diff.Resizer, null),
-      ),
+      <Diff>
+        <Diff.Item1 role={'img'} tabIndex={0}>
+          <div id={'a'}>{'A'}</div>
+        </Diff.Item1>
+        <Diff.Item2 role={'img'}>
+          <div id={'b'}>{'B'}</div>
+        </Diff.Item2>
+        <Diff.Resizer />
+      </Diff>,
       container,
     )
 

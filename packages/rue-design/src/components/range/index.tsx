@@ -5,7 +5,7 @@ Range 组件概述
 - 语义回调通过 onValueChange / onValueCommit 暴露，原生 onInput / onChange 仍然继续透传。
 */
 import type { FC } from '@rue-js/rue'
-import { batch, computed, onScopeDispose, ref, toValue } from '@rue-js/rue'
+import { batch, computed, onScopeDispose, ref, toValue, useRef } from '@rue-js/rue'
 
 /** RangeColor 语义色类型。 */
 export type RangeColor =
@@ -365,6 +365,7 @@ const Range: FC<RangeProps> = ({
   })
   const interacting = ref(false)
   const interactionValue = ref(currentValue.get())
+  const rootRef = useRef<HTMLDivElement>()
   const presentedValue = computed(() => {
     const currentBounds = bounds.get()
     return interacting.value
@@ -452,13 +453,11 @@ const Range: FC<RangeProps> = ({
     const next = pendingValueChange
     pendingValueChange = null
 
-    interactionValue.value = next.value
-    if (!controlled.get()) {
-      uncontrolledValue.value = next.value
-    }
     lastEmittedValue = next.value
     interactionHasEmittedValue = true
     onValueChange?.(next.value, next.event)
+    const input = rootRef.current?.querySelector('input[type="range"]') as HTMLInputElement | null
+    if (input) syncPresentedDom(input, next.value)
   }
 
   const scheduleValueChange = (nextValue: number, event: Event) => {
@@ -469,6 +468,42 @@ const Range: FC<RangeProps> = ({
     }
 
     valueChangeFlush = scheduleValueFlush(flushValueChange)
+  }
+
+  const syncPresentedDom = (target: HTMLInputElement, nextValue: number) => {
+    const currentBounds = bounds.get()
+    const currentDisplayValue = formatRangeValue(nextValue, displayFormatter.get(), {
+      min: currentBounds.min,
+      max: currentBounds.max,
+      percent: resolvePercent(nextValue, currentBounds.min, currentBounds.max),
+    })
+
+    target.value = String(nextValue)
+    target.setAttribute('aria-valuenow', String(nextValue))
+    if (typeof currentDisplayValue === 'string' || typeof currentDisplayValue === 'number') {
+      const displayText = String(currentDisplayValue)
+      target.setAttribute('aria-valuetext', displayText)
+      const root = target.closest('[data-rue-range-root="true"]')
+      const output = root?.getElementsByTagName('output')[0]
+      if (output?.dataset.rueRangeOutput === 'true') output.textContent = displayText
+    } else {
+      target.removeAttribute('aria-valuetext')
+    }
+
+    const root = target.closest('[data-rue-range-root="true"]')
+    if (root) {
+      Array.from(root.getElementsByTagName('span')).forEach(markElement => {
+        const rawMarkValue = markElement.dataset.rueRangeMark
+        if (rawMarkValue === undefined) return
+        const markValue = Number(rawMarkValue)
+        const active = Number.isFinite(markValue) && nextValue >= markValue
+        markElement.className = `absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1 text-[11px] ${active ? 'font-medium text-base-content' : 'text-base-content/55'}`
+        const tick = markElement.firstElementChild
+        if (tick) {
+          tick.className = `h-2 w-px ${active ? 'bg-base-content/80' : 'bg-base-content/25'}`
+        }
+      })
+    }
   }
 
   onScopeDispose(() => {
@@ -489,6 +524,25 @@ const Range: FC<RangeProps> = ({
       presentedValue.get(),
     )
     startInteraction(nextValue)
+    if (target) {
+      syncPresentedDom(target, nextValue)
+      queueMicrotask(() => {
+        if (interacting.value && interactionValue.value === nextValue) {
+          syncPresentedDom(target, nextValue)
+        }
+      })
+      setTimeout(() => {
+        if (interacting.value && interactionValue.value === nextValue) {
+          const testId = target.getAttribute('data-testid')
+          const liveTarget = testId
+            ? Array.from(target.ownerDocument.getElementsByTagName('input')).find(
+                input => input.getAttribute('data-testid') === testId,
+              )
+            : target
+          if (liveTarget) syncPresentedDom(liveTarget, nextValue)
+        }
+      }, 0)
+    }
     onInput?.(event)
     if (!controlled.get() || onValueChange) {
       scheduleValueChange(nextValue, event)
@@ -547,6 +601,9 @@ const Range: FC<RangeProps> = ({
 
   return (
     <div
+      ref={(element: HTMLDivElement | null) => {
+        rootRef.current = element ?? undefined
+      }}
       className={appendClassName('w-full space-y-3', rootClassName)}
       style={rootStyle}
       data-rue-range-root="true"

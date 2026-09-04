@@ -233,7 +233,7 @@ fn use_memo_expr(el: JSXElement, deps: Expr) -> Expr {
 
     Expr::Call(CallExpr {
         span: DUMMY_SP,
-        callee: Callee::Expr(Box::new(Expr::Ident(emit::ident("_$vaporWithHookId")))),
+        callee: Callee::Expr(Box::new(Expr::Ident(emit::ident("_$compiledWithHookId")))),
         args: vec![
             ExprOrSpread { spread: None, expr: Box::new(hook_id) },
             ExprOrSpread { spread: None, expr: Box::new(runner) },

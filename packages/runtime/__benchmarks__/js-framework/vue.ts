@@ -1,4 +1,4 @@
-import { createApp, h, nextTick, ref, shallowRef, version } from 'vue'
+import { createApp, createVNode as vueCreateElement, nextTick, ref, shallowRef, version } from 'vue'
 
 type Row = {
   id: number
@@ -83,15 +83,15 @@ const remove = (id: number) => {
 }
 
 const button = (id: string, label: string, onClick: () => void) =>
-  h('button', { id, onClick }, label)
+  vueCreateElement('button', { id, onClick }, label)
 
 createApp({
   name: 'VueJsFrameworkBenchmark',
   setup() {
     return () =>
-      h('div', { class: 'container' }, [
-        h('h1', 'Vue js-framework benchmark'),
-        h('div', [
+      vueCreateElement('div', { class: 'container' }, [
+        vueCreateElement('h1', null, 'Vue js-framework benchmark'),
+        vueCreateElement('div', null, [
           button('run', 'Create 1,000 rows', () => run()),
           button('runlots', 'Create 10,000 rows', () => run(10_000)),
           button('add', 'Append 1,000 rows', add),
@@ -99,25 +99,38 @@ createApp({
           button('clear', 'Clear', clear),
           button('swaprows', 'Swap Rows', swap),
         ]),
-        h('table', { class: 'table table-hover table-striped test-data' }, [
-          h(
+        vueCreateElement('table', { class: 'table table-hover table-striped test-data' }, [
+          vueCreateElement(
             'tbody',
+            null,
             rows.value.map(row =>
-              h('tr', { key: row.id, class: row.id === selected.value ? 'danger' : '' }, [
-                h('td', { class: 'col-md-1' }, String(row.id)),
-                h('td', { class: 'col-md-4' }, [
-                  h('a', { 'data-action': 'select', onClick: () => select(row.id) }, row.label),
-                ]),
-                h('td', { class: 'col-md-1' }, [
-                  h('a', { 'data-action': 'remove', onClick: () => remove(row.id) }, [
-                    h('span', {
-                      class: 'glyphicon glyphicon-remove',
-                      'aria-hidden': 'true',
-                    }),
+              vueCreateElement(
+                'tr',
+                { key: row.id, class: row.id === selected.value ? 'danger' : '' },
+                [
+                  vueCreateElement('td', { class: 'col-md-1' }, String(row.id)),
+                  vueCreateElement('td', { class: 'col-md-4' }, [
+                    vueCreateElement(
+                      'a',
+                      { 'data-action': 'select', onClick: () => select(row.id) },
+                      row.label,
+                    ),
                   ]),
-                ]),
-                h('td', { class: 'col-md-6' }),
-              ]),
+                  vueCreateElement('td', { class: 'col-md-1' }, [
+                    vueCreateElement(
+                      'a',
+                      { 'data-action': 'remove', onClick: () => remove(row.id) },
+                      [
+                        vueCreateElement('span', {
+                          class: 'glyphicon glyphicon-remove',
+                          'aria-hidden': 'true',
+                        }),
+                      ],
+                    ),
+                  ]),
+                  vueCreateElement('td', { class: 'col-md-6' }),
+                ],
+              ),
             ),
           ),
         ]),
@@ -177,6 +190,7 @@ window.__RUE_BENCHMARK__ = {
   prepare,
   perform,
   async measure(operation) {
+    const iterations = ['replace1k', 'update10th', 'swap1k'].includes(operation) ? 10 : 1
     const root = document.querySelector('#app')!
     const observer = new MutationObserver(() => {})
     observer.observe(root, {
@@ -186,9 +200,9 @@ window.__RUE_BENCHMARK__ = {
       subtree: true,
     })
     const startedAt = performance.now()
-    await perform(operation)
-    const durationMs = performance.now() - startedAt
-    const mutations = observer.takeRecords().length
+    for (let iteration = 0; iteration < iterations; iteration += 1) await perform(operation)
+    const durationMs = (performance.now() - startedAt) / iterations
+    const mutations = observer.takeRecords().length / iterations
     observer.disconnect()
     return { durationMs, mutations, rowCount: document.querySelectorAll('tbody > tr').length }
   },

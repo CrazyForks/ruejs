@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { h, render, type FC, useEmit } from '../src'
+import { render, type FC, useEmit } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 
 describe('DOM event binding and trigger', () => {
   it('attaches and triggers onClick', async () => {
@@ -8,7 +9,7 @@ describe('DOM event binding and trigger', () => {
     const spy = vi.fn()
 
     // 渲染按钮并绑定 onClick
-    render(h('button', { onClick: spy }, 'btn'), c)
+    render(createTestRenderable('button', { onClick: spy }, 'btn'), c)
 
     // 等待微任务：await Promise.resolve().then(() => {})
     // 等价于“下一轮微任务再继续”，确保异步渲染与事件绑定已经完成。
@@ -32,14 +33,14 @@ describe('DOM event binding and trigger', () => {
     const spy2 = vi.fn()
 
     // 初次绑定 spy1
-    render(h('button', { onClick: spy1 }, 'btn'), c)
+    render(createTestRenderable('button', { onClick: spy1 }, 'btn'), c)
     await Promise.resolve().then(() => {})
     const btn1 = c.querySelector('button')!
     btn1.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(spy1).toHaveBeenCalledTimes(1)
 
     // 替换为 spy2：点击只触发新处理器
-    render(h('button', { onClick: spy2 }, 'btn'), c)
+    render(createTestRenderable('button', { onClick: spy2 }, 'btn'), c)
     await Promise.resolve().then(() => {})
     const btn2 = c.querySelector('button')!
     btn2.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -47,7 +48,7 @@ describe('DOM event binding and trigger', () => {
     expect(spy1).toHaveBeenCalledTimes(1)
 
     // 移除处理器：点击不触发任何回调
-    render(h('button', null, 'btn'), c)
+    render(createTestRenderable('button', null, 'btn'), c)
     await Promise.resolve().then(() => {})
     const btn3 = c.querySelector('button')!
     btn3.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -71,7 +72,7 @@ describe('useEmit in component with camelCase and lowercase handler', () => {
   it('calls onChange when provided', async () => {
     const c = document.createElement('div')
     const handler = vi.fn()
-    render(h(Emitter, { onChange: handler } as any), c)
+    render(createTestRenderable(Emitter, { onChange: handler } as any), c)
     await Promise.resolve().then(() => {})
     const btn = c.querySelector('#em')!
     btn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -82,12 +83,31 @@ describe('useEmit in component with camelCase and lowercase handler', () => {
   it('calls onchange (lowercase) when provided', async () => {
     const c = document.createElement('div')
     const handler = vi.fn()
-    render(h(Emitter, { onchange: handler } as any), c)
+    render(createTestRenderable(Emitter, { onchange: handler } as any), c)
     await Promise.resolve().then(() => {})
     const btn = c.querySelector('#em')!
     btn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(handler).toHaveBeenCalledTimes(1)
     expect(handler).toHaveBeenCalledWith(42)
+  })
+
+  it('prefers onChange over onchange when both are provided', async () => {
+    const c = document.createElement('div')
+    const camelCaseHandler = vi.fn()
+    const lowercaseHandler = vi.fn()
+    render(
+      createTestRenderable(Emitter, {
+        onChange: camelCaseHandler,
+        onchange: lowercaseHandler,
+      } as any),
+      c,
+    )
+    await Promise.resolve().then(() => {})
+    const btn = c.querySelector('#em')!
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(camelCaseHandler).toHaveBeenCalledTimes(1)
+    expect(camelCaseHandler).toHaveBeenCalledWith(42)
+    expect(lowercaseHandler).not.toHaveBeenCalled()
   })
 })
 
@@ -99,14 +119,14 @@ describe('patchProps: remove and re-add event listeners correctly', () => {
     const b = vi.fn()
 
     // 初次绑定 a
-    render(h('button', { onClick: a }, 'x'), c)
+    render(createTestRenderable('button', { onClick: a }, 'x'), c)
     await Promise.resolve().then(() => {})
     const btnA = c.querySelector('button')!
     btnA.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(a).toHaveBeenCalledTimes(1)
 
     // 替换为 b：后续点击只调用 b
-    render(h('button', { onClick: b }, 'x'), c)
+    render(createTestRenderable('button', { onClick: b }, 'x'), c)
     await Promise.resolve().then(() => {})
     const btnB = c.querySelector('button')!
     btnB.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -114,7 +134,7 @@ describe('patchProps: remove and re-add event listeners correctly', () => {
     expect(a).toHaveBeenCalledTimes(1)
 
     // 不变更：保持 b，点击累计调用次数
-    render(h('button', { onClick: b }, 'x'), c)
+    render(createTestRenderable('button', { onClick: b }, 'x'), c)
     await Promise.resolve().then(() => {})
     const btnC = c.querySelector('button')!
     btnC.dispatchEvent(new MouseEvent('click', { bubbles: true }))

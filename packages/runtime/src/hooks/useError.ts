@@ -198,7 +198,7 @@ export function useError(opts?: {
         const details = normalizeErrorDetails(error)
         const newline = String.fromCharCode(10)
         const consoleMessage = [
-          '%cRue Error - The Wasm Framework For Native DOM%c',
+          '%cRue Error - The Compiler Framework For Native DOM%c',
           details.message,
           ...(details.stack ? [details.stack] : []),
         ].join(newline)

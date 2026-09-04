@@ -7,6 +7,23 @@
 */
 import { CUSTOM_ELEMENT_SYNC_PROPS_KEY } from './custom-elements.shared'
 import { resolveActiveRuntime, runWithRuntime } from './runtime-context'
+import {
+  attachDOMHostResult,
+  configureDOMHostOperations,
+  getDOMHostAdapter,
+  getRememberedDOMHostAdapter,
+  isFreshBrowserDOMHost,
+  rememberDOMHostContext,
+  resetDOMHostOperations,
+  withDOMHostOperations,
+  withFreshBrowserDOMHostOperations,
+} from './compiler-runtime/dom-host-operations'
+
+export {
+  attachDOMHostResult,
+  withDOMHostOperations,
+  withFreshBrowserDOMHostOperations,
+} from './compiler-runtime/dom-host-operations'
 
 /** Rue DOMAdapter 使用的最小节点形态。 */
 export interface DomNodeLike {
@@ -310,6 +327,7 @@ const resolveCreateElementParent = (parent?: DomElementLike | null) =>
   parent === undefined ? getActiveRuntimeContainer() : (parent ?? null)
 
 const RUE_PENDING_SELECT_VALUE = Symbol('rue.pendingSelectValue')
+const RUE_CONTROLLED_MULTI_SELECT_TOGGLE = Symbol('rue.controlledMultiSelectToggle')
 const RUE_CONTROLLED_TEXT_VALUE = Symbol('rue.controlledTextValue')
 const RUE_TEXT_CONTROL_COMPOSING_KEY = '__rue_is_composing__'
 const NON_TEXT_INPUT_TYPES = new Set([
@@ -551,6 +569,7 @@ const syncPendingSelectValue = (select: any) => {
   }
 
   if (select.multiple && Array.isArray(pendingValue)) {
+    installControlledMultiSelectToggle(select)
     for (let i = 0; i < select.options.length; i++) {
       const option = select.options[i]
       option.selected = pendingValue.indexOf(option.value) !== -1
@@ -559,6 +578,51 @@ const syncPendingSelectValue = (select: any) => {
   }
 
   select.value = pendingValue
+}
+
+const installControlledMultiSelectToggle = (select: any) => {
+  if (select[RUE_CONTROLLED_MULTI_SELECT_TOGGLE]) {
+    return
+  }
+
+  select[RUE_CONTROLLED_MULTI_SELECT_TOGGLE] = true
+  select.addEventListener('mousedown', (event: MouseEvent) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || select.disabled) {
+      return
+    }
+
+    const option = event.target as HTMLOptionElement | null
+    if (
+      !option ||
+      option.tagName?.toUpperCase() !== 'OPTION' ||
+      option.disabled ||
+      getSelectOwner(option) !== select
+    ) {
+      return
+    }
+
+    const controlledValue = select[RUE_PENDING_SELECT_VALUE]
+    if (!Array.isArray(controlledValue)) {
+      return
+    }
+
+    event.preventDefault()
+    const nextValues = new Set(controlledValue)
+    if (nextValues.has(option.value)) {
+      nextValues.delete(option.value)
+    } else {
+      nextValues.add(option.value)
+    }
+
+    select[RUE_PENDING_SELECT_VALUE] = Array.from(
+      select.options as HTMLOptionsCollection,
+      (item: HTMLOptionElement) => item.value,
+    ).filter((value: string) => nextValues.has(value))
+    syncPendingSelectValue(select)
+    select.focus()
+    select.dispatchEvent(new Event('input', { bubbles: true }))
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
 }
 
 /** 判断目标子树内是否存在正在输入或刚失焦的文本控件。 */
@@ -1041,6 +1105,10 @@ const tryMorphHydratedAdoptedNode = (oldNode: any, newNode: any) => {
   return morphHydratedNode(oldNode, newNode)
 }
 
+/** Adopt a freshly rendered hydration root while preserving the SSR node identity. */
+export const adoptHydratedNode = (serverNode: DomNodeLike, clientNode: DomNodeLike): boolean =>
+  morphHydratedNode(serverNode, clientNode)
+
 const findHydratedReplacementSibling = (parent: any, oldNode: any) => {
   if (!parent || !oldNode?.[RUE_HYDRATED_ADOPTED_NODE]) {
     return null
@@ -1394,6 +1462,7 @@ export class BrowserDOMAdapter implements DOMAdapter {
     if (tag === 'SELECT') {
       anyEl[RUE_PENDING_SELECT_VALUE] = value
       if (anyEl.multiple && Array.isArray(value)) {
+        installControlledMultiSelectToggle(anyEl)
         for (let i = 0; i < anyEl.options.length; i++) {
           const opt = anyEl.options[i]
           opt.selected = (value as string[]).indexOf(opt.value) !== -1
@@ -1531,18 +1600,11 @@ let CURRENT_ADAPTER: DOMAdapter =
 domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] = CURRENT_ADAPTER
 
 const getCurrentDOMAdapter = () => domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] ?? CURRENT_ADAPTER
-type DOMHostOperationContext = {
-  adapter: DOMAdapter
-  freshBrowser: boolean
-}
-let activeDOMHostOperationContext: DOMHostOperationContext | undefined
-const domHostOperationContexts = new WeakMap<object, DOMHostOperationContext>()
 let domAdapterGeneration = 0
 
 const getDOMAdapterForOperation = () =>
   domGlobal[RUE_COMPILED_DOM_OPERATION_ADAPTER_GLOBAL_KEY] ??
-  activeDOMHostOperationContext?.adapter ??
-  getCurrentDOMAdapter()
+  getDOMHostAdapter(getCurrentDOMAdapter())
 
 const isHydrationHostBoundary = (parent: DomNodeLike | null | undefined) => {
   if (!parent) return false
@@ -1562,37 +1624,17 @@ const isHydrationHostBoundary = (parent: DomNodeLike | null | undefined) => {
   return (parent as any).firstChild != null
 }
 
-/** 在一次同步 mount/reconcile 内绑定稳定宿主操作；嵌套边界复用同一解析结果。 */
-export const withDOMHostOperations = <T>(
-  parent: DomNodeLike | null | undefined,
-  run: () => T,
-): T => {
-  if (activeDOMHostOperationContext) return run()
-
-  const inheritedContext =
-    parent != null && typeof parent === 'object'
-      ? domHostOperationContexts.get(parent as object)
-      : undefined
-  const adapter = inheritedContext?.adapter ?? getCurrentDOMAdapter()
-  const generation = domAdapterGeneration
-  const previous = activeDOMHostOperationContext
-  activeDOMHostOperationContext = inheritedContext ?? {
-    adapter,
-    freshBrowser: adapter === DEFAULT_BROWSER_DOM_ADAPTER && !isHydrationHostBoundary(parent),
-  }
-
-  try {
-    return run()
-  } finally {
-    if (generation === domAdapterGeneration) {
-      activeDOMHostOperationContext = previous
-    }
-  }
-}
+configureDOMHostOperations({
+  getCurrentAdapter: getCurrentDOMAdapter,
+  getFreshBrowserAdapter: () => DEFAULT_BROWSER_DOM_ADAPTER,
+  getGeneration: () => domAdapterGeneration,
+  isFreshBrowserParent: (parent, adapter) =>
+    adapter === DEFAULT_BROWSER_DOM_ADAPTER && !isHydrationHostBoundary(parent),
+})
 
 const setCurrentDOMAdapter = (adapter: DOMAdapter) => {
   domAdapterGeneration += 1
-  activeDOMHostOperationContext = undefined
+  resetDOMHostOperations()
   CURRENT_ADAPTER = adapter
   domGlobal[RUE_DOM_ADAPTER_GLOBAL_KEY] = adapter
 }
@@ -1738,7 +1780,7 @@ export const createComment = (data: string) => getDOMAdapterForOperation().creat
  * @param data 文本内容
  */
 export const createTextNode = (data: string) =>
-  activeDOMHostOperationContext?.freshBrowser
+  isFreshBrowserDOMHost()
     ? (document.createTextNode(data) as any)
     : getDOMAdapterForOperation().createTextNode(data)
 /** 创建元素（便捷函数）
@@ -1746,11 +1788,9 @@ export const createTextNode = (data: string) =>
  */
 export const createElement = (tag: string, parent?: DomElementLike | null) => {
   const resolvedParent = resolveCreateElementParent(parent)
-  if (!activeDOMHostOperationContext?.freshBrowser) {
+  if (!isFreshBrowserDOMHost()) {
     const element = getDOMAdapterForOperation().createElement(tag, resolvedParent)
-    if (activeDOMHostOperationContext && element != null && typeof element === 'object') {
-      domHostOperationContexts.set(element as object, activeDOMHostOperationContext)
-    }
+    if (element != null && typeof element === 'object') rememberDOMHostContext(element as object)
     return element
   }
   const element =
@@ -1758,7 +1798,7 @@ export const createElement = (tag: string, parent?: DomElementLike | null) => {
       ? document.createElementNS(SVG_NS, tag)
       : document.createElement(tag)
   freshDomParents.add(element)
-  domHostOperationContexts.set(element, activeDOMHostOperationContext)
+  rememberDOMHostContext(element)
   return element as any
 }
 /** 创建文本包装元素（便捷函数）
@@ -1775,29 +1815,32 @@ export const setStyle = (
 }
 /** 设置节点文本内容（便捷函数） */
 export const settextContent = (el: DomNodeLike, val: any) => {
-  if (activeDOMHostOperationContext?.freshBrowser) {
-    ;(el as any).textContent = val == null || typeof val === 'boolean' ? '' : String(val)
+  const text = val == null || typeof val === 'boolean' ? '' : String(val)
+  if (typeof Node !== 'undefined' && el instanceof Node && el.textContent === text) {
+    DEFAULT_BROWSER_DOM_ADAPTER.settextContent(el, text)
+    return
+  }
+  if (isFreshBrowserDOMHost()) {
+    ;(el as any).textContent = text
     return
   }
   getDOMAdapterForOperation().settextContent(el, val)
 }
 /** 创建文档片段（便捷函数） */
 export const createDocumentFragment = () => {
-  if (!activeDOMHostOperationContext?.freshBrowser) {
+  if (!isFreshBrowserDOMHost()) {
     const fragment = getDOMAdapterForOperation().createDocumentFragment()
-    if (activeDOMHostOperationContext && fragment != null && typeof fragment === 'object') {
-      domHostOperationContexts.set(fragment as object, activeDOMHostOperationContext)
-    }
+    if (fragment != null && typeof fragment === 'object') rememberDOMHostContext(fragment as object)
     return fragment
   }
   const fragment = document.createDocumentFragment()
   freshDomParents.add(fragment)
-  domHostOperationContexts.set(fragment, activeDOMHostOperationContext)
+  rememberDOMHostContext(fragment)
   return fragment as any
 }
 /** 追加子节点（便捷函数） */
 export const appendChild = (parent: DomNodeLike, child: DomNodeLike) => {
-  if (activeDOMHostOperationContext?.freshBrowser) {
+  if (isFreshBrowserDOMHost()) {
     ;(parent as any).appendChild(child)
     syncSelectValueForMutationParent(parent)
     return
@@ -1810,7 +1853,7 @@ export const removeChild = (parent: DomNodeLike, child: DomNodeLike) => {
 }
 /** 插入子节点（便捷函数） */
 export const insertBefore = (parent: DomNodeLike, child: DomNodeLike, ref: DomNodeLike | null) => {
-  if (activeDOMHostOperationContext?.freshBrowser) {
+  if (isFreshBrowserDOMHost()) {
     ;(parent as any).insertBefore(child, ref)
     syncSelectValueForMutationParent(parent)
     return
@@ -1826,7 +1869,7 @@ export const querySelector = (selector: string) =>
   getDOMAdapterForOperation().querySelector(selector)
 /** 设置属性（便捷函数） */
 export const setAttribute = (el: DomElementLike, name: string, value: any) => {
-  if (activeDOMHostOperationContext?.freshBrowser) {
+  if (isFreshBrowserDOMHost()) {
     ;(el as any).setAttribute(name, String(value))
     return
   }
@@ -1834,7 +1877,7 @@ export const setAttribute = (el: DomElementLike, name: string, value: any) => {
 }
 /** 移除属性（便捷函数） */
 export const removeAttribute = (el: DomElementLike, name: string) => {
-  if (activeDOMHostOperationContext?.freshBrowser) {
+  if (isFreshBrowserDOMHost()) {
     ;(el as any).removeAttribute(name)
     return
   }
@@ -1900,7 +1943,7 @@ export const removeEventListener = (
 ) => getDOMAdapterForOperation().removeEventListener(el, eventName, listener)
 /** 设置类名（便捷函数） */
 export const setClassName = (el: DomElementLike, value: any) => {
-  if (activeDOMHostOperationContext?.freshBrowser) {
+  if (isFreshBrowserDOMHost()) {
     const className = value == null ? '' : String(value)
     if (el instanceof SVGElement) (el as any).setAttribute('class', className)
     else (el as any as HTMLElement).className = className
@@ -2187,10 +2230,12 @@ const applySpreadAttributes = (
 export const spreadAttributes = (
   el: DomElementLike,
   props: Record<string, any> | null | undefined,
+  excludedKeys: readonly string[] = [],
 ) => {
   const next = props && typeof props === 'object' ? props : {}
   const state = getSpreadAttributesState(el)
-  const keys = Object.keys(next)
+  const excluded = excludedKeys.length > 0 ? new Set(excludedKeys) : null
+  const keys = excluded ? Object.keys(next).filter(key => !excluded.has(key)) : Object.keys(next)
   const record = resolveSpreadAttributesRecord(state, next, keys)
   record.keys = keys
   record.values = toSpreadRecordValues(next, keys)
@@ -2225,7 +2270,15 @@ export const applyDomProps = (
 export const contains = (parent: DomNodeLike, child: DomNodeLike) =>
   getDOMAdapterForOperation().contains(parent, child)
 /** 获取父节点（便捷函数） */
-export const getParentNode = (node: DomNodeLike) => getDOMAdapterForOperation().getParentNode(node)
+export const getParentNode = (node: DomNodeLike) => {
+  const inherited =
+    node != null && typeof node === 'object'
+      ? getRememberedDOMHostAdapter<DOMAdapter>(node as object)
+      : undefined
+  if (inherited != null) return inherited.getParentNode(node)
+  if (typeof Node !== 'undefined' && node instanceof Node) return node.parentNode
+  return getDOMAdapterForOperation().getParentNode(node)
+}
 /** 样式增量补丁（便捷函数） */
 export const patchStyle = (
   el: DomElementLike,

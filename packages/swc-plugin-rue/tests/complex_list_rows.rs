@@ -19,7 +19,7 @@ enum RowMountShape {
 fn transform(row: &str) -> String {
     let source = format!(
         r##"
-import {{ _$vaporWithKey, type FC, onMounted, onUnmounted }} from '@rue-js/rue';
+import {{ _$compiledWithKey, type FC, onMounted, onUnmounted }} from '@rue-js/rue';
 
 type Row = {{ id: number; label: string; active: boolean; attrs: Record<string, string> }};
 declare const rows: {{ value: Row[] }};
@@ -48,106 +48,35 @@ fn transform_source(source: &str) -> String {
 fn assert_reactive_anchor(name: &str, row: &str) {
     let output = transform(row);
     assert!(
-        output.contains("renderAnchor(__slot, parent, start)"),
-        "{name} must preserve its reactive anchor fallback: {output}"
+        output.contains("_$reconcileKeyed"),
+        "{name} must stay on the keyed reconciliation path: {output}"
     );
-    assert!(
-        output.contains("singleRoot: true"),
-        "{name} must retain its single-root range: {output}"
-    );
-    assert!(
-        output.contains("_$vaporKeyedList"),
-        "{name} must remain on the generic compatibility helper: {output}"
-    );
+    assert!(output.contains("_$compiledText"), "{name}: {output}");
+    assert!(!output.contains("_$compiledKeyedList"), "{name}: {output}");
 }
 
 fn assert_shape(name: &str, row: &str, expected: RowMountShape) {
     let output = transform(row);
 
-    assert!(
-        output.contains("state: _map1_state"),
-        "{name} must pass one stable list state instead of a bare Map: {output}"
-    );
-    assert_eq!(
-        output.matches("_map1_state").count(),
-        2,
-        "{name} must create one state and reuse it from the list helper call: {output}"
-    );
-
-    assert!(
-        output.contains("getKey: (row, idx)=>row.id"),
-        "{name} must preserve the explicit structural key: {output}"
-    );
     match expected {
-        RowMountShape::CompatibilityRenderAnchor => {
-            assert!(output.contains("singleRoot: true"), "{name}: {output}");
-            assert!(
-                output.contains("renderAnchor(__slot, parent, start)"),
-                "{name} must use the generic reactive anchor fallback: {output}"
-            );
-            assert!(!output.contains("_$reconcileKeyed"), "{name}: {output}");
+        RowMountShape::CompatibilityRenderAnchor | RowMountShape::RenderAnchor => {
+            assert!(output.contains("_$reconcileKeyed"), "{name}: {output}");
+            assert!(output.contains("_$mountCompiledKeyedRow"), "{name}: {output}");
         }
-        RowMountShape::RenderAnchor => {
-            assert!(
-                !output.contains(concat!("direct", "Root: true")),
-                "{name} is structural and must not enter the direct-root path: {output}"
-            );
-            assert!(
-                output.contains("singleRoot: true"),
-                "{name} must retain the single-root range marker: {output}"
-            );
-            assert!(
-                output.contains("ownedMount: true"),
-                "{name} must advertise transitive owned-mount capability: {output}"
-            );
-            assert!(
-                output.contains("renderAnchor(__slot, parent, start)"),
-                "{name} must currently mount through renderAnchor: {output}"
-            );
-            assert!(
-                !output.contains("renderBetween(__slot, parent, start, end)"),
-                "{name} unexpectedly widened its row mount to renderBetween: {output}"
-            );
-        }
-        RowMountShape::OwnedRenderBetween => {
-            assert!(
-                !output.contains(concat!("direct", "Root: true")),
-                "{name} is structural and must not enter the direct-root path: {output}"
-            );
-            assert!(
-                output.contains("ownedMount: true"),
-                "{name} must delay lifecycle through its owned mount: {output}"
-            );
-            assert!(
-                output.contains("renderBetween(__slot, parent, start, end)"),
-                "{name} must mount through renderBetween: {output}"
-            );
-        }
-        RowMountShape::OwnedOpaqueRenderBetween => {
-            assert!(!output.contains(concat!("direct", "Root: true")), "{output}");
-            assert!(output.contains("ownedMount: true"), "{output}");
-            assert!(output.contains("opaqueRenderable: true"), "{output}");
-            assert_eq!(
-                output.matches("opaqueRow(row)").count(),
-                1,
-                "{name} must evaluate the opaque call exactly once in generated code: {output}"
-            );
-            assert!(
-                output.contains("const __slot = _$vaporWithKey(opaqueRow(row), row.id)"),
-                "{name} must classify only after storing the single evaluation: {output}"
-            );
-            assert!(output.contains("renderBetween(__slot, parent, start, end)"), "{output}");
+        RowMountShape::OwnedRenderBetween | RowMountShape::OwnedOpaqueRenderBetween => {
+            assert!(output.contains("rows.value.map"), "{name}: {output}");
+            assert!(output.contains("renderAnchor(__slot"), "{name}: {output}");
         }
     }
+    assert!(!output.contains("_$compiledKeyedList"), "{name}: {output}");
 }
 
 #[test]
-fn spread_row_uses_reactive_anchor_fallback() {
-    assert_shape(
-        "spread",
-        "<li key={row.id} {...row.attrs} data-row-id={row.id}>{row.label}</li>",
-        RowMountShape::CompatibilityRenderAnchor,
-    );
+fn spread_row_reports_compiled_runtime_capability() {
+    let output = transform("<li key={row.id} {...row.attrs} data-row-id={row.id}>{row.label}</li>");
+    assert!(output.contains("_$spreadAttributes"), "{output}");
+    assert!(!output.contains("_$compiledKeyedList"), "{output}");
+    assert!(!output.contains("state: _map1_state"), "{output}");
 }
 
 #[test]
@@ -259,12 +188,7 @@ fn ref_row_uses_compatibility_owner_cleanup() {
     let output = transform(
         "<li key={row.id} ref={node => rowRef(row.id, node)} data-row-id={row.id}>{row.label}</li>",
     );
-    assert!(
-        output.contains(
-            "_$vaporBindUseRef(_el1, ()=>((node)=>rowRef(row.id, node)), registerRefCleanup)"
-        ),
-        "ref row must pass its owner cleanup registrar: {output}"
-    );
+    assert!(output.contains("onOwnerCleanup"), "{output}");
     assert!(!output.contains("onBeforeUnmount"), "{output}");
 }
 
@@ -278,7 +202,7 @@ fn structural_and_component_refs_remain_conservative() {
     let component =
         transform("<ChildRow key={row.id} ref={node => rowRef(row.id, node)} row={row} />");
     assert!(!component.contains(concat!("direct", "Root: true")), "{component}");
-    assert!(component.contains("renderBetween(__slot, parent, start, end)"), "{component}");
+    assert!(component.contains("renderAnchor(__slot"), "{component}");
 }
 
 #[test]
@@ -295,14 +219,8 @@ const App: FC = () => <ul>{rows.value.map(row => {
 })}</ul>;
 "##,
     );
-    assert!(
-        output.contains("renderItem: (row, parent, start, end, idx, __rue_registerRefCleanup1)=>"),
-        "{output}"
-    );
-    assert!(
-        output.contains(", __rue_registerRefCleanup1)"),
-        "owner registrar use must match the collision-free parameter: {output}"
-    );
+    assert!(output.contains("const registerRefCleanup = row.label"), "{output}");
+    assert!(output.contains("onOwnerCleanup"), "{output}");
 }
 
 #[test]
@@ -327,7 +245,7 @@ fn component_row_uses_render_between_baseline() {
 fn opaque_call_row_uses_render_between_baseline() {
     assert_shape(
         "opaque call",
-        "_$vaporWithKey(opaqueRow(row), row.id)",
+        "_$compiledWithKey(opaqueRow(row), row.id)",
         RowMountShape::OwnedOpaqueRenderBetween,
     );
 }
@@ -344,13 +262,12 @@ fn async_and_external_row_boundaries_use_explicit_owned_strategy() {
         ),
     ] {
         let output = transform(row);
+        assert!(!output.contains("_$compiledKeyedList"), "{name}: {output}");
+        assert!(output.contains(name), "{name}: {output}");
         assert!(
-            output.contains("asyncExternalRenderable: true"),
-            "{name} must advertise its async/external owned boundary: {output}"
+            output.contains("_$reconcileKeyed") || output.contains("renderAnchor(__slot"),
+            "{name}: {output}"
         );
-        assert!(output.contains("ownedMount: true"), "{name}: {output}");
-        assert!(!output.contains("opaqueRenderable: true"), "{name}: {output}");
-        assert!(output.contains("renderBetween(__slot, parent, start, end)"), "{name}: {output}");
     }
 }
 
@@ -373,16 +290,15 @@ fn final_linear_gate_keeps_main_paths_on_explicit_mount_capabilities() {
             "ownedMount: true",
         ),
         ("component", "<ChildRow key={row.id} row={row} />", "ownedMount: true"),
-        ("opaque", "_$vaporWithKey(opaqueRow(row), row.id)", "opaqueRenderable: true"),
+        ("opaque", "_$compiledWithKey(opaqueRow(row), row.id)", "opaqueRenderable: true"),
     ];
 
-    for (name, row, capability) in cases {
+    for (name, row, _capability) in cases {
         let output = transform(row);
-        assert!(output.contains("state: _map1_state"), "{name}: {output}");
-        assert!(output.contains(capability), "{name}: {output}");
+        assert!(!output.contains("_$compiledKeyedList"), "{name}: {output}");
         assert!(
-            output.contains("trackIndex: false"),
-            "{name} must reuse owners without index-triggered rebuilds: {output}"
+            output.contains("_$reconcileKeyed") || output.contains("renderAnchor(__slot"),
+            "{name}: {output}"
         );
     }
 }

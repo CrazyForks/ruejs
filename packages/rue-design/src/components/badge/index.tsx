@@ -859,7 +859,7 @@ const BadgeRibbon: FC<BadgeRibbonProps> = ({
   )
 }
 
-const Badge: BadgeCompound = Object.assign(BadgeBase, {
+const Badge: BadgeCompound = /*#__PURE__*/ Object.assign(BadgeBase, {
   Ribbon: BadgeRibbon,
 })
 

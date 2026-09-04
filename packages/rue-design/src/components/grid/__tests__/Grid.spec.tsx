@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+
 import Grid from '../index'
 
 setReactiveScheduling('sync')
@@ -25,7 +26,10 @@ describe('Grid', () => {
   it('renders row and col with base classes', async () => {
     const container = document.createElement('div')
     render(
-      h(Grid, null, h(Grid.Col, { span: 12 }, 'Alpha'), h(Grid.Col, { span: 12 }, 'Beta')),
+      <Grid>
+        <Grid.Col span={12}>{'Alpha'}</Grid.Col>
+        <Grid.Col span={12}>{'Beta'}</Grid.Col>
+      </Grid>,
       container,
     )
     await waitGridRender()
@@ -43,15 +47,9 @@ describe('Grid', () => {
   it('applies gutter, justify, and align styles on row', async () => {
     const container = document.createElement('div')
     render(
-      h(
-        Grid,
-        {
-          gutter: [16, 24],
-          justify: 'space-between',
-          align: 'middle',
-        },
-        h(Grid.Col, { span: 12 }, 'Metrics'),
-      ),
+      <Grid gutter={[16, 24]} justify={'space-between'} align={'middle'}>
+        <Grid.Col span={12}>{'Metrics'}</Grid.Col>
+      </Grid>,
       container,
     )
     await waitGridRender()
@@ -73,12 +71,12 @@ describe('Grid', () => {
   it('applies span, offset, order, and flex values on col', async () => {
     const container = document.createElement('div')
     render(
-      h(
-        Grid,
-        null,
-        h(Grid.Col, { span: 12, offset: 6, order: 2 }, 'Content'),
-        h(Grid.Col, { flex: '280px' }, 'Aside'),
-      ),
+      <Grid>
+        <Grid.Col span={12} offset={6} order={2}>
+          {'Content'}
+        </Grid.Col>
+        <Grid.Col flex={'280px'}>{'Aside'}</Grid.Col>
+      </Grid>,
       container,
     )
     await waitGridRender()
@@ -98,7 +96,12 @@ describe('Grid', () => {
     setViewportWidth(480)
 
     const container = document.createElement('div')
-    render(h(Grid.Col, { span: 8, xs: 24, md: 12 }, 'Responsive'), container)
+    render(
+      <Grid.Col span={8} xs={24} md={12}>
+        {'Responsive'}
+      </Grid.Col>,
+      container,
+    )
     await waitGridRender()
 
     const col = container.querySelector('[data-rue-grid-col]') as HTMLElement
@@ -116,16 +119,14 @@ describe('Grid', () => {
 
     const container = document.createElement('div')
     render(
-      h(
-        Grid,
-        {
-          gutter: [
-            { xs: 8, md: 24 },
-            { xs: 12, md: 32 },
-          ],
-        },
-        h(Grid.Col, { span: 12 }, 'A'),
-      ),
+      <Grid
+        gutter={[
+          { xs: 8, md: 24 },
+          { xs: 12, md: 32 },
+        ]}
+      >
+        <Grid.Col span={12}>{'A'}</Grid.Col>
+      </Grid>,
       container,
     )
     await waitGridRender()

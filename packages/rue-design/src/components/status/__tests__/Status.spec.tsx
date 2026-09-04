@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 import Status from '../index'
 
@@ -25,7 +26,7 @@ afterEach(() => {
 
 describe('Status', () => {
   it('renders default as span with base class', async () => {
-    const c = await renderAndWait(h(Status, null))
+    const c = await renderAndWait(<Status />)
     const el = c.querySelector('.status') as HTMLElement
     expect(el).toBeTruthy()
     expect(el.tagName).toBe('SPAN')
@@ -34,7 +35,7 @@ describe('Status', () => {
 
   it('supports as=div, size and color variants', async () => {
     const c = await renderAndWait(
-      h(Status, { as: 'div', ariaLabel: 'status', size: 'lg', color: 'primary' }),
+      <Status as={'div'} ariaLabel={'status'} size={'lg'} color={'primary'} />,
     )
     const el = c.querySelector('.status') as HTMLElement
     expect(el).toBeTruthy()
@@ -45,13 +46,13 @@ describe('Status', () => {
   })
 
   it('appends custom className', async () => {
-    const c = await renderAndWait(h(Status, { className: 'animate-bounce' }))
+    const c = await renderAndWait(<Status className={'animate-bounce'} />)
     const el = c.querySelector('.status') as HTMLElement
     expect(el.classList.contains('animate-bounce')).toBe(true)
   })
 
   it('renders standalone count text in right-top indicator mode', async () => {
-    const c = await renderAndWait(h(Status, { count: 7, text: '待审核', color: '#f97316' }))
+    const c = await renderAndWait(<Status count={7} text={'待审核'} color={'#f97316'} />)
 
     const wrapper = c.querySelector('.indicator') as HTMLElement
     const indicator = c.querySelector('.indicator-item') as HTMLElement
@@ -70,7 +71,7 @@ describe('Status', () => {
   })
 
   it('renders standalone dot text in right-top indicator mode', async () => {
-    const c = await renderAndWait(h(Status, { dot: true, text: '处理中', color: 'warning' }))
+    const c = await renderAndWait(<Status dot={true} text={'处理中'} color={'warning'} />)
 
     const wrapper = c.querySelector('.indicator') as HTMLElement
     const dot = c.querySelector('.indicator-item.status') as HTMLElement

@@ -3,7 +3,6 @@
 import {
   batch,
   createContext,
-  createElement,
   mount,
   onError,
   render,
@@ -15,6 +14,7 @@ import {
   useRef,
   useState,
 } from '@rue-js/rue'
+import { _$createComponent } from '@rue-js/rue/internal'
 import '@rue-js/rsc/browser'
 import '../client/instrumentation-client.js'
 import { notifyAppRouterTransitionStart } from '../client/instrumentation-client-state.js'
@@ -902,16 +902,6 @@ function handleDevRecoveryBoundaryCatch(resetKey: number): void {
   browserNavigationController.drainPrePaintEffects(resetKey)
 }
 
-const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
-  'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
-
-function isUnsupportedObjectInputError(error: unknown): boolean {
-  return (
-    error instanceof TypeError &&
-    String(error.message).includes(DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR)
-  )
-}
-
 function hasAppRenderableEntries(elements: Readonly<Record<string, unknown>>): boolean {
   return Object.keys(elements).some(key => {
     const parsed = AppElementsWire.parseElementKey(key)
@@ -1149,24 +1139,13 @@ function BrowserRoot({
   // URL, hiding which route is broken and mis-targeting the text HMR
   // payload (which fetches RSC for window.location.pathname).
   //
-  // This file is .ts, not .tsx — children are passed positionally to satisfy
-  // both the createElement overload and eslint's no-children-prop rule.
   let committedTree = innerTree
   if (import.meta.env.DEV) {
-    try {
-      committedTree = createElement(
-        DevRecoveryBoundary,
-        {
-          resetKey: treeState.renderId,
-          onCatch: handleDevRecoveryBoundaryCatch,
-        },
-        ...(Array.isArray(innerTree) ? innerTree : [innerTree]),
-      )
-    } catch (error) {
-      if (!isUnsupportedObjectInputError(error)) {
-        throw error
-      }
-    }
+    committedTree = _$createComponent(DevRecoveryBoundary, {
+      resetKey: treeState.renderId,
+      onCatch: handleDevRecoveryBoundaryCatch,
+      children: innerTree,
+    })
   }
 
   return committedTree
@@ -1564,7 +1543,7 @@ async function bootstrapHydration(rscStream: ReadableStream<Uint8Array>): Promis
         onUncaughtError,
       })
   window.__TEXT_RSC_ROOT__ = mountRueRootInTransition({
-    children: createElement(BrowserRoot, null),
+    children: _$createComponent(BrowserRoot, null),
     container: document,
     options: rueRootOptions,
   })

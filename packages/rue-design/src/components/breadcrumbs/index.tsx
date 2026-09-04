@@ -230,7 +230,12 @@ const DefaultDropdownIcon: FC = () => {
 }
 
 /** 渲染 Menu Trigger 的内部工具函数。 */
-const renderMenuTrigger = (menu: BreadcrumbsMenu | undefined, dropdownIcon: any, title: any) => {
+const MenuTrigger: FC<{
+  menu?: BreadcrumbsMenu
+  dropdownIcon?: any
+  title: any
+  children?: any
+}> = ({ menu, dropdownIcon, title, children }) => {
   if (!menu?.items || menu.items.length === 0) {
     return null
   }
@@ -247,7 +252,11 @@ const renderMenuTrigger = (menu: BreadcrumbsMenu | undefined, dropdownIcon: any,
         className="inline-flex items-center justify-center rounded-full text-base-content/60 outline-none transition-colors hover:text-base-content"
         aria-label={triggerLabel}
       >
-        {dropdownIcon ?? <DefaultDropdownIcon />}
+        {children != null ? (
+          <span style={{ display: 'contents' }}>{children}</span>
+        ) : (
+          (dropdownIcon ?? <DefaultDropdownIcon />)
+        )}
       </Dropdown.Trigger>
       <Dropdown.Content
         as="ul"
@@ -398,7 +407,9 @@ const renderItemContent = ({
     return (
       <>
         {itemRender(item, params, routes, paths, href)}
-        {renderMenuTrigger(item.menu, dropdownIcon, title)}
+        <MenuTrigger menu={item.menu} title={title}>
+          {dropdownIcon}
+        </MenuTrigger>
       </>
     )
   }
@@ -439,7 +450,9 @@ const renderItemContent = ({
         >
           {content}
         </a>
-        {renderMenuTrigger(item.menu, dropdownIcon, title)}
+        <MenuTrigger menu={item.menu} title={title}>
+          {dropdownIcon}
+        </MenuTrigger>
       </>
     )
   }
@@ -450,7 +463,9 @@ const renderItemContent = ({
         <button className={contentClassName} type="button" onClick={handleClick}>
           {content}
         </button>
-        {renderMenuTrigger(item.menu, dropdownIcon, title)}
+        <MenuTrigger menu={item.menu} title={title}>
+          {dropdownIcon}
+        </MenuTrigger>
       </>
     )
   }
@@ -460,7 +475,9 @@ const renderItemContent = ({
       <span className={contentClassName} aria-current={isCurrent ? 'page' : undefined}>
         {content}
       </span>
-      {renderMenuTrigger(item.menu, dropdownIcon, title)}
+      <MenuTrigger menu={item.menu} title={title}>
+        {dropdownIcon}
+      </MenuTrigger>
     </>
   )
 }
@@ -555,7 +572,7 @@ type BreadcrumbsCompound = FC<BreadcrumbsProps> & {
   Item: FC<BreadcrumbsItemProps>
 }
 
-const BreadcrumbsCompound: BreadcrumbsCompound = Object.assign(Breadcrumbs, {
+const BreadcrumbsCompound: BreadcrumbsCompound = /*#__PURE__*/ Object.assign(Breadcrumbs, {
   Item,
 })
 

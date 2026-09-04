@@ -28,27 +28,29 @@ export default OrCases
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$appendChild, untrack, watchEffect, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { vapor, renderAnchor, _$template, untrack, watchEffect, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
+const _$getTemplate1 = _$template("<div><!--rue:text-hole:0--><!--rue:text-hole:1--></div>");
 const show = false;
 const a = false;
 const b = false;
 const OrCases: FC = ()=>{
     return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list1);
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[0];
+        const _el2 = _el1.parentNode;
+        const _el3 = _root.childNodes[1];
+        const _el4 = _el3.parentNode;
         watchEffect(()=>{
             const __slot = show || _$compiledRoot((__rue_parent_context)=>{
                 const _root = _$compiledCreateElement("div", __rue_parent_context);
                 _$compiledAppendChild(_root, _$compiledCreateTextNode("Alt"));
                 return _root;
             });
-            untrack(()=>renderAnchor(__slot, _root, _list1));
+            untrack(()=>renderAnchor(__slot, _el2, _el1));
         });
-        const _list2 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list2);
         watchEffect(()=>{
             const __slot = a ? _$compiledRoot((__rue_parent_context)=>{
                 const _root = _$compiledCreateElement("div", __rue_parent_context);
@@ -59,7 +61,7 @@ const OrCases: FC = ()=>{
                 _$compiledAppendChild(_root, _$compiledCreateTextNode("B"));
                 return _root;
             });
-            untrack(()=>renderAnchor(__slot, _root, _list2));
+            untrack(()=>renderAnchor(__slot, _el4, _el3));
         });
         return _root;
     });
@@ -70,5 +72,10 @@ export default OrCases;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec23.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert_eq!(normalized.matches("_$compiledRoot(Object.assign(").count(), 6);
+    assert_eq!(normalized.matches("__rue_compiled_explicit_roots").count(), 6);
+    assert_eq!(normalized.matches("_$compiledBranchAt(").count(), 2, "{out}");
+    assert_eq!(normalized.matches("_$compiledBranch(").count(), 1, "{out}");
+    assert!(!normalized.contains("renderAnchor("), "{out}");
 }

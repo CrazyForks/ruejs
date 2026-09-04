@@ -29,6 +29,7 @@ import {
   isUnresolvedAppClientReferenceExport,
   resolveAppClientReferenceExport,
 } from '../server/app-client-reference-resolver.js'
+import { getRequestContext, isInsideUnifiedScope } from './unified-request-context.js'
 
 const EMPTY_ELEMENTS: AppElements = Object.freeze({})
 const warnedMissingEntryIds = new Set<string>()
@@ -67,6 +68,18 @@ type ThenableRecord<T> =
 const thenableRecords = new WeakMap<PromiseLike<unknown>, ThenableRecord<unknown>>()
 
 function getCurrentSsrAppElementsState(): CurrentSsrAppElementsState {
+  if (isInsideUnifiedScope()) {
+    const context = getRequestContext()
+    if (!context.ssrAppElementsState) {
+      context.ssrAppElementsState = {
+        active: false,
+        elements: null,
+        readElements: null,
+        renderedEntryIds: new Set<string>(),
+      } satisfies CurrentSsrAppElementsState
+    }
+    return context.ssrAppElementsState as CurrentSsrAppElementsState
+  }
   const globalState = globalThis as CurrentSsrAppElementsGlobal
   if (!globalState[CURRENT_SSR_APP_ELEMENTS_KEY]) {
     globalState[CURRENT_SSR_APP_ELEMENTS_KEY] = {
@@ -205,6 +218,53 @@ function resolveSlotPlaceholders(
 
   if (isSlotComponentType(value.type)) {
     return value
+  }
+
+  if (value.type === 'text-rue-html') {
+    const props = value.props as Record<string, unknown>
+    const innerHtml = (props.dangerouslySetInnerHTML as { __html?: unknown } | undefined)?.__html
+    if (typeof innerHtml === 'string' && innerHtml.includes('<text-slot-placeholder')) {
+      const placeholderPattern = /<text-slot-placeholder\b([^>]*)>(?:<\/text-slot-placeholder>)?/gi
+      const parts: TextCompatNode[] = []
+      let cursor = 0
+      let match: RegExpExecArray | null
+      while ((match = placeholderPattern.exec(innerHtml))) {
+        const attributes = match[1] ?? ''
+        const kindMatch = /\bdata-text-slot-placeholder=(?:"([^"]+)"|'([^']+)')/i.exec(attributes)
+        const kind = kindMatch?.[1] ?? kindMatch?.[2]
+        if (kind !== 'children' && kind !== 'parallel-slot') continue
+
+        if (match.index > cursor) {
+          parts.push(
+            cloneServerProtocolElement(value, {
+              ...props,
+              dangerouslySetInnerHTML: { __html: innerHtml.slice(cursor, match.index) },
+            }) as TextCompatNode,
+          )
+        }
+
+        if (kind === 'children') {
+          parts.push(slotChildren ?? null)
+        } else {
+          const nameMatch = /\bdata-text-slot-name=(?:"([^"]+)"|'([^']+)')/i.exec(attributes)
+          const name = nameMatch?.[1] ?? nameMatch?.[2]
+          parts.push(name ? (parallelSlots?.[name] ?? null) : null)
+        }
+        cursor = placeholderPattern.lastIndex
+      }
+
+      if (cursor > 0) {
+        if (cursor < innerHtml.length) {
+          parts.push(
+            cloneServerProtocolElement(value, {
+              ...props,
+              dangerouslySetInnerHTML: { __html: innerHtml.slice(cursor) },
+            }) as TextCompatNode,
+          )
+        }
+        return parts
+      }
+    }
   }
 
   const sentinel = readAppSlotPlaceholderSentinel(value.type, value.props)

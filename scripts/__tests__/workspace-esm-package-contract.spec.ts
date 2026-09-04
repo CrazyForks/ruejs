@@ -63,7 +63,7 @@ const findCjsDistFiles = async (directory: string) => {
 }
 
 describe('workspace ESM package contract', () => {
-  it('automatically discovers and classifies all 16 Rue workspace packages', async () => {
+  it('automatically discovers and classifies all 13 Rue workspace packages', async () => {
     const packages = await findRueWorkspacePackages()
     const manifests = await Promise.all(
       packages.map(async pkg => ({
@@ -72,14 +72,14 @@ describe('workspace ESM package contract', () => {
       })),
     )
 
-    expect(manifests).toHaveLength(16)
+    expect(manifests).toHaveLength(13)
     expect(manifests.filter(pkg => pkg.manifest.private).map(pkg => pkg.manifest.name)).toEqual([
       privatePackage,
     ])
     expect(manifests.filter(pkg => pkg.manifest.name === wasmPackage)).toHaveLength(1)
     expect(
       manifests.filter(pkg => !pkg.manifest.private && pkg.manifest.name !== wasmPackage),
-    ).toHaveLength(14)
+    ).toHaveLength(11)
   })
 
   it('publishes every JavaScript package as ESM-only and the SWC package as a Wasm asset', async () => {

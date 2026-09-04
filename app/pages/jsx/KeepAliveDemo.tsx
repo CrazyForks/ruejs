@@ -1,13 +1,4 @@
-import {
-  Component,
-  KeepAlive,
-  ref,
-  renderAnchor,
-  useState,
-  vapor,
-  watchEffect,
-  type FC,
-} from '@rue-js/rue'
+import { Component, KeepAlive, ref, useState, type FC } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -163,23 +154,11 @@ const KeepAliveViewport: FC<{
   activeView: { value: ViewName }
   cacheMode: { value: CacheMode }
 }> = props => {
-  return vapor(() => {
-    const root = document.createDocumentFragment()
-    const anchor = document.createComment('keep-alive-demo-anchor')
-    root.appendChild(anchor)
-
-    watchEffect(() => {
-      renderAnchor(
-        <KeepAlive {...resolveKeepAliveProps(props.cacheMode.value)}>
-          <Component is={views[props.activeView.value]} key={props.activeView.value} />
-        </KeepAlive>,
-        root as any,
-        anchor as any,
-      )
-    })
-
-    return root as any
-  }) as any
+  return (
+    <KeepAlive {...resolveKeepAliveProps(props.cacheMode.value)}>
+      <Component is={views[props.activeView.value]} key={props.activeView.value} />
+    </KeepAlive>
+  )
 }
 
 const KeepAliveDemo: FC = () => {

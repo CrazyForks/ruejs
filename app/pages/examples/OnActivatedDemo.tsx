@@ -3,17 +3,7 @@
  *
  * 展示 KeepAlive 缓存组件重新进入活动 DOM 区间时的 activated 生命周期。
  */
-import {
-  Component,
-  KeepAlive,
-  onActivated,
-  onDeactivated,
-  ref,
-  renderAnchor,
-  vapor,
-  watchEffect,
-  type FC,
-} from '@rue-js/rue'
+import { Component, KeepAlive, onActivated, onDeactivated, ref, type FC } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -170,27 +160,15 @@ const KeepAliveViewport: FC<{
   activeView: { value: ViewKey }
   onEvent: (message: string) => void
 }> = props => {
-  return vapor(() => {
-    const root = document.createDocumentFragment()
-    const anchor = document.createComment('on-activated-keep-alive-anchor')
-    root.appendChild(anchor)
-
-    watchEffect(() => {
-      renderAnchor(
-        <KeepAlive>
-          <Component
-            is={views[props.activeView.value]}
-            key={props.activeView.value}
-            onEvent={props.onEvent}
-          />
-        </KeepAlive>,
-        root as any,
-        anchor as any,
-      )
-    })
-
-    return root as any
-  }) as any
+  return (
+    <KeepAlive>
+      <Component
+        is={views[props.activeView.value]}
+        key={props.activeView.value}
+        onEvent={props.onEvent}
+      />
+    </KeepAlive>
+  )
 }
 
 /** onActivated / onDeactivated KeepAlive 示例入口。 */

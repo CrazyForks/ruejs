@@ -6,6 +6,7 @@
  * with actual content.
  */
 import {
+  createTextCompatElement,
   TextCompatComponent,
   type TextCompatComponentType,
   type TextCompatElement,
@@ -30,12 +31,15 @@ export function Html({
  * The dev server injects meta tags, styles, etc.
  */
 export function Head({ children }: { children?: TextCompatNode }): TextCompatNode {
-  return (
-    <head>
-      <meta charSet="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      {children}
-    </head>
+  return createTextCompatElement(
+    'head',
+    null,
+    createTextCompatElement('meta', { charSet: 'utf-8' }),
+    createTextCompatElement('meta', {
+      name: 'viewport',
+      content: 'width=device-width, initial-scale=1',
+    }),
+    children ?? null,
   )
 }
 
@@ -43,7 +47,10 @@ export function Head({ children }: { children?: TextCompatNode }): TextCompatNod
  * Main - renders the page content container.
  */
 export function Main(): TextCompatNode {
-  return <div id="__text" dangerouslySetInnerHTML={{ __html: getTextMainHtml() }} />
+  return createTextCompatElement('div', {
+    id: '__text',
+    dangerouslySetInnerHTML: { __html: getTextMainHtml() },
+  })
 }
 
 /**
@@ -52,7 +59,9 @@ export function Main(): TextCompatNode {
  * Uses dangerouslySetInnerHTML so the HTML comment survives renderToString.
  */
 export function TextScript(): TextCompatNode {
-  return <span dangerouslySetInnerHTML={{ __html: getTextScriptsHtml() }} />
+  return createTextCompatElement('span', {
+    dangerouslySetInnerHTML: { __html: getTextScriptsHtml() },
+  })
 }
 
 export function getTextMainHtml(): string {

@@ -264,16 +264,21 @@ describe('InputNumber', () => {
     increaseButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
     expect(input.value).toBe('$3000')
 
-    decreaseButton.dispatchEvent(
+    const currentInput = container.querySelector('[data-testid="budget-input"]') as HTMLInputElement
+    const currentDecreaseButton = container.querySelector(
+      'button[aria-label="Decrease value"]',
+    ) as HTMLButtonElement
+
+    currentDecreaseButton.dispatchEvent(
       new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }),
     )
-    expect(input.value).toBe('$2500')
+    expect(currentInput.value).toBe('$2500')
 
     vi.advanceTimersByTime(450)
-    expect(input.value).toBe('$2000')
+    expect(currentInput.value).toBe('$2000')
 
     vi.advanceTimersByTime(80)
-    expect(input.value).toBe('$1500')
+    expect(currentInput.value).toBe('$1500')
 
     window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }))
 

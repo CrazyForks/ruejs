@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ref, render, setReactiveScheduling } from '@rue-js/rue'
+import { ref, render } from '@rue-js/rue'
 import Mentions from '../index'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
-
-setReactiveScheduling('sync')
 
 const resetActiveRuntime = () => {
   ;(globalThis as any).__rue_active = (globalThis as any).__rue

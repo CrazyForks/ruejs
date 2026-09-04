@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+
 import { Button, Carousel } from '@rue-js/design'
 import {
   click,
@@ -22,7 +23,7 @@ describe('Carousel', () => {
     const c = mountContainer()
     resetActiveRuntime()
 
-    render(h(Carousel, null, 'hello'), c)
+    render(<Carousel>{'hello'}</Carousel>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.carousel') as HTMLElement
@@ -37,12 +38,14 @@ describe('Carousel', () => {
     resetActiveRuntime()
 
     render(
-      h(
-        Carousel,
-        { align: 'end', direction: 'vertical', className: 'rounded-box w-64' },
-        h(Carousel.Item, null, h('img', { src: 'x', alt: 'y' })),
-        h(Carousel.Item, null, h('img', { src: 'x2', alt: 'y2' })),
-      ),
+      <Carousel align={'end'} direction={'vertical'} className={'rounded-box w-64'}>
+        <Carousel.Item>
+          <img src={'x'} alt={'y'} />
+        </Carousel.Item>
+        <Carousel.Item>
+          <img src={'x2'} alt={'y2'} />
+        </Carousel.Item>
+      </Carousel>,
       c,
     )
 
@@ -64,9 +67,9 @@ describe('Carousel', () => {
     render(
       <Carousel
         items={[
-          { content: h('div', { className: 'h-24 w-full bg-base-200' }, '1') },
-          { content: h('div', { className: 'h-24 w-full bg-base-200' }, '2') },
-          { content: h('div', { className: 'h-24 w-full bg-base-200' }, '3') },
+          { content: <div className={'h-24 w-full bg-base-200'}>{'1'}</div> },
+          { content: <div className={'h-24 w-full bg-base-200'}>{'2'}</div> },
+          { content: <div className={'h-24 w-full bg-base-200'}>{'3'}</div> },
         ]}
         activeIndex={2}
         dots
@@ -89,12 +92,17 @@ describe('Carousel', () => {
 
     const spy = vi.fn()
     const items = [
-      { content: h('div', { className: 'h-24 w-full bg-base-200' }, '1') },
-      { content: h('div', { className: 'h-24 w-full bg-base-200' }, '2') },
-      { content: h('div', { className: 'h-24 w-full bg-base-200' }, '3') },
+      { content: <div className={'h-24 w-full bg-base-200'}>{'1'}</div> },
+      { content: <div className={'h-24 w-full bg-base-200'}>{'2'}</div> },
+      { content: <div className={'h-24 w-full bg-base-200'}>{'3'}</div> },
     ]
 
-    render(h(Carousel, { items, arrows: true, dots: true, speed: 0, onIndexChange: spy }, null), c)
+    render(
+      <Carousel items={items} arrows={true} dots={true} speed={0} onIndexChange={spy}>
+        {null}
+      </Carousel>,
+      c,
+    )
 
     await waitForContent(() => {
       expect(c.querySelector('.carousel')).toBeTruthy()
@@ -185,20 +193,20 @@ describe('Carousel', () => {
 
     const carouselRef: { current?: any } = { current: undefined }
     const items = [
-      { content: h('div', { id: 's1' }, '1') },
-      { content: h('div', { id: 's2' }, '2'), className: 'w-full' },
-      { content: h('img', { src: 'x', alt: 'y' }) },
+      { content: <div id={'s1'}>{'1'}</div> },
+      { content: <div id={'s2'}>{'2'}</div>, className: 'w-full' },
+      { content: <img src={'x'} alt={'y'} /> },
     ]
 
     render(
-      h(Carousel, {
-        items,
-        align: 'center',
-        direction: 'horizontal',
-        dots: true,
-        speed: 0,
-        apiRef: carouselRef,
-      }),
+      <Carousel
+        items={items}
+        align={'center'}
+        direction={'horizontal'}
+        dots={true}
+        speed={0}
+        apiRef={carouselRef}
+      />,
       c,
     )
 

@@ -639,7 +639,7 @@ const AnchorBase: FC<AnchorProps> = ({
 
   const activeHref = activeHrefRef.value
 
-  const renderItem = (item: NormalizedAnchorItem) => {
+  const RenderItem: FC<{ item: NormalizedAnchorItem }> = ({ item }) => {
     const active = activeHref === item.href
     const nestedVisible = direction !== 'horizontal' && !!item.children?.length
     const effectiveReplace = item.replace ?? replace
@@ -750,7 +750,9 @@ const AnchorBase: FC<AnchorProps> = ({
         </a>
         {nestedVisible ? (
           <ul className="mt-2 space-y-1.5 border-l border-base-300/70 pl-4">
-            {item.children!.map(child => renderItem(child))}
+            {item.children!.map(child => (
+              <RenderItem key={child.keyText} item={child} />
+            ))}
           </ul>
         ) : null}
       </li>
@@ -804,7 +806,9 @@ const AnchorBase: FC<AnchorProps> = ({
           )}
           style={styles?.list}
         >
-          {visibleItems.map(item => renderItem(item))}
+          {visibleItems.map(item => (
+            <RenderItem key={item.keyText} item={item} />
+          ))}
         </ul>
       )}
     </nav>

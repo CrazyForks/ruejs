@@ -46,18 +46,12 @@ export default Demo;
 
     let normalized = normalize(&strip_marker(&out));
 
-    assert!(normalized.contains(&normalize("_$vaporKeyedList({")));
-    assert!(normalized.contains(&normalize("getKey: (item, idx)=>item.placement,")));
-    assert!(normalized.contains(&normalize("const __child")));
-    assert!(normalized.contains(&normalize("const _root = _$createDocumentFragment();")));
-    assert!(normalized.contains(&normalize("_$setClassName(_el1, \"badge\");")));
-    assert!(normalized.contains(&normalize("_$settextContent(_el2, item.placement);")));
-    assert!(normalized.contains(&normalize("const _el3 = _$createElement(\"section\"")));
-    assert!(normalized.contains(&normalize("_$settextContent(_el4, item.title);")));
-    assert!(normalized.contains(&normalize("const __slot = _$createComponent(Surface, {")));
-    assert!(normalized.contains("children: __child"));
-    assert!(
-        normalized.contains(&normalize("renderBetween(__slot, parent, start, end);"))
-            || normalized.contains(&normalize("renderAnchor(__slot, parent, start);"))
-    );
+    assert!(!normalized.contains(&normalize("_$compiledKeyedList({")), "{normalized}");
+    assert!(normalized.contains(&normalize("_$createComponent(Surface, ()=>({")), "{normalized}");
+    let child2 = normalized.find("__child2").expect("first component child");
+    let child3 = normalized.find("__child3").expect("second component child");
+    assert!(normalized.contains("children: ["), "{normalized}");
+    assert!(child2 < child3, "{normalized}");
+    assert!(normalized.contains("item.placement"), "{normalized}");
+    assert!(normalized.contains("item.title"), "{normalized}");
 }

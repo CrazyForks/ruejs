@@ -1,178 +1,40 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "presets": {
-    "compiled-core": {
+    "client-core": {
       "measurement": "absolute",
-      "max": {
-        "min": 45000,
-        "brotli": 13000
-      },
+      "max": { "gzip": 12288 },
       "requireReactiveKernel": true,
       "requireCompiledRuntime": true,
-      "forbidDefaultRuntime": true,
-      "forbidVaporRuntime": true,
       "forbidWasm": true,
       "forbidSSRRenderer": true,
-      "forbidAutomaticJsxRuntime": true,
-      "forbidCompatPatch": true,
-      "forbidCompatTokens": ["head-record", "stable-host"],
-      "forbidModules": {
-        "fullFacade": [
-          "packages/runtime-vapor/dist/index.js",
-          "packages/runtime-vapor/dist/vapor.js",
-          "packages/runtime-vapor/dist/js-reactive/facade.js"
-        ],
-        "jsRuntime": ["packages/runtime-vapor/dist/js-runtime/"],
-        "watch": ["packages/runtime-vapor/dist/reactive-kernel/watch.js"],
-        "resource": ["packages/runtime-vapor/dist/reactive-kernel/resource.js"],
-        "reactive": [
-          "packages/runtime-vapor/dist/reactive.js",
-          "packages/runtime-vapor/dist/reactive.browser.js",
-          "packages/runtime-vapor/dist/reactive.vapor.js",
-          "packages/runtime-vapor/dist/reactive.shared.js",
-          "packages/runtime-vapor/dist/reactive-kernel/reactive.js"
-        ],
-        "computed": [
-          "packages/runtime-vapor/dist/reactive-kernel/computed.js",
-          "packages/runtime-vapor/dist/js-reactive/hooks/computed.js"
-        ],
-        "vaporHelpers": ["packages/runtime/src/vapor-helpers.ts"],
-        "compatPatch": ["packages/runtime-vapor/dist/js-runtime/mount-compat.js"],
-        "automaticJsxRuntime": ["packages/jsx-runtime/", "packages/jsx-dev-runtime/"]
-      }
-    },
-    "vapor-core": {
-      "measurement": "absolute",
-      "max": {
-        "min": 516320,
-        "gzip": 206557,
-        "brotli": 85242
-      },
-      "requireReactiveKernel": true,
-      "forbidWasm": true,
-      "forbidDefaultRuntime": true,
-      "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
-      "forbidSSRRenderer": true
+      "forbidAutomaticJsxRuntime": true
     },
     "compiled-component": {
       "measurement": "absolute",
-      "max": {
-        "min": 140470,
-        "gzip": 40461,
-        "brotli": 35773
-      },
-      "requireReactiveKernel": true,
+      "max": { "gzip": 45661 },
+      "requireCompiledRuntime": true,
       "forbidWasm": true,
-      "forbidDefaultRuntime": true,
-      "forbidSSRRenderer": true,
-      "forbidAutomaticJsxRuntime": true,
-      "forbidCompatPatch": true,
-      "forbidCompatTokens": ["head-record", "stable-host"],
-      "forbidModules": {
-        "compatPatch": ["packages/runtime-vapor/dist/js-runtime/mount-compat.js"],
-        "defaultRuntime": [
-          "packages/rue/dist/rue.runtime.esm-bundler.js",
-          "packages/runtime/dist/runtime.esm-bundler.js"
-        ],
-        "automaticJsxRuntime": ["packages/jsx-runtime/", "packages/jsx-dev-runtime/"]
-      }
+      "forbidSSRRenderer": true
     },
-    "h-only": {
+    "compiled-list": {
       "measurement": "absolute",
-      "max": {
-        "min": 147751,
-        "gzip": 42869,
-        "brotli": 37758
-      },
+      "max": { "gzip": 2406 },
       "requireReactiveKernel": true,
+      "requireCompiledRuntime": true,
       "forbidWasm": true,
-      "forbidSSRRenderer": true,
-      "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
-      "requireCompatRenderer": true
+      "forbidSSRRenderer": true
     },
-    "jsx-runtime-only": {
+    "compiled-builtins": {
       "measurement": "absolute",
-      "max": {
-        "min": 147360,
-        "gzip": 42746,
-        "brotli": 37619
-      },
-      "requireReactiveKernel": true,
+      "max": { "gzip": 49166 },
+      "requireCompiledRuntime": true,
       "forbidWasm": true,
-      "forbidSSRRenderer": true,
-      "forbidBuiltins": ["KeepAlive", "Suspense", "Transition", "TransitionGroup"],
-      "requireCompatRenderer": true,
-      "requireAutomaticJsxRuntime": true
+      "forbidSSRRenderer": true
     },
-    "vapor-app": {
+    "hydrate": {
       "measurement": "absolute",
-      "max": {
-        "min": 517480,
-        "gzip": 206953
-      },
-      "requireReactiveKernel": true,
-      "forbidWasm": true,
-      "forbidDefaultRuntime": true,
-      "forbidSSRRenderer": true
-    },
-    "full-core": {
-      "measurement": "absolute",
-      "max": {
-        "min": 516320,
-        "gzip": 206557,
-        "brotli": 170485
-      },
-      "requireReactiveKernel": true,
-      "forbidWasm": true,
-      "forbidSSRRenderer": true
-    },
-    "keep-alive": {
-      "measurement": "deltaFromVaporCore",
-      "max": {
-        "min": 53620,
-        "gzip": 14505
-      },
-      "requireReactiveKernel": true,
-      "forbidWasm": true,
-      "forbidSSRRenderer": true
-    },
-    "suspense": {
-      "measurement": "deltaFromVaporCore",
-      "max": {
-        "min": 53154,
-        "gzip": 14213
-      },
-      "requireReactiveKernel": true,
-      "forbidWasm": true,
-      "forbidSSRRenderer": true
-    },
-    "transition": {
-      "measurement": "deltaFromVaporCore",
-      "max": {
-        "min": 54958,
-        "gzip": 15047
-      },
-      "requireReactiveKernel": true,
-      "forbidWasm": true,
-      "forbidSSRRenderer": true
-    },
-    "transition-group": {
-      "measurement": "deltaFromVaporCore",
-      "max": {
-        "min": 51219,
-        "gzip": 13783
-      },
-      "requireReactiveKernel": true,
-      "forbidWasm": true,
-      "forbidSSRRenderer": true
-    },
-    "all-builtins": {
-      "measurement": "deltaFromVaporCore",
-      "max": {
-        "min": 67382,
-        "gzip": 18659
-      },
-      "requireReactiveKernel": true,
+      "max": { "gzip": 49669 },
       "forbidWasm": true,
       "forbidSSRRenderer": true
     }

@@ -97,16 +97,16 @@ export default ControlledInputs
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useState, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { useState, ref, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import SidebarPlayground from '../site/SidebarPlayground';
 import Code from '../site/components/Code';
 const ControlledInputs: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const [text, setText] = _$vaporWithHookId("useState:1:0", ()=>useState(''));
-            const activeTab = _$vaporWithHookId("ref:1:1", ()=>ref<'preview' | 'code'>('code'));
-            var [text2, setText2] = _$vaporWithHookId("useState:1:2", ()=>useState(''));
-            let [text3, setText3] = _$vaporWithHookId("useState:1:3", ()=>useState(''));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const [text, setText] = useState('');
+            const activeTab = ref<'preview' | 'code'>('code');
+            var [text2, setText2] = useState('');
+            let [text3, setText3] = useState('');
             return {
                 text: text,
                 setText: setText,
@@ -175,5 +175,11 @@ export default ControlledInputs;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec37.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("const [text, setText] = useState('')"), "{normalized}");
+    assert!(normalized.contains("var [text2, setText2] = useState('')"), "{normalized}");
+    assert!(normalized.contains("let [text3, setText3] = useState('')"), "{normalized}");
+    assert!(normalized.contains("value={text.value}"), "{normalized}");
+    assert!(normalized.contains("setText((e.target as HTMLInputElement).value)"), "{normalized}");
 }

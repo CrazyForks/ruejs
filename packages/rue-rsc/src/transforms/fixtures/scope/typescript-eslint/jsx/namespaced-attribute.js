@@ -1,4 +1,4 @@
-import { jsx as _jsx } from '@rue-js/jsx-runtime'
+import { jsx as _jsx } from 'react/jsx-runtime'
 import * as Rue from 'rue'
 // Both of these are equivalent:
 const x = _jsx(Foo, { 'a:b': 'hello' })

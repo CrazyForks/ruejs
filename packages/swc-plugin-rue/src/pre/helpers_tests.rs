@@ -193,6 +193,21 @@ fn distinguishes_plain_vapor_returns_from_setup_render_control() {
 }
 
 #[test]
+fn distinguishes_eager_custom_composable_values_from_closure_owned_reads() {
+    let closure_owned = parse_fn_decl(
+        "function Sidebar(): JSX.Element { const route = useOptionalRoute(); const path = computed(() => route?.get().path); return <aside enabled={!!route}>{path.get()}</aside>; }",
+    );
+    let closure_owned_block = closure_owned.function.body.expect("closure-owned body");
+    assert!(!block_requires_custom_composable_render_effect(&closure_owned_block));
+
+    let eager = parse_fn_decl(
+        "function Locale(): JSX.Element { const { locale, translate } = useLocale(); const current = locale.value; return <p>{translate('hello', current)}</p>; }",
+    );
+    let eager_block = eager.function.body.expect("eager body");
+    assert!(block_requires_custom_composable_render_effect(&eager_block));
+}
+
+#[test]
 fn rewrites_props_destructure_in_arrow_and_function_bodies() {
     let mut arrow =
         parse_arrow("({ foo = 1, bar: baz, ...rest }) => <div>{foo}{baz}{rest.qux}</div>");
@@ -275,7 +290,7 @@ fn eagerly_primes_lowered_call_expressions_in_source_order() {
 }
 
 #[test]
-fn keeps_non_call_phase2_values_lazy() {
+fn primes_non_call_phase2_values_for_component_render_tracking() {
     let mut fn_decl = parse_fn_decl(
         "function Comp(props) { const value = props.count + 1; return <div>{value}</div>; }",
     );
@@ -283,7 +298,9 @@ fn keeps_non_call_phase2_values_lazy() {
 
     let rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Fn(fn_decl))]));
     assert!(
-        rendered.contains("constvalue=computed(()=>props.count+1);const__rue_phase2_value=value;"),
+        rendered.contains(
+            "constvalue=computed(()=>props.count+1);value.get();const__rue_phase2_value=value;"
+        ),
         "{rendered}"
     );
 }
@@ -329,9 +346,9 @@ fn collects_setup_and_injects_use_setup_for_hoistable_statements() {
     inject_setup(&mut block, ret_idx, names_const, names_let, collected);
     let rendered = normalize(&emit_stmts(block.stmts.clone()));
 
-    assert!(rendered.contains("_$vaporWithHookId(\"useSetup:0:0\""));
-    assert!(rendered.contains("useSetup(()=>{"));
+    assert!(rendered.contains("_$compiledSetup(\"useSetup:0:0\""), "{rendered}");
     assert!(rendered.contains(&normalize("const { state: state, helper: helper } = _$useSetup;")));
+    assert_eq!(rendered.matches("const _$useSetup =").count(), 1);
     assert!(rendered.contains("watchEffect"));
     assert!(rendered.contains("console.log(state.value)"));
 }
@@ -402,7 +419,7 @@ fn skips_phase2_lowering_for_props_derived_objects_mutated_by_known_helpers() {
 #[test]
 fn collect_setup_hoists_wrapped_computed_and_setup_effects_until_jsx_boundary() {
     let fn_decl = parse_fn_decl(
-        "function Comp() { const state = ref(0); const doubled = _$vaporWithHookId(\"computed:1:0\", () => computed(() => state.value * 2)); const helper = () => doubled.value; _$vaporWithHookId(\"onMounted:1:1\", () => onMounted(() => console.log(helper()))); const view = <aside />; return <div>{helper()}</div>; }",
+        "function Comp() { const state = ref(0); const doubled = _$compiledWithHookId(\"computed:1:0\", () => computed(() => state.value * 2)); const helper = () => doubled.value; _$compiledWithHookId(\"onMounted:1:1\", () => onMounted(() => console.log(helper()))); const view = <aside />; return <div>{helper()}</div>; }",
     );
     let mut block = fn_decl.function.body.clone().expect("body");
 
@@ -420,17 +437,19 @@ fn collect_setup_hoists_wrapped_computed_and_setup_effects_until_jsx_boundary() 
     assert!(!available.contains("view"));
 
     let collected_rendered = normalize(&emit_stmts(collected.clone()));
-    assert!(collected_rendered.contains("_$vaporWithHookId(\"computed:1:0\""));
+    assert!(collected_rendered.contains("_$compiledWithHookId(\"computed:1:0\""));
     assert!(collected_rendered.contains("computed(()=>state.value * 2)"));
-    assert!(collected_rendered.contains("_$vaporWithHookId(\"onMounted:1:1\""));
+    assert!(collected_rendered.contains("_$compiledWithHookId(\"onMounted:1:1\""));
     assert!(!collected_rendered.contains(&normalize("const view = <aside />;")));
 
     inject_setup(&mut block, ret_idx, names_const, names_let, collected);
     let rendered = normalize(&emit_stmts(block.stmts.clone()));
 
-    assert!(rendered.contains("_$vaporWithHookId(\"useSetup:0:0\""));
-    assert!(rendered.contains("_$vaporWithHookId(\"computed:1:0\""));
-    assert!(rendered.contains("_$vaporWithHookId(\"onMounted:1:1\""));
+    assert!(rendered.contains("_$compiledSetup(\"useSetup:0:0\""), "{rendered}");
+    assert!(rendered.contains("const doubled = computed(()=>state.value * 2);"));
+    assert!(rendered.contains("onMounted(()=>console.log(helper()));"));
+    assert!(!rendered.contains("computed:1:0"));
+    assert!(!rendered.contains("onMounted:1:1"));
     assert!(rendered.contains(&normalize(
         "const { state: state, doubled: doubled, helper: helper } = _$useSetup;",
     )));
@@ -531,7 +550,7 @@ fn process_entries_skip_existing_setup_and_detect_nested_return_boundaries() {
     );
     process_fn_decl(&mut fn_decl);
     let fn_rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Fn(fn_decl))]));
-    assert!(fn_rendered.contains("const_$useSetup=_$vaporWithHookId(\"useSetup:0:0\""));
+    assert!(fn_rendered.contains("const_$useSetup=_$compiledSetup(\"useSetup:0:0\""));
     assert!(fn_rendered.contains("const{state:state}=_$useSetup;"));
     assert!(fn_rendered.contains("if(props.ok){return<div>{state.value}</div>;}"));
 
@@ -543,7 +562,7 @@ fn process_entries_skip_existing_setup_and_detect_nested_return_boundaries() {
         };
     process_function(&mut fn_expr.function);
     let fn_expr_rendered = compact(&emit_expr(Expr::Fn(fn_expr)));
-    assert!(fn_expr_rendered.contains("const_$useSetup=_$vaporWithHookId(\"useSetup:0:0\""));
+    assert!(fn_expr_rendered.contains("const_$useSetup=_$compiledSetup(\"useSetup:0:0\""));
 
     let var_decl = parse_var_declarator(
         "const Comp: FC = (props) => { const state = ref(0); return <div>{state.value}</div>; };",
@@ -557,14 +576,14 @@ fn process_entries_skip_existing_setup_and_detect_nested_return_boundaries() {
     };
     process_var_decl(&mut var);
     let var_rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Var(Box::new(var)))]));
-    assert!(var_rendered.contains("const_$useSetup=_$vaporWithHookId(\"useSetup:0:0\""));
+    assert!(var_rendered.contains("const_$useSetup=_$compiledSetup(\"useSetup:0:0\""));
 
     let mut existing = parse_fn_decl(
         "function Existing() { const _$useSetup = useSetup(() => ({})); const state = ref(0); return <div>{state.value}</div>; }",
     );
     process_fn_decl(&mut existing);
     let existing_rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Fn(existing))]));
-    assert!(!existing_rendered.contains("_$vaporWithHookId(\"useSetup:0:0\""));
+    assert!(!existing_rendered.contains("_$compiledSetup(\"useSetup:0:0\""));
 }
 
 #[test]
@@ -967,7 +986,7 @@ fn covers_props_rewrite_and_phase2_false_entry_paths() {
         };
     process_function(&mut plain_fn.function);
     let plain_rendered = compact(&emit_expr(Expr::Fn(plain_fn)));
-    assert!(!plain_rendered.contains("_$vaporWithHookId(\"useSetup"));
+    assert!(!plain_rendered.contains("_$compiledWithHookId(\"useSetup"));
 }
 
 #[test]
@@ -988,7 +1007,7 @@ fn covers_process_var_decl_continue_edges() {
     assert!(rendered.contains("Expr=()=><div/>"));
     assert!(rendered.contains("NoReturn"));
     assert!(rendered.contains("const_$useSetup=useSetup"));
-    assert!(!rendered.contains("_$vaporWithHookId(\"useSetup"));
+    assert!(!rendered.contains("_$compiledWithHookId(\"useSetup"));
 }
 
 #[test]
@@ -1045,7 +1064,7 @@ fn covers_remaining_setup_helper_boundary_shapes() {
 #[test]
 fn collect_setup_keeps_wrapped_function_hook_forms_before_jsx_boundary() {
     let fn_decl = parse_fn_decl(
-        "function Comp(flag) { const direct = computed(function () { return flag; }); const wrapped = _$vaporWithHookId(\"computed:0:0\", () => computed(function () { return direct.get(); })); _$vaporWithHookId(\"watchEffect:0:1\", () => watchEffect(function () { direct.get(); })); _$vaporWithHookId(\"effect:0:2\", () => effect(() => wrapped.get())); const view = (<span /> as any); return <div>{wrapped.get()}</div>; }",
+        "function Comp(flag) { const direct = computed(function () { return flag; }); const wrapped = _$compiledWithHookId(\"computed:0:0\", () => computed(function () { return direct.get(); })); _$compiledWithHookId(\"watchEffect:0:1\", () => watchEffect(function () { direct.get(); })); _$compiledWithHookId(\"effect:0:2\", () => effect(() => wrapped.get())); const view = (<span /> as any); return <div>{wrapped.get()}</div>; }",
     );
     let block = fn_decl.function.body.clone().expect("body");
     let ret_idx = find_first_return_index(&block).expect("return index");
@@ -1061,16 +1080,16 @@ fn collect_setup_keeps_wrapped_function_hook_forms_before_jsx_boundary() {
     assert!(available.contains("direct"));
     assert!(available.contains("wrapped"));
     assert!(collected_rendered.contains("constdirect=computed(function(){returnflag;});"));
-    assert!(collected_rendered.contains("_$vaporWithHookId(\"computed:0:0\""));
-    assert!(collected_rendered.contains("_$vaporWithHookId(\"watchEffect:0:1\""));
-    assert!(collected_rendered.contains("_$vaporWithHookId(\"effect:0:2\""));
+    assert!(collected_rendered.contains("_$compiledWithHookId(\"computed:0:0\""));
+    assert!(collected_rendered.contains("_$compiledWithHookId(\"watchEffect:0:1\""));
+    assert!(collected_rendered.contains("_$compiledWithHookId(\"effect:0:2\""));
     assert!(!collected_rendered.contains("view"));
 }
 
 #[test]
 fn collect_setup_classifies_block_body_computed_wrappers_and_function_helpers() {
     let fn_decl = parse_fn_decl(
-        "function Comp(flag) { const direct = computed(() => flag); const wrapped = _$vaporWithHookId(\"computed:0:0\", () => { return computed(function () { return direct.get(); }); }); const read = function () { return wrapped.get(); }; return <div>{read()}</div>; }",
+        "function Comp(flag) { const direct = computed(() => flag); const wrapped = _$compiledWithHookId(\"computed:0:0\", () => { return computed(function () { return direct.get(); }); }); const read = function () { return wrapped.get(); }; return <div>{read()}</div>; }",
     );
     let block = fn_decl.function.body.clone().expect("body");
     let ret_idx = find_first_return_index(&block).expect("return index");
@@ -1093,7 +1112,7 @@ fn collect_setup_classifies_block_body_computed_wrappers_and_function_helpers() 
 #[test]
 fn covers_collect_setup_wrapper_false_edges_await_and_entry_bails() {
     let async_fn = parse_fn_decl(
-        "async function Comp(props) { const { id = fallback, ...rest } = props; const boxed = { id }; const nonHook = (tools.computed)(() => id); const missingRunner = _$vaporWithHookId(\"computed:0:0\"); const nonArrowRunner = _$vaporWithHookId(\"computed:0:1\", value); const noReturnRunner = _$vaporWithHookId(\"computed:0:2\", () => { const local = id; }); const nonCallRunner = _$vaporWithHookId(\"computed:0:3\", () => id); _$vaporWithHookId(\"effect:0:0\"); _$vaporWithHookId(\"effect:0:1\", value); _$vaporWithHookId(\"effect:0:2\", () => {}); _$vaporWithHookId(\"effect:0:3\", () => value); const later = await fetchValue(); const after = id; return <div>{id}{rest.extra}</div>; }",
+        "async function Comp(props) { const { id = fallback, ...rest } = props; const boxed = { id }; const nonHook = (tools.computed)(() => id); const missingRunner = _$compiledWithHookId(\"computed:0:0\"); const nonArrowRunner = _$compiledWithHookId(\"computed:0:1\", value); const noReturnRunner = _$compiledWithHookId(\"computed:0:2\", () => { const local = id; }); const nonCallRunner = _$compiledWithHookId(\"computed:0:3\", () => id); _$compiledWithHookId(\"effect:0:0\"); _$compiledWithHookId(\"effect:0:1\", value); _$compiledWithHookId(\"effect:0:2\", () => {}); _$compiledWithHookId(\"effect:0:3\", () => value); const later = await fetchValue(); const after = id; return <div>{id}{rest.extra}</div>; }",
     );
     let block = async_fn.function.body.clone().expect("body");
     let ret_idx = find_first_return_index(&block).expect("return index");
@@ -1113,8 +1132,8 @@ fn covers_collect_setup_wrapper_false_edges_await_and_entry_bails() {
     assert!(collected_rendered.contains("constboxed={id};"));
     assert!(collected_rendered.contains("constnonHook="));
     assert!(collected_rendered.contains("tools.computed"));
-    assert!(collected_rendered.contains("_$vaporWithHookId(\"computed:0:0\")"));
-    assert!(collected_rendered.contains("_$vaporWithHookId(\"effect:0:3\",()=>value);"));
+    assert!(collected_rendered.contains("_$compiledWithHookId(\"computed:0:0\")"));
+    assert!(collected_rendered.contains("_$compiledWithHookId(\"effect:0:3\",()=>value);"));
     assert!(!collected_rendered.contains("constlater=awaitfetchValue();"));
     assert!(!collected_rendered.contains("constafter=id;"));
 
@@ -1145,7 +1164,7 @@ fn covers_collect_setup_wrapper_false_edges_await_and_entry_bails() {
     let mut no_return_decl = parse_fn_decl("function Helper() { const x = 1; }");
     process_fn_decl(&mut no_return_decl);
     let no_return_rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Fn(no_return_decl))]));
-    assert!(!no_return_rendered.contains("_$vaporWithHookId(\"useSetup"));
+    assert!(!no_return_rendered.contains("_$compiledWithHookId(\"useSetup"));
 
     let existing_stmt = parse_module_stmt(
         "const Existing = () => { const { _$useSetup } = bag; return <div />; };",
@@ -1157,7 +1176,10 @@ fn covers_collect_setup_wrapper_false_edges_await_and_entry_bails() {
     process_var_decl(&mut existing_var);
     let existing_rendered = compact(&emit_stmts(vec![Stmt::Decl(Decl::Var(existing_var))]));
     assert!(existing_rendered.contains("const{_$useSetup}=bag;"));
-    assert!(existing_rendered.contains("_$vaporWithHookId(\"useSetup"));
+    assert!(
+        existing_rendered.contains("_$compiledWithHookId(\"useSetup")
+            || existing_rendered.contains("_$compiledSetup(\"useSetup")
+    );
 
     let super_render_call = Expr::Call(CallExpr {
         span: DUMMY_SP,
@@ -1318,7 +1340,7 @@ fn hardens_collect_setup_and_component_entry_tail_edges() {
     let collected_rendered = compact(&emit_stmts(collected.clone()));
 
     assert_eq!(collected.len(), 5);
-    assert!(!names_const.contains(&"__rue_phase2_hidden".to_string()));
+    assert!(names_const.contains(&"__rue_phase2_hidden".to_string()));
     assert!(names_const.contains(&"helper".to_string()));
     assert!(names_const.contains(&"late".to_string()));
     assert!(names_const.contains(&"blocked".to_string()));
@@ -1425,7 +1447,7 @@ fn hardens_remaining_component_shape_and_jsx_setup_edges() {
 #[test]
 fn hardens_collect_setup_hoistable_call_predicate_edges() {
     let fn_decl = parse_fn_decl(
-        "function Comp() { const notComputed = computed(value); const yesComputed = computed(() => value); const hookedComputed = _$vaporWithHookId('c', () => computed(() => value)); watchEffect(value); watchEffect(() => value); _$vaporWithHookId('w', () => watchEffect(() => value)); _$vaporWithHookId('bad', value); helper.effect(); return <div />; }",
+        "function Comp() { const notComputed = computed(value); const yesComputed = computed(() => value); const hookedComputed = _$compiledWithHookId('c', () => computed(() => value)); watchEffect(value); watchEffect(() => value); _$compiledWithHookId('w', () => watchEffect(() => value)); _$compiledWithHookId('bad', value); helper.effect(); return <div />; }",
     );
     let block = fn_decl.function.body.clone().expect("body");
     let ret_idx = find_first_return_index(&block).expect("return index");
@@ -1439,8 +1461,8 @@ fn hardens_collect_setup_hoistable_call_predicate_edges() {
     assert!(names_let.is_empty());
     assert!(out.contains("computed(value)"));
     assert!(out.contains("computed(()=>value)"));
-    assert!(out.contains("_$vaporWithHookId('w',()=>watchEffect(()=>value));"));
-    assert!(out.contains("_$vaporWithHookId('bad',value);"));
+    assert!(out.contains("_$compiledWithHookId('w',()=>watchEffect(()=>value));"));
+    assert!(out.contains("_$compiledWithHookId('bad',value);"));
     assert!(out.contains("helper.effect();"));
 }
 
@@ -2780,7 +2802,7 @@ watch(foo.bar);
     assert!(props_out.contains("watch(__rue_props.foo.bar);"), "{props_out}");
 
     let async_fn = parse_fn_decl(
-        "function Comp(flag) { const wrapped = _$vaporWithHookId('computed:bad', () => computed(value)); const effectish = _$vaporWithHookId('effect:bad', () => watchEffect(value)); const later = missing + 1; return <div>{flag}</div>; }",
+        "function Comp(flag) { const wrapped = _$compiledWithHookId('computed:bad', () => computed(value)); const effectish = _$compiledWithHookId('effect:bad', () => watchEffect(value)); const later = missing + 1; return <div>{flag}</div>; }",
     );
     let block = async_fn.function.body.clone().expect("body");
     let ret_idx = find_first_return_index(&block).expect("return");
@@ -2799,7 +2821,7 @@ watch(foo.bar);
 #[test]
 fn hardens_setup_hoistable_wrapped_watch_and_synthetic_jsx_return_type() {
     let fn_decl = parse_fn_decl(
-        "function Comp() { const later = missing + 1; _$vaporWithHookId('watchEffect:edge', () => watchEffect(() => later)); return <div>{later}</div>; }",
+        "function Comp() { const later = missing + 1; _$compiledWithHookId('watchEffect:edge', () => watchEffect(() => later)); return <div>{later}</div>; }",
     );
     let block = fn_decl.function.body.clone().expect("body");
     let ret_idx = find_first_return_index(&block).expect("return");
@@ -2810,7 +2832,7 @@ fn hardens_setup_hoistable_wrapped_watch_and_synthetic_jsx_return_type() {
     assert_eq!(names_const, vec!["later".to_string()]);
     assert!(names_let.is_empty());
     assert!(available.contains("later"));
-    assert!(out.contains("_$vaporWithHookId('watchEffect:edge'"), "{out}");
+    assert!(out.contains("_$compiledWithHookId('watchEffect:edge'"), "{out}");
     assert!(out.contains("watchEffect(()=>later)"), "{out}");
 
     let mut no_return_fn = match parse_expr("function () { const state = ref(0); }", true) {
@@ -2818,7 +2840,9 @@ fn hardens_setup_hoistable_wrapped_watch_and_synthetic_jsx_return_type() {
         other => panic!("expected fn expr, got {other:?}"),
     };
     process_function(&mut no_return_fn.function);
-    assert!(!compact(&emit_expr(Expr::Fn(no_return_fn))).contains("_$vaporWithHookId(\"useSetup"));
+    assert!(
+        !compact(&emit_expr(Expr::Fn(no_return_fn))).contains("_$compiledWithHookId(\"useSetup")
+    );
 
     let synthetic_arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,

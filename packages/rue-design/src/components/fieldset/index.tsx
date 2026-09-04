@@ -463,18 +463,6 @@ const Root: FC<FieldsetRootProps> = ({
   if (ariaInvalid !== undefined && ariaInvalid !== null) {
     fieldsetAriaInvalidProps['aria-invalid'] = ariaInvalid
   }
-  const renderItem = (item: FieldsetItemData, index: number) => {
-    const { key, ...itemProps } = item
-    return (
-      <Item
-        key={key ?? index}
-        {...itemProps}
-        size={item.size ?? size}
-        invalid={item.invalid ?? invalid}
-      />
-    )
-  }
-
   return (
     <fieldset
       {...rest}
@@ -515,7 +503,17 @@ const Root: FC<FieldsetRootProps> = ({
           ) : null}
           {!hasContent && hasItems ? (
             <div className={joinClassName('grid min-w-0', resolveGapClass(size), contentClassName)}>
-              {items.map((item, index) => renderItem(item, index))}
+              {items.map((item, index) => {
+                const { key, ...itemProps } = item
+                return (
+                  <Item
+                    key={key ?? index}
+                    {...itemProps}
+                    size={item.size ?? size}
+                    invalid={item.invalid ?? invalid}
+                  />
+                )
+              })}
             </div>
           ) : null}
           {hasRenderableContent(hint) ? (
@@ -550,7 +548,7 @@ type FieldsetCompound = FC<FieldsetRootProps> & {
   Item: FC<FieldsetItemProps>
 }
 
-const Fieldset: FieldsetCompound = Object.assign(Root, {
+const Fieldset: FieldsetCompound = /*#__PURE__*/ Object.assign(Root, {
   Legend,
   Label,
   Item,

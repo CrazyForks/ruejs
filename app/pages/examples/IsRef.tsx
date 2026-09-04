@@ -54,7 +54,7 @@ const IsRef: FC = () => {
   const nameRef = toRef(state, 'name')
   const doubled = computed(() => count.value * 2)
   const plain = { value: 'looks like a ref' }
-  const rows = [
+  const rows = computed(() => [
     {
       name: 'ref(count)',
       kind: '可写 ref',
@@ -91,7 +91,7 @@ const IsRef: FC = () => {
       result: isRef(state),
       value: state.name,
     },
-  ]
+  ])
 
   return (
     <SidebarPlayground>
@@ -169,7 +169,7 @@ const IsRef: FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map(row => (
+                    {rows.get().map(row => (
                       <tr>
                         <td>
                           <code>{row.name}</code>

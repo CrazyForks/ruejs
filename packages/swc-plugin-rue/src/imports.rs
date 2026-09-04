@@ -248,6 +248,40 @@ fn drain_routed_root_value_imports(
     moved
 }
 
+fn drain_named_runtime_subpath_imports(m: &mut Module) -> Vec<NamedImportSpec> {
+    let mut moved = Vec::new();
+    let mut routed_bindings = Vec::new();
+    m.body.retain_mut(|item| {
+        let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
+            return true;
+        };
+        if !matches!(
+            decl.src.value.as_str(),
+            Some("@rue-js/rue/internal" | "@rue-js/rue/internal/compiler")
+        ) {
+            return true;
+        }
+        decl.specifiers.retain(|specifier| {
+            if let ImportSpecifier::Named(named) = specifier {
+                let mut named_spec = named_import_to_spec(named);
+                if named_spec.local_ctxt != SyntaxContext::empty() {
+                    routed_bindings.push((named.local.sym.clone(), named_spec.local_ctxt));
+                    named_spec.local_ctxt = SyntaxContext::empty();
+                }
+                moved.push(named_spec);
+                false
+            } else {
+                true
+            }
+        });
+        !decl.specifiers.is_empty()
+    });
+    if !routed_bindings.is_empty() {
+        m.visit_mut_with(&mut RoutedBindingNormalizer { bindings: routed_bindings });
+    }
+    moved
+}
+
 struct RoutedBindingNormalizer {
     bindings: Vec<(Atom, SyntaxContext)>,
 }
@@ -260,15 +294,14 @@ impl VisitMut for RoutedBindingNormalizer {
     }
 }
 
-fn runtime_subpath_import_locals(m: &Module) -> HashSet<String> {
+fn runtime_subpath_import_locals(m: &Module, source: &str) -> HashSet<String> {
     m.body
         .iter()
         .filter_map(|item| {
             let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
                 return None;
             };
-            matches!(decl.src.value.as_str(), Some("@rue-js/rue/compiled" | "@rue-js/rue/vapor"))
-                .then_some(&decl.specifiers)
+            (decl.src.value.as_str() == Some(source)).then_some(&decl.specifiers)
         })
         .flatten()
         .map(|specifier| match specifier {
@@ -279,27 +312,14 @@ fn runtime_subpath_import_locals(m: &Module) -> HashSet<String> {
         .collect()
 }
 
-const COMPILED_REACTIVE_GRAPH_EXPORTS: &[&str] = &[
-    "signal",
-    "effect",
-    "batch",
-    "untrack",
-    "onCleanup",
-    "createOwner",
-    "runWithOwner",
-    "disposeOwner",
-    "createSelector",
-    "setReactiveScheduling",
-    "_$compiledRoot",
-    "_$reconcileKeyed",
-];
+const COMPILED_REACTIVE_GRAPH_EXPORTS: &[&str] = &["signal", "setReactiveScheduling"];
 
 fn has_explicit_compiled_reactive_graph_import(m: &Module) -> bool {
     m.body.iter().any(|item| {
         let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
             return false;
         };
-        if decl.src.value.as_str() != Some("@rue-js/rue/compiled") {
+        if decl.src.value.as_str() != Some("@rue-js/rue/internal/compiler") {
             return false;
         }
         decl.specifiers.iter().any(|specifier| {
@@ -334,15 +354,18 @@ fn dedupe_named_specs(specs: &mut Vec<NamedImportSpec>) {
 }
 
 /// 基于模块实际使用情况按需注入运行时导入。
-/// 类型走 `@rue-js/rue`，值 helper 走 `@rue-js/rue/vapor`。
+/// 类型走 `@rue-js/rue`，compiled 与 Vapor 值 helper 分别走各自私有入口。
 pub fn ensure_runtime_imports(m: &mut Module) {
     crate::log::debug("rue-swc: ensure_runtime_imports start");
     let type_import_source =
         Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue").into(), raw: None };
-    let compiled_import_source =
-        Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue/compiled").into(), raw: None };
+    let compiled_import_source = Str {
+        span: DUMMY_SP,
+        value: Atom::from("@rue-js/rue/internal/compiler").into(),
+        raw: None,
+    };
     let vapor_import_source =
-        Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue/vapor").into(), raw: None };
+        Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue/internal").into(), raw: None };
 
     let explicit_compiled_reactive_graph = has_explicit_compiled_reactive_graph_import(m);
     let mut collector = RuntimeUseCollector::new();
@@ -372,22 +395,38 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
             return false;
         };
-        matches!(decl.src.value.as_str(), Some("@rue-js/rue/compiled" | "@rue-js/rue/vapor"))
+        matches!(
+            decl.src.value.as_str(),
+            Some("@rue-js/rue/internal" | "@rue-js/rue/internal/compiler")
+        )
     });
     let allow_compiled_root_values = has_runtime_subpath_import
         || collector
             .used_capabilities
             .iter()
             .any(|helper| matches!(helper.as_str(), "_$compiledRoot" | "_$reconcileKeyed"));
+    let had_vapor_import = m.body.iter().any(|item| {
+        matches!(item,
+            ModuleItem::ModuleDecl(ModuleDecl::Import(decl))
+                if decl.src.value.as_str() == Some("@rue-js/rue/internal")
+        )
+    });
     let mut moved_helper_specs = drain_routed_root_value_imports(m, allow_compiled_root_values);
-    let module_tier = aggregate_runtime_tier(
+    let mut existing_runtime_specs = drain_named_runtime_subpath_imports(m);
+    let mut module_tier = aggregate_runtime_tier(
         collector
             .used_capabilities
             .iter()
             .map(String::as_str)
-            .chain(moved_helper_specs.iter().map(NamedImportSpec::export_name)),
+            .chain(moved_helper_specs.iter().map(NamedImportSpec::export_name))
+            .chain(existing_runtime_specs.iter().map(NamedImportSpec::export_name)),
     );
-    let existing_runtime_locals = runtime_subpath_import_locals(m);
+    if had_vapor_import {
+        module_tier = module_tier.max(RuntimeTier::Vapor);
+    }
+    let mut existing_runtime_locals = runtime_subpath_import_locals(m, "@rue-js/rue/internal");
+    existing_runtime_locals
+        .extend(runtime_subpath_import_locals(m, "@rue-js/rue/internal/compiler"));
     moved_helper_specs.retain(|spec| !existing_runtime_locals.contains(&spec.local));
 
     let mut helper_specs: Vec<NamedImportSpec> = collector
@@ -402,6 +441,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         })
         .collect();
     moved_helper_specs.append(&mut helper_specs);
+    moved_helper_specs.append(&mut existing_runtime_specs);
     let mut helper_specs = moved_helper_specs;
 
     let type_specs: Vec<NamedImportSpec> = collector
@@ -452,12 +492,25 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "_$insertBefore",
         "effect",
         "_$reconcileKeyed",
+        "_$compiledBranch",
+        "_$compiledBranchAt",
+        "_$compiledComponent",
+        "_$compiledDynamicComponent",
+        "_$compiledCreateDocumentFragment",
+        "_$compiledSpreadAttributes",
+        "_$compiledOmitProps",
+        "_$compiledSlotValue",
+        "_$compiledRootFactory",
+        "_$compiledText",
+        "_$compiledSetup",
+        "_$withCompiledHookScope",
         "createOwner",
         "createSelector",
         "runWithOwner",
         "disposeOwner",
         "batch",
         "onCleanup",
+        "onOwnerCleanup",
         "onScopeDispose",
         "untrack",
         "setCurrentInstance",
@@ -477,6 +530,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "signal",
         "ref",
         "shallowRef",
+        "customRef",
         "triggerRef",
         "computed",
         "isProxy",
@@ -490,15 +544,14 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "propsReactive",
         "useMemo",
         "useCallback",
-        "_$vaporKeyedList",
         "_$createTextWrapper",
-        "_$vaporWithKey",
-        "_$vaporShowStyle",
-        "_$vaporBindUseRef",
-        "_$vaporWithEventModifiers",
-        "_$vaporWithNativeEvents",
-        "_$vaporWithHookId",
-        "_$vaporMarkComponentRenderReactive",
+        "_$compiledWithKey",
+        "_$compiledShowStyle",
+        "_$compiledBindUseRef",
+        "_$compiledWithEventModifiers",
+        "_$compiledWithNativeEvents",
+        "_$compiledWithHookId",
+        "_$compiledMarkComponentRenderReactive",
         "_$setAttribute",
         "_$addEventListener",
         "_$setClassName",
@@ -542,15 +595,16 @@ pub fn ensure_runtime_imports(m: &mut Module) {
                 merged_type = true;
                 crate::log::debug("rue-swc: merge existing @rue-js/rue import");
             }
-            if !merged_compiled && decl.src.value.as_str() == Some("@rue-js/rue/compiled") {
+            if !merged_compiled && decl.src.value.as_str() == Some("@rue-js/rue/internal/compiler")
+            {
                 append_missing_specifiers(decl, &compiled_specs);
                 merged_compiled = true;
-                crate::log::debug("rue-swc: merge existing @rue-js/rue/compiled import");
+                crate::log::debug("rue-swc: merge existing @rue-js/rue/internal/compiler import");
             }
-            if !merged_vapor && decl.src.value.as_str() == Some("@rue-js/rue/vapor") {
+            if !merged_vapor && decl.src.value.as_str() == Some("@rue-js/rue/internal") {
                 append_missing_specifiers(decl, &vapor_specs);
                 merged_vapor = true;
-                crate::log::debug("rue-swc: merge existing @rue-js/rue/vapor import");
+                crate::log::debug("rue-swc: merge existing @rue-js/rue/internal import");
             }
             if merged_type && merged_compiled && merged_vapor {
                 break;
@@ -558,20 +612,76 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         }
     }
 
-    if !merged_vapor {
-        crate::log::debug("rue-swc: insert new @rue-js/rue/vapor import");
-        insert_import(m, &vapor_import_source, vapor_specs);
+    if !merged_compiled {
+        crate::log::debug("rue-swc: insert new @rue-js/rue/internal/compiler import");
+        insert_import(m, &compiled_import_source, compiled_specs);
     }
 
-    if !merged_compiled {
-        crate::log::debug("rue-swc: insert new @rue-js/rue/compiled import");
-        insert_import(m, &compiled_import_source, compiled_specs);
+    if !merged_vapor {
+        crate::log::debug("rue-swc: insert new @rue-js/rue/internal import");
+        insert_import(m, &vapor_import_source, vapor_specs);
     }
 
     if !merged_type {
         crate::log::debug("rue-swc: insert new @rue-js/rue import");
         insert_import(m, &type_import_source, type_specs);
     }
+}
+
+/// Inject only the server renderer operations referenced by server-target output.
+pub fn ensure_server_runtime_imports(m: &mut Module) {
+    const SERVER_HELPERS: &[&str] = &["_$serverElement", "_$serverComponent", "_$serverFragment"];
+    #[derive(Default)]
+    struct ServerHelperCollector {
+        used: HashSet<String>,
+    }
+    impl Visit for ServerHelperCollector {
+        fn visit_expr(&mut self, expression: &Expr) {
+            if let Expr::Ident(ident) = expression
+                && SERVER_HELPERS.contains(&ident.sym.as_ref())
+            {
+                self.used.insert(ident.sym.to_string());
+            }
+            expression.visit_children_with(self);
+        }
+    }
+
+    let mut collector = ServerHelperCollector::default();
+    m.visit_with(&mut collector);
+    let specs: Vec<NamedImportSpec> = SERVER_HELPERS
+        .iter()
+        .filter(|helper| collector.used.contains(**helper))
+        .map(|helper| NamedImportSpec {
+            local: (*helper).to_string(),
+            local_ctxt: SyntaxContext::empty(),
+            imported: None,
+            is_type_only: false,
+        })
+        .collect();
+    if specs.is_empty() {
+        return;
+    }
+
+    let source =
+        Str { span: DUMMY_SP, value: Atom::from("@rue-js/server-renderer").into(), raw: None };
+    let specifiers = specs.iter().map(spec_to_named_import).collect();
+    let import = ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
+        span: DUMMY_SP,
+        specifiers,
+        src: Box::new(source),
+        type_only: false,
+        with: None,
+        phase: Default::default(),
+    }));
+    let directive_count = m
+        .body
+        .iter()
+        .take_while(|item| {
+            matches!(item, ModuleItem::Stmt(Stmt::Expr(ExprStmt { expr, .. }))
+                if matches!(expr.as_ref(), Expr::Lit(Lit::Str(_))))
+        })
+        .count();
+    m.body.insert(directive_count, import);
 }
 
 #[cfg(test)]

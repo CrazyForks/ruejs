@@ -531,6 +531,123 @@ fn call_expr_callee_ident_name(call: &CallExpr) -> Option<&str> {
     }
 }
 
+fn is_custom_composable_call_name(name: &str) -> bool {
+    let Some(suffix) = name.strip_prefix("use") else {
+        return false;
+    };
+    if !suffix.chars().next().is_some_and(|ch| ch.is_ascii_uppercase()) {
+        return false;
+    }
+
+    !matches!(
+        name,
+        "useMemo" | "useEffect" | "useCallback" | "useRef" | "useState" | "useSignal" | "useSetup"
+    )
+}
+
+struct CustomComposableCallDetector {
+    found: bool,
+}
+
+impl Visit for CustomComposableCallDetector {
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        if call_expr_callee_ident_name(call).is_some_and(is_custom_composable_call_name) {
+            self.found = true;
+            return;
+        }
+        call.visit_children_with(self);
+    }
+
+    fn visit_arrow_expr(&mut self, _arrow: &ArrowExpr) {}
+
+    fn visit_function(&mut self, _function: &Function) {}
+}
+
+fn node_contains_custom_composable_call<N>(node: &N) -> bool
+where
+    N: VisitWith<CustomComposableCallDetector>,
+{
+    let mut detector = CustomComposableCallDetector { found: false };
+    node.visit_with(&mut detector);
+    detector.found
+}
+
+fn expr_is_custom_composable_truthiness(expr: &Expr, names: &HashSet<String>) -> bool {
+    match crate::utils::unwrap_expr(expr) {
+        Expr::Ident(ident) => names.contains(ident.sym.as_ref()),
+        Expr::Unary(unary) if unary.op == UnaryOp::Bang => {
+            expr_is_custom_composable_truthiness(unary.arg.as_ref(), names)
+        }
+        _ => false,
+    }
+}
+
+struct CustomComposableRenderUseDetector<'a> {
+    names: &'a HashSet<String>,
+    found: bool,
+}
+
+impl Visit for CustomComposableRenderUseDetector<'_> {
+    fn visit_arrow_expr(&mut self, _arrow: &ArrowExpr) {}
+
+    fn visit_function(&mut self, _function: &Function) {}
+
+    fn visit_ident(&mut self, ident: &Ident) {
+        if self.names.contains(ident.sym.as_ref()) {
+            self.found = true;
+        }
+    }
+
+    fn visit_unary_expr(&mut self, unary: &UnaryExpr) {
+        if unary.op == UnaryOp::Bang
+            && expr_is_custom_composable_truthiness(unary.arg.as_ref(), self.names)
+        {
+            return;
+        }
+        unary.visit_children_with(self);
+    }
+
+    fn visit_var_declarator(&mut self, declarator: &VarDeclarator) {
+        let Some(init) = &declarator.init else {
+            return;
+        };
+        if expr_is_custom_composable_initializer(init.as_ref()) {
+            return;
+        }
+        init.visit_with(self);
+    }
+}
+
+/// A custom composable only needs a component-wide render effect when its returned value is read
+/// eagerly by render-stage code. Reads captured by computed/effect/event closures establish their
+/// own subscriptions, while boolean existence checks only inspect the stable composable handle.
+pub fn block_requires_custom_composable_render_effect(block: &BlockStmt) -> bool {
+    let Some(ret_idx) = find_first_return_index(block) else {
+        return false;
+    };
+    let mut names = HashSet::new();
+    for stmt in block.stmts.iter().take(ret_idx) {
+        let Stmt::Decl(Decl::Var(var)) = stmt else {
+            continue;
+        };
+        for declarator in &var.decls {
+            let Some(init) = &declarator.init else {
+                continue;
+            };
+            if expr_is_custom_composable_initializer(init.as_ref()) {
+                collect_pat_declared_names(&declarator.name, &mut names);
+            }
+        }
+    }
+    if names.is_empty() {
+        return false;
+    }
+
+    let mut detector = CustomComposableRenderUseDetector { names: &names, found: false };
+    block.visit_with(&mut detector);
+    detector.found
+}
+
 fn arrow_body_expr(arrow: &ArrowExpr) -> Option<&Expr> {
     match arrow.body.as_ref() {
         BlockStmtOrExpr::Expr(expr) => Some(crate::utils::unwrap_expr(expr.as_ref())),
@@ -573,7 +690,7 @@ fn expr_is_phase2_reactive_source_initializer(expr: &Expr) -> bool {
         return true;
     }
 
-    if call_expr_callee_ident_name(call) != Some("_$vaporWithHookId") {
+    if call_expr_callee_ident_name(call) != Some("_$compiledWithHookId") {
         return false;
     }
 
@@ -591,6 +708,13 @@ fn expr_is_phase2_reactive_source_initializer(expr: &Expr) -> bool {
     };
 
     call_expr_callee_ident_name(inner_call).is_some_and(is_phase2_reactive_source_call_name)
+}
+
+fn expr_is_custom_composable_initializer(expr: &Expr) -> bool {
+    let Expr::Call(call) = crate::utils::unwrap_expr(expr) else {
+        return false;
+    };
+    call_expr_callee_ident_name(call).is_some_and(is_custom_composable_call_name)
 }
 
 fn expr_is_phase2_nonlowerable(expr: &Expr) -> bool {
@@ -672,6 +796,33 @@ fn collect_phase2_derived_const_candidates(
     let mut derived_names = HashSet::new();
     let local_targets = HashSet::new();
 
+    // A render-stage snapshot often calls a small local getter instead of reading props/ref
+    // directly. Propagate reactivity through those helper declarations before selecting const
+    // candidates, otherwise `const open = getOpen()` is incorrectly hoisted into useSetup.
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for stmt in block.stmts.iter().take(ret_idx) {
+            let Stmt::Decl(Decl::Var(var)) = stmt else {
+                continue;
+            };
+            for decl in &var.decls {
+                let Pat::Ident(binding) = &decl.name else {
+                    continue;
+                };
+                let Some(init) = &decl.init else {
+                    continue;
+                };
+                if !matches!(crate::utils::unwrap_expr(init.as_ref()), Expr::Arrow(_) | Expr::Fn(_))
+                    || !expr_references_names(init.as_ref(), &reactive_names)
+                {
+                    continue;
+                }
+                changed |= reactive_names.insert(binding.id.sym.to_string());
+            }
+        }
+    }
+
     for stmt in block.stmts.iter().take(ret_idx) {
         let Stmt::Decl(Decl::Var(var)) = stmt else {
             continue;
@@ -684,6 +835,10 @@ fn collect_phase2_derived_const_candidates(
             let Pat::Ident(binding) = &decl.name else {
                 continue;
             };
+            let name = binding.id.sym.to_string();
+            if is_phase2_private_name(&name) {
+                continue;
+            }
             let Some(init) = &decl.init else {
                 continue;
             };
@@ -697,7 +852,6 @@ fn collect_phase2_derived_const_candidates(
                 continue;
             }
 
-            let name = binding.id.sym.to_string();
             derived_names.insert(name.clone());
             reactive_names.insert(name);
         }
@@ -718,6 +872,10 @@ fn collect_phase2_reactive_source_names(block: &BlockStmt, ret_idx: usize) -> Ha
             let Some(init) = &decl.init else {
                 continue;
             };
+            if expr_is_custom_composable_initializer(init.as_ref()) {
+                collect_pat_declared_names(&decl.name, &mut names);
+                continue;
+            }
             if !expr_is_phase2_reactive_source_initializer(init.as_ref()) {
                 continue;
             }
@@ -1571,11 +1729,7 @@ fn apply_phase2_props_derived_const_lowering(
                 }
                 _ => None,
             };
-            let should_prime = derived_binding.is_some()
-                && decl
-                    .init
-                    .as_deref()
-                    .is_some_and(|init| matches!(crate::utils::unwrap_expr(init), Expr::Call(_)));
+            let should_prime = derived_binding.is_some();
 
             if derived_binding.is_some()
                 && let Some(init) = decl.init.take()
@@ -1596,8 +1750,9 @@ fn apply_phase2_props_derived_const_lowering(
             };
 
             if should_prime {
-                // Calls are eager in source JavaScript. Prime the computed at the same lexical
-                // point so lowering keeps side effects and thrown errors in their original order.
+                // The source const initializer is eager. Prime every lowered computed at the same
+                // lexical point both to preserve that order and to connect component render
+                // effects when the value is otherwise first read inside a returned Vapor setup.
                 rewritten_stmts.push(Stmt::Expr(ExprStmt {
                     span: DUMMY_SP,
                     expr: Box::new(value_member_expr(binding_ident.clone())),
@@ -1628,7 +1783,15 @@ fn apply_phase2_props_derived_const_lowering(
     true
 }
 
+#[allow(dead_code)]
 pub fn lower_props_derived_consts_in_arrow(arrow: &mut ArrowExpr) -> bool {
+    lower_props_derived_consts_in_arrow_with_inputs(arrow, HashSet::new())
+}
+
+pub fn lower_props_derived_consts_in_arrow_with_inputs(
+    arrow: &mut ArrowExpr,
+    additional_inputs: HashSet<String>,
+) -> bool {
     let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_mut() else {
         return false;
     };
@@ -1636,11 +1799,20 @@ pub fn lower_props_derived_consts_in_arrow(arrow: &mut ArrowExpr) -> bool {
         return false;
     };
     let mut reactive_inputs = collect_param_idents(&arrow.params);
+    reactive_inputs.extend(additional_inputs);
     reactive_inputs.extend(collect_phase2_reactive_source_names(block, ret_idx));
     apply_phase2_props_derived_const_lowering(block, ret_idx, &reactive_inputs)
 }
 
+#[allow(dead_code)]
 pub fn lower_props_derived_consts_in_function(func: &mut Function) -> bool {
+    lower_props_derived_consts_in_function_with_inputs(func, HashSet::new())
+}
+
+pub fn lower_props_derived_consts_in_function_with_inputs(
+    func: &mut Function,
+    additional_inputs: HashSet<String>,
+) -> bool {
     let Some(block) = &mut func.body else {
         return false;
     };
@@ -1649,6 +1821,7 @@ pub fn lower_props_derived_consts_in_function(func: &mut Function) -> bool {
     };
     let params: Vec<Pat> = func.params.iter().map(|param| param.pat.clone()).collect();
     let mut reactive_inputs = collect_param_idents(&params);
+    reactive_inputs.extend(additional_inputs);
     reactive_inputs.extend(collect_phase2_reactive_source_names(block, ret_idx));
     apply_phase2_props_derived_const_lowering(block, ret_idx, &reactive_inputs)
 }
@@ -1852,12 +2025,50 @@ pub fn collect_setup(
     stop_at_control: bool,
     initial_locals: &HashSet<String>,
 ) -> (Vec<Stmt>, Vec<String>, Vec<String>, HashSet<String>) {
+    collect_setup_with_locals(
+        block,
+        ret_idx,
+        first_control_idx,
+        stop_at_control,
+        initial_locals,
+        initial_locals,
+    )
+}
+
+/// Crate-internal regional entry used by compiled component lowering. Values in
+/// `unavailable_locals` are known live inputs (notably compiled prop slots), so declarations
+/// derived from them stay inside the branch effect instead of becoming a `useSetup` snapshot.
+pub(crate) fn collect_setup_region(
+    block: &BlockStmt,
+    available_locals: &HashSet<String>,
+    unavailable_locals: &HashSet<String>,
+) -> (Vec<Stmt>, Vec<String>, Vec<String>, HashSet<String>) {
+    let mut known_locals = available_locals.clone();
+    known_locals.extend(unavailable_locals.iter().cloned());
+    collect_setup_with_locals(
+        block,
+        block.stmts.len(),
+        block.stmts.len(),
+        false,
+        available_locals,
+        &known_locals,
+    )
+}
+
+fn collect_setup_with_locals(
+    block: &BlockStmt,
+    ret_idx: usize,
+    first_control_idx: usize,
+    stop_at_control: bool,
+    initial_available: &HashSet<String>,
+    initial_known: &HashSet<String>,
+) -> (Vec<Stmt>, Vec<String>, Vec<String>, HashSet<String>) {
     let mut collected: Vec<Stmt> = Vec::new();
     let mut names_const: Vec<String> = Vec::new();
     let mut names_let: Vec<String> = Vec::new();
     // 组件参数本身就是 setup 输入，不应再被视作 useSetup 收集阶段的 unavailable local。
-    let mut available: HashSet<String> = initial_locals.clone();
-    let mut known_locals: HashSet<String> = initial_locals.clone();
+    let mut available: HashSet<String> = initial_available.clone();
+    let mut known_locals: HashSet<String> = initial_known.clone();
 
     fn collect_pat_idents(pat: &Pat, out: &mut Vec<String>) {
         match pat {
@@ -2003,7 +2214,7 @@ pub fn collect_setup(
             });
         }
 
-        if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        if call_callee_ident_name(call) != Some("_$compiledWithHookId") {
             return false;
         }
 
@@ -2037,7 +2248,7 @@ pub fn collect_setup(
             });
         }
 
-        if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        if call_callee_ident_name(call) != Some("_$compiledWithHookId") {
             return false;
         }
 
@@ -2127,7 +2338,7 @@ pub fn collect_setup(
             return true;
         }
 
-        if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+        if call_callee_ident_name(call) != Some("_$compiledWithHookId") {
             return false;
         }
 
@@ -2169,6 +2380,11 @@ pub fn collect_setup(
                 if var_decl_contains_jsx(var) {
                     break;
                 }
+                // 自定义 composable 可能在内部读取响应式状态。它必须在组件 render effect
+                // 中执行，才能让这些隐藏依赖被收集；搬进一次性的 useSetup 会冻结首帧值。
+                if node_contains_custom_composable_call(var) {
+                    break;
+                }
                 let is_hoistable_computed = var_decl_is_hoistable_computed(var);
                 let is_setup_helper = var_decl_is_setup_helper(var);
                 if !uses_unavailable_locals || is_hoistable_computed || is_setup_helper {
@@ -2178,12 +2394,10 @@ pub fn collect_setup(
                         let mut idents: Vec<String> = Vec::new();
                         collect_pat_idents(&vd.name, &mut idents);
                         for nm in idents {
-                            if !is_phase2_private_name(&nm) {
-                                match var.kind {
-                                    VarDeclKind::Const => names_const.push(nm.clone()),
-                                    VarDeclKind::Let => names_let.push(nm.clone()),
-                                    VarDeclKind::Var => names_let.push(nm.clone()),
-                                }
+                            match var.kind {
+                                VarDeclKind::Const => names_const.push(nm.clone()),
+                                VarDeclKind::Let => names_let.push(nm.clone()),
+                                VarDeclKind::Var => names_let.push(nm.clone()),
                             }
                             available.insert(nm);
                         }
@@ -2223,7 +2437,7 @@ pub fn collect_setup(
     (collected, names_const, names_let, available)
 }
 
-fn collect_param_idents(params: &[Pat]) -> HashSet<String> {
+pub fn collect_param_idents(params: &[Pat]) -> HashSet<String> {
     fn collect_pat_names(pat: &Pat, out: &mut HashSet<String>) {
         match pat {
             Pat::Ident(BindingIdent { id, .. }) => {
@@ -2260,7 +2474,7 @@ fn collect_param_idents(params: &[Pat]) -> HashSet<String> {
 
 /// 将已收集的语句封装进 useSetup 并在边界前插入解构绑定
 /// 过程：
-/// 1) 调用 `on_setup::build_setup_with_binds(names_const, names_let, collected)` 生成：
+/// 1) 调用 `on_setup::build_setup_with_binds` 并传入普通组件的稳定区域身份，生成：
 ///    - `const _$useSetup = useSetup(() => { ...; return {consts..., lets...} })`
 ///    - `const { consts } = _$useSetup; let { lets } = _$useSetup;`
 /// 2) 在原函数体中移除被收集的语句，保留其余语句与返回语句；
@@ -2277,8 +2491,30 @@ pub fn inject_setup(
     }
     let mut new_body: Vec<Stmt> = Vec::new();
     // 构建 useSetup 包裹及解构绑定的两段声明
-    let decls =
-        on_setup::build_setup_with_binds(names_const.clone(), names_let.clone(), collected.clone());
+    let setup_args = (
+        "useSetup:0:0",
+        crate::emit::ident("_$useSetup"),
+        names_const.clone(),
+        names_let.clone(),
+        collected.clone(),
+    );
+    let decls = if setup_is_compiled_safe(&collected) {
+        on_setup::build_compiled_setup_with_binds(
+            setup_args.0,
+            setup_args.1,
+            setup_args.2,
+            setup_args.3,
+            setup_args.4,
+        )
+    } else {
+        on_setup::build_setup_with_binds(
+            setup_args.0,
+            setup_args.1,
+            setup_args.2,
+            setup_args.3,
+            setup_args.4,
+        )
+    };
     for d in decls {
         // 依次插入：先插入 useSetup 容器声明，再插入 const/let 解构绑定
         new_body.push(d);
@@ -2295,6 +2531,64 @@ pub fn inject_setup(
         new_body.push(s.clone());
     }
     block.stmts = new_body;
+}
+
+fn setup_is_compiled_safe(collected: &[Stmt]) -> bool {
+    struct DirectCallClassifier {
+        safe: bool,
+    }
+
+    impl Visit for DirectCallClassifier {
+        fn visit_call_expr(&mut self, call: &CallExpr) {
+            let Callee::Expr(callee) = &call.callee else {
+                self.safe = false;
+                return;
+            };
+            if let Expr::Ident(ident) = crate::utils::unwrap_expr(callee.as_ref()) {
+                if ident.sym == *"_$compiledWithHookId" {
+                    let Some(runner) = call.args.get(1) else {
+                        self.safe = false;
+                        return;
+                    };
+                    let Expr::Arrow(arrow) = crate::utils::unwrap_expr(runner.expr.as_ref()) else {
+                        self.safe = false;
+                        return;
+                    };
+                    let BlockStmtOrExpr::Expr(body) = arrow.body.as_ref() else {
+                        self.safe = false;
+                        return;
+                    };
+                    let Expr::Call(inner) = crate::utils::unwrap_expr(body.as_ref()) else {
+                        self.safe = false;
+                        return;
+                    };
+                    self.visit_call_expr(inner);
+                    return;
+                }
+                if !matches!(
+                    crate::compiled_capabilities::runtime_tier_for_helper(ident.sym.as_ref()),
+                    Some(crate::compiled_capabilities::RuntimeTier::Compiled)
+                ) {
+                    self.safe = false;
+                    return;
+                }
+            }
+            call.visit_children_with(self);
+        }
+
+        // Creating a deferred closure is setup-safe; its body is not executed by the setup factory.
+        fn visit_arrow_expr(&mut self, _arrow: &ArrowExpr) {}
+        fn visit_function(&mut self, _function: &Function) {}
+    }
+
+    let mut classifier = DirectCallClassifier { safe: true };
+    for stmt in collected {
+        stmt.visit_with(&mut classifier);
+        if !classifier.safe {
+            return false;
+        }
+    }
+    true
 }
 
 /// 查找返回语句的索引（更宽松：无论是否返回 JSX，都视为边界）
@@ -2432,6 +2726,16 @@ struct RenderControlReturnDetector {
     found: bool,
 }
 
+struct RenderControlThrowDetector {
+    found: bool,
+}
+
+impl Visit for RenderControlThrowDetector {
+    fn visit_throw_stmt(&mut self, _throw_stmt: &ThrowStmt) {
+        self.found = true;
+    }
+}
+
 impl Visit for RenderControlReturnDetector {
     fn visit_return_stmt(&mut self, return_stmt: &ReturnStmt) {
         if return_stmt.arg.as_ref().is_some_and(|arg| expr_is_component_renderable(arg.as_ref())) {
@@ -2461,9 +2765,9 @@ fn expr_selects_render_branch(expr: &Expr) -> bool {
 
 fn stmt_has_render_control(stmt: &Stmt) -> bool {
     match stmt {
-        Stmt::Return(ret) => {
-            ret.arg.as_ref().is_some_and(|arg| expr_selects_render_branch(arg.as_ref()))
-        }
+        Stmt::Return(ret) => ret.arg.as_ref().is_some_and(|arg| {
+            expr_selects_render_branch(arg.as_ref()) || expr_is_dynamic_component_root(arg.as_ref())
+        }),
         Stmt::If(_)
         | Stmt::Switch(_)
         | Stmt::Try(_)
@@ -2478,7 +2782,12 @@ fn stmt_has_render_control(stmt: &Stmt) -> bool {
             }
             let mut render_return = RenderControlReturnDetector { found: false };
             stmt.visit_with(&mut render_return);
-            render_return.found
+            if render_return.found {
+                return true;
+            }
+            let mut render_throw = RenderControlThrowDetector { found: false };
+            stmt.visit_with(&mut render_throw);
+            render_throw.found
         }
         // Conditional/logical JSX inside a variable initializer or expression is lowered to a
         // fine-grained anchor by the element transform. It does not require a component-wide
@@ -2501,14 +2810,58 @@ pub fn block_has_reactive_render_control(block: &BlockStmt) -> bool {
     block.stmts.iter().take(ret_idx + 1).any(stmt_has_render_control)
 }
 
-pub fn arrow_has_reactive_render_control(arrow: &ArrowExpr) -> bool {
-    let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() else {
-        return false;
-    };
-    block_has_reactive_render_control(block)
+pub fn block_has_custom_composable_call(block: &BlockStmt) -> bool {
+    node_contains_custom_composable_call(block)
 }
 
-fn block_has_component_render_reactive_marker(block: &BlockStmt) -> bool {
+pub fn arrow_has_reactive_render_control(arrow: &ArrowExpr) -> bool {
+    match arrow.body.as_ref() {
+        BlockStmtOrExpr::BlockStmt(block) => block_has_reactive_render_control(block),
+        BlockStmtOrExpr::Expr(expr) => expr_is_dynamic_component_root(expr.as_ref()),
+    }
+}
+
+fn expr_is_dynamic_component_root(expr: &Expr) -> bool {
+    let Expr::JSXElement(element) = crate::utils::unwrap_expr(expr) else {
+        return false;
+    };
+    crate::utils::is_component(&element.opening.name)
+        && (!crate::utils::component_has_no_dynamic_props_excluding_children(element)
+            || component_has_dynamic_children(element))
+}
+
+fn component_has_dynamic_children(element: &JSXElement) -> bool {
+    element.children.iter().any(|child| match child {
+        JSXElementChild::JSXElement(child) => {
+            crate::utils::is_component(&child.opening.name)
+                && (!crate::utils::component_has_no_dynamic_props_excluding_children(child)
+                    || component_has_dynamic_children(child))
+        }
+        JSXElementChild::JSXFragment(fragment) => {
+            fragment.children.iter().any(|child| match child {
+                JSXElementChild::JSXElement(child) => {
+                    crate::utils::is_component(&child.opening.name)
+                        && (!crate::utils::component_has_no_dynamic_props_excluding_children(child)
+                            || component_has_dynamic_children(child))
+                }
+                JSXElementChild::JSXExprContainer(container) => match &container.expr {
+                    JSXExpr::Expr(expr) => !matches!(crate::utils::unwrap_expr(expr), Expr::Lit(_)),
+                    JSXExpr::JSXEmptyExpr(_) => false,
+                },
+                JSXElementChild::JSXSpreadChild(_) => true,
+                _ => false,
+            })
+        }
+        JSXElementChild::JSXExprContainer(container) => match &container.expr {
+            JSXExpr::Expr(expr) => !matches!(crate::utils::unwrap_expr(expr), Expr::Lit(_)),
+            JSXExpr::JSXEmptyExpr(_) => false,
+        },
+        JSXElementChild::JSXSpreadChild(_) => true,
+        JSXElementChild::JSXText(_) => false,
+    })
+}
+
+pub(crate) fn block_has_component_render_reactive_marker(block: &BlockStmt) -> bool {
     block.stmts.iter().any(|stmt| {
         let Stmt::Expr(expr_stmt) = stmt else {
             return false;
@@ -2516,7 +2869,7 @@ fn block_has_component_render_reactive_marker(block: &BlockStmt) -> bool {
         let Expr::Call(call) = crate::utils::unwrap_expr(expr_stmt.expr.as_ref()) else {
             return false;
         };
-        call_expr_callee_ident_name(call) == Some("_$vaporMarkComponentRenderReactive")
+        call_expr_callee_ident_name(call) == Some("_$compiledMarkComponentRenderReactive")
     })
 }
 
@@ -2529,7 +2882,10 @@ pub fn mark_component_render_reactive(block: &mut BlockStmt) {
         0,
         Stmt::Expr(ExprStmt {
             span: DUMMY_SP,
-            expr: Box::new(crate::emit::call_ident("_$vaporMarkComponentRenderReactive", vec![])),
+            expr: Box::new(crate::emit::call_ident(
+                "_$compiledMarkComponentRenderReactive",
+                vec![],
+            )),
         }),
     );
 }
@@ -2537,7 +2893,8 @@ pub fn mark_component_render_reactive(block: &mut BlockStmt) {
 pub fn mark_component_render_reactive_factory(expr: &mut Box<Expr>) {
     let component = expr.as_ref().clone();
     let span = component.span();
-    let mut call = crate::emit::call_ident("_$vaporMarkComponentRenderReactive", vec![component]);
+    let mut call =
+        crate::emit::call_ident("_$compiledMarkComponentRenderReactive", vec![component]);
     if let Expr::Call(call_expr) = &mut call {
         call_expr.span = span;
     }
@@ -2563,7 +2920,8 @@ pub fn mark_nested_jsx_render_closure(expr: &mut Box<Expr>) -> bool {
     }
 
     let closure = expr.as_ref().clone();
-    *expr = Box::new(crate::emit::call_ident("_$vaporMarkComponentRenderReactive", vec![closure]));
+    *expr =
+        Box::new(crate::emit::call_ident("_$compiledMarkComponentRenderReactive", vec![closure]));
     true
 }
 

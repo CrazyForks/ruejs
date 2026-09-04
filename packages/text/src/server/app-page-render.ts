@@ -661,7 +661,21 @@ export async function renderAppPageLifecycle(
   // as Text.js does. The digest survives in the App payload for the
   // client router to consume.
   if (options.hasLoadingBoundary) {
-    const captured = rscErrorTracker.getCapturedSpecialError()
+    // The compat RSC encoder resolves the async page through a short chain of
+    // promise reactions. Give that already-runnable microtask chain a bounded
+    // chance to report a control-flow digest before committing status headers.
+    // Do not cross a macrotask boundary: genuine I/O must retain streaming.
+    let captured = rscErrorTracker.getCapturedSpecialError()
+    for (let i = 0; captured === null && i < 32; i += 1) {
+      await Promise.resolve()
+      captured = rscErrorTracker.getCapturedSpecialError()
+    }
+    if (captured === null && !options.isProduction) {
+      // A newly discovered route may still be passing through the dev module
+      // runner after the HTML fallback shell is ready. Bound that dev-only
+      // race so control-flow errors can still determine the HTTP status.
+      captured = await rscErrorTracker.waitForSpecialError(100)
+    }
     if (captured) {
       const specialError = resolveAppPageSpecialError(captured)
       if (specialError) {

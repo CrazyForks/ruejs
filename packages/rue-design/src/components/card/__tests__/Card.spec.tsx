@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import { renderToString } from '@rue-js/server-renderer'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
@@ -14,7 +14,9 @@ afterEach(() => {
 describe('Card', () => {
   it('server-renders semantic structure without actions', async () => {
     const html = await renderToString(
-      h(Card, { title: 'SSR Card', className: 'bg-base-100' }, h('p', null, 'Server body')),
+      <Card title={'SSR Card'} className={'bg-base-100'}>
+        <p>{'Server body'}</p>
+      </Card>,
     )
 
     expect(html).toContain('SSR Card')
@@ -26,19 +28,17 @@ describe('Card', () => {
   it('renders with base class and legacy class props', async () => {
     const c = mountContainer()
     render(
-      h(
-        Card,
-        {
-          size: 'lg',
-          border: true,
-          bordered: true,
-          dash: true,
-          side: true,
-          imageFull: true,
-          className: 'bg-base-100',
-        },
-        'hello',
-      ),
+      <Card
+        size={'lg'}
+        border={true}
+        bordered={true}
+        dash={true}
+        side={true}
+        imageFull={true}
+        className={'bg-base-100'}
+      >
+        {'hello'}
+      </Card>,
       c,
     )
 
@@ -59,17 +59,15 @@ describe('Card', () => {
   it('supports semantic header, cover, actions and body slots', async () => {
     const c = mountContainer()
     render(
-      h(
-        Card,
-        {
-          title: 'Analytics Overview',
-          extra: h('button', { className: 'btn btn-ghost btn-sm' }, 'Refresh'),
-          cover: h('img', { src: 'cover.png', alt: 'cover' }),
-          actions: [h('span', null, 'Share'), h('span', null, 'Inspect')],
-          className: 'bg-base-100',
-        },
-        h('p', { className: 'body-copy' }, 'Revenue increased by 24% this month.'),
-      ),
+      <Card
+        title={'Analytics Overview'}
+        extra={<button className={'btn btn-ghost btn-sm'}>{'Refresh'}</button>}
+        cover={<img src={'cover.png'} alt={'cover'} />}
+        actions={[<span>{'Share'}</span>, <span>{'Inspect'}</span>]}
+        className={'bg-base-100'}
+      >
+        <p className={'body-copy'}>{'Revenue increased by 24% this month.'}</p>
+      </Card>,
       c,
     )
 
@@ -98,7 +96,12 @@ describe('Card', () => {
 
   it('renders loading placeholders instead of body content', async () => {
     const c = mountContainer()
-    render(h(Card, { title: 'Loading card', loading: true }, h('p', null, 'Hidden body')), c)
+    render(
+      <Card title={'Loading card'} loading={true}>
+        <p>{'Hidden body'}</p>
+      </Card>,
+      c,
+    )
 
     await waitForContent(() => {
       const card = c.querySelector('.card') as HTMLElement
@@ -113,15 +116,15 @@ describe('Card', () => {
     const onTabChange = vi.fn()
 
     render(
-      h(Card, {
-        title: 'Traffic',
-        defaultActiveTabKey: 'metrics',
-        onTabChange,
-        tabList: [
+      <Card
+        title={'Traffic'}
+        defaultActiveTabKey={'metrics'}
+        onTabChange={onTabChange}
+        tabList={[
           { key: 'overview', label: 'Overview' },
           { key: 'metrics', label: 'Metrics' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 
@@ -146,33 +149,27 @@ describe('Card', () => {
   it('renders Meta and Grid compounded subcomponents', async () => {
     const c = mountContainer()
     render(
-      h(
-        Card,
-        { title: 'Shortcuts', bodyClassName: '!p-0' },
-        h(
-          Card.Body,
-          { className: 'border-base-300/80 border-b' },
-          h(Card.Meta, {
-            avatar: h(
-              'div',
-              { className: 'avatar placeholder' },
-              h('div', { className: 'bg-primary text-primary-content rounded-full w-10' }, 'AI'),
-            ),
-            title: 'Workspace AI',
-            description: 'Connect docs, demos and design decisions in one place.',
-          }),
-        ),
-        h(
-          'div',
-          { className: 'grid gap-px bg-base-300/60 sm:grid-cols-2' },
-          h(Card.Grid, null, h('div', { className: 'font-semibold' }, 'Design Tokens')),
-          h(
-            Card.Grid,
-            { hoverable: false },
-            h('div', { className: 'font-semibold' }, 'Usage Reports'),
-          ),
-        ),
-      ),
+      <Card title={'Shortcuts'} bodyClassName={'!p-0'}>
+        <Card.Body className={'border-base-300/80 border-b'}>
+          <Card.Meta
+            avatar={
+              <div className={'avatar placeholder'}>
+                <div className={'bg-primary text-primary-content rounded-full w-10'}>{'AI'}</div>
+              </div>
+            }
+            title={'Workspace AI'}
+            description={'Connect docs, demos and design decisions in one place.'}
+          />
+        </Card.Body>
+        <div className={'grid gap-px bg-base-300/60 sm:grid-cols-2'}>
+          <Card.Grid>
+            <div className={'font-semibold'}>{'Design Tokens'}</div>
+          </Card.Grid>
+          <Card.Grid hoverable={false}>
+            <div className={'font-semibold'}>{'Usage Reports'}</div>
+          </Card.Grid>
+        </div>
+      </Card>,
       c,
     )
 
@@ -192,18 +189,18 @@ describe('Card', () => {
   it('renders Body, Title, Actions and Figure low-level subcomponents', async () => {
     const c = mountContainer()
     render(
-      h(
-        Card,
-        null,
-        h(Card.Figure, null, h('img', { src: 'x', alt: 'y' })),
-        h(
-          Card.Body,
-          null,
-          h(Card.Title, null, 'Hello'),
-          h('p', null, 'content'),
-          h(Card.Actions, null, h('button', { className: 'btn' }, 'Go')),
-        ),
-      ),
+      <Card>
+        <Card.Figure>
+          <img src={'x'} alt={'y'} />
+        </Card.Figure>
+        <Card.Body>
+          <Card.Title>{'Hello'}</Card.Title>
+          <p>{'content'}</p>
+          <Card.Actions>
+            <button className={'btn'}>{'Go'}</button>
+          </Card.Actions>
+        </Card.Body>
+      </Card>,
       c,
     )
 

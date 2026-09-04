@@ -289,7 +289,7 @@ type MockupBrowserCompound = FC<MockupBrowserProps> & {
   Content: FC<MockupBrowserContentProps>
 }
 
-const MockupBrowser: MockupBrowserCompound = Object.assign(Root, {
+const MockupBrowser: MockupBrowserCompound = /*#__PURE__*/ Object.assign(Root, {
   Toolbar,
   AddressBar,
   Content,

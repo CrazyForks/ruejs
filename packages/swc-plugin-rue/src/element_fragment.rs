@@ -33,6 +33,7 @@ pub fn emit_fragment_children(
                     let inner_top = crate::utils::unwrap_expr(expr.as_ref());
                     let is_children = crate::utils::is_children_member_expr(inner_top);
 
+                    let list_stmt_start = stmts.len();
                     if !is_children
                         && let Expr::Call(call) = inner_top
                         && crate::element_list::try_build_list_from_map(
@@ -41,6 +42,7 @@ pub fn emit_fragment_children(
                             call,
                             stmts,
                         )
+                        && stmts.len() > list_stmt_start
                     {
                         continue;
                     }

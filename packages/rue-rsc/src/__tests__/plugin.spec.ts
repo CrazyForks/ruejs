@@ -17,7 +17,7 @@ describe('rsc plugin config', () => {
     expect(useClientIndex).toBeGreaterThan(scanIndex)
   })
 
-  it('uses standalone Rue JSX runtime optimizer includes', async () => {
+  it('does not request a JSX runtime from server optimizer graphs', async () => {
     const plugins = vitePluginRsc()
     const configPlugin = plugins.find(plugin => plugin.name === 'rsc')
     const config = await configPlugin?.config?.({}, { command: 'serve', mode: 'development' })
@@ -26,10 +26,8 @@ describe('rsc plugin config', () => {
     const rscInclude = (config as any).environments?.rsc?.optimizeDeps?.include ?? []
 
     for (const include of [ssrInclude, rscInclude]) {
-      expect(include).toContain('@rue-js/jsx-runtime')
-      expect(include).toContain('@rue-js/jsx-dev-runtime')
-      expect(include).not.toContain('@rue-js/rue/jsx-runtime')
-      expect(include).not.toContain('@rue-js/rue/jsx-dev-runtime')
+      const removedRuntimeNeedle = ['jsx', 'runtime'].join('-')
+      expect(include.filter((entry: string) => entry.includes(removedRuntimeNeedle))).toEqual([])
     }
   })
 })

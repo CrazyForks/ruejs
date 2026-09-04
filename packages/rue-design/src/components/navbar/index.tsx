@@ -290,7 +290,7 @@ type NavbarCompound = FC<NavbarRootProps> & {
   Item: FC<NavbarItemProps>
 }
 
-const Navbar: NavbarCompound = Object.assign(Root, {
+const Navbar: NavbarCompound = /*#__PURE__*/ Object.assign(Root, {
   Start,
   Center,
   End,

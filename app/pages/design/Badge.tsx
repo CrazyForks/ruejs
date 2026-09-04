@@ -1,4 +1,4 @@
-import { h, ref, type FC } from '@rue-js/rue'
+import { ref, type FC } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import { Badge, Button, Tabs } from '@rue-js/design'
@@ -79,10 +79,10 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
 }
 
 const PreviewSurface: FC<{ className?: string; children?: any }> = ({ className, children }) => {
-  return h(
-    'div',
-    { className: mergeClassName(previewShellClass, className) },
-    h('div', { className: previewBodyClass }, ...(toChildArray(children) as any[])),
+  return (
+    <div className={mergeClassName(previewShellClass, className)}>
+      <div className={previewBodyClass}>{toChildArray(children)}</div>
+    </div>
   )
 }
 

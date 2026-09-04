@@ -800,19 +800,6 @@ const Group: FC<RadioGroupProps> = ({
     syncChildInputs()
   })
 
-  const injectedChildren = injectRadioGroupProps(children, {
-    __rueRadioGroupValue: readCurrentValue(),
-    __rueRadioGroupDisabled: disabled,
-    __rueRadioGroupControlled: value !== undefined,
-    __rueRadioGroupOnChange: handleRadioChange,
-    name: mergedName,
-    optionType,
-    buttonStyle,
-    size,
-    color,
-    block,
-  })
-
   return (
     <div
       {...rest}
@@ -860,7 +847,7 @@ const Group: FC<RadioGroupProps> = ({
               {option.label}
             </RadioRoot>
           ))
-        : injectedChildren}
+        : children}
     </div>
   )
 }
@@ -875,7 +862,7 @@ type RadioCompound = FC<RadioProps> & {
   Button: FC<RadioProps>
 }
 
-const Radio: RadioCompound = Object.assign(RadioRoot, {
+const Radio: RadioCompound = /*#__PURE__*/ Object.assign(RadioRoot, {
   Group,
   Button: RadioButton,
 })

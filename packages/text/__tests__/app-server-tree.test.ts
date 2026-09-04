@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import { Suspense, h } from '@rue-js/rue'
+import { Suspense } from '@rue-js/rue'
 import {
   AppServerSuspense,
   adaptAppServerRenderableForHtmlSsr,
@@ -59,7 +59,7 @@ describe('createAppServerElement', () => {
 
   it('adapts portable Rue Vapor component results before the SSR renderer consumes them as children', async () => {
     const portableVapor = {
-      __rue_vapor_setup() {},
+      __rue_compiled_mount() {},
       __rue_cleanup_bucket: [],
     }
     function VaporPage() {
@@ -87,7 +87,7 @@ describe('createAppServerElement', () => {
 
   it('uses the injected Rue SSR renderer when the RSC graph adapts portable Rue output', async () => {
     const portableVapor = {
-      __rue_vapor_setup() {},
+      __rue_compiled_mount() {},
       __rue_cleanup_bucket: [],
     }
     const injectedRenderToString = vi.fn(async () => '<article>injected rue html</article>')
@@ -110,7 +110,7 @@ describe('createAppServerElement', () => {
 
   it('adapts portable Rue Vapor children before they cross client references', async () => {
     const portableVapor = {
-      __rue_vapor_setup() {},
+      __rue_compiled_mount() {},
       __rue_cleanup_bucket: [],
     }
     const clientReference = Object.assign(
@@ -369,7 +369,7 @@ describe('createAppServerElement', () => {
 
   it('adapts Rue client component output after resolving async references for HTML SSR', async () => {
     function ResolvedClientComponent() {
-      return h('button', null, 'Client')
+      return createAppServerElement('button', null, 'Client')
     }
     const clientReference = Object.assign(
       () => {
@@ -398,8 +398,8 @@ describe('createAppServerElement', () => {
     }
     const rendered = await adapted.type(adapted.props)
 
-    expect(rendered.type).toBe('text-rue-html')
-    expect(rendered.props.dangerouslySetInnerHTML.__html).toBe('<main>rue html</main>')
+    expect(rendered.type).toBe('button')
+    expect(rendered.props.children).toBe('Client')
   })
 
   it('unwraps Rue signal children returned by client components during HTML SSR', async () => {
@@ -531,7 +531,7 @@ describe('createAppServerElement', () => {
 
   it('resolves async Rue children in arrays during inline SSR adaptation', async () => {
     const portableVapor = {
-      __rue_vapor_setup() {},
+      __rue_compiled_mount() {},
       __rue_cleanup_bucket: [],
     }
 

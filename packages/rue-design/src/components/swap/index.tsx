@@ -239,7 +239,7 @@ type SwapCompound = FC<SwapProps> & {
   Indeterminate: FC<SwapPartProps>
 }
 
-const SwapCompound: SwapCompound = Object.assign(SwapRoot, {
+const SwapCompound: SwapCompound = /*#__PURE__*/ Object.assign(SwapRoot, {
   On,
   Off,
   Indeterminate,

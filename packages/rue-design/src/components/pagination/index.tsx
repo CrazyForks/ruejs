@@ -740,7 +740,7 @@ type PaginationCompound = FC<PaginationProps> & {
   Item: FC<PaginationItemProps>
 }
 
-const Pagination: PaginationCompound = Object.assign(Root, {
+const Pagination: PaginationCompound = /*#__PURE__*/ Object.assign(Root, {
   Item,
 })
 

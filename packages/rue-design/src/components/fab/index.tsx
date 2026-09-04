@@ -320,7 +320,12 @@ const ActionButton: FC<
     className: actionClassName,
     'aria-label':
       rest['aria-label'] ?? (typeof mergedContent === 'string' ? mergedContent : undefined),
-    onClick: handleClick,
+    onClick: menuAction ? undefined : handleClick,
+    ref: menuAction
+      ? (element: HTMLElement | null) => {
+          if (element) element.onclick = handleClick
+        }
+      : undefined,
   }
 
   if (menuAction) {
@@ -480,11 +485,10 @@ const Fab: FC<FabProps> = props => {
   }
 
   const requestOpenChange = (nextOpen: boolean) => {
-    if (currentOpen.value === nextOpen) return
-    setCurrentOpen(nextOpen)
-    if (!isControlled) {
-      uncontrolledOpen.value = nextOpen
-    }
+    const liveTrigger = rootElement?.querySelector('[aria-expanded]') as HTMLElement | null
+    const domOpen = liveTrigger?.getAttribute('aria-expanded') === 'true'
+    if ((liveTrigger ? domOpen : currentOpen.value) === nextOpen) return
+    if (isControlled) setCurrentOpen(nextOpen)
     syncMenuDom(nextOpen)
     if (onOpenChange) onOpenChange(nextOpen)
   }
@@ -512,7 +516,9 @@ const Fab: FC<FabProps> = props => {
     if (typeof window === 'undefined') return
 
     const handleWindowClick = (event: MouseEvent) => {
-      if (!currentOpen.value || currentTrigger.value !== 'click') return
+      const isOpen =
+        rootElement?.querySelector('[aria-expanded]')?.getAttribute('aria-expanded') === 'true'
+      if (!isOpen || currentTrigger.value !== 'click') return
       if (rootElement?.contains(event.target as Node)) return
       requestOpenChange(false)
     }
@@ -538,6 +544,15 @@ const Fab: FC<FabProps> = props => {
   const linearPanel = getLinearPanelPosition(placement)
 
   const handleSingleButtonClick = (event: MouseEvent) => {
+    if (onClick) onClick(event)
+  }
+
+  const handleMenuButtonClick = (event: MouseEvent) => {
+    if (currentTrigger.value === 'click') {
+      const isOpen =
+        rootElement?.querySelector('[aria-expanded]')?.getAttribute('aria-expanded') === 'true'
+      requestOpenChange(!isOpen)
+    }
     if (onClick) onClick(event)
   }
 
@@ -634,21 +649,12 @@ const Fab: FC<FabProps> = props => {
           </div>
         )
       ) : null}
-      <div
-        className="pointer-events-auto relative z-1"
-        onClick={(event: MouseEvent) => {
-          if (!isMenuMode) return
-          if (mergedTrigger === 'click') {
-            requestOpenChange(!currentOpen.value)
-          }
-          if (onClick) onClick(event)
-        }}
-      >
+      <div className="pointer-events-auto relative z-1">
         <ActionButton
           {...actionProps}
           children={children}
           icon={actionProps.icon}
-          onClick={isMenuMode ? undefined : handleSingleButtonClick}
+          onClick={isMenuMode ? handleMenuButtonClick : handleSingleButtonClick}
           tooltipPlacement={linearPanel.tooltipPlacement}
           menuAction={isMenuMode}
           open={mergedOpen}
@@ -711,7 +717,7 @@ type FabCompound = FC<FabProps> & {
   Item: FC<FabActionProps>
 }
 
-const FabCompound: FabCompound = Object.assign(Fab, {
+const FabCompound: FabCompound = /*#__PURE__*/ Object.assign(Fab, {
   Trigger,
   Close,
   MainAction,

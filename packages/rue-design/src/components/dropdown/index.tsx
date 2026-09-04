@@ -4,7 +4,7 @@ Dropdown 组件概述
 - 同时补齐更接近成熟组件库的增强 API：menu/items、trigger、open/defaultOpen、popupRender。
 - 视觉仍沿用 Rue 当前的 dropdown 基底，只做交互与组织能力增强。
 */
-import { onMounted, onUnmounted, ref, watch, type FC } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
 import Menu from '../menu/index'
 import type { MenuClickInfo, MenuDataEntry, MenuProps } from '../menu/index'
 
@@ -653,8 +653,24 @@ const Dropdown: FC<DropdownProps> = ({
   }
 
   const childSlots = splitDropdownChildren(children)
-  const uncontrolledOpen = ref(defaultOpen ?? false)
-  const currentOpen = ref(open ?? defaultOpen ?? false)
+  const uncontrolledOpenState = useRef<boolean>(defaultOpen ?? false)
+  const currentOpenState = useRef<boolean>(open ?? defaultOpen ?? false)
+  const uncontrolledOpen = {
+    get value() {
+      return uncontrolledOpenState.current ?? false
+    },
+    set value(nextOpen: boolean) {
+      uncontrolledOpenState.current = nextOpen
+    },
+  }
+  const currentOpen = {
+    get value() {
+      return currentOpenState.current ?? false
+    },
+    set value(nextOpen: boolean) {
+      currentOpenState.current = nextOpen
+    },
+  }
   const currentTriggers = ref(normalizeTrigger(trigger))
   const contextPosition = ref<{ x: number; y: number } | null>(null)
   const menuConfig: DropdownMenuProps | undefined =
@@ -874,8 +890,83 @@ const Dropdown: FC<DropdownProps> = ({
           )}
           style={mergeStyleValue(menuConfig.style, styles?.menu) || undefined}
           onClick={(info: MenuClickInfo) => {
+            const liveOverlay = (info.domEvent.target as HTMLElement | null)?.closest?.(
+              '.dropdown-content',
+            )
+            const liveRoot = liveOverlay?.closest?.('.dropdown')
+            const rootLocations: Array<{ ancestor: HTMLElement; index: number }> = []
+            let ancestor = liveRoot?.parentElement ?? null
+            while (liveRoot && ancestor) {
+              rootLocations.push({
+                ancestor,
+                index: Array.from(ancestor.querySelectorAll('.dropdown')).indexOf(liveRoot),
+              })
+              ancestor = ancestor.parentElement
+            }
             if (menuConfig.onClick) menuConfig.onClick(info)
             if (mergedCloseOnClick) closeFromMenu()
+            else {
+              const preserveOpenDom = () => {
+                const location = rootLocations.find(
+                  entry => entry.ancestor.isConnected && entry.index >= 0,
+                )
+                const nextRoot = location
+                  ? (location.ancestor.querySelectorAll('.dropdown')[location.index] as
+                      | HTMLElement
+                      | undefined)
+                  : liveOverlay?.closest?.('.dropdown')
+                const nextOverlay = nextRoot?.querySelector<HTMLElement>('.dropdown-content')
+                if (liveOverlay && nextOverlay && liveOverlay !== nextOverlay) {
+                  Array.from(liveOverlay.attributes).forEach(attribute =>
+                    liveOverlay.removeAttribute(attribute.name),
+                  )
+                  Array.from(nextOverlay.attributes).forEach(attribute =>
+                    liveOverlay.setAttribute(attribute.name, attribute.value),
+                  )
+                  liveOverlay.replaceChildren(...Array.from(nextOverlay.childNodes))
+                  nextOverlay.replaceWith(liveOverlay)
+                }
+                nextRoot?.classList.add('dropdown-open')
+                nextRoot
+                  ?.querySelector<HTMLElement>('[aria-haspopup="menu"]')
+                  ?.setAttribute('aria-expanded', 'true')
+                if (nextRoot && typeof window !== 'undefined') {
+                  const cleanupKey = '__rueDropdownPreservedOpenCleanup'
+                  const preservedRoot = nextRoot as HTMLElement & {
+                    [cleanupKey]?: () => void
+                  }
+                  preservedRoot[cleanupKey]?.()
+                  const cleanup = () => {
+                    window.removeEventListener('click', handleOutsideClick, true)
+                    window.removeEventListener('keydown', handleEscape)
+                    delete preservedRoot[cleanupKey]
+                  }
+                  const closePreservedRoot = () => {
+                    preservedRoot.classList.remove('dropdown-open')
+                    preservedRoot
+                      .querySelector<HTMLElement>('[aria-haspopup="menu"]')
+                      ?.setAttribute('aria-expanded', 'false')
+                    cleanup()
+                  }
+                  const handleOutsideClick = (event: MouseEvent) => {
+                    if (
+                      !preservedRoot.isConnected ||
+                      !preservedRoot.contains(event.target as Node)
+                    ) {
+                      closePreservedRoot()
+                    }
+                  }
+                  const handleEscape = (event: KeyboardEvent) => {
+                    if (event.key === 'Escape') closePreservedRoot()
+                  }
+                  preservedRoot[cleanupKey] = cleanup
+                  window.addEventListener('click', handleOutsideClick, true)
+                  window.addEventListener('keydown', handleEscape)
+                }
+              }
+              queueMicrotask(preserveOpenDom)
+              setTimeout(preserveOpenDom, 0)
+            }
           }}
         />
       )
@@ -1086,7 +1177,7 @@ type DropdownCompound = FC<DropdownProps> & {
   Content: FC<DropdownContentProps>
 }
 
-const DropdownCompound: DropdownCompound = Object.assign(Dropdown, {
+const DropdownCompound: DropdownCompound = /*#__PURE__*/ Object.assign(Dropdown, {
   Trigger,
   Content,
 })

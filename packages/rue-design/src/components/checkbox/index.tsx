@@ -369,7 +369,7 @@ const Group: FC<CheckboxGroupProps> = ({
 
     if (!order.length) return normalizedValue
 
-    const orderMap = new Map(order.map((item, index) => [item, index]))
+    const orderMap = /*#__PURE__*/ new Map(order.map((item, index) => [item, index]))
     return normalizedValue.sort((left, right) => {
       return (
         (orderMap.get(serializeValue(left)) ?? Number.MAX_SAFE_INTEGER) -
@@ -409,7 +409,7 @@ const Group: FC<CheckboxGroupProps> = ({
 
   const syncChildInputs = () => {
     const root = instance.root
-    const selectedSet = new Set(readCurrentValue().map(serializeValue))
+    const selectedSet = /*#__PURE__*/ new Set(readCurrentValue().map(serializeValue))
     if (!root || typeof root.querySelectorAll !== 'function') return
 
     root
@@ -470,7 +470,13 @@ const Group: FC<CheckboxGroupProps> = ({
       className={groupClassName}
       style={style}
       data-rue-checkbox-group="true"
-      onChange={normalizedOptions.length ? rest.onChange : handleChildrenChange}
+      onChange={(event: Event) => {
+        if (normalizedOptions.length) {
+          if (typeof rest.onChange === 'function') rest.onChange(event)
+          return
+        }
+        handleChildrenChange(event)
+      }}
     >
       {normalizedOptions.length
         ? readOptionItems().map(({ option, checked }) => (
@@ -506,7 +512,7 @@ type CheckboxCompound = FC<CheckboxProps> & {
   Group: FC<CheckboxGroupProps>
 }
 
-const CheckboxCompound: CheckboxCompound = Object.assign(Checkbox, {
+const CheckboxCompound: CheckboxCompound = /*#__PURE__*/ Object.assign(Checkbox, {
   Group,
 })
 

@@ -149,48 +149,31 @@ describe('_$reconcileKeyed', () => {
     expect(Array.from(attachedAtDispose.values()).every(Boolean)).toBe(true)
   })
 
-  it('remounts duplicate keys without reusing ambiguous row identity', () => {
+  it('rejects duplicate keys explicitly', () => {
     const parent = document.createElement('tbody')
     const before = document.createComment('list:end')
     parent.appendChild(before)
-    const disposed: number[] = []
     const mount = vi.fn((item: Row) => {
       const node = document.createElement('tr')
       node.dataset.id = String(item.id)
       node.textContent = item.label
-      return { node, patch: vi.fn(), dispose: () => disposed.push(item.id) }
+      return { node, patch: vi.fn(), dispose: vi.fn() }
     })
 
-    const first = _$reconcileKeyed(
-      parent,
-      before,
-      [],
-      [
-        { id: 1, label: 'one' },
-        { id: 1, label: 'duplicate' },
-      ],
-      item => item.id,
-      mount,
-    )
-    const firstNodes = first.map(row => row.node)
-    const second = _$reconcileKeyed(
-      parent,
-      before,
-      first,
-      [
-        { id: 1, label: 'one-next' },
-        { id: 1, label: 'duplicate-next' },
-      ],
-      item => item.id,
-      mount,
-    )
-
-    expect(disposed).toEqual([1, 1])
-    expect(second.every((row, index) => row.node !== firstNodes[index])).toBe(true)
-    expect(Array.from(parent.querySelectorAll('tr')).map(node => node.textContent)).toEqual([
-      'one-next',
-      'duplicate-next',
-    ])
+    expect(() =>
+      _$reconcileKeyed(
+        parent,
+        before,
+        [],
+        [
+          { id: 1, label: 'one' },
+          { id: 1, label: 'duplicate' },
+        ],
+        item => item.id,
+        mount,
+      ),
+    ).toThrow('[rue] duplicate keys are not supported by compiled keyed lists')
+    expect(mount).not.toHaveBeenCalled()
   })
 
   it('clears without rescanning previous keys', () => {
@@ -296,10 +279,112 @@ describe('_$reconcileKeyed', () => {
       ),
     ).toBe(false)
     expect(insertBefore).toHaveBeenCalledTimes(2)
-    expect(Array.from(patchCounts.values()).reduce((total, count) => total + count, 0)).toBe(1_000)
+    expect(Array.from(patchCounts.values()).reduce((total, count) => total + count, 0)).toBe(2)
     expect(previous[1].node.textContent).toBe('moved high')
     expect(previous[998].node.textContent).toBe('moved low')
     expect(rowIds(parent)).toEqual(swapped.map(item => item.id))
+  })
+
+  it('patches only changed identities for same-order and two-item swap updates', () => {
+    const parent = document.createElement('tbody')
+    const before = document.createComment('list:end')
+    parent.appendChild(before)
+    const patches: Array<[number, number]> = []
+    const mount = (item: Row, index: number) => {
+      const node = document.createElement('tr')
+      node.dataset.id = String(item.id)
+      node.dataset.index = String(index)
+      node.textContent = item.label
+      return {
+        node,
+        patch(next: Row, nextIndex: number) {
+          patches.push([next.id, nextIndex])
+          node.dataset.id = String(next.id)
+          node.dataset.index = String(nextIndex)
+          node.textContent = next.label
+        },
+        dispose: vi.fn(),
+      }
+    }
+    const rows = Array.from({ length: 1_000 }, (_, index) => ({
+      id: index + 1,
+      label: `row ${index + 1}`,
+    }))
+    let previous = _$reconcileKeyed(parent, before, [], rows, item => item.id, mount)
+
+    const updated = rows.map((item, index) =>
+      index % 10 === 0 ? { ...item, label: `${item.label} updated` } : item,
+    )
+    previous = _$reconcileKeyed(parent, before, previous, updated, item => item.id, mount)
+
+    expect(patches).toHaveLength(100)
+    expect(patches.map(([id]) => id)).toEqual(
+      updated.filter((_, index) => index % 10 === 0).map(item => item.id),
+    )
+    expect(rowIds(parent)).toEqual(updated.map(item => item.id))
+
+    patches.length = 0
+    const swapped = updated.slice()
+    ;[swapped[1], swapped[998]] = [swapped[998], swapped[1]]
+    const swappedNodes = [previous[1].node, previous[998].node]
+    previous = _$reconcileKeyed(parent, before, previous, swapped, item => item.id, mount)
+
+    expect(patches).toHaveLength(2)
+    expect(patches).toEqual(
+      expect.arrayContaining([
+        [swapped[1].id, 1],
+        [swapped[998].id, 998],
+      ]),
+    )
+    expect(previous[1].node).toBe(swappedNodes[1])
+    expect(previous[998].node).toBe(swappedNodes[0])
+    expect(rowIds(parent)).toEqual(swapped.map(item => item.id))
+  })
+
+  it('reorders an adjacent two-row swap while patching replacement items', () => {
+    const parent = document.createElement('tbody')
+    const before = document.createComment('list:end')
+    parent.appendChild(before)
+    const mount = (item: Row) => {
+      const node = document.createElement('tr')
+      const patch = (next: Row) => {
+        node.dataset.id = String(next.id)
+        node.textContent = next.label
+      }
+      patch(item)
+      return { node, patch, dispose: vi.fn() }
+    }
+
+    let previous = _$reconcileKeyed(
+      parent,
+      before,
+      [],
+      [
+        { id: 1, label: 'one' },
+        { id: 2, label: 'two' },
+      ],
+      item => item.id,
+      mount,
+    )
+    const firstNode = previous[0].node
+    const secondNode = previous[1].node
+
+    previous = _$reconcileKeyed(
+      parent,
+      before,
+      previous,
+      [
+        { id: 2, label: 'TWO' },
+        { id: 1, label: 'ONE' },
+      ],
+      item => item.id,
+      mount,
+    )
+
+    expect(rowIds(parent)).toEqual([2, 1])
+    expect(previous[0].node).toBe(secondNode)
+    expect(previous[1].node).toBe(firstNode)
+    expect(previous.map(row => row.node.textContent)).toEqual(['TWO', 'ONE'])
   })
 
   it('falls back when a two-row swap also replaces an otherwise stable item', () => {

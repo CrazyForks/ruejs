@@ -64,7 +64,7 @@ describe('vite-plugin-rue model directive preprocessing', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
     expect(code).not.toContain('v-model:trim')
     expect(code).not.toContain('r-model:number')
     expect(code).not.toContain('v-model:lazy-user-name')

@@ -2,16 +2,27 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
   createContext,
-  createElement,
   mount,
   render,
   setReactiveScheduling,
   useContext,
   useState,
 } from '@rue-js/rue'
+import { _$createComponent } from '@rue-js/rue/internal'
 import { deleteContextRuntime, setContextRuntime } from '../src/shims/context-runtime-global.js'
 import { renderSlotElement } from '../src/shims/slot-core.js'
 import { normalizeAppClientReferences } from '../src/server/app-client-reference-normalization.js'
+
+function createCompiledTestElement(
+  type: unknown,
+  props: Record<string, unknown> | null = null,
+  ...children: unknown[]
+) {
+  const componentProps = { ...props }
+  if (children.length === 1) componentProps.children = children[0]
+  else if (children.length > 1) componentProps.children = children
+  return _$createComponent(type as never, componentProps)
+}
 
 afterEach(() => {
   deleteContextRuntime()
@@ -77,7 +88,7 @@ describe('slot browser hydration', () => {
 
     function Counter() {
       const [count, setCount] = useState(0)
-      return createElement(
+      return createCompiledTestElement(
         'button',
         {
           onClick: () => {
@@ -92,7 +103,7 @@ describe('slot browser hydration', () => {
 
     const root = document.createElement('div')
     document.body.append(root)
-    render(createElement(Counter), root)
+    render(_$createComponent(Counter, null), root)
 
     const button = root.querySelector('button')
     expect(button?.textContent).toBe('Count 0')
@@ -116,7 +127,7 @@ describe('slot browser hydration', () => {
         setLikes(likes.value + (nextLiked ? 1 : -1))
       }
 
-      return createElement(
+      return createCompiledTestElement(
         'button',
         {
           className: liked.value ? 'like-button liked' : 'like-button',
@@ -133,7 +144,7 @@ describe('slot browser hydration', () => {
     ).__rue_rsc_client_require__ = clientRequire
     setContextRuntime({
       createContext,
-      createElement,
+      createElement: createCompiledTestElement,
       useContext,
     })
 
@@ -162,7 +173,7 @@ describe('slot browser hydration', () => {
     let clicks = 0
 
     function LikeButton() {
-      return createElement(
+      return createCompiledTestElement(
         'button',
         {
           onClick: () => {
@@ -179,7 +190,7 @@ describe('slot browser hydration', () => {
     ).__rue_rsc_client_require__ = vi.fn(() => ({ default: LikeButton }))
     setContextRuntime({
       createContext,
-      createElement,
+      createElement: createCompiledTestElement,
       useContext,
     })
 
@@ -194,7 +205,7 @@ describe('slot browser hydration', () => {
 
     const root = document.createElement('div')
     document.body.append(root)
-    mount(() => createElement(BrowserRootLike), root)
+    mount(() => _$createComponent(BrowserRootLike, null), root)
 
     const button = root.querySelector('button')
     expect(button?.textContent).toBe('Like')
@@ -208,7 +219,7 @@ describe('slot browser hydration', () => {
     let clicks = 0
 
     function LikeButton() {
-      return createElement(
+      return createCompiledTestElement(
         'button',
         {
           onClick: () => {
@@ -225,7 +236,7 @@ describe('slot browser hydration', () => {
     ).__rue_rsc_client_require__ = vi.fn(() => ({ default: LikeButton }))
     setContextRuntime({
       createContext,
-      createElement,
+      createElement: createCompiledTestElement,
       useContext,
     })
 
@@ -246,7 +257,7 @@ describe('slot browser hydration', () => {
 
     const root = document.createElement('div')
     document.body.append(root)
-    mount(() => createElement(BrowserRootLike), root)
+    mount(() => _$createComponent(BrowserRootLike, null), root)
 
     const button = root.querySelector('button')
     expect(button?.textContent).toBe('Like')
@@ -262,7 +273,7 @@ describe('slot browser hydration', () => {
 
     function LikeButton() {
       renders += 1
-      return createElement(
+      return createCompiledTestElement(
         'button',
         {
           className: 'like-button',
@@ -280,7 +291,7 @@ describe('slot browser hydration', () => {
     ).__rue_rsc_client_require__ = vi.fn(() => ({ default: LikeButton }))
     setContextRuntime({
       createContext,
-      createElement,
+      createElement: createCompiledTestElement,
       useContext,
     })
 
@@ -296,7 +307,7 @@ describe('slot browser hydration', () => {
     const root = document.createElement('div')
     root.innerHTML = '<button class="like-button" type="button">Like · 16</button>'
     document.body.append(root)
-    mount(() => createElement(BrowserRootLike), root)
+    mount(() => _$createComponent(BrowserRootLike, null), root)
 
     const button = root.querySelector('button')
     expect(renders).toBe(1)
@@ -312,7 +323,7 @@ describe('slot browser hydration', () => {
 
     function LikeButton() {
       renders += 1
-      return createElement(
+      return createCompiledTestElement(
         'button',
         {
           className: 'like-button',
@@ -330,7 +341,7 @@ describe('slot browser hydration', () => {
     ).__rue_rsc_client_require__ = vi.fn(() => ({ default: LikeButton }))
     setContextRuntime({
       createContext,
-      createElement,
+      createElement: createCompiledTestElement,
       useContext,
     })
 
@@ -345,7 +356,7 @@ describe('slot browser hydration', () => {
 
     document.body.innerHTML =
       '<fragment><main><article><button class="like-button" type="button">Like · 16</button></article></main></fragment>'
-    mount(() => createElement(BrowserRootLike), document.body)
+    mount(() => _$createComponent(BrowserRootLike, null), document.body)
 
     const button = document.body.querySelector('button')
     expect(renders).toBe(1)

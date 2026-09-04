@@ -5,7 +5,7 @@ Watermark 组件概述
 - inherit 通过 CSS 自定义属性把当前水印图案继续传递给后代 Watermark；子级未显式传入 content/image 时，可直接复用上层图案。
 */
 import type { FC } from '@rue-js/rue'
-import { computed, onMounted, ref } from '@rue-js/rue'
+import { computed, onMounted, ref, watchEffect } from '@rue-js/rue'
 
 /** WatermarkFont 接口。 */
 export interface WatermarkFont {
@@ -121,9 +121,9 @@ const MIN_MARK_HEIGHT = 24
 /** WATERMARK_CACHE_LIMIT 内部常量。 */
 const WATERMARK_CACHE_LIMIT = 80
 /** watermarkDimensionsCache 内部缓存。 */
-const watermarkDimensionsCache = new Map<string, MarkDimensions>()
+const watermarkDimensionsCache = /*#__PURE__*/ new Map<string, MarkDimensions>()
 /** watermarkPatternCache 内部缓存。 */
-const watermarkPatternCache = new Map<string, WatermarkPatternResult>()
+const watermarkPatternCache = /*#__PURE__*/ new Map<string, WatermarkPatternResult>()
 
 /** join Class Name 的内部工具函数。 */
 const joinClassName = (...classNames: Array<string | undefined | null | false>) => {
@@ -773,11 +773,12 @@ const Watermark: FC<WatermarkProps> = ({
   let lastAutoTextColorElement: HTMLElement | null = null
   let lastAutoTextColorSignature = ''
 
-  const lines = normalizeContent(content)
-  const [gapX = DEFAULT_GAP_X, gapY = DEFAULT_GAP_Y] = gap
-  const hasLocalPattern = !!image || hasMeaningfulContent(lines)
+  const getLines = () => normalizeContent(content)
+  const getGapX = () => gap?.[0] ?? DEFAULT_GAP_X
+  const getGapY = () => gap?.[1] ?? DEFAULT_GAP_Y
+  const hasLocalPattern = () => !!image || hasMeaningfulContent(getLines())
   const getResolvedFont = () => {
-    if (!image && !font.color && hasMeaningfulContent(lines) && autoTextColor.value) {
+    if (!image && !font.color && hasMeaningfulContent(getLines()) && autoTextColor.value) {
       return { ...font, color: autoTextColor.value }
     }
 
@@ -787,7 +788,7 @@ const Watermark: FC<WatermarkProps> = ({
   const getCachedDimensions = (nextResolvedFont: WatermarkFont) => {
     const dimensionsKey = buildDimensionsCacheKey({
       image,
-      lines,
+      lines: getLines(),
       font: nextResolvedFont,
       width,
       height,
@@ -797,20 +798,21 @@ const Watermark: FC<WatermarkProps> = ({
       return cachedDimensions
     }
 
-    const nextDimensions = measureTextBlock(lines, nextResolvedFont, width, height, image)
+    const nextDimensions = measureTextBlock(getLines(), nextResolvedFont, width, height, image)
     return writeCacheValue(watermarkDimensionsCache, dimensionsKey, nextDimensions)
   }
 
   const getCachedPattern = (nextResolvedFont: WatermarkFont, nextDimensions: MarkDimensions) => {
-    const patternLines = lines.length ? lines : ['']
+    const currentLines = getLines()
+    const patternLines = currentLines.length ? currentLines : ['']
     const nextOpacity = clamp(opacity, 0, 1)
     const patternKey = buildPatternCacheKey({
       image,
       lines: patternLines,
       rotate,
       font: nextResolvedFont,
-      gapX,
-      gapY,
+      gapX: getGapX(),
+      gapY: getGapY(),
       dimensions: nextDimensions,
       opacity: nextOpacity,
     })
@@ -824,8 +826,8 @@ const Watermark: FC<WatermarkProps> = ({
       lines: patternLines,
       rotate,
       font: nextResolvedFont,
-      gapX,
-      gapY,
+      gapX: getGapX(),
+      gapY: getGapY(),
       dimensions: nextDimensions,
       opacity: nextOpacity,
     })
@@ -834,9 +836,11 @@ const Watermark: FC<WatermarkProps> = ({
 
   const getPatternState = () => {
     const nextResolvedFont = getResolvedFont()
-    const nextPlacement = buildOverlayPlacement(gapX, gapY, offset)
+    const nextPlacement = buildOverlayPlacement(getGapX(), getGapY(), offset)
     const nextDimensions = getCachedDimensions(nextResolvedFont)
-    const nextPattern = hasLocalPattern ? getCachedPattern(nextResolvedFont, nextDimensions) : null
+    const nextPattern = hasLocalPattern()
+      ? getCachedPattern(nextResolvedFont, nextDimensions)
+      : null
 
     return {
       placement: nextPlacement,
@@ -928,7 +932,7 @@ const Watermark: FC<WatermarkProps> = ({
             style?.['--color-base-content'],
           ].join('|')
 
-    return JSON.stringify([lines, className ?? '', rootClassName ?? '', styleSignature])
+    return JSON.stringify([getLines(), className ?? '', rootClassName ?? '', styleSignature])
   }
 
   const patternState = computed(() => getPatternState())
@@ -963,7 +967,7 @@ const Watermark: FC<WatermarkProps> = ({
   }
 
   const syncAutoTextColor = (force = false) => {
-    if (image || font.color || !hasMeaningfulContent(lines)) {
+    if (image || font.color || !hasMeaningfulContent(getLines())) {
       return
     }
 
@@ -1017,6 +1021,10 @@ const Watermark: FC<WatermarkProps> = ({
 
     Promise.resolve().then(run)
   }
+
+  watchEffect(() => {
+    syncPatternStyles()
+  })
 
   onMounted(() => {
     syncAutoTextColor(true)

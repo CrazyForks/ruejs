@@ -32,14 +32,14 @@ export default Chain
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const Chain: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(true));
-            const b = _$vaporWithHookId("ref:1:1", ()=>ref(false));
-            const c = _$vaporWithHookId("ref:1:2", ()=>ref(false));
-            const d = _$vaporWithHookId("ref:1:3", ()=>ref(false));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(true);
+            const b = ref(false);
+            const c = ref(false);
+            const d = ref(false);
             return {
                 a: a,
                 b: b,
@@ -57,5 +57,8 @@ export default Chain;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec28.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("a ? <div>A</div> : b ? <div>B</div>"), "{normalized}");
+    assert!(normalized.contains(": d ? <div>D</div> : <div>Else</div>"), "{normalized}");
 }

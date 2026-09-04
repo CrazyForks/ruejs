@@ -482,12 +482,16 @@ const Collapse: FC<CollapseProps> = ({
   const resolvedIcon = normalizeIcon(icon, arrow, plus)
   const hasManagedIcon = showArrow === false ? false : !!resolvedIcon
   const generatedGroupName = ref(`rue-collapse-${collapseGroupSeed++}`)
-  const uncontrolledOpenKeys = ref(
-    resolveItemsDefaultOpenKeys(normalizedItems, defaultActiveKey, accordion),
-  )
+  // items 模式由事件处理器直接同步面板 DOM；这里若再使用 ref，会让一次点击同时触发
+  // 响应式重渲染与手工同步，在部分编译分支中造成展开图标重复挂载。
+  const uncontrolledOpenKeys = {
+    current: resolveItemsDefaultOpenKeys(normalizedItems, defaultActiveKey, accordion),
+  }
   const getCurrentOpenKeys = () => {
     const keys =
-      activeKey !== undefined ? normalizeOpenKeys(activeKey, accordion) : uncontrolledOpenKeys.value
+      activeKey !== undefined
+        ? normalizeOpenKeys(activeKey, accordion)
+        : uncontrolledOpenKeys.current
     return Array.isArray(keys) ? keys : []
   }
 
@@ -519,7 +523,7 @@ const Collapse: FC<CollapseProps> = ({
       const itemOpen = nextOpenKeys.some(key => key === item.key)
 
       if (activeKey === undefined) {
-        uncontrolledOpenKeys.value = nextOpenKeys
+        uncontrolledOpenKeys.current = nextOpenKeys
         syncItemsDom(nextOpenKeys, source)
       }
 
@@ -790,7 +794,7 @@ type CollapseCompound = FC<CollapseProps> & {
   Content: FC<CollapsePartProps>
 }
 
-const CollapseCompound: CollapseCompound = Object.assign(Collapse, {
+const CollapseCompound: CollapseCompound = /*#__PURE__*/ Object.assign(Collapse, {
   Title,
   Content,
 })

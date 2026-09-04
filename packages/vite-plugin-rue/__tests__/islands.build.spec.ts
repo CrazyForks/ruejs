@@ -41,25 +41,17 @@ const buildFixture = async (outDir: string, input: string, ssr = false) => {
     resolve: {
       conditions: ['development', 'browser'],
       alias: {
-        '@rue-js/runtime-vapor/protocol': path.join(
+        '@rue-js/rue/internal/compiler': path.join(
           repoRoot,
-          'packages/runtime-vapor/src/protocol.ts',
+          'packages/rue/src/compiler-internal.ts',
         ),
-        '@rue-js/runtime-vapor/vapor': path.join(
+        '@rue-js/runtime/internal/compiler': path.join(
           repoRoot,
-          `packages/runtime-vapor/dist/vapor${ssr ? '.node' : ''}.js`,
-        ),
-        '@rue-js/runtime-vapor/reactive': path.join(
-          repoRoot,
-          `packages/runtime-vapor/dist/reactive${ssr ? '.node' : ''}.js`,
+          'packages/runtime/src/compiler-internal.ts',
         ),
         '@rue-js/rue': path.join(repoRoot, 'packages/rue/src'),
         '@rue-js/runtime': path.join(repoRoot, 'packages/runtime/src'),
         '@rue-js/server-renderer': path.join(repoRoot, 'packages/server-renderer/src'),
-        '@rue-js/runtime-vapor': path.join(
-          repoRoot,
-          `packages/runtime-vapor/dist/index${ssr ? '.node' : ''}.js`,
-        ),
       },
     },
     build: {
@@ -84,15 +76,17 @@ const buildFixture = async (outDir: string, input: string, ssr = false) => {
 
 const collectStaticClosure = (bundle: Rollup.OutputBundle, entry: Rollup.OutputChunk) => {
   const assets = new Set<string>()
+  const moduleIds = new Set<string>()
   const visit = (fileName: string) => {
     if (assets.has(`/${fileName}`)) return
     const chunk = bundle[fileName]
     if (!chunk || chunk.type !== 'chunk') return
     assets.add(`/${chunk.fileName}`)
+    chunk.moduleIds.forEach(id => moduleIds.add(id))
     chunk.imports.forEach(visit)
   }
   visit(entry.fileName)
-  return { entry: `/${entry.fileName}`, assets }
+  return { entry: `/${entry.fileName}`, assets, moduleIds }
 }
 
 const template = `<!doctype html>
@@ -150,6 +144,11 @@ describe('Rue island real build contract', () => {
         output.type === 'chunk' &&
         output.moduleIds.some(id => id.includes('/components/OnlyPanel')),
     )
+    const hydratedPanelChunk = clientBuild.output.find(
+      (output): output is Rollup.OutputChunk =>
+        output.type === 'chunk' &&
+        output.moduleIds.some(id => id.includes('/components/HydratedPanel')),
+    )
     const builtModuleIds = clientBuild.output.flatMap(output =>
       output.type === 'chunk' ? output.moduleIds : [],
     )
@@ -161,6 +160,17 @@ describe('Rue island real build contract', () => {
     )
     expect(counterChunk, `client modules: ${builtModuleIds.join(', ')}`).toBeTruthy()
     expect(onlyChunk, `client modules: ${builtModuleIds.join(', ')}`).toBeTruthy()
+    expect(hydratedPanelChunk, `client modules: ${builtModuleIds.join(', ')}`).toBeTruthy()
+    expect([...clientGraph.moduleIds]).toEqual(
+      expect.arrayContaining([expect.stringContaining('compiler-runtime/dom.hydrate')]),
+    )
+    const hydratedPanelGraph = collectStaticClosure(bundle, hydratedPanelChunk!)
+    expect([...hydratedPanelGraph.moduleIds]).toEqual(
+      expect.arrayContaining([expect.stringContaining('compiler-runtime/dom.hydrate')]),
+    )
+    expect(onlyChunk!.moduleIds).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('compiler-runtime/dom.hydrate')]),
+    )
     expect(clientGraph.assets).not.toContain(`/${counterChunk!.fileName}`)
     expect(clientGraph.assets).not.toContain(`/${onlyChunk!.fileName}`)
     expect(entryChunk!.dynamicImports).toEqual(

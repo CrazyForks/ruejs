@@ -16,6 +16,7 @@ import {
   type TextCompatComponentType,
   type TextCompatElement,
 } from './component-adapter.js'
+import { readAppRouterRenderPhase } from './app-render-phase.js'
 
 type DynamicLoadingProps = {
   error?: Error | null
@@ -159,6 +160,34 @@ function normalizeDynamicOptions<P extends object>(
 function isServerRuntime(): boolean {
   if (typeof window === 'undefined') return true
   return typeof navigator !== 'undefined' && /\bjsdom\b/i.test(navigator.userAgent)
+}
+
+function isRueServerRenderingActive(): boolean {
+  const value = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
+  return typeof value === 'number' && value > 0
+}
+
+function isTextRscRenderActive(): boolean {
+  const appRouterRenderPhase = readAppRouterRenderPhase()
+  if (appRouterRenderPhase !== null) return appRouterRenderPhase === 'rsc'
+  return isServerRuntime() && !isRueServerRenderingActive()
+}
+
+function createTextRscDynamicComponent<P extends object>(loader: LoaderFn<P>): ComponentType<P> {
+  let loadPromise: Promise<ComponentType<P>> | null = null
+  const load = () =>
+    (loadPromise ??= loader().then(mod =>
+      markTextDynamicResolvedComponent(normalizeResolvedModule(mod)),
+    ))
+
+  // The RSC renderer natively awaits async components. Returning the resolved
+  // element directly avoids feeding a thrown-thenable Suspense retry back into
+  // the RSC-to-SSR pipeline.
+  return (async (props: P) =>
+    createTextCompatElement(
+      (await load()) as TextCompatComponentType<P>,
+      props,
+    )) as ComponentType<P>
 }
 
 function createRenderableDynamicComponent<P extends object>(
@@ -318,8 +347,14 @@ function dynamic<P extends object = object>(
 
   const RenderableDynamicComponent = createRenderableDynamicComponent(loader, LoadingComponent)
   const TextDynamicComponent = createTextDynamicComponent(loader, LoadingComponent)
-  const DynamicComponent = (props: P): RenderableOutput =>
-    isTextCompatRenderRuntime() ? TextDynamicComponent(props) : RenderableDynamicComponent(props)
+  const TextRscDynamicComponent = createTextRscDynamicComponent(loader)
+  const DynamicComponent = (props: P): RenderableOutput => {
+    const compatRuntime = isTextCompatRenderRuntime()
+    if (!compatRuntime) return RenderableDynamicComponent(props)
+    // The request-local phase keeps concurrent RSC and HTML SSR passes apart;
+    // HTML SSR still owns loading fallbacks.
+    return isTextRscRenderActive() ? TextRscDynamicComponent(props) : TextDynamicComponent(props)
+  }
   DynamicComponent.displayName = isServerRuntime() ? 'RueDynamicServer' : 'RueDynamicClient'
   return DynamicComponent
 }

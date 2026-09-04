@@ -52,13 +52,10 @@ const Demo: FC = () => (
 
     let out = compile(src, "list_block_scope");
 
-    assert!(out.contains("renderItem: (step, parent, start, end, idx)=>"));
-    assert!(out.contains("const y = cPad.t + plotH - step * plotH;"));
-    assert!(!out.contains("getKey: (step, idx)=>{ const y = cPad.t + plotH - step * plotH;"));
-    assert!(out.contains("String((y))"));
-    assert!(out.contains("String(y - 6)"));
-    assert!(out.contains("String((cPad.l))"));
-    assert!(out.contains("String(chartW - cPad.r)"));
+    assert!(out.contains("].map((step)=>{"), "{out}");
+    assert!(out.contains("const y = cPad.t + plotH - step * plotH;"), "{out}");
+    assert!(out.contains("_$setAttribute(_el1, \"y1\", String((y)))"), "{out}");
+    assert!(!out.contains("_$compiledKeyedList"), "{out}");
 }
 
 #[test]
@@ -89,10 +86,11 @@ const Demo: FC = () => (
 
     let out = compile(src, "list_block_scope_destructure");
 
-    assert!(out.contains("const rowKey = item.id;"));
-    assert!(out.contains("const label = item.value * 2;"));
-    assert!(out.contains("return rowKey;"));
-    let removed_factory = ["_$vaporCreate", "V", "Node", "(__slot)"];
+    assert!(out.contains("rows.map(({ id, value })=>{"), "{out}");
+    assert!(out.contains("const rowKey = id;"), "{out}");
+    assert!(out.contains("const label = value * 2;"), "{out}");
+    assert!(!out.contains("_$compiledKeyedList"), "{out}");
+    let removed_factory = ["_$compiledCreate", "V", "Node", "(__slot)"];
     assert!(!out.contains(&removed_factory.concat()));
 }
 
@@ -126,10 +124,11 @@ const Demo: FC = () => (
 
     let out = compile(src, "list_block_scope_fragment");
 
-    assert!(out.contains("const base = row.value * 10;"));
-    assert!(out.contains("const label = base.toFixed(0);"));
-    assert!(out.contains("_$settextContent(_el2, label);"));
-    assert!(out.contains("_$settextContent(_el4, base);"));
+    assert!(out.contains("const base = row.value * 10;"), "{out}");
+    assert!(out.contains("const label = base.toFixed(0);"), "{out}");
+    assert!(out.contains("const __child1 = vapor("), "{out}");
+    assert!(out.contains("const __child2 = vapor("), "{out}");
+    assert!(!out.contains("_$compiledKeyedList"), "{out}");
 }
 
 #[test]
@@ -161,12 +160,12 @@ const Demo: FC = () => (
 
     let out = compile(src, "list_block_scope_conditional");
 
-    assert!(out.contains("const __slot = (()=>{"));
-    assert!(out.contains("if (row.hot) {"));
-    assert!(out.contains("renderBetween(__slot, parent, start, end);"));
-    let removed_factory = ["_$vaporCreate", "V", "Node", "(__slot)"];
+    assert!(out.contains("const label = row.value.toFixed(0);"), "{out}");
+    assert!(out.contains("if (row.hot)"), "{out}");
+    assert_eq!(out.matches("return vapor(").count(), 2, "{out}");
+    assert!(!out.contains("_$compiledKeyedList"), "{out}");
+    let removed_factory = ["_$compiledCreate", "V", "Node", "(__slot)"];
     assert!(!out.contains(&removed_factory.concat()));
-    assert!(!out.contains("getKey: (row, idx)=>{ const label = row.value.toFixed(0);"));
 }
 
 #[test]
@@ -203,13 +202,13 @@ const Demo: FC = () => {
 
     let out = compile(src, "list_block_scope_outer_ref_value");
 
-    assert!(out.contains("const __slot = vapor(()=>{"));
-    assert!(out.contains(
-        "const __slot = !(editingId.value === row.id) ? _$compiledRoot((__rue_parent_context)=>{"
-    ));
-    assert!(out.contains("const __slot = (editingId.value === row.id) ? vapor(()=>{"));
-    assert!(out.contains("renderAnchor(__slot, _el1, _list3)"));
-    assert!(out.contains("renderAnchor(__slot, _el1, _list4)"));
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert_eq!(out.matches("_$compiledBranch(").count(), 2, "{out}");
+    assert!(out.contains("!(editingId.value === _$rowItem.get().id)"), "{out}");
+    assert!(out.contains("editingId.value === _$rowItem.get().id"), "{out}");
+    assert!(out.contains("_$rowItem.get().title"), "{out}");
+    assert!(!out.contains("renderAnchor("), "{out}");
+    assert!(!out.contains("vapor("), "{out}");
     assert!(!out.contains("const isEditing = editingId.value === row.id;"));
 }
 
@@ -247,9 +246,10 @@ const Demo: FC = () => {
         1,
         "safe getter reads should run through the list-level patch effect: {out}"
     );
-    assert!(out.contains("patch: _$rowPatch"), "{out}");
-    assert!(out.contains(".textContent = _$rowBindingNext0"), "{out}");
-    assert!(out.contains("selectedId.get() === row.id"), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedRow"), "{out}");
+    assert!(out.contains("_$compiledText("), "{out}");
+    assert!(out.contains("selectedId.get() === _$rowItem.get().id"), "{out}");
     assert!(!out.contains("renderAnchor("), "{out}");
+    assert!(!out.contains("vapor("), "{out}");
     assert!(!out.contains("const isSelected = selectedId.get() === row.id;"));
 }

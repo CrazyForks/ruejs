@@ -549,7 +549,7 @@ const Sider: FC<LayoutSiderProps> = ({
   )
 }
 
-const Layout = Object.assign(LayoutRoot, {
+const Layout = /*#__PURE__*/ Object.assign(LayoutRoot, {
   Header,
   Content,
   Footer,

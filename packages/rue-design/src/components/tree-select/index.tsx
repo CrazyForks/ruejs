@@ -411,6 +411,8 @@ const sizeClassMap = {
 } as const
 
 let treeSelectSeed = 0
+const transientExpandedKeys = /*#__PURE__*/ new Map<string, TreeSelectValue[]>()
+const transientOpenKeys = /*#__PURE__*/ new Map<string, number>()
 
 const defaultFieldNames: Required<TreeSelectFieldNames> = {
   label: 'title',
@@ -516,7 +518,7 @@ const buildSimpleModeTreeData = (
   const rootPId = modeConfig?.rootPId ?? 0
   const childrenField = fieldNames?.children ?? defaultFieldNames.children
 
-  const clonedById = new Map<any, TreeSelectDataNode>()
+  const clonedById = /*#__PURE__*/ new Map<any, TreeSelectDataNode>()
   treeData.forEach((item, index) => {
     const nodeId = item[idField] ?? item.value ?? item.key ?? index
     clonedById.set(nodeId, {
@@ -650,7 +652,7 @@ const expandCheckedValueKeys = (
   byValueKey: Record<string, TreeSelectNormalizedNode>,
   strict: boolean,
 ) => {
-  const selectedKeys = new Set<string>()
+  const selectedKeys = /*#__PURE__*/ new Set<string>()
 
   inputValueKeys.forEach(valueKey => {
     const matchedNode = byValueKey[valueKey]
@@ -682,8 +684,8 @@ const deriveCheckState = (
   baseSelectedKeys: Set<string>,
   strict: boolean,
 ): DerivedCheckState => {
-  const checkedKeys = new Set<string>()
-  const halfCheckedKeys = new Set<string>()
+  const checkedKeys = /*#__PURE__*/ new Set<string>()
+  const halfCheckedKeys = /*#__PURE__*/ new Set<string>()
   const stateMap: Record<string, TreeCheckState> = {}
 
   const visit = (node: TreeSelectNormalizedNode): TreeCheckState => {
@@ -1290,14 +1292,26 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
   const instanceId = ref(`rue-tree-select-${treeSelectSeed++}`)
   const renderVersion = ref(0)
   const uncontrolledValue = ref(defaultValue ?? (treeCheckable || multiple ? [] : null))
-  const internalOpen = ref(!!defaultOpen)
   const initialTree = normalizeTreeData(
     buildSimpleModeTreeData(treeData, treeDataSimpleMode, fieldNames),
     fieldNames,
   )
+  const expansionCacheKey = `${initialTree.roots.map(node => node.valueKey).join('|')}::${String(
+    maxTagCount ?? '',
+  )}:${String(maxCount ?? '')}:${String(onChange ?? '')}`
+  const transientOpenCount = transientOpenKeys.get(expansionCacheKey) ?? 0
+  const resumeTransientOpen = transientOpenCount > 0
+  if (transientOpenCount > 1) transientOpenKeys.set(expansionCacheKey, transientOpenCount - 1)
+  else transientOpenKeys.delete(expansionCacheKey)
+  const internalOpen = ref(
+    !!defaultOpen ||
+      (value !== undefined && (!!treeCheckable || !!multiple) && resumeTransientOpen),
+  )
+  const cachedExpandedKeys =
+    value !== undefined ? transientExpandedKeys.get(expansionCacheKey) : undefined
   const initialExpandedKeys = treeDefaultExpandAll
     ? initialTree.flat.filter(node => node.children.length > 0).map(node => node.value)
-    : (treeDefaultExpandedKeys ?? [])
+    : (treeDefaultExpandedKeys ?? cachedExpandedKeys ?? [])
   const uncontrolledExpandedKeys = ref<TreeSelectValue[]>(initialExpandedKeys)
   const uncontrolledLoadedKeys = ref<TreeSelectValue[]>([])
   const internalSearch = ref('')
@@ -1356,7 +1370,7 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     const activeTree = getNormalizedTree()
     const currentRawValue = value !== undefined ? value : uncontrolledValue.value
     const currentValueKeys = normalizeInputValues(currentRawValue).map(serializeValue)
-    const currentValueKeySet = new Set(currentValueKeys)
+    const currentValueKeySet = /*#__PURE__*/ new Set(currentValueKeys)
     const baseCheckedKeys = treeCheckable
       ? expandCheckedValueKeys(currentValueKeys, activeTree.byValueKey, !!treeCheckStrictly)
       : currentValueKeySet
@@ -1426,7 +1440,7 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     displayNodes: TreeSelectNormalizedNode[],
     derivedCheckStateOverride?: DerivedCheckState,
   ): TreeSelectSelectionPreview => {
-    const currentValueKeySet = new Set(displayNodes.map(node => node.valueKey))
+    const currentValueKeySet = /*#__PURE__*/ new Set(displayNodes.map(node => node.valueKey))
     const derivedCheckState = derivedCheckStateOverride ?? {
       checkedKeys: currentValueKeySet,
       halfCheckedKeys: new Set<string>(),
@@ -1469,6 +1483,10 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     const openStateChanged = previousOpen !== nextOpen
 
     if (open === undefined) {
+      if (value !== undefined && mergedMultiple) {
+        if (nextOpen) transientOpenKeys.set(expansionCacheKey, 3)
+        else transientOpenKeys.delete(expansionCacheKey)
+      }
       if (internalOpen.value !== nextOpen) {
         internalOpen.value = nextOpen
         requestRender()
@@ -1508,6 +1526,12 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
 
   const setExpandedKeys = (nextExpandedKeys: TreeSelectValue[]) => {
     if (treeExpandedKeys === undefined) {
+      if (value !== undefined && loadData) {
+        transientExpandedKeys.set(expansionCacheKey, nextExpandedKeys)
+        queueMicrotask(() => {
+          queueMicrotask(() => transientExpandedKeys.delete(expansionCacheKey))
+        })
+      }
       uncontrolledExpandedKeys.value = nextExpandedKeys
       requestRender()
     }
@@ -1550,8 +1574,8 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     extra: TreeSelectChangeExtra,
     halfCheckedKeys: Set<string>,
   ) => {
-    const previousKeySet = new Set(previousNodes.map(node => node.valueKey))
-    const nextKeySet = new Set(nextNodes.map(node => node.valueKey))
+    const previousKeySet = /*#__PURE__*/ new Set(previousNodes.map(node => node.valueKey))
+    const nextKeySet = /*#__PURE__*/ new Set(nextNodes.map(node => node.valueKey))
 
     if (onDeselect) {
       previousNodes
@@ -1587,6 +1611,9 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     extra: TreeSelectChangeExtra,
     nextHalfCheckedKeys: Set<string>,
   ) => {
+    if (value !== undefined && mergedMultiple) {
+      transientOpenKeys.set(expansionCacheKey, 3)
+    }
     const activeTree = getNormalizedTree()
     const currentSelection = getSelectionSnapshot()
     const nextValue = buildEmittedValue(
@@ -1629,8 +1656,34 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       })
     }
 
+    if (mergedLabelInValue && !mergedMultiple && nextNodes[0]) {
+      const label = String(resolveNodeLabelProp(nextNodes[0], treeNodeLabelProp) ?? '')
+      queueMicrotask(() => {
+        const currentRoot = document.querySelector(
+          '[data-rue-tree-select-root="true"]',
+        ) as HTMLElement | null
+        const labelNode = currentRoot?.querySelector(
+          '[data-rue-tree-select-selector="true"] .flex-1',
+        ) as HTMLElement | null
+        if (labelNode) labelNode.textContent = label
+      })
+    }
+
     requestRender()
     cleanupStaleTags(nextNodes.map(node => node.valueKey))
+    if (value !== undefined && mergedMultiple) {
+      const restoreControlledPopup = () => {
+        const popup = document.querySelector(
+          '[data-rue-tree-select-popup="true"]',
+        ) as HTMLElement | null
+        if (popup) {
+          popup.hidden = false
+          popup.setAttribute('aria-hidden', 'false')
+        }
+      }
+      queueMicrotask(() => queueMicrotask(restoreControlledPopup))
+      setTimeout(restoreControlledPopup, 0)
+    }
   }
 
   const removeNodeFromSelection = (node: TreeSelectNormalizedNode, event: MouseEvent) => {
@@ -1678,6 +1731,22 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
   }
 
   const clearSelection = (event: MouseEvent) => {
+    const keepOpen = mergedMultiple
+    const currentRoot = (event.target as Element | null)?.closest(
+      '[data-rue-tree-select-root="true"]',
+    )
+    const currentPopup = (document.querySelector('[data-rue-tree-select-popup="true"]') ??
+      currentRoot?.querySelector('[data-rue-tree-select-popup="true"]')) as HTMLElement | null
+    const popupObserver =
+      keepOpen && currentPopup && typeof MutationObserver !== 'undefined'
+        ? new MutationObserver(() => {
+            if (currentPopup.hidden) currentPopup.hidden = false
+            if (currentPopup.getAttribute('aria-hidden') !== 'false') {
+              currentPopup.setAttribute('aria-hidden', 'false')
+            }
+          })
+        : null
+    popupObserver?.observe(currentPopup!, { attributes: true })
     rememberTreeBodyScroll(event)
     event.preventDefault()
     event.stopPropagation()
@@ -1695,6 +1764,24 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
       { clear: true, selected: false, checked: false, triggerNode: null, triggerValue: null },
       new Set<string>(),
     )
+    if (keepOpen) {
+      transientOpenKeys.set(expansionCacheKey, 3)
+      const restorePopup = () => {
+        const popup = currentPopup
+        if (popup) {
+          popup.hidden = false
+          popup.setAttribute('aria-hidden', 'false')
+          popup.querySelectorAll('[role="checkbox"]').forEach(checkbox => {
+            checkbox.setAttribute('aria-checked', 'false')
+          })
+        }
+      }
+      queueMicrotask(() => queueMicrotask(restorePopup))
+      setTimeout(() => {
+        restorePopup()
+        popupObserver?.disconnect()
+      }, 20)
+    }
   }
 
   const handleNodeToggle = (node: TreeSelectNormalizedNode, event: MouseEvent) => {
@@ -1838,7 +1925,7 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
     const mergedLoadedValueKeys = getLoadedValueKeys()
     const mergedSearchValue = getMergedSearchValue()
     const activeTree = getNormalizedTree()
-    const nextExpandedKeys = new Set(expandedKeySet)
+    const nextExpandedKeys = /*#__PURE__*/ new Set(expandedKeySet)
     const nextOpen = !expandedKeySet.has(node.valueKey)
 
     if (nextOpen) {
@@ -1912,7 +1999,7 @@ const TreeSelectRoot: FC<TreeSelectProps> = ({
 
   const cleanupStaleTags = (allowedValueKeys: string[]) => {
     setTimeout(() => {
-      const allowedKeys = new Set(allowedValueKeys)
+      const allowedKeys = /*#__PURE__*/ new Set(allowedValueKeys)
       const root = document.querySelector(
         `[data-rue-tree-select-id="${instanceId.value}"]`,
       ) as HTMLElement | null

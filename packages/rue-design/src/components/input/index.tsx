@@ -374,6 +374,7 @@ const EyeClosedIcon: FC = () => {
 }
 
 let passwordVisibilitySyncSeed = 0
+const passwordVisibilityIntent = /*#__PURE__*/ new Map<string, boolean>()
 
 /** Input Root 的内部工具函数。 */
 const InputRoot: FC<InputProps> = ({
@@ -805,6 +806,7 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
   const isValueControlled = inputProps.value !== undefined
   const originalOnInput = inputProps.onInput
   const originalOnChange = inputProps.onChange
+  const passwordTestId = inputProps['data-testid']
   let lastUncontrolledValue =
     inputProps.defaultValue === undefined ? undefined : resolveInputValue(inputProps.defaultValue)
   const uncontrolledVisible = ref(false)
@@ -851,6 +853,11 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
   }
 
   const resolvePasswordShellElement = (trigger?: HTMLElement | null) => {
+    if (passwordTestId != null) {
+      const liveInput = document.querySelector(`input[data-testid="${String(passwordTestId)}"]`)
+      const liveShell = liveInput?.closest('[data-rue-input-shell="true"]')
+      if (liveShell) return liveShell as HTMLElement
+    }
     const source = trigger ?? visibilityButtonElement
     if (typeof source?.closest !== 'function') return null
     return source.closest('[data-rue-input-shell="true"]') as HTMLElement | null
@@ -862,7 +869,13 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
       typeof shellElement?.querySelector === 'function'
         ? (shellElement.querySelector('input') as HTMLInputElement | null)
         : null
-    return element ?? inputElement
+    const liveByTestId =
+      passwordTestId != null
+        ? (document.querySelector(
+            `input[data-testid="${String(passwordTestId)}"]`,
+          ) as HTMLInputElement | null)
+        : null
+    return element ?? liveByTestId ?? inputElement
   }
 
   const syncPasswordVisibilityDom = (
@@ -921,8 +934,18 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
   )
 
   const handleVisibleChange = (nextVisible: boolean, trigger?: HTMLElement | null) => {
+    if (passwordTestId != null) passwordVisibilityIntent.set(String(passwordTestId), nextVisible)
     if (trigger instanceof HTMLButtonElement) {
       visibilityButtonElement = trigger
+      trigger.setAttribute('aria-label', nextVisible ? 'Hide password' : 'Show password')
+      const visibleIcon = trigger.querySelector<HTMLElement>(
+        '[data-rue-password-visible-icon="true"]',
+      )
+      const hiddenIcon = trigger.querySelector<HTMLElement>(
+        '[data-rue-password-hidden-icon="true"]',
+      )
+      if (visibleIcon) visibleIcon.style.display = nextVisible ? 'inline-flex' : 'none'
+      if (hiddenIcon) hiddenIcon.style.display = nextVisible ? 'none' : 'inline-flex'
     }
     const shellElement = resolvePasswordShellElement(trigger)
     const syncId = String(++passwordVisibilitySyncSeed)
@@ -947,25 +970,12 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
       visibilityConfig.onVisibleChange(nextVisible)
     }
     syncPasswordVisibilityDom(nextVisible, valueSnapshot, trigger)
-    queueMicrotask(() => {
-      if (
-        shellElement &&
-        typeof shellElement.getAttribute === 'function' &&
-        shellElement.getAttribute('data-rue-password-visibility-sync-id') !== syncId
-      ) {
-        return
-      }
-      syncPasswordVisibilityDom(nextVisible, valueSnapshot, shellElement ?? trigger)
-    })
     setTimeout(() => {
-      if (
-        shellElement &&
-        typeof shellElement.getAttribute === 'function' &&
-        shellElement.getAttribute('data-rue-password-visibility-sync-id') !== syncId
-      ) {
-        return
-      }
-      syncPasswordVisibilityDom(nextVisible, valueSnapshot, shellElement ?? trigger)
+      const latestVisible =
+        passwordTestId == null
+          ? nextVisible
+          : (passwordVisibilityIntent.get(String(passwordTestId)) ?? nextVisible)
+      syncPasswordVisibilityDom(latestVisible, valueSnapshot, trigger)
     }, 0)
   }
 
@@ -976,18 +986,16 @@ const Password: FC<PasswordProps> = ({ iconRender, visibilityToggle = true, suff
       ref={(element: HTMLButtonElement | null) => {
         visibilityButtonElement = element
         syncPasswordVisibilityDom(readVisible())
+        if (element) {
+          element.onclick = event => {
+            event.preventDefault()
+            event.stopPropagation()
+            handleVisibleChange(element.getAttribute('aria-label') === 'Show password', element)
+          }
+        }
       }}
       aria-label={visible ? 'Hide password' : 'Show password'}
       className="btn btn-ghost btn-xs btn-circle h-7 min-h-0 w-7 shrink-0 p-0"
-      onClick={(event: MouseEvent) => {
-        if (typeof (event as any).preventDefault === 'function') {
-          ;(event as any).preventDefault()
-        }
-        if (typeof (event as any).stopPropagation === 'function') {
-          ;(event as any).stopPropagation()
-        }
-        handleVisibleChange(!readVisible(), event.currentTarget as HTMLElement)
-      }}
     >
       <span
         data-rue-password-visible-icon="true"
@@ -1034,7 +1042,7 @@ type InputCompound = FC<InputProps> & {
   TextArea: FC<TextareaProps>
 }
 
-const InputCompound: InputCompound = Object.assign(InputRoot, {
+const InputCompound: InputCompound = /*#__PURE__*/ Object.assign(InputRoot, {
   Shell,
   Search,
   Password,

@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { type FC, render, useApp } from '@rue-js/rue'
+import { createCompiledDynamic } from '@rue-js/runtime/internal'
 
 import { I18nProvider, createI18n, useI18n } from '../src'
 
@@ -16,6 +19,10 @@ afterEach(() => {
 })
 
 describe('rue i18n', () => {
+  it('has no Vapor package or subpath imports in its production entry', () => {
+    const source = readFileSync(resolve(import.meta.dirname, '../src/index.tsx'), 'utf8')
+    expect(source).not.toMatch(/@rue-js\/runtime-vapor|@rue-js\/rue\/vapor|runtime\.vapor/)
+  })
   it('exposes the global composer through app.use and translates with source text', async () => {
     const i18n = createI18n({
       locale: 'fr',
@@ -33,7 +40,10 @@ describe('rue i18n', () => {
 
     const App: FC = () => {
       const { _ } = useI18n()
-      return <p data-testid="reader">{_('你好，{name}！', { name: 'Rue' })}</p>
+      return createCompiledDynamic('p', {
+        'data-testid': 'reader',
+        children: _('你好，{name}！', { name: 'Rue' }),
+      }) as any
     }
 
     const container = document.createElement('div')
@@ -48,22 +58,18 @@ describe('rue i18n', () => {
   it('provides subtree-specific messages through I18nProvider', async () => {
     const Reader: FC = () => {
       const { _ } = useI18n()
-      return <p data-testid="reader">{_('你好，{name}！', { name: 'Rue' })}</p>
+      return createCompiledDynamic('p', {
+        'data-testid': 'reader',
+        children: _('你好，{name}！', { name: 'Rue' }),
+      }) as any
     }
 
     const App: FC = () => {
-      return (
-        <I18nProvider
-          locale="zh-CN"
-          messages={{
-            'zh-CN': {
-              '你好，{name}！': '你好，{name}！',
-            },
-          }}
-        >
-          <Reader />
-        </I18nProvider>
-      )
+      return createCompiledDynamic(I18nProvider, {
+        locale: 'zh-CN',
+        messages: { 'zh-CN': { '你好，{name}！': '你好，{name}！' } },
+        children: createCompiledDynamic(Reader, {}),
+      }) as any
     }
 
     const container = document.createElement('div')
@@ -73,6 +79,39 @@ describe('rue i18n', () => {
     await flushRender()
 
     expect(container.querySelector('[data-testid="reader"]')?.textContent).toBe('你好，Rue！')
+  })
+
+  it('keeps nested I18nProvider composers scoped to their own subtrees', async () => {
+    const Reader: FC<{ testId: string }> = props => {
+      const { _ } = useI18n()
+      return createCompiledDynamic('p', {
+        'data-testid': props.testId,
+        children: _('greeting'),
+      }) as any
+    }
+    const App: FC = () =>
+      createCompiledDynamic(I18nProvider, {
+        locale: 'en',
+        messages: { en: { greeting: 'Outer' } },
+        children: [
+          createCompiledDynamic(Reader, { testId: 'outer-before' }),
+          createCompiledDynamic(I18nProvider, {
+            locale: 'en',
+            messages: { en: { greeting: 'Inner' } },
+            children: createCompiledDynamic(Reader, { testId: 'inner' }),
+          }),
+          createCompiledDynamic(Reader, { testId: 'outer-after' }),
+        ],
+      }) as any
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    useApp(App).mount(container)
+    await flushRender()
+
+    expect(container.querySelector('[data-testid="outer-before"]')?.textContent).toBe('Outer')
+    expect(container.querySelector('[data-testid="inner"]')?.textContent).toBe('Inner')
+    expect(container.querySelector('[data-testid="outer-after"]')?.textContent).toBe('Outer')
   })
 
   it('creates a component-local composer when useI18n is called with local scope', async () => {
@@ -97,24 +136,21 @@ describe('rue i18n', () => {
       const { _, locale } = composer
       const currentLocale = locale.value
 
-      return (
-        <button
-          data-testid="reader"
-          onClick={() => {
-            locale.value = locale.value === 'en' ? 'zh-CN' : 'en'
-            switchedLocale = locale.value
-            switchedHello = composer._('你好', undefined, locale.value)
-          }}
-        >
-          {_('切换语言', undefined, currentLocale)} / {_('你好', undefined, currentLocale)}
-        </button>
-      )
+      return createCompiledDynamic('button', {
+        'data-testid': 'reader',
+        onClick: () => {
+          locale.value = locale.value === 'en' ? 'zh-CN' : 'en'
+          switchedLocale = locale.value
+          switchedHello = composer._('你好', undefined, locale.value)
+        },
+        children: `${_('切换语言', undefined, currentLocale)} / ${_('你好', undefined, currentLocale)}`,
+      }) as any
     }
 
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(<LocalReader />, container)
+    render(createCompiledDynamic(LocalReader, {}) as any, container)
     await flushRender()
 
     const button = container.querySelector('[data-testid="reader"]') as HTMLButtonElement | null
@@ -180,6 +216,44 @@ describe('rue i18n', () => {
 
     await i18n.global.loadLocaleMessages('ja-JP')
     expect(loadCount).toBe(1)
+  })
+
+  it('keeps translations, fallback, and formats aligned with the current lazy locale', async () => {
+    let resolveLoader: ((value: { default: { greeting: string } }) => void) | undefined
+    const i18n = createI18n({
+      locale: 'zh-CN',
+      fallbackLocale: 'en',
+      messages: {
+        'zh-CN': { greeting: '你好' },
+        en: { greeting: 'Hello', fallback: 'English fallback' },
+      },
+      numberFormats: {
+        'zh-CN': { currency: { style: 'currency', currency: 'CNY' } },
+        en: { currency: { style: 'currency', currency: 'USD' } },
+        'ja-JP': { currency: { style: 'currency', currency: 'JPY' } },
+      },
+      messageLoader: {
+        'ja-JP': () =>
+          new Promise(resolve => {
+            resolveLoader = resolve
+          }),
+      },
+    })
+
+    i18n.global.locale.value = 'en'
+    expect(i18n.global._('greeting')).toBe('Hello')
+    expect(i18n.global._('fallback')).toBe('English fallback')
+    expect(i18n.global.n(1299, 'currency')).toBe('$1,299.00')
+
+    const load = i18n.global.loadLocaleMessages('ja-JP')
+    expect(i18n.global.isLocaleLoading('ja-JP')).toBe(true)
+    resolveLoader?.({ default: { greeting: 'こんにちは' } })
+    await load
+    i18n.global.locale.value = 'ja-JP'
+
+    expect(i18n.global._('greeting')).toBe('こんにちは')
+    expect(i18n.global._('fallback')).toBe('English fallback')
+    expect(i18n.global.n(1299, 'currency')).toMatch(/[￥¥]1,299/)
   })
 
   it('keeps source-text interpolation working for existing locales after lazy locale loads', async () => {

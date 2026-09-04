@@ -3,7 +3,7 @@ Steps 模块概述
 - 汇总步骤条组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
-import { h, type FC } from '@rue-js/rue'
+import { Component, type FC } from '@rue-js/rue'
 
 /** StepsDirection 位置或方向类型。 */
 export type StepsDirection = 'vertical' | 'horizontal'
@@ -203,7 +203,11 @@ const resolveItemStatus = (
 /** 渲染 Tag 的内部工具函数。 */
 const renderTag = (as: any, props: Record<string, any>, children?: any) => {
   const nextChildren = toChildArray(children)
-  return h(as, props, ...nextChildren)
+  return (
+    <Component is={as} {...props}>
+      {nextChildren}
+    </Component>
+  )
 }
 
 /** Step 的内部工具函数。 */
@@ -395,7 +399,7 @@ type StepsCompound = FC<StepsProps> & {
   Icon: FC<StepIconProps>
 }
 
-const StepsCompound: StepsCompound = Object.assign(StepsRoot, {
+const StepsCompound: StepsCompound = /*#__PURE__*/ Object.assign(StepsRoot, {
   Step,
   Icon,
 })

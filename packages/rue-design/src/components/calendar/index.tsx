@@ -5,8 +5,7 @@ Calendar 组件概述
 - 视觉层继续使用 Rue 当前的 daisyUI/Tailwind 体系，不引入额外样式文件。
 */
 import type { FC } from '@rue-js/rue'
-import { onUnmounted, ref, renderAnchor, useRef, useSetup, vapor } from '@rue-js/rue'
-import { _$vaporMarkComponentRenderReactive } from '@rue-js/rue/vapor'
+import { onUnmounted, ref, renderAnchor, useRef, useSetup } from '@rue-js/rue'
 
 /** CalendarMode 类型。 */
 export type CalendarMode = 'month' | 'year'
@@ -297,11 +296,11 @@ const createSelectabilityCaches = (): CalendarSelectabilityCaches => ({
   year: new Map(),
 })
 
-const weekdayLabelCache = new Map<string, string[]>()
-const monthLabelCache = new Map<string, string[]>()
-const monthYearFormatterCache = new Map<string, Intl.DateTimeFormat>()
-const yearFormatterCache = new Map<string, Intl.DateTimeFormat>()
-const todayFormatterCache = new Map<string, Intl.DateTimeFormat>()
+const weekdayLabelCache = /*#__PURE__*/ new Map<string, string[]>()
+const monthLabelCache = /*#__PURE__*/ new Map<string, string[]>()
+const monthYearFormatterCache = /*#__PURE__*/ new Map<string, Intl.DateTimeFormat>()
+const yearFormatterCache = /*#__PURE__*/ new Map<string, Intl.DateTimeFormat>()
+const todayFormatterCache = /*#__PURE__*/ new Map<string, Intl.DateTimeFormat>()
 
 const getCalendarNow = () => {
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
@@ -1714,7 +1713,7 @@ const CalendarPanelImpl: FC<CalendarProps> = ({
     optimizedCtx.eventsAttached = true
   }
 
-  const dateCellStates = new Map<string, DefaultDateCellState>()
+  const dateCellStates = /*#__PURE__*/ new Map<string, DefaultDateCellState>()
   if (isMonthMode) {
     for (const row of dateRows) {
       for (const cell of row.cells) {
@@ -1734,7 +1733,7 @@ const CalendarPanelImpl: FC<CalendarProps> = ({
     value: year,
     disabled: !resolveYearSelectable(createDate(year, currentValue.getMonth(), 1)),
   }))
-  const managedCellContent = new Map<string, ManagedCalendarCellContent>()
+  const managedCellContent = /*#__PURE__*/ new Map<string, ManagedCalendarCellContent>()
   if (isMonthMode && hasDateCustomRender) {
     dateRows.forEach((row, rowIndex) => {
       row.cells.forEach((cell, columnIndex) => {
@@ -1994,33 +1993,29 @@ const CalendarPanelImpl: FC<CalendarProps> = ({
     return renderOptimizedDefaultCalendarView(optimizedSnapshot) as any
   }
 
-  return vapor(() => {
-    optimizedCtx.cleanupVersion += 1
-    clearManagedCalendarContent(optimizedCtx.managedContentMounts)
-    clearManagedCalendarMount(optimizedCtx.managedHeaderMount)
-    optimizedCtx.managedHeaderMount = null
-
-    const host = document.createElement('span')
-    host.style.display = 'contents'
-    optimizedCtx.host = host
-    optimizedCtx.eventsAttached = false
-    optimizedCtx.lastSnapshot = null
-    ensureHostEvents()
-
-    host.innerHTML = renderOptimizedDefaultCalendarHTML(optimizedSnapshot)
-    syncManagedCalendarContent(host, optimizedCtx.managedContentMounts, optimizedSnapshot)
-    optimizedCtx.managedHeaderMount = syncManagedCalendarHeaderContent(
-      host,
-      optimizedCtx.managedHeaderMount,
-      optimizedSnapshot,
-    )
-    optimizedCtx.lastSnapshot = optimizedSnapshot
-    emitCalendarRenderProfile(onRenderProfile, renderProfile, currentMode, 'html')
-    return host
-  })
+  optimizedCtx.cleanupVersion += 1
+  clearManagedCalendarContent(optimizedCtx.managedContentMounts)
+  clearManagedCalendarMount(optimizedCtx.managedHeaderMount)
+  optimizedCtx.managedHeaderMount = null
+  const host = document.createElement('span')
+  host.style.display = 'contents'
+  optimizedCtx.host = host
+  optimizedCtx.eventsAttached = false
+  optimizedCtx.lastSnapshot = null
+  ensureHostEvents()
+  host.innerHTML = renderOptimizedDefaultCalendarHTML(optimizedSnapshot)
+  syncManagedCalendarContent(host, optimizedCtx.managedContentMounts, optimizedSnapshot)
+  optimizedCtx.managedHeaderMount = syncManagedCalendarHeaderContent(
+    host,
+    optimizedCtx.managedHeaderMount,
+    optimizedSnapshot,
+  )
+  optimizedCtx.lastSnapshot = optimizedSnapshot
+  emitCalendarRenderProfile(onRenderProfile, renderProfile, currentMode, 'html')
+  return host
 }
 
-const CalendarPanel = _$vaporMarkComponentRenderReactive(CalendarPanelImpl)
+const CalendarPanel = CalendarPanelImpl
 
 /** Cally web component 容器 */
 const Cally: FC<CalendarHostProps> = ({ className, children, ...rest }) => {
@@ -2064,7 +2059,7 @@ type CalendarCompound = FC<CalendarProps> & {
   PikaSingle: FC<CalendarPikaSingleProps>
 }
 
-const CalendarCompound: CalendarCompound = Object.assign(CalendarPanel, {
+const CalendarCompound: CalendarCompound = /*#__PURE__*/ Object.assign(CalendarPanel, {
   Cally,
   Month,
   PikaSingle,

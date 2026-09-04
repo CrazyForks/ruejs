@@ -86,6 +86,29 @@ fn emit_expr(expr: Expr) -> String {
     emit_stmts(vec![Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(expr) })])
 }
 
+fn transform_module(src: &str) -> String {
+    let cm = Arc::new(SourceMap::default());
+    let fm = cm.new_source_file(
+        FileName::Custom("element-reactive-scalar-test.tsx".into()).into(),
+        src.to_string(),
+    );
+    let mut parser = Parser::new(
+        Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+        StringInput::from(&*fm),
+        None,
+    );
+    let transformed = crate::apply(parser.parse_program().expect("parse module"));
+    let mut buf = Vec::new();
+    let mut emitter = Emitter {
+        cfg: Default::default(),
+        comments: None,
+        cm: cm.clone(),
+        wr: JsWriter::new(cm, "\n", &mut buf, None),
+    };
+    emitter.emit_program(&transformed).expect("emit transformed module");
+    String::from_utf8(buf).expect("utf8")
+}
+
 fn compact(src: &str) -> String {
     src.chars().filter(|ch| !ch.is_whitespace()).collect()
 }
@@ -106,10 +129,30 @@ fn compile_expr_child_for_parent(expr_src: &str, parent_tag: &str) -> String {
 }
 
 #[test]
+fn compiles_slot_factory_with_target_props_owner_abi_without_renderable_helpers() {
+    let mut vt = new_vt();
+    let factory = compiled_slot_factory_expr(
+        &mut vt,
+        &parse_expr("<><strong>head</strong><em>tail</em></>", true),
+    )
+    .expect("compiled slot factory");
+    let out = compact(&emit_expr(factory));
+
+    assert!(out.starts_with("(target,slotProps,owner)=>"), "{out}");
+    assert!(out.contains("_$mountCompiledSlotFactory(target,owner,"), "{out}");
+    assert!(out.contains("_$compiledCreateElement(\"strong\""), "{out}");
+    assert!(out.contains("_$compiledCreateElement(\"em\""), "{out}");
+    assert!(!out.contains("renderBetween"), "{out}");
+    assert!(!out.contains("renderAnchor"), "{out}");
+    assert!(!out.contains("_$compiledRootFactory"), "{out}");
+    assert!(!out.contains("vapor("), "{out}");
+}
+
+#[test]
 fn detects_renderable_calls_empty_memos_and_local_aliases() {
     assert!(contains_jsx_in_expr(&parse_expr("useMemo(() => ok ? <span /> : null, [])", true)));
     assert!(contains_jsx_in_expr(&parse_expr(
-        "_$vaporWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
+        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
         true,
     )));
     assert!(contains_jsx_in_expr(&parse_expr(
@@ -123,7 +166,7 @@ fn detects_renderable_calls_empty_memos_and_local_aliases() {
 
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr("useMemo(() => <span />, [])", true)));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "_$vaporWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
+        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
         true,
     )));
     assert!(!is_empty_deps_memoized_jsx_expr(&parse_expr("useMemo(() => <span />, deps)", true,)));
@@ -173,14 +216,14 @@ const empty = null;
 fn rewrites_hook_wrapped_memo_calls_for_slot_with_empty_fallbacks() {
     let mut vt = new_vt();
     let expr = parse_expr(
-        "_$vaporWithHookId(\"memo:0:0\", () => useMemo(() => ok ? <span /> : null, []))",
+        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => ok ? <span /> : null, []))",
         true,
     );
 
     let out = compact(&emit_expr(make_expr_for_slot(&mut vt, &expr)));
 
-    assert!(out.contains("_$vaporWithHookId(\"memo:0:0\",()=>useMemo(()"));
-    assert!(out.contains("_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(out.contains("_$compiledWithHookId(\"memo:0:0\",()=>useMemo(()"));
+    assert!(out.contains("_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
     assert!(out.contains("_$compiledCreateElement(\"span\",__rue_parent_context)"));
     assert!(out.contains(":\"\""));
 }
@@ -202,7 +245,7 @@ fn emits_slot_render_once_and_style_text_paths_for_expr_children() {
     let slot_out = compact(&emit_stmts(slot_stmts));
     assert!(slot_out.contains("_$createComment(\"rue:slot:anchor\")"));
     assert!(slot_out.contains(
-        "watchEffect(()=>{const__slot=(slotView);untrack(()=>renderAnchor(__slot,root,_list1));});"
+        "effect(()=>{const__slot=(slotView);untrack(()=>renderAnchor(__slot,root,_list1));});"
     ));
 
     let mut memo_vt = new_vt();
@@ -244,7 +287,7 @@ fn routes_opaque_identifier_children_through_slot_anchor_in_html_elements() {
 
     assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
     assert!(out.contains(
-        "watchEffect(()=>{const__slot=(extra);untrack(()=>renderAnchor(__slot,root,_list1));});"
+        "effect(()=>{const__slot=(extra);untrack(()=>renderAnchor(__slot,root,_list1));});"
     ));
     assert!(!out.contains("_$settextContent"));
 }
@@ -281,7 +324,7 @@ fn routes_accessor_get_children_through_slot_anchor_in_html_elements() {
 
     let member_text = compile_expr_child_for_parent("sha.slice(0, 7)", "div");
     assert!(member_text.contains("_$createTextWrapper(root)"));
-    assert!(member_text.contains("watchEffect(()=>{_$settextContent(_el1,sha.slice(0,7));});"));
+    assert!(member_text.contains("effect(()=>{_$settextContent(_el1,sha.slice(0,7));});"));
     assert!(!member_text.contains("renderAnchor"));
 }
 
@@ -351,12 +394,12 @@ fn keeps_static_literals_on_text_content_path_for_html_children() {
 #[test]
 fn keeps_style_and_svg_identifier_children_on_text_content_path() {
     let style_out = compile_expr_child_for_parent("cssText", "style");
-    assert!(style_out.contains("watchEffect(()=>{_$settextContent(root,cssText);});"));
+    assert!(style_out.contains("effect(()=>{_$settextContent(root,cssText);});"));
     assert!(!style_out.contains("renderAnchor"));
 
     let svg_out = compile_expr_child_for_parent("label", "text");
     assert!(svg_out.contains("_$createTextWrapper(root)"));
-    assert!(svg_out.contains("watchEffect(()=>{_$settextContent(_el1,label);});"));
+    assert!(svg_out.contains("effect(()=>{_$settextContent(_el1,label);});"));
     assert!(!svg_out.contains("renderAnchor"));
 }
 
@@ -368,8 +411,8 @@ fn rewrites_fragments_logicals_maps_and_fallback_calls_for_slot_values() {
         &parse_expr("<><span>one</span><em>two</em></>", true),
     )));
 
-    assert!(fragment_out.contains("_$compiledRoot((__rue_parent_context)=>{"));
-    assert!(fragment_out.contains("document.createDocumentFragment()"));
+    assert!(fragment_out.contains("_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
+    assert!(fragment_out.contains("_$createDocumentFragment()"));
     assert!(fragment_out.contains("_$compiledCreateElement(\"span\",_root)"));
     assert!(fragment_out.contains("_$compiledCreateElement(\"em\",_root)"));
 
@@ -378,7 +421,7 @@ fn rewrites_fragments_logicals_maps_and_fallback_calls_for_slot_values() {
         &mut logical_vt,
         &parse_expr("0 && <span />", true),
     )));
-    assert!(numeric_and.contains("0?_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(numeric_and.contains("0?_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
     assert!(numeric_and.ends_with(":0;"));
 
     let nan_and = compact(&emit_expr(make_expr_for_slot(
@@ -391,7 +434,7 @@ fn rewrites_fragments_logicals_maps_and_fallback_calls_for_slot_values() {
         &mut logical_vt,
         &parse_expr("fallback ?? <strong />", true),
     )));
-    assert!(nullish.contains("fallback??_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(nullish.contains("fallback??_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
     assert!(nullish.contains("_$compiledCreateElement(\"strong\",__rue_parent_context)"));
 
     let map_out = compact(&emit_expr(make_expr_for_slot(
@@ -399,8 +442,8 @@ fn rewrites_fragments_logicals_maps_and_fallback_calls_for_slot_values() {
         &parse_expr("items.map(item => <span>{item.name}</span>)", true),
     )));
     assert!(map_out.contains("vapor(()=>{"));
-    assert!(map_out.contains("_$vaporKeyedList({"));
-    assert!(map_out.contains("items:_map1_current"));
+    assert!(map_out.contains("items.map((item)=>"), "{map_out}");
+    assert!(!map_out.contains("_$compiledKeyedList"), "{map_out}");
 
     let plain_call = compact(&emit_expr(make_expr_for_slot(
         &mut logical_vt,
@@ -454,7 +497,13 @@ fn emits_children_slots_svg_text_style_literals_and_member_renderables() {
     );
     let children_out = compact(&emit_stmts(children_stmts));
     assert!(children_out.contains("_$createComment(\"rue:children:anchor\")"));
-    assert!(children_out.contains("renderAnchor(__slot,root,_list1)"));
+    assert!(
+        children_out.contains(
+            "_$mountCompiledSlotAt({parent:root,before:_list1},()=>props.children,()=>({}))"
+        ),
+        "{children_out}"
+    );
+    assert!(!children_out.contains("renderAnchor"));
 
     let mut member_vt = new_vt();
     member_vt.el_tag_by_ident.insert("root".to_string(), "div".to_string());
@@ -480,7 +529,7 @@ fn emits_children_slots_svg_text_style_literals_and_member_renderables() {
     );
     let svg_out = compact(&emit_stmts(svg_stmts));
     assert!(svg_out.contains("_$createTextWrapper(svgRoot)"));
-    assert!(svg_out.contains("watchEffect(()=>{"));
+    assert!(svg_out.contains("effect(()=>{"));
     assert!(!svg_out.contains("renderAnchor"));
 
     let mut style_empty_vt = new_vt();
@@ -519,7 +568,7 @@ fn emits_children_slots_svg_text_style_literals_and_member_renderables() {
     );
     assert_eq!(
         compact(&emit_stmts(style_dynamic_stmts)),
-        "watchEffect(()=>{_$settextContent(styleEl,dynamicCss);});"
+        "effect(()=>{_$settextContent(styleEl,dynamicCss);});"
     );
 }
 
@@ -570,7 +619,7 @@ fn finds_empty_memo_deps_inside_nested_expressions() {
         true,
     )));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "left || _$vaporWithHookId('memo:0:0', () => useMemo(() => <span />, []))",
+        "left || _$compiledWithHookId('memo:0:0', () => useMemo(() => <span />, []))",
         true,
     )));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
@@ -635,29 +684,36 @@ fn rewrites_slot_conditionals_with_renderable_calls_and_plain_fallbacks() {
         &mut vt,
         &parse_expr("ok ? useMemo(() => <span />, []) : null", true),
     )));
-    assert!(cond_out.contains("ok?useMemo(()=>_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(
+        cond_out.contains("ok?useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
+    );
     assert!(cond_out.contains(":\"\""));
 
     let and_out = compact(&emit_expr(make_expr_for_slot(
         &mut vt,
         &parse_expr("ok && useMemo(() => <span />, [])", true),
     )));
-    assert!(and_out.contains("ok?useMemo(()=>_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(
+        and_out.contains("ok?useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
+    );
     assert!(and_out.contains(":\"\""));
 
     let or_out = compact(&emit_expr(make_expr_for_slot(
         &mut vt,
         &parse_expr("renderFallback() || useMemo(() => <span />, [])", true),
     )));
-    assert!(
-        or_out.contains("renderFallback()||useMemo(()=>_$compiledRoot((__rue_parent_context)=>{")
-    );
+    assert!(or_out.contains(
+        "renderFallback()||useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+    ));
 
     let left_renderable_or = compact(&emit_expr(make_expr_for_slot(
         &mut vt,
         &parse_expr("useMemo(() => <span />, []) || fallback", true),
     )));
-    assert!(left_renderable_or.contains("useMemo(()=>_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(
+        left_renderable_or
+            .contains("useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
+    );
     assert!(left_renderable_or.contains("||fallback"));
 }
 
@@ -668,8 +724,8 @@ fn covers_fragment_once_nested_opaque_and_rewrite_false_edges() {
         make_expr_for_slot(vt, &parse_expr("ok ? <>frag</> : value", true))
     });
     let once_out = compact(&emit_expr(once_fragment));
-    assert!(once_out.contains("ok?_$compiledRoot((__rue_parent_context)=>{"));
-    assert!(once_out.contains("document.createDocumentFragment()"));
+    assert!(once_out.contains("ok?_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
+    assert!(once_out.contains("_$createDocumentFragment()"));
     assert!(!once_out.contains("watchEffect("));
 
     let mut branch_vt = new_vt();
@@ -677,21 +733,24 @@ fn covers_fragment_once_nested_opaque_and_rewrite_false_edges() {
         &mut branch_vt,
         &parse_expr("ok ? null : useMemo(() => <span />, [])", true),
     )));
-    assert!(cond_out.contains("ok?\"\":useMemo(()=>_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(
+        cond_out
+            .contains("ok?\"\":useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
+    );
 
     let or_left_out = compact(&emit_expr(make_expr_for_slot(
         &mut branch_vt,
         &parse_expr("<span /> || fallback", true),
     )));
-    assert!(or_left_out.contains("_$compiledRoot((__rue_parent_context)=>{"));
+    assert!(or_left_out.contains("_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
     assert!(or_left_out.contains("||fallback"));
 
     assert!(!hook_wrapped_call_has_empty_memo_deps(&parse_call(
-        "_$vaporWithHookId('memo:0:0')",
+        "_$compiledWithHookId('memo:0:0')",
         true,
     )));
     assert!(!hook_wrapped_call_has_empty_memo_deps(&parse_call(
-        "_$vaporWithHookId('memo:0:0', function () { return useMemo(() => <span />, []); })",
+        "_$compiledWithHookId('memo:0:0', function () { return useMemo(() => <span />, []); })",
         true,
     )));
 
@@ -735,11 +794,11 @@ fn covers_helper_false_edges_plain_slot_branches_and_list_early_return() {
     assert!(contains_jsx_in_expr(&parse_expr("ok && <span />", true)));
 
     assert!(!hook_wrapped_call_has_empty_memo_deps(&parse_call(
-        "_$vaporWithHookId('memo', () => { return useMemo(() => <span />, []); })",
+        "_$compiledWithHookId('memo', () => { return useMemo(() => <span />, []); })",
         true,
     )));
     assert!(!hook_wrapped_call_has_empty_memo_deps(&parse_call(
-        "_$vaporWithHookId('memo', () => value)",
+        "_$compiledWithHookId('memo', () => value)",
         false,
     )));
 
@@ -758,7 +817,7 @@ fn covers_helper_false_edges_plain_slot_branches_and_list_early_return() {
     assert!(
         rewrite_hook_wrapped_call_for_slot(
             &mut vt,
-            &parse_call("_$vaporWithHookId('memo')", false),
+            &parse_call("_$compiledWithHookId('memo')", false),
         )
         .is_none()
     );
@@ -811,7 +870,8 @@ fn covers_helper_false_edges_plain_slot_branches_and_list_early_return() {
         &mut list_stmts,
     );
     let list_out = compact(&emit_stmts(list_stmts));
-    assert!(list_out.contains("_$vaporKeyedList"), "{list_out}");
+    assert!(list_out.contains("_$reconcileKeyed"), "{list_out}");
+    assert!(list_out.contains("_$mountCompiledKeyedRow"), "{list_out}");
 }
 
 #[test]
@@ -821,14 +881,14 @@ fn hardens_slot_rewrite_false_edges_for_hook_runners_and_nullish_logic() {
     assert!(
         rewrite_hook_wrapped_call_for_slot(
             &mut vt,
-            &parse_call("_$vaporWithHookId('memo', value)", false),
+            &parse_call("_$compiledWithHookId('memo', value)", false),
         )
         .is_none()
     );
     assert!(
         rewrite_hook_wrapped_call_for_slot(
             &mut vt,
-            &parse_call("_$vaporWithHookId('memo', () => value)", false),
+            &parse_call("_$compiledWithHookId('memo', () => value)", false),
         )
         .is_none()
     );
@@ -841,7 +901,10 @@ fn hardens_slot_rewrite_false_edges_for_hook_runners_and_nullish_logic() {
         &mut vt,
         &parse_expr("(<span />) ?? fallback", true),
     )));
-    assert!(jsx_left.contains("_$compiledRoot((__rue_parent_context)=>{"), "{jsx_left}");
+    assert!(
+        jsx_left.contains("_$compiledRoot(Object.assign((__rue_parent_context)=>{"),
+        "{jsx_left}"
+    );
     assert!(jsx_left.contains("??fallback"), "{jsx_left}");
 
     let mut style_vt = new_vt();
@@ -856,4 +919,92 @@ fn hardens_slot_rewrite_false_edges_for_hook_runners_and_nullish_logic() {
     let style_out = compact(&emit_stmts(style_stmts));
     assert!(style_out.contains("_$settextContent(styleRoot,"), "{style_out}");
     assert!(style_out.contains("body{color:red;}"), "{style_out}");
+}
+
+#[test]
+fn builds_compiled_branch_factories_only_for_closed_result_sets() {
+    let mut vt = new_vt();
+    let conditional =
+        try_make_compiled_branch_expr(&mut vt, &parse_expr("true ? <span>yes</span> : null", true))
+            .expect("static closed conditional should compile");
+    let conditional_out = compact(&emit_expr(conditional));
+    assert!(conditional_out.contains("_$compiledBranch(()=>{"), "{conditional_out}");
+    assert!(
+        conditional_out.contains("if(true)return{__rue_compiled_branch_key:true"),
+        "{conditional_out}"
+    );
+    assert!(conditional_out.contains("_$createDocumentFragment()"), "{conditional_out}");
+
+    let logical =
+        try_make_compiled_branch_expr(&mut vt, &parse_expr("0 && <span>unreachable</span>", true))
+            .expect("numeric logical falsy value should compile");
+    let logical_out = compact(&emit_expr(logical));
+    assert!(logical_out.contains("typeof__rue_branch_value===\"number\""), "{logical_out}");
+    assert!(logical_out.contains("__rue_compiled_branch_key:true"), "{logical_out}");
+    assert!(logical_out.contains("__rue_compiled_branch_key:false"), "{logical_out}");
+    assert!(logical_out.contains("_$compiledCreateTextNode"), "{logical_out}");
+
+    assert!(
+        try_make_compiled_branch_expr(
+            &mut vt,
+            &parse_expr("true ? <span>safe</span> : renderNode()", true),
+        )
+        .is_none()
+    );
+}
+
+#[test]
+fn builds_one_literal_sibling_reader_with_an_explicit_empty_case() {
+    let output = compact(&transform_module(
+        r#"
+import { ref } from '@rue-js/rue';
+const tab = ref<'preview' | 'code' | 'unknown'>('preview');
+export const View = () => (
+  <div>
+    {tab.value === 'code' && <span>code</span>}
+    {tab.value === 'preview' && <span>preview</span>}
+  </div>
+);
+"#,
+    ));
+
+    assert_eq!(output.matches("_$compiledBranchAt(").count(), 1, "{output}");
+    assert_eq!(output.matches("const__rue_branch_value=tab.value").count(), 1, "{output}");
+    assert!(output.contains("_$createDocumentFragment()"), "{output}");
+}
+
+#[test]
+fn emits_renderable_expression_at_a_precomputed_anchor_without_creating_another_marker() {
+    let mut vt = new_vt();
+    let mut stmts = Vec::new();
+
+    emit_element_expr_container_child_at(
+        &mut vt,
+        &ident("parent"),
+        &ident("hole"),
+        &expr_container("ok ? <span>shown</span> : null", true),
+        &mut stmts,
+    );
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(out.contains("_$compiledBranchAt(parent,hole"), "{out}");
+    assert!(!out.contains("_$createComment("), "{out}");
+    assert!(!out.contains("_$appendChild(parent"), "{out}");
+}
+
+#[test]
+fn emits_proven_reactive_text_as_compiled_text_binding() {
+    let output = compact(&transform_module(
+        r#"
+import { ref, signal } from '@rue-js/rue';
+const message = ref('hello');
+const count = signal(1);
+export const View = () => <p>{message.value}:{count.get()}</p>;
+"#,
+    ));
+
+    assert!(output.contains("_$compiledRoot"), "{output}");
+    assert_eq!(output.matches("_$compiledText(").count(), 2, "{output}");
+    assert!(!output.contains("watchEffect"), "{output}");
+    assert!(!output.contains("vapor("), "{output}");
 }

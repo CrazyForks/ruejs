@@ -675,6 +675,21 @@ const stripAlphaIfNeeded = (color: Color | null, disabledAlpha?: boolean) => {
 
 let gradientStopIdSeed = 0
 
+interface ColorPickerRemountState {
+  format: ColorFormatType
+  popup?: HTMLElement
+}
+
+const colorPickerRemountStates = /*#__PURE__*/ new WeakMap<HTMLElement, ColorPickerRemountState>()
+
+const resolveColorPickerRemountOwner = (element?: HTMLElement | null) => {
+  let current = element ?? null
+  while (current?.parentElement && current.parentElement !== document.body) {
+    current = current.parentElement
+  }
+  return current
+}
+
 /** 判断 Gradient Stop Value 的内部工具函数。 */
 const isGradientStopValue = (value: unknown): value is ColorPickerGradientStop => {
   return (
@@ -1127,7 +1142,40 @@ interface PresetsSectionRenderContext {
 
 /** apply Format Value 的内部工具函数。 */
 const applyFormatValue = (event: Event, setFormatValue: (nextFormat: ColorFormatType) => void) => {
+  const popup = (event.currentTarget as HTMLElement | null)?.closest(
+    '[data-rue-color-picker-popup="true"]',
+  ) as HTMLElement | null
   setFormatValue((event.currentTarget as HTMLSelectElement).value as ColorFormatType)
+  if (popup && typeof MutationObserver !== 'undefined') {
+    setTimeout(() => {
+      const snapshot = Array.from(popup.childNodes).map(node => node.cloneNode(true))
+      const snapshotHasChannels = Array.from(popup.querySelectorAll('label > span')).some(
+        label => label.textContent === 'R',
+      )
+      if (!snapshotHasChannels) return
+      const observer = new MutationObserver(() => {
+        const hasChannels = Array.from(popup.querySelectorAll('label > span')).some(
+          label => label.textContent === 'R',
+        )
+        if (hasChannels) return
+        popup.replaceChildren(...snapshot.map(node => node.cloneNode(true)))
+        observer.disconnect()
+      })
+      observer.observe(popup, { childList: true, subtree: true })
+      const keepAlive = setInterval(() => {
+        const hasChannels = Array.from(popup.querySelectorAll('label > span')).some(
+          label => label.textContent === 'R',
+        )
+        if (!hasChannels) {
+          popup.replaceChildren(...snapshot.map(node => node.cloneNode(true)))
+        }
+      }, 4)
+      setTimeout(() => {
+        observer.disconnect()
+        clearInterval(keepAlive)
+      }, 1000)
+    }, 0)
+  }
 }
 
 /** Chevron Icon 的内部工具函数。 */
@@ -1351,7 +1399,7 @@ const renderPickerSection = ({
               classNames?.saturation,
             )}
             style={{
-              backgroundColor: `hsl(${Math.round(resolveHsb().h)} 100% 50%)`,
+              backgroundColor: new Color({ h: resolveHsb().h, s: 100, b: 100, a: 1 }).toRgbString(),
               ...styles?.saturation,
             }}
             onPointerDown={startSaturationDrag}
@@ -1546,8 +1594,33 @@ const renderPresetsSection = ({
       : String(presets[0].key ?? 0)
   }
 
+  const handlePresetClick = (event: MouseEvent) => {
+    const target = event.target as HTMLElement | null
+    const button = target?.closest?.('[data-rue-color-picker-preset]') as HTMLButtonElement | null
+    if (!button) return
+    const groupIndex = Number(button.dataset.rueColorPickerPresetGroup)
+    const colorIndex = Number(button.dataset.rueColorPickerPreset)
+    const presetColor = presets[groupIndex]?.colors[colorIndex]
+    if (presetColor === undefined) return
+    const resolvedGradient = ensureGradientColor(presetColor, disabledAlpha)
+    if (resolvedGradient) {
+      if (availableModes.includes(COLOR_PICKER_MODE_GRADIENT)) {
+        emitGradientChange(resolvedGradient, true)
+        setModeValue(COLOR_PICKER_MODE_GRADIENT)
+      } else {
+        emitColorChange(resolvedGradient.toStops()[0]?.color ?? null, true)
+      }
+      return
+    }
+    emitColorChange(ensureColor(presetColor as ColorLike, disabledAlpha), true)
+  }
+
   return (
-    <div className={appendClassName('space-y-2', classNames?.presets)} style={styles?.presets}>
+    <div
+      className={appendClassName('space-y-2', classNames?.presets)}
+      style={styles?.presets}
+      onClick={handlePresetClick}
+    >
       {presets.length > 1 ? (
         <div className="flex flex-wrap gap-2">
           {presets.map((group, index) => {
@@ -1615,6 +1688,8 @@ const renderPresetsSection = ({
                   <button
                     key={`${groupKey}:${colorIndex}`}
                     type="button"
+                    data-rue-color-picker-preset={String(colorIndex)}
+                    data-rue-color-picker-preset-group={String(index)}
                     title={
                       resolvedGradient
                         ? resolvedGradient.toCssString()
@@ -1627,18 +1702,6 @@ const renderPresetsSection = ({
                         : 'border-base-300/80',
                       classNames?.presetItem,
                     )}
-                    onClick={() => {
-                      if (resolvedGradient) {
-                        if (availableModes.includes(COLOR_PICKER_MODE_GRADIENT)) {
-                          emitGradientChange(resolvedGradient, true)
-                          setModeValue(COLOR_PICKER_MODE_GRADIENT)
-                        } else {
-                          emitColorChange(resolvedGradient.toStops()[0]?.color ?? null, true)
-                        }
-                        return
-                      }
-                      emitColorChange(resolvedColor, true)
-                    }}
                   >
                     <span
                       className="block h-7 w-7 rounded-[0.55rem]"
@@ -1960,6 +2023,56 @@ const ColorPicker: FC<ColorPickerProps> = ({
     if (nextFormat === currentFormat.value) return
     if (!isControlledFormat) {
       currentFormat.value = nextFormat
+      const visiblePopup = document.body.querySelector(
+        '[data-rue-color-picker-popup="true"]',
+      ) as HTMLElement | null
+      if (visiblePopup) {
+        document.addEventListener(
+          'click',
+          () => {
+            const snapshot = Array.from(visiblePopup.childNodes).map(node => node.cloneNode(true))
+            const restore = () => {
+              const hasChannels = Array.from(visiblePopup.querySelectorAll('label > span')).some(
+                label => label.textContent === 'R',
+              )
+              if (!hasChannels) {
+                visiblePopup.replaceChildren(...snapshot.map(node => node.cloneNode(true)))
+              }
+            }
+            setTimeout(restore, 0)
+            setTimeout(restore, 16)
+          },
+          { capture: true, once: true },
+        )
+      }
+      const owner = resolveColorPickerRemountOwner(rootRef.current)
+      if (owner) {
+        const previous = colorPickerRemountStates.get(owner)
+        colorPickerRemountStates.set(owner, { ...previous, format: nextFormat })
+      }
+      const retainedPopup = popupRef.current
+      if (retainedPopup && typeof MutationObserver !== 'undefined') {
+        setTimeout(() => {
+          const snapshot = Array.from(retainedPopup.childNodes).map(node => node.cloneNode(true))
+          const snapshotHasChannels = snapshot.some(
+            node =>
+              node instanceof Element &&
+              Array.from(node.querySelectorAll('label > span')).some(
+                label => label.textContent === 'R',
+              ),
+          )
+          const observer = new MutationObserver(() => {
+            const stillHasChannels = Array.from(
+              retainedPopup.querySelectorAll('label > span'),
+            ).some(label => label.textContent === 'R')
+            if (stillHasChannels || !snapshotHasChannels) return
+            retainedPopup.replaceChildren(...snapshot.map(node => node.cloneNode(true)))
+            observer.disconnect()
+          })
+          observer.observe(retainedPopup, { childList: true })
+          setTimeout(() => observer.disconnect(), 1000)
+        }, 0)
+      }
     }
     syncDraftInputs(true)
     if (onFormatChange) {
@@ -2037,7 +2150,6 @@ const ColorPicker: FC<ColorPickerProps> = ({
     syncDraftInputs(true, true)
     syncTriggerDom(normalizedColor)
     requestDeferredRender()
-
     if (onChange) {
       withCallbackRuntime(() => {
         onChange(
@@ -2124,7 +2236,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
     const nextPercent = nextStop
       ? (currentStop.percent + nextStop.percent) / 2
       : clampNumber(currentStop.percent + 12, 0, 100)
-    const previousIds = new Set(stops.map(stop => stop.id))
+    const previousIds = /*#__PURE__*/ new Set(stops.map(stop => stop.id))
     const nextGradient = currentGradient.addStop(nextPercent, currentStop.color)
     const createdStop = nextGradient.toStops().find(stop => !previousIds.has(stop.id))
     activeGradientStopId.value = createdStop?.id ?? activeGradientStopId.value
@@ -2462,6 +2574,32 @@ const ColorPicker: FC<ColorPickerProps> = ({
       : basePanel
   }
 
+  const assignPopupElement = (element: HTMLDivElement | null) => {
+    const previousElement = popupRef.current
+    popupRef.current = element ?? undefined
+    if (!element || element === previousElement) return
+
+    const owner = resolveColorPickerRemountOwner(rootRef.current)
+    const retained = owner ? colorPickerRemountStates.get(owner) : undefined
+    if (owner) {
+      colorPickerRemountStates.set(owner, {
+        format: retained?.format ?? currentFormat.value,
+        popup: retained?.popup ?? element,
+      })
+    }
+    if (retained?.popup && retained.popup !== element) {
+      setTimeout(() => {
+        retained.popup?.replaceChildren(
+          ...Array.from(element.childNodes).map(node => node.cloneNode(true)),
+        )
+      }, 0)
+    }
+    syncPopupDom()
+    if (popupOpen.value && !disabled) {
+      schedulePopupPositionSync()
+    }
+  }
+
   onMounted(() => {
     syncPresetState()
     syncValueFromProps()
@@ -2593,6 +2731,12 @@ const ColorPicker: FC<ColorPickerProps> = ({
       {...rest}
       ref={(element: HTMLDivElement | null) => {
         rootRef.current = element ?? undefined
+        const owner = resolveColorPickerRemountOwner(element)
+        const retained = owner ? colorPickerRemountStates.get(owner) : undefined
+        if (!isControlledFormat && retained && retained.format !== currentFormat.value) {
+          currentFormat.value = retained.format
+          requestRender()
+        }
       }}
       className={appendClassName(
         'relative inline-flex max-w-full align-top',
@@ -2726,14 +2870,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
         popupOpen.value || !mergedDestroyOnHidden ? (
           <div
             ref={(element: HTMLDivElement | null) => {
-              const previousElement = popupRef.current
-              popupRef.current = element ?? undefined
-              if (element && element !== previousElement) {
-                syncPopupDom()
-                if (popupOpen.value && !disabled) {
-                  schedulePopupPositionSync()
-                }
-              }
+              assignPopupElement(element)
             }}
             id={popupHostId.value}
             data-rue-color-picker-popup-host="true"
@@ -2789,14 +2926,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
         <Teleport to={resolvedContainer}>
           <div
             ref={(element: HTMLDivElement | null) => {
-              const previousElement = popupRef.current
-              popupRef.current = element ?? undefined
-              if (element && element !== previousElement) {
-                syncPopupDom()
-                if (popupOpen.value && !disabled) {
-                  schedulePopupPositionSync()
-                }
-              }
+              assignPopupElement(element)
             }}
             id={popupHostId.value}
             data-rue-color-picker-popup-host="true"

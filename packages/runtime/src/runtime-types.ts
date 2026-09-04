@@ -1,6 +1,6 @@
-import type { PortableHandle } from '@rue-js/runtime-vapor/protocol'
+import type { PortableHandle } from './runtime-core/protocol'
+import type { CompiledRootHandle } from './compiled-root'
 import type { DomNodeLike } from './dom'
-import type { Renderable } from './renderable'
 
 /** JSX/组件 props 的通用结构，允许任意属性和 children。 */
 export interface ComponentProps {
@@ -10,29 +10,31 @@ export interface ComponentProps {
   children?: ChildInput
 }
 
-/** Wasm/runtime-vapor 返回的可挂载句柄集合。 */
-export type RueMountHandle = PortableHandle
+/** 显式运行时边界返回的可挂载句柄集合。 */
+export type RuntimeHandle = PortableHandle | CompiledRootHandle
 
-/** 默认 runtime 可接受的顶层渲染输入。 */
-export type RenderableInput = Renderable | RueMountHandle | ReadonlyArray<RenderableInput>
+/** 编译运行时可以闭包化挂载的值。 */
+export type RenderOutput =
+  | DomNodeLike
+  | RuntimeHandle
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | ReadonlyArray<RenderOutput>
 
-/** 组件和 JSX 工厂可返回的渲染输出。 */
-export type RenderableOutput = Renderable | RueMountHandle | ReadonlyArray<RenderableOutput>
+/** render 接受的编译值。 */
+export type RenderInput = RenderOutput
 
-/** @deprecated Prefer RenderableOutput. */
-export type RenderOutput = RenderableOutput
-
-/** Vapor setup 返回的 DOM 节点。 */
-export type VaporSetupResult = DomNodeLike
-
-export type Child = RenderableOutput
+export type Child = RenderOutput
 export type ChildInput = Child | ReadonlyArray<ChildInput>
 
 /** 给组件 props 自动附加 children 字段。 */
 export type PropsWithChildren<P = {}> = P & { children?: ChildInput }
 
 /** Rue 函数组件类型。 */
-export type FC<P = {}> = (props: PropsWithChildren<P>) => RenderableOutput
+export type FC<P = {}> = (props: PropsWithChildren<P>) => RenderOutput
 
 /** 组件实例类型，当前等价于函数组件。 */
 export type ComponentInstance<P = {}> = FC<P>

@@ -1,7 +1,8 @@
 import { attachRouter, createRouter, RouterView } from '@rue-js/router'
 import { expect, it } from 'vitest'
 
-import { h, render, useComponent } from '../src'
+import { render, useComponent } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import { click, createStaticHistory, mountContainer, waitForContent } from './page-test-utils'
 import {
   clickByText,
@@ -27,7 +28,7 @@ it('preserves existing keyed rows on add', async () => {
   const { default: Page } = await import('../../../app/pages/examples/LocalTodoList')
   const container = mountContainer()
 
-  render(h(Page as any, null), container)
+  render(createTestRenderable(Page as any, null), container)
 
   await waitForContent(() => {
     expect(normalizeText(container.textContent)).toContain('总计: 3 | 已完成: 1')
@@ -81,7 +82,7 @@ it('toggles completion reactively and preserves keyed rows on delete', async () 
   const { default: Page } = await import('../../../app/pages/examples/LocalTodoList')
   const container = mountContainer()
 
-  render(h(Page as any, null), container)
+  render(createTestRenderable(Page as any, null), container)
 
   await waitForContent(() => {
     expect(normalizeText(container.textContent)).toContain('总计: 3 | 已完成: 1')
@@ -147,7 +148,7 @@ it('preserves both surrounding rows when deleting the middle todo item', async (
   const { default: Page } = await import('../../../app/pages/examples/LocalTodoList')
   const container = mountContainer()
 
-  render(h(Page as any, null), container)
+  render(createTestRenderable(Page as any, null), container)
 
   await waitForContent(() => {
     expect(normalizeText(container.textContent)).toContain('总计: 3 | 已完成: 1')

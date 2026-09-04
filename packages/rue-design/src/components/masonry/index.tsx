@@ -88,7 +88,7 @@ const SPACE_SIZE_FALLBACKS: Record<MasonrySpacePreset, number> = {
   middle: 16,
   large: 24,
 }
-const viewportSubscribers = new Set<() => void>()
+const viewportSubscribers = /*#__PURE__*/ new Set<() => void>()
 
 /** merge Class Names 的内部工具函数。 */
 const mergeClassNames = (...classNames: Array<string | undefined | false>) => {

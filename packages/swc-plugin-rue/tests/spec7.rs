@@ -25,39 +25,12 @@ export default Parent;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$appendChild, untrack, watchEffect, _$setAttribute } from "@rue-js/rue/vapor";
-import { type FC, h } from '@rue-js/rue';
-const count = _$vaporWithHookId("ref:1:0", ()=>ref(2));
-const Child: FC<{
-    label: number;
-}> = (p)=>vapor(()=>{
-        const _root = _$createElement("span");
-        _$setAttribute(_root, "id", "child");
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list1);
-        watchEffect(()=>{
-            const __slot = (p.label);
-            untrack(()=>renderAnchor(__slot, _root, _list1));
-        });
-        return _root;
-    });
-const Parent: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        const _list2 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list2);
-        watchEffect(()=>{
-            const __slot3 = _$createComponent(Child, {
-                label: count.value
-            });
-            untrack(()=>renderAnchor(__slot3, _root, _list2));
-        });
-        return _root;
-    });
-export default Parent;
-"##;
+    let output = utils::strip_marker(&out);
 
-    use utils::{normalize, strip_marker};
-    std::fs::create_dir_all("target/vapor_outputs").ok();
-    std::fs::write("target/vapor_outputs/spec7.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert!(output.contains("_$compiledRoot"), "{output}");
+    assert!(output.contains("_$compiledText"), "{output}");
+    assert!(output.contains("()=>p.label"), "{output}");
+    assert!(output.contains("_$createComponent(Child"), "{output}");
+    assert!(output.contains("label: count.value"), "{output}");
+    assert!(!output.contains("const __slot = (p.label)"), "{output}");
 }

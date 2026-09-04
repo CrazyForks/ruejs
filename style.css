@@ -1,4 +1,16 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
+
+@source './index.html';
+@source './app';
+@source './docs';
+@source './packages/i18n/src';
+@source './packages/router/src';
+@source './packages/rue-design/src';
+@source './packages/rue/src';
+@source './packages/runtime/src';
+@source './packages/server-renderer/src';
+@source './packages/shared/src';
+@source './packages/store/src';
 
 @tailwind base;
 @tailwind components;

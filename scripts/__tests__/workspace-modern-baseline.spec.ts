@@ -19,18 +19,15 @@ describe('workspace modern baseline', () => {
     const rootPackage = await readProjectJson<PackageManifest>('package.json')
     const workspacePackages = await findRueWorkspacePackages()
 
-    expect(workspacePackages).toHaveLength(16)
+    expect(workspacePackages).toHaveLength(13)
     expect(rootPackage.engines?.node).toBe(nodeBaseline)
     expect(workspacePackages.map(item => item.manifest.name)).toEqual([
       '@rue-js/design',
       '@rue-js/i18n',
-      '@rue-js/jsx-dev-runtime',
-      '@rue-js/jsx-runtime',
       '@rue-js/router',
       '@rue-js/rsc',
       '@rue-js/rue',
       '@rue-js/runtime',
-      '@rue-js/runtime-vapor',
       '@rue-js/server-renderer',
       '@rue-js/shared',
       '@rue-js/ssr-binary-demo',

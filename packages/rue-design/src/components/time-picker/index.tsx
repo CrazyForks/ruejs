@@ -718,7 +718,7 @@ const buildMeridiemOptions = (
   honorHideDisabled = true,
 ) => {
   const disabledConfig = resolveDisabledConfig(selection, config)
-  const disabledHours = new Set(disabledConfig?.disabledHours?.() ?? [])
+  const disabledHours = /*#__PURE__*/ new Set(disabledConfig?.disabledHours?.() ?? [])
   const steppedHours = buildStepValues(23, config.hourStep)
   const options: TimePanelOption<TimeMeridiem>[] = [
     {
@@ -744,7 +744,7 @@ const buildHourOptions = (
   honorHideDisabled = true,
 ) => {
   const disabledConfig = resolveDisabledConfig(selection, config)
-  const disabledHours = new Set(disabledConfig?.disabledHours?.() ?? [])
+  const disabledHours = /*#__PURE__*/ new Set(disabledConfig?.disabledHours?.() ?? [])
   const steppedHours = buildStepValues(23, config.hourStep)
   const currentMeridiem = getMeridiem(selection.hour)
   const visibleHours = config.use12Hours
@@ -766,7 +766,9 @@ const buildMinuteOptions = (
   honorHideDisabled = true,
 ) => {
   const disabledConfig = resolveDisabledConfig(selection, config)
-  const disabledMinutes = new Set(disabledConfig?.disabledMinutes?.(selection.hour) ?? [])
+  const disabledMinutes = /*#__PURE__*/ new Set(
+    disabledConfig?.disabledMinutes?.(selection.hour) ?? [],
+  )
   const options = buildStepValues(59, config.minuteStep).map(value => ({
     key: `minute-${value}`,
     value,
@@ -783,7 +785,7 @@ const buildSecondOptions = (
   honorHideDisabled = true,
 ) => {
   const disabledConfig = resolveDisabledConfig(selection, config)
-  const disabledSeconds = new Set(
+  const disabledSeconds = /*#__PURE__*/ new Set(
     disabledConfig?.disabledSeconds?.(selection.hour, selection.minute) ?? [],
   )
   const options = buildStepValues(59, config.secondStep).map(value => ({
@@ -1176,6 +1178,9 @@ const TimePickerRoot: FC<TimePickerProps> = props => {
   const blurTimer = useRef<ReturnType<typeof setTimeout>>()
   const internalBlurPreserveTimer = useRef<ReturnType<typeof setTimeout>>()
   const suppressFocusOpenTimer = useRef<ReturnType<typeof setTimeout>>()
+  const popupRefocusTimer = useRef<ReturnType<typeof setTimeout>>()
+  const scrollRestoreFrames = /*#__PURE__*/ new Map<Window, Set<number>>()
+  const scrollRestoreTimers = /*#__PURE__*/ new Map<Window, Set<number>>()
   const runtimeConfig = (): TimePickerRuntimeConfig => ({
     format: resolvedFormatValue,
     use12Hours,
@@ -1309,13 +1314,29 @@ const TimePickerRoot: FC<TimePickerProps> = props => {
       snapshot.view?.window ?? (typeof window === 'undefined' ? undefined : window)
 
     restoreDocumentScrollAroundPopup(snapshot)
-    ownerWindow?.requestAnimationFrame?.(() => {
+    const frameId = ownerWindow?.requestAnimationFrame?.(() => {
+      if (frameId !== undefined) {
+        scrollRestoreFrames.get(ownerWindow)?.delete(frameId)
+      }
       restoreDocumentScrollAroundPopup(snapshot)
     })
+    if (ownerWindow && frameId !== undefined) {
+      const frames = scrollRestoreFrames.get(ownerWindow) ?? new Set<number>()
+      frames.add(frameId)
+      scrollRestoreFrames.set(ownerWindow, frames)
+    }
     internalSelectionScrollRestoreDelays.forEach(delay => {
-      ownerWindow?.setTimeout(() => {
+      const timerId = ownerWindow?.setTimeout(() => {
+        if (timerId !== undefined) {
+          scrollRestoreTimers.get(ownerWindow)?.delete(timerId)
+        }
         restoreDocumentScrollAroundPopup(snapshot)
       }, delay)
+      if (ownerWindow && timerId !== undefined) {
+        const timers = scrollRestoreTimers.get(ownerWindow) ?? new Set<number>()
+        timers.add(timerId)
+        scrollRestoreTimers.set(ownerWindow, timers)
+      }
     })
   }
 
@@ -1420,7 +1441,11 @@ const TimePickerRoot: FC<TimePickerProps> = props => {
   }
 
   const schedulePopupRefocus = () => {
-    setTimeout(() => {
+    if (popupRefocusTimer.current !== undefined) {
+      clearTimeout(popupRefocusTimer.current)
+    }
+    popupRefocusTimer.current = setTimeout(() => {
+      popupRefocusTimer.current = undefined
       if (!inputRef.current || disabled) {
         return
       }
@@ -2102,6 +2127,18 @@ const TimePickerRoot: FC<TimePickerProps> = props => {
       if (suppressFocusOpenTimer.current) {
         clearTimeout(suppressFocusOpenTimer.current)
       }
+      if (popupRefocusTimer.current !== undefined) {
+        clearTimeout(popupRefocusTimer.current)
+        popupRefocusTimer.current = undefined
+      }
+      scrollRestoreFrames.forEach((frameIds, ownerWindow) => {
+        frameIds.forEach(frameId => ownerWindow.cancelAnimationFrame?.(frameId))
+      })
+      scrollRestoreFrames.clear()
+      scrollRestoreTimers.forEach((timerIds, ownerWindow) => {
+        timerIds.forEach(timerId => ownerWindow.clearTimeout(timerId))
+      })
+      scrollRestoreTimers.clear()
       window.removeEventListener('pointerdown', handleWindowPointerDown, true)
       window.removeEventListener('keydown', handleWindowKeyDown)
     })

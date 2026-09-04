@@ -6,19 +6,15 @@ import { resolve } from 'node:path'
 import swc from '@swc/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  createOwner,
-  disposeOwner,
-  onCleanup,
-  runWithOwner,
-} from '../../runtime-vapor/dist/compiled.js'
+import { createOwner, disposeOwner, onCleanup, onOwnerCleanup, runWithOwner } from '../src/internal'
 import { _$compiledRoot } from '../src/compiled-root'
 import {
   _$compiledAppendChild,
   _$compiledCreateComment,
   _$compiledCreateElement,
   _$compiledCreateTextNode,
-} from '../src/compiled'
+} from '../src/internal'
+import { template as _$template } from '../src/compiler-runtime/dom.browser'
 
 type Row = {
   id: number
@@ -79,7 +75,8 @@ const evaluate = (output: string) => {
     '_$compiledCreateTextNode',
     '_$compiledCreateComment',
     '_$compiledAppendChild',
-    'onCleanup',
+    '_$template',
+    'onOwnerCleanup',
     executable,
   ) as (
     compiledRoot: typeof _$compiledRoot,
@@ -87,7 +84,8 @@ const evaluate = (output: string) => {
     compiledCreateTextNode: typeof _$compiledCreateTextNode,
     compiledCreateComment: typeof _$compiledCreateComment,
     compiledAppendChild: typeof _$compiledAppendChild,
-    cleanup: typeof onCleanup,
+    template: typeof _$template,
+    cleanup: typeof onOwnerCleanup,
   ) => {
     View(
       functionRef: (node: HTMLButtonElement | null) => void,
@@ -101,7 +99,8 @@ const evaluate = (output: string) => {
     _$compiledCreateTextNode,
     _$compiledCreateComment,
     _$compiledAppendChild,
-    onCleanup,
+    _$template,
+    onOwnerCleanup,
   )
 }
 
@@ -155,13 +154,13 @@ afterEach(() => {
 describe('compiled native events and refs', () => {
   it('executes real compiler output with latest handlers and root-owned ref cleanup', () => {
     const output = compile()
-    expect(output).toContain('from "@rue-js/rue/compiled"')
+    expect(output).toContain('from "@rue-js/rue/internal/compiler"')
     expect(output).toContain('.addEventListener(')
     expect(output).toContain('.removeEventListener(')
-    expect(output).toContain('onCleanup')
+    expect(output).toContain('onOwnerCleanup')
     expect(output).not.toContain('_$addEventListener')
-    expect(output).not.toContain('_$vaporBindUseRef')
-    expect(output).not.toContain('from "@rue-js/rue/vapor"')
+    expect(output).not.toContain('_$compiledBindUseRef')
+    expect(output).not.toContain('from "@rue-js/rue/internal"')
 
     const add = vi.spyOn(EventTarget.prototype, 'addEventListener')
     const remove = vi.spyOn(EventTarget.prototype, 'removeEventListener')
@@ -183,7 +182,7 @@ describe('compiled native events and refs', () => {
     const handle = View(node => functionRefCalls.push(node), objectRef)
     const host = document.createElement('main')
     document.body.appendChild(host)
-    const mounted = handle.__rue_vapor_setup(host)
+    const mounted = handle.__rue_compiled_mount(host)
     if (!(mounted instanceof HTMLElement)) throw new Error('Expected a compiled HTMLElement root')
     host.appendChild(mounted)
     const button = mounted.querySelector('button')

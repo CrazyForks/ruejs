@@ -1,10 +1,11 @@
-import type { ComponentInstance, ComponentProps, RenderableInput } from './runtime-types'
+import type { ComponentInstance, ComponentProps, RenderInput } from './runtime-types'
 
 export const RUE_ISLAND_ELEMENT = 'rue-island'
 export const RUE_ISLAND_PROPS_SCRIPT_TYPE = 'application/json'
 export const RUE_ISLAND_DESCRIPTOR = Symbol.for('rue.island.descriptor')
 export const RUE_SERVER_ISLAND_DESCRIPTOR = Symbol.for('rue.server-island.descriptor')
 export const RUE_SERVER_ISLAND_SSR_BRIDGE = Symbol.for('rue.server-island.ssr-bridge')
+export const RUE_SERVER_COMPILED_VALUE_SNAPSHOT = Symbol.for('rue.server.compiled-value-snapshot')
 
 export type RueIslandHydrationStrategy =
   | 'load'
@@ -52,7 +53,7 @@ export interface RueIslandDescriptorMetadata extends RueIslandManifestEntry {
 export interface RueIslandDescriptorOptions {
   component: ComponentInstance<any>
   props?: ComponentProps
-  fallback?: RenderableInput
+  fallback?: RenderInput
   metadata: RueIslandDescriptorMetadata
 }
 
@@ -60,14 +61,23 @@ export interface RueIslandDescriptor {
   readonly [RUE_ISLAND_DESCRIPTOR]: true
   readonly component: ComponentInstance<any>
   readonly props: ComponentProps
-  readonly fallback?: RenderableInput
+  readonly fallback?: RenderInput
   readonly metadata: Readonly<RueIslandDescriptorMetadata>
 }
 
 export const isRueIslandDescriptor = (value: unknown): value is RueIslandDescriptor =>
   typeof value === 'object' &&
   value !== null &&
-  (value as Partial<RueIslandDescriptor>)[RUE_ISLAND_DESCRIPTOR] === true
+  (value as Partial<RueIslandDescriptor>)[RUE_ISLAND_DESCRIPTOR] === true &&
+  typeof (value as Partial<RueIslandDescriptor>).component === 'function' &&
+  typeof (value as Partial<RueIslandDescriptor>).props === 'object' &&
+  (value as Partial<RueIslandDescriptor>).props !== null &&
+  typeof (value as Partial<RueIslandDescriptor>).metadata === 'object' &&
+  (value as Partial<RueIslandDescriptor>).metadata !== null &&
+  typeof (value as RueIslandDescriptor).metadata.id === 'string' &&
+  (value as RueIslandDescriptor).metadata.id.length > 0 &&
+  typeof (value as RueIslandDescriptor).metadata.component === 'string' &&
+  (value as RueIslandDescriptor).metadata.component.length > 0
 
 export const createRueIslandDescriptor = (
   options: RueIslandDescriptorOptions,
@@ -83,14 +93,14 @@ export const createRueIslandDescriptor = (
 export interface RueServerIslandDescriptorOptions {
   id: string
   props?: ComponentProps
-  fallback?: RenderableInput
+  fallback?: RenderInput
 }
 
 export interface RueServerIslandDescriptor {
   readonly [RUE_SERVER_ISLAND_DESCRIPTOR]: true
   readonly id: string
   readonly props: ComponentProps
-  readonly fallback?: RenderableInput
+  readonly fallback?: RenderInput
 }
 
 export const isRueServerIslandDescriptor = (value: unknown): value is RueServerIslandDescriptor =>

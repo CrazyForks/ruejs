@@ -8,7 +8,6 @@ const createPlugin = () =>
   VitePluginRue({
     include: ['/app/'],
     transformTimeoutMs: 0,
-    transformExecutor: ({ code }) => code,
   }) as any
 
 const callHook = async (hook: any, ctx: any, ...args: any[]) => {
@@ -31,7 +30,7 @@ const readManifest = async (plugin: any) => {
 describe('vite-plugin-rue client directives', () => {
   it('rewrites direct imports to shared descriptors and exposes an island manifest', async () => {
     const plugin = createPlugin()
-    plugin.configResolved?.({ command: 'build' })
+    plugin.configResolved?.({ command: 'serve' })
 
     const source = `
       import Counter from './Counter'
@@ -54,7 +53,7 @@ describe('vite-plugin-rue client directives', () => {
     )
     const code = String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
     expect(code).not.toContain('client:visible')
     expect(code).not.toContain('client:media')
     expect(code).not.toContain('client:none')
@@ -79,7 +78,7 @@ describe('vite-plugin-rue client directives', () => {
 
   it('keeps client:none static without a descriptor or manifest entry', async () => {
     const plugin = createPlugin()
-    plugin.configResolved?.({ command: 'build' })
+    plugin.configResolved?.({ command: 'serve' })
 
     const result = await callHook(
       plugin.transform,
@@ -100,7 +99,7 @@ describe('vite-plugin-rue client directives', () => {
 
   it('records static interaction arrays for named direct imports', async () => {
     const plugin = createPlugin()
-    plugin.configResolved?.({ command: 'build' })
+    plugin.configResolved?.({ command: 'serve' })
     const id = '/Users/Shared/work/dir/data/codes/rue/app/InteractionIsland.tsx'
 
     const result = await callHook(
@@ -131,7 +130,7 @@ describe('vite-plugin-rue client directives', () => {
 
   it('records idle timeout and visible rootMargin static options', async () => {
     const plugin = createPlugin()
-    plugin.configResolved?.({ command: 'build' })
+    plugin.configResolved?.({ command: 'serve' })
 
     await callHook(
       plugin.transform,
@@ -167,7 +166,7 @@ describe('vite-plugin-rue client directives', () => {
 
     for (const usage of cases) {
       const plugin = createPlugin()
-      plugin.configResolved?.({ command: 'build' })
+      plugin.configResolved?.({ command: 'serve' })
       await expect(
         callHook(
           plugin.transform,
@@ -205,7 +204,7 @@ describe('vite-plugin-rue client directives', () => {
 
     for (const { source, pattern } of cases) {
       const plugin = createPlugin()
-      plugin.configResolved?.({ command: 'build' })
+      plugin.configResolved?.({ command: 'serve' })
       await expect(
         callHook(
           plugin.transform,
@@ -219,7 +218,7 @@ describe('vite-plugin-rue client directives', () => {
 
   it('rejects components with multiple client:* directives', async () => {
     const plugin = createPlugin()
-    plugin.configResolved?.({ command: 'build' })
+    plugin.configResolved?.({ command: 'serve' })
 
     await expect(
       callHook(
@@ -236,7 +235,7 @@ describe('vite-plugin-rue client directives', () => {
 
   it('keeps client:only fallback outside client props and avoids helper name collisions', async () => {
     const plugin = createPlugin()
-    plugin.configResolved?.({ command: 'build' })
+    plugin.configResolved?.({ command: 'serve' })
 
     const result = await callHook(
       plugin.transform,
@@ -253,14 +252,15 @@ describe('vite-plugin-rue client directives', () => {
     const code = String(result?.code ?? '')
 
     expect(code).toContain('createRueIslandDescriptor as __rueCreateIslandDescriptor1')
-    expect(code).toContain('fallback: <p>loading</p>')
+    expect(code).toContain('fallback: _$compiledRoot(')
+    expect(code).not.toContain('<p>loading</p>')
     expect(code).toContain('"label": "ready"')
     expect(code).not.toMatch(/props:\s*\{[^}]*fallback/s)
   })
 
   it('clears stale manifest entries when a module no longer contains client directives', async () => {
     const plugin = createPlugin()
-    plugin.configResolved?.({ command: 'build' })
+    plugin.configResolved?.({ command: 'serve' })
     const id = '/Users/Shared/work/dir/data/codes/rue/app/HotIsland.tsx'
 
     await callHook(

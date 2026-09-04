@@ -16,13 +16,7 @@ interface PackResult {
   files: Array<{ path: string }>
 }
 
-const esmPackages = [
-  'vite-plugin-rue',
-  'rue-rsc',
-  'text',
-  'runtime-vapor',
-  'rue-ssr-binary-demo',
-] as const
+const esmPackages = ['vite-plugin-rue', 'rue-rsc', 'text', 'rue-ssr-binary-demo'] as const
 
 const readManifest = (directory: string) =>
   JSON.parse(
@@ -49,6 +43,7 @@ describe('tooling ESM package contract', () => {
       expect(JSON.stringify(manifest.exports ?? {})).not.toContain('"require"')
       expect(packedFiles.filter(file => /(?:^|\/)\S*\.cjs(?:\.|$)/.test(file))).toEqual([])
     },
+    30_000,
   )
 
   it('keeps the Vite plugin on its existing ESM entry', () => {

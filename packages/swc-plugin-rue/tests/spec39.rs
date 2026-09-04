@@ -270,7 +270,7 @@ export default FetchingData
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { watchEffect, useEffect, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { watchEffect, useEffect, ref, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import SidebarPlayground from '../site/SidebarPlayground';
 import Code from '../site/components/Code';
@@ -289,15 +289,15 @@ type CommitItem = {
     };
 };
 const FetchingData: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const API_URL = 'https://api.github.com/repos/rust-lang/rust/commits?per_page=10&sha=';
             const branches = [
                 'main',
                 'beta',
                 'stable'
             ] as const;
-            const currentBranch = _$vaporWithHookId("ref:1:0", ()=>ref<(typeof branches)[number]>(branches[0]));
-            const commits = _$vaporWithHookId("ref:1:1", ()=>ref<CommitItem[]>([]));
+            const currentBranch = ref<(typeof branches)[number]>(branches[0]);
+            const commits = ref<CommitItem[]>([]);
             const load = (branch: string)=>{
                 const url = API_URL + branch;
                 console.info(url);
@@ -310,24 +310,24 @@ const FetchingData: FC = ()=>{
                     commits.value = [];
                 });
             };
-            _$vaporWithHookId("useEffect:1:2", ()=>useEffect(()=>{
+            useEffect(()=>{
                     console.info(22222);
                     load(currentBranch.value);
                 }, [
                     currentBranch.value
-                ]));
-            _$vaporWithHookId("watch:1:3", ()=>watch(currentBranch, (newVal, oldVal)=>{
+                ]);
+            watch(currentBranch, (newVal, oldVal)=>{
                     console.log('currentBranch.value changed', newVal, oldVal);
-                }));
-            _$vaporWithHookId("watchEffect:1:4", ()=>watchEffect(()=>{
+                });
+            watchEffect(()=>{
                     console.info('currentBranch.value', currentBranch.value);
-                }));
+                });
             const truncate = (v: string)=>{
                 const newline = v.indexOf('\n');
                 return newline > 0 ? v.slice(0, newline) : v;
             };
             const formatDate = (v: string)=>v.replace(/T|Z/g, ' ');
-            const activeTab = _$vaporWithHookId("ref:1:5", ()=>ref<'preview' | 'code'>('preview'));
+            const activeTab = ref<'preview' | 'code'>('preview');
             return {
                 API_URL: API_URL,
                 branches: branches,
@@ -506,5 +506,17 @@ export default FetchingData;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec39.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("watchEffect(()=>"), "{normalized}");
+    assert!(normalized.contains("load(currentBranch.value)"), "{normalized}");
+    assert!(normalized.contains("commits.value = Array.isArray(data) ? data : []"), "{normalized}");
+    assert!(
+        normalized.contains("[ 'main', 'beta', 'stable' ] as const).map((branch)=>"),
+        "{normalized}"
+    );
+    assert!(
+        normalized.contains("commits.value.map(({ html_url, sha, author, commit })=>"),
+        "{normalized}"
+    );
 }

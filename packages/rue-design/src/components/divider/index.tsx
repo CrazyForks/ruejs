@@ -175,6 +175,15 @@ const Divider: FC<DividerProps> = ({
 
   return (
     <div
+      ref={(element: HTMLDivElement | null) => {
+        if (!element || isVerticalSeparator) return
+        Promise.resolve().then(() => {
+          const content = element.querySelector(':scope > span')
+          const empty = !content || (content.textContent ?? '').trim().length === 0
+          element.classList.toggle('gap-0', empty)
+          if (empty) content?.remove()
+        })
+      }}
       className={cls}
       style={style}
       role="separator"

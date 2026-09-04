@@ -126,7 +126,6 @@ const DemoSurface: FC<{ name: ValueSignal<string> }> = props => {
 
   // 显式读取 locale.value，再传给 _()，更贴近 Rue 当前依赖追踪边界。
   const currentLocale = locale.value
-  const currentName = props.name.value
   const japaneseLoaded = availableLocales.value.includes('ja-JP')
 
   const switchLocale = async (nextLocale: Locale) => {
@@ -140,7 +139,7 @@ const DemoSurface: FC<{ name: ValueSignal<string> }> = props => {
   const previewRows = [
     {
       source: '你好，{name}！',
-      rendered: _('你好，{name}！', { name: currentName }, currentLocale),
+      rendered: _('你好，{name}！', { name: props.name.value }, currentLocale),
     },
     {
       source: '欢迎回来',
@@ -226,7 +225,7 @@ const DemoSurface: FC<{ name: ValueSignal<string> }> = props => {
 
             <div>
               <div className="text-3xl font-semibold">
-                {_('你好，{name}！', { name: currentName }, currentLocale)}
+                {_('你好，{name}！', { name: props.name.value }, currentLocale)}
               </div>
               <div className="mt-2 text-base-content/70">
                 {_('欢迎回来', undefined, currentLocale)}
@@ -308,17 +307,11 @@ const DemoSurface: FC<{ name: ValueSignal<string> }> = props => {
 
 const I18nLocaleSwitcherDemo: FC = () => {
   const i18nRef = useRef<I18n>()
-  const nameRef = useRef<ValueSignal<string>>()
+  const name = ref('Alice')
 
   if (!i18nRef.current) {
     i18nRef.current = createDemoI18n()
   }
-
-  if (!nameRef.current) {
-    nameRef.current = ref('Alice')
-  }
-
-  const name = nameRef.current
 
   return (
     <I18nProvider i18n={i18nRef.current}>

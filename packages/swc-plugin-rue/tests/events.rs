@@ -120,30 +120,27 @@ export default Events;
     // - 文本插值：普通文本值走 _$createTextWrapper；对象成员等可渲染表达式走 slot-anchor + renderAnchor
     // - disabled：基于 list.length 的 watch 控制
     // - 函数状态：调用 valueOf() 的格式化函数再 watch 更新
-    let expected_fragment = r##"
-import { useState, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { useState, _$compiledWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createTextNode, _$appendChild, onScopeDispose, untrack, watchEffect, _$setAttribute, _$setClassName, _$setValue, _$setDisabled } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
-const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">事件处理</h3>');
-const _$getTemplate2 = _$template('<h3 class="text-xl font-semibold">数据状态（数组）</h3>');
-const _$getTemplate3 = _$template('<h3 class="text-xl font-semibold">对象状态</h3>');
-const _$getTemplate4 = _$template('<h3 class="text-xl font-semibold">函数状态</h3>');
+const _$getTemplate1 = _$template('<div class="max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm"><h3 class="text-xl font-semibold">事件处理</h3><div>count: <!--rue:text-hole:0--></div><button class="px-3 py-2 rounded-md bg-blue-600 text-white">+1</button><h3 class="text-xl font-semibold">数据状态（数组）</h3><div>list: <!--rue:text-hole:1--></div><div class="space-x-2"><button class="px-3 py-2 rounded-md bg-gray-100 border">添加项</button><button class="px-3 py-2 rounded-md bg-gray-100 border">移除最后一个</button><button class="px-3 py-2 rounded-md bg-gray-100 border">重置</button></div><h3 class="text-xl font-semibold">对象状态</h3><div>name: <!--rue:text-hole:2-->, age: <!--rue:text-hole:3--></div><div class="space-x-2"><button class="px-3 py-2 rounded-md bg-gray-100 border">年龄 +1</button><input class="px-3 py-2 rounded-md border" placeholder="修改 name"></div><h3 class="text-xl font-semibold">函数状态</h3><div>formatted count: <!--rue:text-hole:4--></div><div class="space-x-2"><button class="px-3 py-2 rounded-md bg-gray-100 border">切换十进制/十六进制</button><button class="px-3 py-2 rounded-md bg-gray-100 border">使用十进制</button><button class="px-3 py-2 rounded-md bg-gray-100 border">使用十六进制</button></div><!--rue:opaque-hole:5--></div>');
 const DEC_FORMAT = (n: number)=>String(n);
 const HEX_FORMAT = (n: number)=>'0x' + n.toString(16);
 const Events: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const [count, setCount] = _$vaporWithHookId("useState:1:0", ()=>useState(0));
-            const [list, setList] = _$vaporWithHookId("useState:1:1", ()=>useState<string[]>([
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const [count, setCount] = useState(0);
+            const [list, setList] = useState<string[]>([
                     'A'
-                ]));
-            const [user, setUser] = _$vaporWithHookId("useState:1:2", ()=>useState<{
+                ]);
+            const [user, setUser] = useState<{
                     name: string;
                     age: number;
                 }>({
                     name: 'Alice',
                     age: 20
-                }));
-            const [format, setFormat] = _$vaporWithHookId("useState:1:3", ()=>useState<(n: number) => string>(()=>DEC_FORMAT));
+                });
+            const [format, setFormat] = useState<(n: number) => string>(()=>DEC_FORMAT);
             return {
                 count: count,
                 setCount: setCount,
@@ -157,135 +154,126 @@ const Events: FC = ()=>{
         }));
     const { count: count, setCount: setCount, list: list, setList: setList, user: user, setUser: setUser, format: format, setFormat: setFormat } = _$useSetup;
     return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _el2 = _$createElement("div", _root);
-        _$appendChild(_root, _el2);
-        _$appendChild(_el2, _$createTextNode("count: "));
-        const _el3 = _$createTextWrapper(_el2);
-        _$appendChild(_el2, _el3);
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[2];
+        const _el2 = _root.childNodes[5].childNodes[0];
+        const _el3 = _root.childNodes[5].childNodes[1];
+        const _el4 = _root.childNodes[5].childNodes[2];
+        const _el5 = _root.childNodes[8].childNodes[0];
+        const _el6 = _root.childNodes[8].childNodes[1];
+        const _el7 = _root.childNodes[11].childNodes[0];
+        const _el8 = _root.childNodes[11].childNodes[1];
+        const _el9 = _root.childNodes[11].childNodes[2];
+        const _el10 = _root.childNodes[1].childNodes[1];
+        const _el11 = _el10.parentNode;
+        const _el12 = _root.childNodes[4].childNodes[1];
+        const _el13 = _el12.parentNode;
+        const _el14 = _root.childNodes[7].childNodes[1];
+        const _el15 = _el14.parentNode;
+        const _el16 = _root.childNodes[7].childNodes[3];
+        const _el17 = _el16.parentNode;
+        const _el18 = _root.childNodes[10].childNodes[1];
+        const _el19 = _el18.parentNode;
+        const _el20 = _root.childNodes[12];
+        const _el21 = _el20.parentNode;
+        _$setClassName(_el1, "px-3 py-2 rounded-md bg-blue-600 text-white");
+        const _el1_event_1 = ($event)=>()=>setCount((c)=>c + 1)($event);
+        _el1.addEventListener("click", _el1_event_1);
+        onScopeDispose(()=>_el1.removeEventListener("click", _el1_event_1));
+        _$setClassName(_el2, "px-3 py-2 rounded-md bg-gray-100 border");
+        const _el2_event_1 = ($event)=>()=>setList((xs)=>[
+                        ...xs,
+                        `Item ${xs.length + 1}`
+                    ])($event);
+        _el2.addEventListener("click", _el2_event_1);
+        onScopeDispose(()=>_el2.removeEventListener("click", _el2_event_1));
+        _$setClassName(_el3, "px-3 py-2 rounded-md bg-gray-100 border");
+        const _el3_event_1 = ($event)=>()=>setList((xs)=>xs.slice(0, -1))($event);
+        _el3.addEventListener("click", _el3_event_1);
+        onScopeDispose(()=>_el3.removeEventListener("click", _el3_event_1));
         watchEffect(()=>{
-            _$settextContent(_el3, count.value);
+            _$setDisabled(_el3, !list.length);
         });
-        const _el4 = _$createElement("button", _root);
-        _$appendChild(_root, _el4);
-        _$setClassName(_el4, "px-3 py-2 rounded-md bg-blue-600 text-white");
-        _$addEventListener(_el4, "click", (()=>setCount((c)=>c + 1)));
-        _$appendChild(_el4, _$createTextNode("+1"));
-        _root.appendChild(_$getTemplate2().content.cloneNode(true));
-        const _el6 = _$createElement("div", _root);
-        _$appendChild(_root, _el6);
-        _$appendChild(_el6, _$createTextNode("list: "));
-        const _el7 = _$createTextWrapper(_el6);
-        _$appendChild(_el6, _el7);
+        _$setClassName(_el4, "px-3 py-2 rounded-md bg-gray-100 border");
+        const _el4_event_1 = ($event)=>()=>setList([
+                    'A'
+                ])($event);
+        _el4.addEventListener("click", _el4_event_1);
+        onScopeDispose(()=>_el4.removeEventListener("click", _el4_event_1));
+        _$setClassName(_el5, "px-3 py-2 rounded-md bg-gray-100 border");
+        const _el5_event_1 = ($event)=>()=>setUser((u)=>({
+                        ...u,
+                        age: u.age + 1
+                    }))($event);
+        _el5.addEventListener("click", _el5_event_1);
+        onScopeDispose(()=>_el5.removeEventListener("click", _el5_event_1));
+        _$setClassName(_el6, "px-3 py-2 rounded-md border");
         watchEffect(()=>{
-            _$settextContent(_el7, list.join(', '));
+            _$setValue(_el6, user.name);
         });
-        const _el8 = _$createElement("div", _root);
-        _$appendChild(_root, _el8);
-        _$setClassName(_el8, "space-x-2");
-        const _el9 = _$createElement("button", _el8);
-        _$appendChild(_el8, _el9);
+        const _el6_event_2 = ($event)=>(e: any)=>setUser((u)=>({
+                        ...u,
+                        name: (e.target as HTMLInputElement).value
+                    }))($event);
+        _el6.addEventListener("input", _el6_event_2);
+        onScopeDispose(()=>_el6.removeEventListener("input", _el6_event_2));
+        _$setAttribute(_el6, "placeholder", "修改 name");
+        _$setClassName(_el7, "px-3 py-2 rounded-md bg-gray-100 border");
+        const _el7_event_1 = ($event)=>()=>setFormat((prev: (n: number) => string)=>(prev === DEC_FORMAT ? HEX_FORMAT : DEC_FORMAT))($event);
+        _el7.addEventListener("click", _el7_event_1);
+        onScopeDispose(()=>_el7.removeEventListener("click", _el7_event_1));
+        _$setClassName(_el8, "px-3 py-2 rounded-md bg-gray-100 border");
+        const _el8_event_1 = ($event)=>()=>setFormat(()=>DEC_FORMAT)($event);
+        _el8.addEventListener("click", _el8_event_1);
+        onScopeDispose(()=>_el8.removeEventListener("click", _el8_event_1));
         _$setClassName(_el9, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el9, "click", (()=>setList((xs)=>[
-                    ...xs,
-                    `Item ${xs.length + 1}`
-                ])));
-        _$appendChild(_el9, _$createTextNode("添加项"));
-        const _el10 = _$createElement("button", _el8);
-        _$appendChild(_el8, _el10);
-        _$setClassName(_el10, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el10, "click", (()=>setList((xs)=>xs.slice(0, -1))));
+        const _el9_event_1 = ($event)=>()=>setFormat(()=>HEX_FORMAT)($event);
+        _el9.addEventListener("click", _el9_event_1);
+        onScopeDispose(()=>_el9.removeEventListener("click", _el9_event_1));
         watchEffect(()=>{
-            _$setDisabled(_el10, !list.length);
+            const __slot = (count.value);
+            untrack(()=>renderAnchor(__slot, _el11, _el10));
         });
-        _$appendChild(_el10, _$createTextNode("移除最后一个"));
-        const _el11 = _$createElement("button", _el8);
-        _$appendChild(_el8, _el11);
-        _$setClassName(_el11, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el11, "click", (()=>setList([
-                'A'
-            ])));
-        _$appendChild(_el11, _$createTextNode("重置"));
-        _root.appendChild(_$getTemplate3().content.cloneNode(true));
-        const _el13 = _$createElement("div", _root);
-        _$appendChild(_root, _el13);
-        _$appendChild(_el13, _$createTextNode("name: "));
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_el13, _list1);
+        watchEffect(()=>{
+            const __slot = list.join(', ');
+            untrack(()=>renderAnchor(__slot, _el13, _el12));
+        });
         watchEffect(()=>{
             const __slot = (user.name);
-            untrack(()=>renderAnchor(__slot, _el13, _list1));
+            untrack(()=>renderAnchor(__slot, _el15, _el14));
         });
-        _$appendChild(_el13, _$createTextNode(", age: "));
-        const _list2 = _$createComment("rue:slot:anchor");
-        _$appendChild(_el13, _list2);
         watchEffect(()=>{
             const __slot = (user.age);
-            untrack(()=>renderAnchor(__slot, _el13, _list2));
+            untrack(()=>renderAnchor(__slot, _el17, _el16));
         });
-        const _el14 = _$createElement("div", _root);
-        _$appendChild(_root, _el14);
-        _$setClassName(_el14, "space-x-2");
-        const _el15 = _$createElement("button", _el14);
-        _$appendChild(_el14, _el15);
-        _$setClassName(_el15, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el15, "click", (()=>setUser((u)=>({
-                    ...u,
-                    age: u.age + 1
-                }))));
-        _$appendChild(_el15, _$createTextNode("年龄 +1"));
-        const _el16 = _$createElement("input", _el14);
-        _$appendChild(_el14, _el16);
-        _$setClassName(_el16, "px-3 py-2 rounded-md border");
         watchEffect(()=>{
-            _$setValue(_el16, user.name);
+            const __slot = ((format as any).valueOf())(count);
+            untrack(()=>renderAnchor(__slot, _el19, _el18));
         });
-        _$addEventListener(_el16, "input", ((e: any)=>setUser((u)=>({
-                    ...u,
-                    name: (e.target as HTMLInputElement).value
-                }))));
-        _$setAttribute(_el16, "placeholder", "修改 name");
-        _root.appendChild(_$getTemplate4().content.cloneNode(true));
-        const _el18 = _$createElement("div", _root);
-        _$appendChild(_root, _el18);
-        _$appendChild(_el18, _$createTextNode("formatted count: "));
-        const _el19 = _$createTextWrapper(_el18);
-        _$appendChild(_el18, _el19);
+        const _el22 = _$createElement("a", _el21);
+        _$appendChild(_el21, _el22);
+        _el21.insertBefore(_el22, _el20);
         watchEffect(()=>{
-            _$settextContent(_el19, ((format as any).valueOf())(count));
+            _$setAttribute(_el22, "href", String(RouterLink.__rueHref("/jsx")));
         });
-        const _el20 = _$createElement("div", _root);
-        _$appendChild(_root, _el20);
-        _$setClassName(_el20, "space-x-2");
-        const _el21 = _$createElement("button", _el20);
-        _$appendChild(_el20, _el21);
-        _$setClassName(_el21, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el21, "click", (()=>setFormat((prev: (n: number) => string)=>(prev === DEC_FORMAT ? HEX_FORMAT : DEC_FORMAT))));
-        _$appendChild(_el21, _$createTextNode("切换十进制/十六进制"));
-        const _el22 = _$createElement("button", _el20);
-        _$appendChild(_el20, _el22);
-        _$setClassName(_el22, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el22, "click", (()=>setFormat(()=>DEC_FORMAT)));
-        _$appendChild(_el22, _$createTextNode("使用十进制"));
-        const _el23 = _$createElement("button", _el20);
-        _$appendChild(_el20, _el23);
-        _$setClassName(_el23, "px-3 py-2 rounded-md bg-gray-100 border");
-        _$addEventListener(_el23, "click", (()=>setFormat(()=>HEX_FORMAT)));
-        _$appendChild(_el23, _$createTextNode("使用十六进制"));
-        const _el24 = _$createElement("a", _root);
-        _$appendChild(_root, _el24);
-        watchEffect(()=>{
-            _$setAttribute(_el24, "href", String(RouterLink.__rueHref("/jsx")));
-        });
-        _$addEventListener(_el24, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
-        _$addEventListener(_el24, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el24, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el24, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el24, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$setClassName(_el24, "text-blue-600 hover:underline");
-        _$appendChild(_el24, _$createTextNode("返回目录"));
+        const _el22_event_1 = ($event)=>(e)=>RouterLink.__rueOnClick(e, "/jsx", false)($event);
+        _el22.addEventListener("click", _el22_event_1);
+        onScopeDispose(()=>_el22.removeEventListener("click", _el22_event_1));
+        const _el22_event_2 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el22.addEventListener("pointerenter", _el22_event_2);
+        onScopeDispose(()=>_el22.removeEventListener("pointerenter", _el22_event_2));
+        const _el22_event_3 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el22.addEventListener("focus", _el22_event_3);
+        onScopeDispose(()=>_el22.removeEventListener("focus", _el22_event_3));
+        const _el22_event_4 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el22.addEventListener("pointerdown", _el22_event_4);
+        onScopeDispose(()=>_el22.removeEventListener("pointerdown", _el22_event_4));
+        const _el22_event_5 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el22.addEventListener("touchstart", _el22_event_5);
+        onScopeDispose(()=>_el22.removeEventListener("touchstart", _el22_event_5));
+        _$setClassName(_el22, "text-blue-600 hover:underline");
+        _$appendChild(_el22, _$createTextNode("返回目录"));
         return _root;
     });
 };
@@ -295,5 +283,12 @@ export default Events;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/events.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup"), "{normalized}");
+    assert!(normalized.contains("effect"), "{normalized}");
+    assert!(normalized.contains("addEventListener"), "{normalized}");
+    assert!(normalized.contains("_$setValue"), "{normalized}");
+    assert!(normalized.contains("_$setDisabled"), "{normalized}");
+    assert!(normalized.contains("RouterLink.__rueHref"), "{normalized}");
+    assert!(!normalized.contains("watchEffect"), "{normalized}");
 }

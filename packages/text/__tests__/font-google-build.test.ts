@@ -11,12 +11,17 @@ const APP_FIXTURE_DIR = path.resolve(import.meta.dirname, './fixtures/font-googl
 
 async function buildFontGoogleMultipleFixture(): Promise<string> {
   const outDir = await fs.mkdtemp(path.join(os.tmpdir(), 'text-font-google-multiple-'))
+  const fixtureDir = path.join(outDir, 'fixture')
+  await fs.cp(APP_FIXTURE_DIR, fixtureDir, {
+    recursive: true,
+    filter: source => path.basename(source) !== 'node_modules',
+  })
 
   const rscOutDir = path.join(outDir, 'server')
   const ssrOutDir = path.join(outDir, 'server', 'ssr')
   const clientOutDir = path.join(outDir, 'client')
 
-  const nodeModulesLink = path.join(APP_FIXTURE_DIR, 'node_modules')
+  const nodeModulesLink = path.join(fixtureDir, 'node_modules')
 
   try {
     // Intercept the Google Fonts CSS fetch issued by the in-process Vite build.
@@ -44,11 +49,11 @@ async function buildFontGoogleMultipleFixture(): Promise<string> {
     await fs.symlink(projectNodeModules, nodeModulesLink)
 
     const builder = await createBuilder({
-      root: APP_FIXTURE_DIR,
+      root: fixtureDir,
       configFile: false,
       plugins: [
         text({
-          appDir: APP_FIXTURE_DIR,
+          appDir: fixtureDir,
           rscOutDir,
           ssrOutDir,
           clientOutDir,

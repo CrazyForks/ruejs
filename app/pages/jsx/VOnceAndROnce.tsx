@@ -98,6 +98,10 @@ export default VOnceAndROnce;`}
                   </button>
                 </div>
 
+                <p className="text-sm opacity-70">
+                  once 内容仅在当前组件挂载期间保持首次渲染值；离开路由后再次返回会重新取值。
+                </p>
+
                 <div className="rounded-box border border-base-300 p-4 grid md:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <div className="text-sm opacity-70">当前值：{onceMessage.value}</div>

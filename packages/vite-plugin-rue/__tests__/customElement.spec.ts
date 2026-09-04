@@ -98,7 +98,7 @@ describe('customElement build helper', () => {
       isResolved?: boolean,
     ) => boolean
     expect(external('@rue-js/rue')).toBe(true)
-    expect(external('@rue-js/runtime-vapor/reactive')).toBe(true)
+    expect(external('@rue-js/runtime-vapor/reactive')).toBe(false)
     expect(external('already-external')).toBe(true)
     expect(external('local-module')).toBe(false)
 

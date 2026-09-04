@@ -7,14 +7,14 @@ mod visitor;
 #[cfg(test)]
 pub(crate) use block::expr_container::is_compiled_scalar_expr;
 pub(crate) use block::expr_container::{
-    emit_compiled_text_binding, is_compiled_scalar_expr_with_shadows,
+    emit_compiled_text_binding, emit_compiled_text_effect, is_compiled_reactive_scalar_expr,
+    is_compiled_scalar_expr_with_shadows,
 };
 
 use std::collections::HashSet;
 
-use swc_core::common::DUMMY_SP;
+use swc_core::common::{DUMMY_SP, Span};
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::{Visit, VisitMut, VisitMutWith, VisitWith};
 
 /*
 Vapor 深编译转换器说明：
@@ -63,6 +63,9 @@ pub struct VaporTransform {
 impl VaporTransform {
     const ASYNC_FUNCTION_SCOPE: &'static str = "\0rue:async-function";
     const SYNC_FUNCTION_SCOPE: &'static str = "\0rue:sync-function";
+    const COMPILED_COMPONENT_PREFIX: &'static str = "\0rue:compiled-component:";
+    const COMPONENT_FUNCTION_PREFIX: &'static str = "\0rue:component-function:";
+    const DISABLE_COMPILED_COMPONENT_CALLS: &'static str = "\0rue:disable-compiled-component-calls";
     pub(crate) fn push_function_scope(&mut self, is_async: bool) {
         let mut scope = HashSet::new();
         scope.insert(
@@ -137,6 +140,53 @@ impl VaporTransform {
     pub(crate) fn pop_plain_local_scope(&mut self) {
         self.plain_local_scopes.pop();
     }
+
+    /// 返回当前词法作用域中可证明的 Rue 响应式值种类。
+    #[allow(dead_code)] // 后续 lowering 任务将通过该 API 查询来源。
+    pub(crate) fn reactive_kind(
+        &self,
+        name: &str,
+    ) -> Option<crate::reactive_provenance::ReactiveKind> {
+        crate::reactive_provenance::reactive_kind(&self.plain_local_scopes, name)
+    }
+
+    pub(crate) fn register_compiled_components(
+        scope: &mut HashSet<String>,
+        names: impl IntoIterator<Item = String>,
+    ) {
+        scope.extend(
+            names.into_iter().map(|name| format!("{}{name}", Self::COMPILED_COMPONENT_PREFIX)),
+        );
+    }
+
+    pub(crate) fn register_component_functions(
+        scope: &mut HashSet<String>,
+        spans: impl IntoIterator<Item = Span>,
+    ) {
+        scope.extend(
+            spans.into_iter().map(|span| {
+                format!("{}{}:{}", Self::COMPONENT_FUNCTION_PREFIX, span.lo.0, span.hi.0)
+            }),
+        );
+    }
+
+    pub(crate) fn is_component_function(&self, span: Span) -> bool {
+        let marker = format!("{}{}:{}", Self::COMPONENT_FUNCTION_PREFIX, span.lo.0, span.hi.0);
+        self.plain_local_scopes.iter().rev().any(|scope| scope.contains(&marker))
+    }
+
+    pub(crate) fn is_compiled_component(&self, name: &str) -> bool {
+        if self
+            .plain_local_scopes
+            .iter()
+            .rev()
+            .any(|scope| scope.contains(Self::DISABLE_COMPILED_COMPONENT_CALLS))
+        {
+            return false;
+        }
+        let marker = format!("{}{name}", Self::COMPILED_COMPONENT_PREFIX);
+        self.plain_local_scopes.iter().rev().any(|scope| scope.contains(&marker))
+    }
 }
 
 pub(crate) fn flatten_once_watch_effects(stmts: &mut Vec<Stmt>) {
@@ -156,435 +206,6 @@ pub(crate) fn flatten_once_watch_effects(stmts: &mut Vec<Stmt>) {
         }
     }
     *stmts = next;
-}
-
-/// 将安全列表行中原本分散的绑定 effect 编译为一个无 owner 的 patch。
-///
-/// 每个原 effect 的 body 都保留在独立块作用域中，避免属性/slot emission
-/// 复用 `__slot`、`__obj` 等临时名时发生声明冲突。patch 会更新 renderItem
-/// 参数绑定，使事件闭包与 DOM 绑定都能读取同 key 的最新对象；首次挂载也调用
-/// 同一个 patch，后续由列表级 effect 批量调用。
-pub(crate) fn coalesce_list_row_binding_effects(
-    stmts: &mut Vec<Stmt>,
-    item_ident: &Ident,
-    index_ident: &Ident,
-) -> Option<Ident> {
-    collapse_sole_list_row_text_wrappers(stmts);
-
-    let mut used_names = RowBindingIdentCollector::default();
-    stmts.visit_with(&mut used_names);
-
-    let mut retained = Vec::with_capacity(stmts.len());
-    let mut effect_blocks = Vec::new();
-    let mut binding_decls = Vec::new();
-    let mut binding_index = 0;
-
-    for stmt in std::mem::take(stmts) {
-        if let Some(body) = watch_effect_body(&stmt) {
-            let body = guard_row_binding_setter(
-                body,
-                &mut binding_decls,
-                &mut used_names.names,
-                &mut binding_index,
-            );
-            effect_blocks.push(Stmt::Block(BlockStmt {
-                span: DUMMY_SP,
-                ctxt: swc_core::common::SyntaxContext::empty(),
-                stmts: body,
-            }));
-        } else {
-            retained.push(stmt);
-        }
-    }
-
-    if effect_blocks.is_empty() {
-        *stmts = retained;
-        return None;
-    }
-
-    retained.extend(binding_decls);
-
-    let (patch_ident, next_item_ident, next_index_ident) = loop {
-        let patch_ident = crate::emit::ident("_$rowPatch");
-        let next_item_ident = crate::emit::ident("_$rowNextItem");
-        let next_index_ident = crate::emit::ident("_$rowNextIndex");
-        if [&patch_ident, &next_item_ident, &next_index_ident]
-            .iter()
-            .all(|ident| !used_names.names.contains(ident.sym.as_ref()))
-        {
-            break (patch_ident, next_item_ident, next_index_ident);
-        }
-
-        let suffix = binding_index;
-        binding_index += 1;
-        let patch_ident = crate::emit::ident(&format!("_$rowPatch{suffix}"));
-        let next_item_ident = crate::emit::ident(&format!("_$rowNextItem{suffix}"));
-        let next_index_ident = crate::emit::ident(&format!("_$rowNextIndex{suffix}"));
-        if [&patch_ident, &next_item_ident, &next_index_ident]
-            .iter()
-            .all(|ident| !used_names.names.contains(ident.sym.as_ref()))
-        {
-            break (patch_ident, next_item_ident, next_index_ident);
-        }
-    };
-
-    let mut patch_stmts = vec![
-        assign_ident_stmt(item_ident.clone(), Expr::Ident(next_item_ident.clone())),
-        assign_ident_stmt(index_ident.clone(), Expr::Ident(next_index_ident.clone())),
-    ];
-    patch_stmts.extend(effect_blocks);
-
-    let patch_arrow = Expr::Arrow(ArrowExpr {
-        span: DUMMY_SP,
-        params: vec![
-            Pat::Ident(BindingIdent { id: next_item_ident, type_ann: None }),
-            Pat::Ident(BindingIdent { id: next_index_ident, type_ann: None }),
-        ],
-        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
-            span: DUMMY_SP,
-            ctxt: swc_core::common::SyntaxContext::empty(),
-            stmts: patch_stmts,
-        })),
-        is_async: false,
-        is_generator: false,
-        type_params: None,
-        return_type: None,
-        ctxt: swc_core::common::SyntaxContext::empty(),
-    });
-    retained.push(crate::emit::const_decl(patch_ident.clone(), patch_arrow));
-    retained.push(Stmt::Expr(ExprStmt {
-        span: DUMMY_SP,
-        expr: Box::new(crate::emit::call_ident(
-            patch_ident.sym.as_ref(),
-            vec![Expr::Ident(item_ident.clone()), Expr::Ident(index_ident.clone())],
-        )),
-    }));
-    *stmts = retained;
-    Some(patch_ident)
-}
-
-/// 从 direct-row patch 中分离 selector 订阅。返回的语句由列表 codegen 放进
-/// 当前行 owner 的独立 effect，避免外部 selected source 成为列表 reconcile 的依赖。
-pub(crate) fn take_list_row_selector_effects(
-    stmts: &mut Vec<Stmt>,
-    selector_ident: &Ident,
-) -> Vec<Stmt> {
-    struct UsesSelector<'a> {
-        selector_ident: &'a Ident,
-        found: bool,
-    }
-
-    impl Visit for UsesSelector<'_> {
-        fn visit_ident(&mut self, ident: &Ident) {
-            if ident.to_id() == self.selector_ident.to_id() {
-                self.found = true;
-            }
-        }
-    }
-
-    let mut retained = Vec::with_capacity(stmts.len());
-    let mut selector_stmts = Vec::new();
-    for stmt in std::mem::take(stmts) {
-        if let Some(body) = watch_effect_body(&stmt) {
-            let mut uses_selector = UsesSelector { selector_ident, found: false };
-            body.visit_with(&mut uses_selector);
-            if uses_selector.found {
-                selector_stmts.push(Stmt::Block(BlockStmt {
-                    span: DUMMY_SP,
-                    ctxt: swc_core::common::SyntaxContext::empty(),
-                    stmts: body,
-                }));
-                continue;
-            }
-        }
-        retained.push(stmt);
-    }
-    *stmts = retained;
-    selector_stmts
-}
-
-/// 将安全 direct-root 行里的 ref helper 绑定到当前行 owner。
-///
-/// 普通 JSX 保持二参数调用，由 runtime 登记组件卸载；只有已经通过列表行能力
-/// 分类的生成语句才会补第三个 registrar 参数。
-pub(crate) fn bind_list_row_ref_cleanups(stmts: &mut Vec<Stmt>, registrar: &Ident) -> bool {
-    struct BindRefCleanupRegistrar<'a> {
-        registrar: &'a Ident,
-        found: bool,
-    }
-
-    impl VisitMut for BindRefCleanupRegistrar<'_> {
-        fn visit_mut_call_expr(&mut self, call: &mut CallExpr) {
-            call.visit_mut_children_with(self);
-            if call_ident_name(call) == Some("_$vaporBindUseRef") && call.args.len() == 2 {
-                self.found = true;
-                call.args.push(ExprOrSpread {
-                    spread: None,
-                    expr: Box::new(Expr::Ident(self.registrar.clone())),
-                });
-            }
-        }
-    }
-
-    let mut binder = BindRefCleanupRegistrar { registrar, found: false };
-    stmts.visit_mut_with(&mut binder);
-    binder.found
-}
-
-#[derive(Default)]
-struct RowBindingIdentCollector {
-    names: HashSet<String>,
-}
-
-impl Visit for RowBindingIdentCollector {
-    fn visit_ident(&mut self, ident: &Ident) {
-        self.names.insert(ident.sym.to_string());
-    }
-}
-
-fn guard_row_binding_setter(
-    body: Vec<Stmt>,
-    binding_decls: &mut Vec<Stmt>,
-    used_names: &mut HashSet<String>,
-    binding_index: &mut usize,
-) -> Vec<Stmt> {
-    let [Stmt::Expr(expr_stmt)] = body.as_slice() else {
-        return body;
-    };
-    let Expr::Call(call) = expr_stmt.expr.as_ref() else {
-        return body;
-    };
-    let value_arg_index = match call_ident_name(call) {
-        Some("_$setClassName" | "_$settextContent") if call.args.len() == 2 => 1,
-        Some("_$setAttribute") if call.args.len() == 3 => 2,
-        _ => return body,
-    };
-    if call.args.iter().any(|arg| arg.spread.is_some()) {
-        return body;
-    }
-
-    let (value_ident, initialized_ident, next_ident) = loop {
-        let index = *binding_index;
-        *binding_index += 1;
-        let value_ident = crate::emit::ident(&format!("_$rowBindingValue{index}"));
-        let initialized_ident = crate::emit::ident(&format!("_$rowBindingInitialized{index}"));
-        let next_ident = crate::emit::ident(&format!("_$rowBindingNext{index}"));
-        if [&value_ident, &initialized_ident, &next_ident]
-            .iter()
-            .all(|ident| !used_names.contains(ident.sym.as_ref()))
-        {
-            used_names.extend([
-                value_ident.sym.to_string(),
-                initialized_ident.sym.to_string(),
-                next_ident.sym.to_string(),
-            ]);
-            break (value_ident, initialized_ident, next_ident);
-        }
-    };
-
-    binding_decls.push(let_decl(value_ident.clone(), None));
-    binding_decls.push(let_decl(
-        initialized_ident.clone(),
-        Some(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false }))),
-    ));
-
-    let next_value = call.args[value_arg_index].expr.as_ref().clone();
-    let mut guarded_call = call.clone();
-    guarded_call.args[value_arg_index].expr = Box::new(Expr::Ident(next_ident.clone()));
-
-    let same_value = crate::emit::call_member(
-        crate::emit::ident("Object"),
-        "is",
-        vec![Expr::Ident(value_ident.clone()), Expr::Ident(next_ident.clone())],
-    );
-    let should_write = Expr::Bin(BinExpr {
-        span: DUMMY_SP,
-        op: BinaryOp::LogicalOr,
-        left: Box::new(Expr::Unary(UnaryExpr {
-            span: DUMMY_SP,
-            op: UnaryOp::Bang,
-            arg: Box::new(Expr::Ident(initialized_ident.clone())),
-        })),
-        right: Box::new(Expr::Unary(UnaryExpr {
-            span: DUMMY_SP,
-            op: UnaryOp::Bang,
-            arg: Box::new(same_value),
-        })),
-    });
-
-    vec![
-        crate::emit::const_decl(next_ident.clone(), next_value),
-        Stmt::If(IfStmt {
-            span: DUMMY_SP,
-            test: Box::new(should_write),
-            cons: Box::new(Stmt::Block(BlockStmt {
-                span: DUMMY_SP,
-                ctxt: swc_core::common::SyntaxContext::empty(),
-                stmts: vec![
-                    Stmt::Expr(ExprStmt {
-                        span: DUMMY_SP,
-                        expr: Box::new(Expr::Call(guarded_call)),
-                    }),
-                    assign_ident_stmt(value_ident, Expr::Ident(next_ident)),
-                    assign_ident_stmt(
-                        initialized_ident,
-                        Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
-                    ),
-                ],
-            })),
-            alt: None,
-        }),
-    ]
-}
-
-fn let_decl(name: Ident, init: Option<Expr>) -> Stmt {
-    Stmt::Decl(Decl::Var(Box::new(VarDecl {
-        span: DUMMY_SP,
-        ctxt: swc_core::common::SyntaxContext::empty(),
-        kind: VarDeclKind::Let,
-        declare: false,
-        decls: vec![VarDeclarator {
-            span: DUMMY_SP,
-            name: Pat::Ident(BindingIdent { id: name, type_ann: None }),
-            init: init.map(Box::new),
-            definite: false,
-        }],
-    })))
-}
-
-fn assign_ident_stmt(target: Ident, value: Expr) -> Stmt {
-    Stmt::Expr(ExprStmt {
-        span: DUMMY_SP,
-        expr: Box::new(Expr::Assign(AssignExpr {
-            span: DUMMY_SP,
-            op: AssignOp::Assign,
-            left: AssignTarget::Simple(SimpleAssignTarget::Ident(target.into())),
-            right: Box::new(value),
-        })),
-    })
-}
-
-fn call_ident_name(call: &CallExpr) -> Option<&str> {
-    let Callee::Expr(callee) = &call.callee else {
-        return None;
-    };
-    let Expr::Ident(ident) = callee.as_ref() else {
-        return None;
-    };
-    Some(ident.sym.as_ref())
-}
-
-fn text_wrapper_decl(stmt: &Stmt) -> Option<(Id, Ident)> {
-    let Stmt::Decl(Decl::Var(var)) = stmt else {
-        return None;
-    };
-    let [decl] = var.decls.as_slice() else {
-        return None;
-    };
-    let Pat::Ident(wrapper) = &decl.name else {
-        return None;
-    };
-    let Expr::Call(call) = decl.init.as_deref()? else {
-        return None;
-    };
-    if call_ident_name(call) != Some("_$createTextWrapper") {
-        return None;
-    }
-    let [parent] = call.args.as_slice() else {
-        return None;
-    };
-    let Expr::Ident(parent) = parent.expr.as_ref() else {
-        return None;
-    };
-    Some((wrapper.id.to_id(), parent.clone()))
-}
-
-fn append_child_idents(stmt: &Stmt) -> Option<(Id, Id)> {
-    let Stmt::Expr(expr_stmt) = stmt else {
-        return None;
-    };
-    let Expr::Call(call) = expr_stmt.expr.as_ref() else {
-        return None;
-    };
-    if call_ident_name(call) != Some("_$appendChild") {
-        return None;
-    }
-    let [parent, child] = call.args.as_slice() else {
-        return None;
-    };
-    let Expr::Ident(parent) = parent.expr.as_ref() else {
-        return None;
-    };
-    let Expr::Ident(child) = child.expr.as_ref() else {
-        return None;
-    };
-    Some((parent.to_id(), child.to_id()))
-}
-
-fn append_child_parent(stmt: &Stmt) -> Option<Id> {
-    let Stmt::Expr(expr_stmt) = stmt else {
-        return None;
-    };
-    let Expr::Call(call) = expr_stmt.expr.as_ref() else {
-        return None;
-    };
-    if call_ident_name(call) != Some("_$appendChild") {
-        return None;
-    }
-    let parent = call.args.first()?;
-    let Expr::Ident(parent) = parent.expr.as_ref() else {
-        return None;
-    };
-    Some(parent.to_id())
-}
-
-struct ReplaceSoleTextWrappers<'a> {
-    parents: &'a std::collections::HashMap<Id, Ident>,
-}
-
-impl VisitMut for ReplaceSoleTextWrappers<'_> {
-    fn visit_mut_ident(&mut self, ident: &mut Ident) {
-        if let Some(parent) = self.parents.get(&ident.to_id()) {
-            *ident = parent.clone();
-        }
-    }
-}
-
-/// 安全 direct-root 列表行中，如果某个元素唯一追加的子节点就是动态文本
-/// wrapper，则直接更新父元素的 textContent。混合静态文本、多动态文本和嵌套
-/// 元素仍保留 wrapper，避免 textContent 更新清掉相邻节点或事件监听器。
-fn collapse_sole_list_row_text_wrappers(stmts: &mut Vec<Stmt>) {
-    let wrappers: std::collections::HashMap<Id, Ident> =
-        stmts.iter().filter_map(text_wrapper_decl).collect();
-    if wrappers.is_empty() {
-        return;
-    }
-
-    let mut append_counts = std::collections::HashMap::<Id, usize>::new();
-    for parent in stmts.iter().filter_map(append_child_parent) {
-        *append_counts.entry(parent).or_default() += 1;
-    }
-
-    let eligible: std::collections::HashMap<Id, Ident> = wrappers
-        .into_iter()
-        .filter(|(_, parent)| append_counts.get(&parent.to_id()) == Some(&1))
-        .collect();
-    if eligible.is_empty() {
-        return;
-    }
-
-    stmts.retain(|stmt| {
-        if let Some((wrapper, _)) = text_wrapper_decl(stmt) {
-            return !eligible.contains_key(&wrapper);
-        }
-        if let Some((_, child)) = append_child_idents(stmt) {
-            return !eligible.contains_key(&child);
-        }
-        true
-    });
-
-    let mut replacer = ReplaceSoleTextWrappers { parents: &eligible };
-    stmts.visit_mut_with(&mut replacer);
 }
 
 fn watch_effect_body(stmt: &Stmt) -> Option<Vec<Stmt>> {

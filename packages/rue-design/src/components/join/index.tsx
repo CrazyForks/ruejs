@@ -256,7 +256,7 @@ type JoinCompound = FC<JoinProps> & {
   Item: FC<JoinItemProps>
 }
 
-const JoinCompound: JoinCompound = Object.assign(JoinRoot, {
+const JoinCompound: JoinCompound = /*#__PURE__*/ Object.assign(JoinRoot, {
   Item,
 })
 

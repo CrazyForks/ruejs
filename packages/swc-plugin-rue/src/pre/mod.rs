@@ -22,6 +22,12 @@ mod side_effect;
 mod template_directive;
 mod transform;
 
+pub(crate) use helpers::{
+    collect_setup_region, has_component_render_return_in_block, is_fc_pat,
+    is_untyped_arrow_component_decl,
+};
+pub(crate) use on_setup::build_compiled_setup_with_binds;
+
 /// 对外暴露的预处理入口：
 /// - PreTransform 会在编译前阶段运行，按顺序应用 helpers/if_directive/show_directive 等改写；
 /// - 旨在保持源代码语义不变的前提下，将条件/useSetup 等结构转换为更利于后续处理的形式。

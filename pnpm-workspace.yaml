@@ -51,7 +51,6 @@ onlyBuiltDependencies:
   - 'simple-git-hooks'
   - 'unrs-resolver'
   - 'workerd'
-  - '@rue-js/jsx-dev-runtime'
 
 patchedDependencies:
   '@bruits/satteri-wasm32-wasi@0.9.5': patches/@bruits__satteri-wasm32-wasi@0.9.5.patch

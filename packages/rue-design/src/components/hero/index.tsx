@@ -502,7 +502,7 @@ type HeroCompound = FC<HeroProps> & {
   Actions: FC<HeroActionsProps>
 }
 
-const HeroCompound: HeroCompound = Object.assign(Hero, {
+const HeroCompound: HeroCompound = /*#__PURE__*/ Object.assign(Hero, {
   Content,
   Overlay,
   Title,

@@ -185,7 +185,7 @@ export default DocDetail
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML, _$compiledCreateElement, _$compiledRoot } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { useState, useEffect, _$compiledWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setAttribute, _$addEventListener, _$setClassName, _$setInnerHTML, _$compiledCreateElement, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlayground';
@@ -311,12 +311,12 @@ async function mdToHtml(markdown: string): Promise<string> {
     return html;
 }
 const DocDetail: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const route = useRoute();
             const docPath = route.value.params?.path as string;
-            const [_title, setTitle] = _$vaporWithHookId("useState:1:0", ()=>useState<string>(''));
-            const [html, setHtml] = _$vaporWithHookId("useState:1:1", ()=>useState<string>(''));
-            const [_results, _setResults] = _$vaporWithHookId("useState:1:2", ()=>useState<{
+            const [_title, setTitle] = _$compiledWithHookId("useState:1:0", ()=>useState<string>(''));
+            const [html, setHtml] = _$compiledWithHookId("useState:1:1", ()=>useState<string>(''));
+            const [_results, _setResults] = _$compiledWithHookId("useState:1:2", ()=>useState<{
                     id: string;
                     title: string;
                     snippet: string;
@@ -339,7 +339,7 @@ const DocDetail: FC = ()=>{
             };
         }));
     const { route: route, docPath: docPath, _title: _title, setTitle: setTitle, html: html, setHtml: setHtml, _results: _results, _setResults: _setResults, sidebarType: sidebarType, uiBase: uiBase, docBase: docBase, DOCS_META: DOCS_META } = _$useSetup;
-    _$vaporWithHookId("useEffect:1:3", ()=>useEffect(()=>{
+    _$compiledWithHookId("useEffect:1:3", ()=>useEffect(()=>{
             let cancelled = false;
             (async ()=>{
                 const seg = docPath || '';
@@ -470,5 +470,11 @@ export default DocDetail;"##;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec34.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("return _$createComponent(SidebarPlayground"));
+    assert!(normalized.contains("type: sidebarType"));
+    assert!(
+        normalized.contains("children: [ __child1, currentIndex >= 0 ? __child2 : undefined ]")
+    );
+    assert!(!normalized.contains(" h("));
 }

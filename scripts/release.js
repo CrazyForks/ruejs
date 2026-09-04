@@ -127,10 +127,6 @@ const getPkgRoot = getPackageRoot
 const step = (/** @type {string} */ msg) => console.log(pico.cyan(msg))
 const releaseVerificationPackages = [
   {
-    name: '@rue-js/runtime-vapor',
-    cwd: path.resolve(__dirname, '../packages/runtime-vapor'),
-  },
-  {
     name: '@rue-js/swc-plugin-rue',
     cwd: path.resolve(__dirname, '../packages/swc-plugin-rue'),
   },
@@ -184,16 +180,6 @@ function restoreFileSnapshots(snapshots) {
 const releaseCheckSnapshots = isCheckOnly
   ? captureFileSnapshots(getReleaseCheckSnapshotPaths())
   : null
-
-async function ensureRuntimeVaporBuilt() {
-  step('\nChecking and generating @rue-js/runtime-vapor TypeScript artifacts...')
-  if (shouldRunValidationCommands) {
-    await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'check-ts'])
-    await run('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-ts'])
-  } else {
-    console.log(`Skipped (dry run)`)
-  }
-}
 
 async function main() {
   if (!(await isInSyncWithRemote())) {
@@ -393,11 +379,10 @@ async function runTestsIfNeeded() {
   if (!skipTests) {
     step('\nRunning tests...')
     if (shouldRunValidationCommands) {
-      await ensureRuntimeVaporBuilt()
       await run('pnpm', ['run', 'test', '--run'])
       await runReleaseVerificationPackageTests()
-      // Keep the size report visible during release, but budgets remain opt-in diagnostics.
-      await run('pnpm', ['run', 'size-runtime'])
+      await run('pnpm', ['run', 'check:compiler-runtime-boundary'])
+      await run('pnpm', ['run', 'size-runtime', '--', '--check'])
     } else {
       console.log(`Skipped (dry run)`)
     }

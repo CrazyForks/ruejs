@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import { Tabs } from '@rue-js/design'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
@@ -36,14 +36,14 @@ describe('Tabs', () => {
     resetActiveRuntime()
 
     render(
-      h(Tabs, {
-        style: 'lift',
-        activeKey: 'metrics',
-        items: [
+      <Tabs
+        style={'lift'}
+        activeKey={'metrics'}
+        items={[
           { key: 'overview', label: 'Overview', children: 'Overview panel' },
           { key: 'metrics', label: 'Metrics', children: 'Metrics panel' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 
@@ -68,14 +68,14 @@ describe('Tabs', () => {
     const spy = vi.fn()
 
     render(
-      h(Tabs, {
-        defaultActiveKey: 'guide',
-        onChange: spy,
-        items: [
+      <Tabs
+        defaultActiveKey={'guide'}
+        onChange={spy}
+        items={[
           { key: 'guide', label: 'Guide', children: 'Guide panel' },
           { key: 'api', label: 'API', children: 'API panel' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 
@@ -106,13 +106,13 @@ describe('Tabs', () => {
     resetActiveRuntime()
 
     render(
-      h(Tabs, {
-        items: [{ key: 'overview', label: 'Overview' }],
-        tabBarExtraContent: {
-          left: h('span', { id: 'tabs-left-extra' }, 'Left'),
-          right: h('span', { id: 'tabs-right-extra' }, 'Right'),
-        },
-      }),
+      <Tabs
+        items={[{ key: 'overview', label: 'Overview' }]}
+        tabBarExtraContent={{
+          left: <span id={'tabs-left-extra'}>{'Left'}</span>,
+          right: <span id={'tabs-right-extra'}>{'Right'}</span>,
+        }}
+      />,
       c,
     )
 
@@ -128,14 +128,14 @@ describe('Tabs', () => {
     const spy = vi.fn()
 
     render(
-      h(Tabs, {
-        type: 'editable-card',
-        onEdit: spy,
-        items: [
+      <Tabs
+        type={'editable-card'}
+        onEdit={spy}
+        items={[
           { key: 'todo', label: 'Todo' },
           { key: 'done', label: 'Done', closable: false },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 
@@ -160,14 +160,14 @@ describe('Tabs', () => {
     resetActiveRuntime()
 
     render(
-      h(Tabs, {
-        defaultActiveKey: 'overview',
-        destroyOnHidden: true,
-        items: [
+      <Tabs
+        defaultActiveKey={'overview'}
+        destroyOnHidden={true}
+        items={[
           { key: 'overview', label: 'Overview', children: 'Overview panel' },
           { key: 'metrics', label: 'Metrics', children: 'Metrics panel' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 
@@ -191,34 +191,36 @@ describe('Tabs', () => {
   it('restores complex panel children after switching back with destroyOnHidden', async () => {
     const c = mountContainer()
     resetActiveRuntime()
+    const OverviewPanel = () => (
+      <div className="space-y-2">
+        <div>Velocity</div>
+        <div>Overview body</div>
+      </div>
+    )
+    const ActivityPanel = () => (
+      <div className="space-y-2">
+        <div>Activity title</div>
+        <div>Activity body</div>
+      </div>
+    )
 
     render(
-      h(Tabs, {
-        defaultActiveKey: 'overview',
-        destroyOnHidden: true,
-        items: [
+      <Tabs
+        defaultActiveKey={'overview'}
+        destroyOnHidden={true}
+        items={[
           {
             key: 'overview',
             label: 'Overview',
-            children: h(
-              'div',
-              { className: 'space-y-2' },
-              h('div', null, 'Velocity'),
-              h('div', null, 'Overview body'),
-            ),
+            children: <OverviewPanel />,
           },
           {
             key: 'activity',
             label: 'Activity',
-            children: h(
-              'div',
-              { className: 'space-y-2' },
-              h('div', null, 'Activity title'),
-              h('div', null, 'Activity body'),
-            ),
+            children: <ActivityPanel />,
           },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 
@@ -249,15 +251,15 @@ describe('Tabs', () => {
     resetActiveRuntime()
 
     render(
-      h(Tabs, {
-        type: 'line',
-        activeKey: 'metrics',
-        indicator: { align: 'center', size: 24 },
-        items: [
+      <Tabs
+        type={'line'}
+        activeKey={'metrics'}
+        indicator={{ align: 'center', size: 24 }}
+        items={[
           { key: 'overview', label: 'Overview' },
           { key: 'metrics', label: 'Metrics' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 

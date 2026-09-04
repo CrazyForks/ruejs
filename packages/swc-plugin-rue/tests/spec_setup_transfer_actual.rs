@@ -23,7 +23,7 @@ fn real_transfer_component_gets_top_level_use_setup() {
     let transfer_slice = &out[transfer_start..];
 
     let top_level_setup_idx = transfer_slice
-        .find("const _$useSetup = _$vaporWithHookId(\"useSetup:")
+        .find("const _$useSetup = _$compiledWithHookId(\"useSetup:")
         .expect("expected top-level useSetup inside Transfer");
 
     let merged_locale_idx =
@@ -54,26 +54,24 @@ fn real_transfer_component_gets_top_level_use_setup() {
     );
 
     assert!(
-        transfer_slice.contains(
-            "const mergedLocale: Required<TransferLocale> = _$vaporWithHookId(\"computed:"
-        ),
+        transfer_slice.contains("const mergedLocale: Required<TransferLocale> = computed("),
         "expected mergedLocale to lower into computed in the real Transfer output"
     );
     assert!(
-        transfer_slice.contains("const searchConfig = _$vaporWithHookId(\"computed:")
-            && transfer_slice
-                .contains("()=>computed(()=>normalizeSearchConfig(__rue_props.showSearch)));"),
+        transfer_slice.contains(
+            "const searchConfig = computed(()=>normalizeSearchConfig(__rue_props.showSearch));"
+        ),
         "expected searchConfig to lower into computed against __rue_props.showSearch"
     );
     assert!(
-        transfer_slice.contains("const paginationConfig = _$vaporWithHookId(\"computed:")
-            && transfer_slice
-                .contains("()=>computed(()=>normalizePagination(__rue_props.pagination)));"),
+        transfer_slice.contains(
+            "const paginationConfig = computed(()=>normalizePagination(__rue_props.pagination));"
+        ),
         "expected paginationConfig to lower into computed against __rue_props.pagination"
     );
     assert!(
-        transfer_slice.contains("const sizeConfig = _$vaporWithHookId(\"computed:")
-            && transfer_slice.contains("()=>computed(()=>resolveSizeConfig(__rue_props.size)));"),
+        transfer_slice
+            .contains("const sizeConfig = computed(()=>resolveSizeConfig(__rue_props.size));"),
         "expected sizeConfig to lower into computed against __rue_props.size"
     );
 }

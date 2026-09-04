@@ -580,7 +580,7 @@ type ButtonCompound = FC<ButtonProps> & {
   Group: FC<ButtonGroupProps>
 }
 
-const ButtonCompound: ButtonCompound = Object.assign(Button, {
+const ButtonCompound: ButtonCompound = /*#__PURE__*/ Object.assign(Button, {
   Group: ButtonGroup,
 })
 

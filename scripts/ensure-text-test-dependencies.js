@@ -65,10 +65,6 @@ const corePackageInputs = [
   'packages/runtime/src',
   'packages/server-renderer/package.json',
   'packages/server-renderer/src',
-  'packages/jsx-runtime/package.json',
-  'packages/jsx-runtime/src',
-  'packages/jsx-dev-runtime/package.json',
-  'packages/jsx-dev-runtime/src',
   'packages/rue/package.json',
   'packages/rue/src',
 ].map(targetPath => path.resolve(rootDir, targetPath))
@@ -78,12 +74,9 @@ const corePackageArtifacts = [
   'packages/runtime/dist/runtime.esm-bundler.js',
   'packages/runtime/dist/runtime.esm-browser.js',
   'packages/server-renderer/dist/server-renderer.esm-bundler.js',
-  'packages/jsx-runtime/dist/jsx-runtime.esm-bundler.js',
-  'packages/jsx-dev-runtime/dist/jsx-dev-runtime.esm-bundler.js',
   'packages/rue/dist/rue.esm-bundler.js',
   'packages/rue/dist/rue.runtime.esm-browser.js',
   'packages/rue/dist/rue.server-renderer.esm-bundler.js',
-  'packages/rue/dist/rue.vapor.esm-bundler.js',
 ].map(targetPath => path.resolve(rootDir, targetPath))
 
 if (artifactNeedsBuild(corePackageArtifacts, corePackageInputs)) {
@@ -93,8 +86,6 @@ if (artifactNeedsBuild(corePackageArtifacts, corePackageInputs)) {
     '^shared$',
     '^runtime$',
     '^server-renderer$',
-    '^jsx-runtime$',
-    '^jsx-dev-runtime$',
     '^rue$',
     '--formats',
     'esm-bundler,esm-browser,esm-browser-runtime',

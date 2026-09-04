@@ -1,6 +1,6 @@
 # 后悔药 Rue.js
 
-> The Wasm Framework For Native DOM
+> The Compiler Framework For Native DOM
 
 语言：[English](./README.md) | 简体中文
 
@@ -55,14 +55,15 @@ pnpm run dev
 pnpm add @rue-js/rue @rue-js/router
 ```
 
-在 Vite 配置中启用 Rue 的 JSX：
+在 Vite 配置中通过编译器插件启用 Rue JSX：
 
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite'
+import Rue from '@rue-js/vite-plugin-rue'
 
 export default defineConfig({
-  esbuild: { jsxImportSource: '@rue-js/rue' },
+  plugins: [Rue()],
 })
 ```
 
@@ -126,7 +127,6 @@ Text.js 是 Rue 生态中的全栈应用框架。它基于 Vite、Rue、RSC 与�
 - `@rue-js/design`：设计系统与组件库
 - `@rue-js/vite-plugin-rue`：Vite 集成
 - `@rue-js/swc-plugin-rue`：SWC JSX 转换插件
-- `@rue-js/jsx-runtime` / `@rue-js/jsx-dev-runtime`：JSX 运行时入口
 
 ## 本地开发
 

@@ -1,8 +1,18 @@
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { hydrateRoot } from '../src/island'
-import { h, render } from '../src/rue'
-import { vapor } from '../src/rue'
+import { render } from '../src/rue'
+import { vapor } from './legacy-test-render'
 import {
   appendChild,
   createElement,
@@ -70,6 +80,42 @@ afterEach(() => {
 })
 
 describe('browser DOM host hot path', () => {
+  it('uses direct browser primitives without adapter or global reads', async () => {
+    const tracker = trackDOMAdapterResolutionReads()
+    const globalRecord = globalThis as typeof globalThis & Record<string, unknown>
+    const operationKey = '__rue_compiled_dom_operation_adapter__'
+    const originalOperation = Object.getOwnPropertyDescriptor(globalRecord, operationKey)
+    let operationReads = 0
+    Object.defineProperty(globalRecord, operationKey, {
+      configurable: true,
+      get() {
+        operationReads += 1
+        return null
+      },
+    })
+
+    try {
+      const browserDOM = await import('../src/compiler-runtime/dom.browser')
+      const container = document.createElement('main')
+      const row = browserDOM.createElement('div', container)
+      const label = browserDOM.createTextNode('direct')
+      browserDOM.appendChild(row, label)
+      browserDOM.insertBefore(container, row, null)
+      browserDOM.removeChild(row, label)
+
+      expect(tracker.reads()).toBe(0)
+      expect(operationReads).toBe(0)
+      expect(container.firstChild).toBe(row)
+    } finally {
+      tracker.restore()
+      if (originalOperation) {
+        Object.defineProperty(globalRecord, operationKey, originalOperation)
+      } else {
+        delete globalRecord[operationKey]
+      }
+    }
+  })
+
   it('binds fresh browser host operations once per mount', () => {
     const tracker = trackDOMAdapterResolutionReads()
     const container = document.createElement('main')
@@ -92,9 +138,17 @@ describe('browser DOM host hot path', () => {
     document.body.appendChild(container)
     const serverButton = container.firstElementChild
 
-    hydrateRoot(container, h('button', { id: 'client', className: 'hydrated' }, 'client'), {
-      replace: false,
-    })
+    hydrateRoot(
+      container,
+      _$createDynamic('button', {
+        id: 'client',
+        className: 'hydrated',
+        children: 'client',
+      }),
+      {
+        replace: false,
+      },
+    )
 
     expect(container.firstElementChild).toBe(serverButton)
     expect(serverButton).toMatchObject({

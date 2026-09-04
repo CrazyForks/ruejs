@@ -78,10 +78,34 @@ const appSsrClientReferencePassthroughAdapterCache = new WeakMap<
 const appServerComponentAdapters = new WeakSet<Function>()
 const appSsrComponentAdapters = new WeakSet<Function>()
 const TEXT_CLIENT_REFERENCE_SSR_KEY = Symbol.for('text.clientReferenceSsr')
+const RUE_COMPILED_COMPONENT_FACTORY_KEY = '__rue_compiled_component_factory__'
+const RUE_COMPILED_COMPONENT_READ_PROPS_KEY = '__rue_compiled_component_read_props__'
 const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
 const RUE_SUSPENSE_COMPONENT_MARKER = Symbol.for('rue.suspense.component')
 const TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER = Symbol.for('text.dynamic.resolvedComponent')
+const RUE_SERVER_OPERATION = Symbol.for('rue.server.operation')
+
+type RueServerOperation = {
+  [RUE_SERVER_OPERATION]: 'element' | 'component' | 'fragment'
+  type?: unknown
+  props?: Record<string, unknown> | null
+  children?: unknown[]
+}
+
+function isRueServerOperation(value: unknown): value is RueServerOperation {
+  return typeof value === 'object' && value !== null && RUE_SERVER_OPERATION in value
+}
+
+function serverOperationToProtocol(value: RueServerOperation): TextCompatNode {
+  const children = value.children ?? []
+  if (value[RUE_SERVER_OPERATION] === 'fragment') {
+    return createServerProtocolElement(ServerProtocolFragment, null, ...children)
+  }
+  const props = value.props ? { ...value.props } : {}
+  if (children.length > 0) props.children = children.length === 1 ? children[0] : children
+  return createServerProtocolElement(value.type as any, props)
+}
 const TEXT_HEAD_RECORD = Symbol.for('text.head.record')
 const APP_LAYOUT_SEGMENT_MAP_PROP = '__textLayoutSegmentMap'
 const APP_SSR_ERROR_BOUNDARY_COMPONENT_NAMES = new Set([
@@ -151,9 +175,13 @@ function resolveAppServerComponentResult(
   }
 
   if (isThenable(value)) {
-    return Promise.resolve(value).then(resolved =>
+    const pending = Promise.resolve(value).then(resolved =>
       adaptResolvedRenderable(resolved as AppServerRenderable),
     )
+    // RSC/SSR may retry a thrown thenable before it attaches its own observer.
+    // Preserve rejection for the consumer while closing that observation gap.
+    void pending.catch(() => undefined)
+    return pending
   }
 
   return adaptResolvedRenderable(value)
@@ -262,12 +290,15 @@ function readRueContextProviderContext(type: unknown): object | null {
 
 function readRueRenderableHandleType(value: unknown): unknown {
   if (!isRueRenderableHandle(value)) return null
-  return (value as { __rue_component_type?: unknown }).__rue_component_type
+  const record = value as Record<string, unknown>
+  return record.__rue_component_type ?? record[RUE_COMPILED_COMPONENT_FACTORY_KEY] ?? null
 }
 
 function readRueRenderableHandleProps(value: unknown): Record<string, unknown> {
   if (!isRueRenderableHandle(value)) return {}
-  const props = (value as { props?: unknown }).props
+  const record = value as Record<string, unknown>
+  const readProps = record[RUE_COMPILED_COMPONENT_READ_PROPS_KEY]
+  const props = typeof readProps === 'function' ? readProps() : record.props
   return props && typeof props === 'object' ? (props as Record<string, unknown>) : {}
 }
 
@@ -355,7 +386,8 @@ function readProviderContextEntryFromRenderable(
   }
   if (isRueRenderableHandle(value)) {
     const type = readRueRenderableHandleType(value)
-    const context = readRueContextProviderContext(type)
+    const context =
+      readTextCompatContextProviderContext(type) ?? readRueContextProviderContext(type)
     if (!context) return null
     return { context, type, value: readRueRenderableHandleProps(value).value }
   }
@@ -668,6 +700,12 @@ function adaptAppServerRenderableWithOptions(
       ? Promise.all(adaptedItems.map(item => Promise.resolve(item)))
       : adaptedItems
   }
+  if (isRueServerOperation(value)) {
+    return adaptAppServerRenderableWithOptions(
+      serverOperationToProtocol(value) as AppServerRenderable,
+      options,
+    )
+  }
   if (isAppServerProtocolElement(value)) {
     const element = value as TextCompatElement<Record<string, unknown>>
     const slotPlaceholderSentinel = readAppSlotPlaceholderSentinel(element.type, element.props)
@@ -870,9 +908,11 @@ function adaptAppServerRenderableWithOptions(
   }
   if (isRueRenderableHandle(value)) {
     const type = readRueRenderableHandleType(value)
-    const providerContext = readRueContextProviderContext(type)
+    const providerContext =
+      readTextCompatContextProviderContext(type) ?? readRueContextProviderContext(type)
     if (providerContext) {
       const props = readRueRenderableHandleProps(value)
+      writeSsrCompatContextProviderValue(providerContext, props.value)
       return runWithTextCompatContextProviderValue(providerContext, props.value, () =>
         adaptAppServerRenderableWithOptions(
           (props.children ?? null) as AppServerRenderable,
@@ -880,7 +920,7 @@ function adaptAppServerRenderableWithOptions(
         ),
       )
     }
-    if (containsAppServerProtocolOrClientReference(value)) {
+    if (type !== null || containsAppServerProtocolOrClientReference(value)) {
       const protocolElement = createAppServerProtocolElementFromRueHandle(value)
       if (protocolElement !== null) {
         return adaptAppServerRenderableWithOptions(protocolElement as AppServerRenderable, options)

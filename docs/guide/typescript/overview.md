@@ -54,8 +54,7 @@ export default defineConfig({
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
-    "jsxImportSource": "@rue-js",
+    "jsx": "preserve",
     "strict": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -67,7 +66,7 @@ export default defineConfig({
 
 其中需要特别注意：
 
-- [`compilerOptions.jsx`](https://www.typescriptlang.org/tsconfig#jsx) 应设为 `"react-jsx"`，并将 [`compilerOptions.jsxImportSource`](https://www.typescriptlang.org/tsconfig#jsxImportSource) 设为 `"@rue-js"`，让 TypeScript 使用 Rue 提供的 JSX runtime 和类型声明。
+- [`compilerOptions.jsx`](https://www.typescriptlang.org/tsconfig#jsx) 应设为 `"preserve"`，让 TypeScript 负责类型检查并把 JSX 转换留给 Rue Vite 插件。绕过插件的 automatic JSX 降级不是受支持的构建路径。
 
 - [`compilerOptions.isolatedModules`](https://www.typescriptlang.org/tsconfig#isolatedModules) 建议设为 `true`，以便尽早发现不适用于 Vite 单文件转换流程的写法。
 

@@ -1,4 +1,13 @@
-import { customRef, type FC, ref, triggerRef, useState, watch, watchEffect } from '@rue-js/rue'
+import {
+  computed,
+  customRef,
+  type FC,
+  ref,
+  triggerRef,
+  useState,
+  watch,
+  watchEffect,
+} from '@rue-js/rue'
 
 const searchItems = [
   'customRef',
@@ -202,10 +211,12 @@ const renderLog = (items: string[]) => (
 
 const CustomRefDemo: FC = () => {
   const [state] = useState(createCustomRefDemoState)
-  const normalizedQuery = state.query.value.trim().toLowerCase()
-  const matches = normalizedQuery
-    ? searchItems.filter(item => item.toLowerCase().includes(normalizedQuery))
-    : searchItems
+  const matches = computed(() => {
+    const normalizedQuery = state.query.value.trim().toLowerCase()
+    return normalizedQuery
+      ? searchItems.filter(item => item.toLowerCase().includes(normalizedQuery))
+      : searchItems
+  })
 
   const updateDraft = (nextValue: string) => {
     state.draft.value = nextValue
@@ -273,8 +284,8 @@ const CustomRefDemo: FC = () => {
           <div className="mt-4">
             <h3 className="mb-2 text-sm font-medium text-base-content/70">匹配结果</h3>
             <ul className="menu rounded-box bg-base-200/40">
-              {matches.length ? (
-                matches.map(item => (
+              {matches.value.length ? (
+                matches.value.map(item => (
                   <li key={item}>
                     <span>{item}</span>
                   </li>

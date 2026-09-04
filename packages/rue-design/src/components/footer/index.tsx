@@ -318,7 +318,7 @@ type FooterCompound = FC<FooterProps> & {
   Link: FC<FooterLinkProps>
 }
 
-const Footer: FooterCompound = Object.assign(Root, {
+const Footer: FooterCompound = /*#__PURE__*/ Object.assign(Root, {
   Brand,
   Section,
   Title,

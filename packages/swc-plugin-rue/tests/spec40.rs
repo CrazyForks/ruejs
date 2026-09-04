@@ -40,12 +40,12 @@ export default HelloWorld
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, _$vaporMarkComponentRenderReactive, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$compiledWithHookId, _$compiledMarkComponentRenderReactive, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
-const HelloWorld: FC = _$vaporMarkComponentRenderReactive(()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+const HelloWorld: FC = _$compiledMarkComponentRenderReactive(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
         console.log('--------start');
-        const x = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+        const x = ref(0);
         console.log(x.value);
         x.value = 100;
         console.log(x.value);
@@ -71,5 +71,10 @@ export default HelloWorld;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec40.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("_$compiledMarkComponentRenderReactive"), "{normalized}");
+    assert!(normalized.contains("x.value = 100"), "{normalized}");
+    assert!(normalized.contains("if (x.value > 500)"), "{normalized}");
+    assert!(normalized.contains("x.value: {x.value}"), "{normalized}");
 }

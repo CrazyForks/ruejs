@@ -609,7 +609,7 @@ const ListDemo: FC = () => {
                   return (
                     <List.Row key={index}>
                       {item.content}
-                      {item.cols?.map((col: any, colIndex: number) =>
+                      {item.cols.map((col: any, colIndex: number) =>
                         col.type === 'grow' ? (
                           <List.ColGrow as={col.as} className={col.className} key={colIndex}>
                             {col.content}

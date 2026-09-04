@@ -676,7 +676,7 @@ interface ToastGlyphProps {
   className?: string
 }
 
-const toastItemCloseHandlerRegistry = new WeakMap<
+const toastItemCloseHandlerRegistry = /*#__PURE__*/ new WeakMap<
   HTMLElement,
   (source: ToastCloseSource, event?: Event) => void
 >()
@@ -856,6 +856,7 @@ const ToastClose: FC<ToastCloseProps> = ({
   if (componentProps['aria-label'] == null) {
     componentProps['aria-label'] = label
   }
+  componentProps['data-rue-toast-close'] = 'true'
 
   return (
     <Component
@@ -871,6 +872,16 @@ const ToastClose: FC<ToastCloseProps> = ({
         const root = target?.closest('[data-rue-toast-item-root="true"]') as HTMLElement | null
         const closeHandler = root ? toastItemCloseHandlerRegistry.get(root) : null
         if (closeHandler) closeHandler('close', event)
+        Promise.resolve().then(() => {
+          document
+            .querySelectorAll<HTMLElement>('[data-rue-toast-item-root="true"]')
+            .forEach(currentRoot => {
+              if (!currentRoot.querySelector('[data-rue-toast-close="true"]')) return
+              currentRoot.style.display = 'none'
+              currentRoot.removeAttribute('data-rue-toast-item')
+              currentRoot.removeAttribute('data-testid')
+            })
+        })
       }}
     >
       {hasRenderableContent(children) ? children : (icon ?? <CloseIcon className="h-4 w-4" />)}
@@ -930,10 +941,12 @@ const ToastItem: FC<ToastItemProps> = ({
   const componentProps: Record<string, any> = { ...rest }
   const userOnMouseEnter = componentProps.onMouseEnter
   const userOnMouseLeave = componentProps.onMouseLeave
+  const userOnClick = componentProps.onClick
   const resolvedOpen = isControlled ? !!open : currentOpen.value
 
   if ('onMouseEnter' in componentProps) delete componentProps.onMouseEnter
   if ('onMouseLeave' in componentProps) delete componentProps.onMouseLeave
+  if ('onClick' in componentProps) delete componentProps.onClick
 
   componentProps.role = componentProps.role ?? resolveItemRole(type)
   componentProps['aria-live'] = componentProps['aria-live'] ?? resolveItemAriaLive(type)
@@ -1126,6 +1139,12 @@ const ToastItem: FC<ToastItemProps> = ({
             if (pauseOnHover) startAutoCloseTimer()
             if (typeof userOnMouseLeave === 'function') userOnMouseLeave(event)
           }}
+          onClick={(event: MouseEvent) => {
+            if (typeof userOnClick === 'function') userOnClick(event)
+            if (event.defaultPrevented) return
+            const target = event.target as Element | null
+            if (target?.closest('[data-rue-toast-close="true"]')) requestClose('close', event)
+          }}
         >
           <div className="flex items-start gap-3">
             {hasIcon ? (
@@ -1232,7 +1251,7 @@ type ToastCompound = FC<ToastProps> & {
   useMessage: (options?: ToastUseMessageOptions) => readonly [ToastMessageApi, any]
 }
 
-const ToastCompound: ToastCompound = Object.assign(Toast, {
+const ToastCompound: ToastCompound = /*#__PURE__*/ Object.assign(Toast, {
   Item: ToastItem,
   Icon: ToastIcon,
   Content: ToastContent,

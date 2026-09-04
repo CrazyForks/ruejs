@@ -473,7 +473,7 @@ type TypographyCompound = FC<TypographyProps> & {
   Paragraph: FC<TypographyParagraphProps>
 }
 
-const Typography: TypographyCompound = Object.assign(TypographyRoot, {
+const Typography: TypographyCompound = /*#__PURE__*/ Object.assign(TypographyRoot, {
   Text,
   Link,
   Title,

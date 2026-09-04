@@ -13,14 +13,11 @@ const RSC_CLIENT_SHIM_OPTIMIZE_DEPS_EXCLUDE = Object.freeze([
 
 const RUE_RUNTIME_OPTIMIZE_DEPS_EXCLUDE = Object.freeze([
   '@rue-js/rue',
+  '@rue-js/rue/internal',
   '@rue-js/rue/server-renderer',
-  '@rue-js/rue/vapor',
   '@rue-js/runtime',
+  '@rue-js/runtime/internal',
   '@rue-js/runtime/server',
-  '@rue-js/runtime/vapor',
-  '@rue-js/runtime-vapor',
-  '@rue-js/runtime-vapor/reactive',
-  '@rue-js/runtime-vapor/vapor',
   '@rue-js/server-renderer',
 ])
 

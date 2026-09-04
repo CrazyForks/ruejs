@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { h, render, setReactiveScheduling } from '../src'
+import { render, setReactiveScheduling } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import { clickByText, defineSplitHomeExampleActualSpec } from './splitHomeExampleTestUtils'
 import { mountContainer, waitForContent } from './page-test-utils'
 
@@ -36,7 +37,7 @@ describe('IsRef actual page interactions', () => {
     const { default: Page } = await import('../../../app/pages/examples/IsRef')
     const container = mountContainer()
 
-    render(h(Page as any, null), container)
+    render(createTestRenderable(Page as any, null), container)
 
     await waitForContent(() => {
       expect(cellTextForExpression(container, 'ref(count)', 3)).toBe('1')

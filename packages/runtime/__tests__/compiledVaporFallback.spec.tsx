@@ -6,12 +6,11 @@ import { resolve } from 'node:path'
 import swc from '@swc/core'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import * as jsxRuntime from '../../jsx-runtime/src'
-import * as compiledRuntime from '../src/compiled'
+import * as compiledRuntime from '../src/internal'
+import * as internalRuntime from '../src/internal'
 import * as runtimeRoot from '../src'
-import * as vaporRuntime from '../src/vapor'
 
-vaporRuntime.setReactiveScheduling('sync')
+runtimeRoot.setReactiveScheduling('sync')
 
 type Row = { id: number; label: string }
 
@@ -53,24 +52,11 @@ export const trace = {
 const FallbackChild: FC = (props) => {
   trace.childRenders += 1
   const context = useContext(BoundaryContext)
-  const label = childLabel.get()
-  let content
-
-  if (label === 'first') {
-    content = <section>
-      <span data-testid="context">{context}</span>
-      <input data-testid="focused-input" value={label} />
-      <button data-testid="child-click" onClick={() => trace.clicks += 1}>{props.label}</button>
-    </section>
-  } else {
-    content = <section>
-      <span data-testid="context">{context}</span>
-      <input data-testid="focused-input" value={label} />
-      <button data-testid="child-click" onClick={() => trace.clicks += 1}>{props.label}</button>
-    </section>
-  }
-
-  return content
+  return <section>
+    <span data-testid="context">{context}</span>
+    <input data-testid="focused-input" tabIndex={0} value={childLabel.get()} />
+    <button data-testid="child-click" onClick={() => trace.clicks += 1}>{props.label}</button>
+  </section>
 }
 
 const LifecycleChild: FC = () => {
@@ -119,27 +105,13 @@ const transform = (moduleType: 'es6' | 'commonjs'): string => {
 const evaluate = (output: string): MixedModule => {
   const module = { exports: {} as Record<string, unknown> }
   const runtimeRequire = (id: string): Record<string, unknown> => {
-    if (id === '@rue-js/rue/compiled') return compiledRuntime
-    if (id === '@rue-js/rue/vapor') return vaporRuntime
+    if (id === '@rue-js/rue/internal/compiler') return compiledRuntime
+    if (id === '@rue-js/rue/internal') return internalRuntime
     if (id === '@rue-js/rue') return runtimeRoot
-    if (id === '@rue-js/jsx-runtime') return jsxRuntime
     throw new Error(`Unexpected generated import: ${id}`)
   }
-  const execute = new Function(
-    'require',
-    'module',
-    'exports',
-    'vapor',
-    '_$vaporMarkComponentRenderReactive',
-    output,
-  )
-  execute(
-    runtimeRequire,
-    module,
-    module.exports,
-    vaporRuntime.vapor,
-    vaporRuntime._$vaporMarkComponentRenderReactive,
-  )
+  const execute = new Function('require', 'module', 'exports', output)
+  execute(runtimeRequire, module, module.exports)
   return module.exports as MixedModule
 }
 
@@ -150,19 +122,19 @@ const flush = async (): Promise<void> => {
 }
 
 afterEach(() => {
+  runtimeRoot.setReactiveScheduling('sync')
   document.body.innerHTML = ''
 })
 
 describe('compiled/Vapor fallback boundary', () => {
   it('shares one reactive graph and one owner across a compiled list and reactive component', async () => {
     const esm = transform('es6')
-    const vaporImport = esm.split('\n').find(line => line.includes('from "@rue-js/rue/vapor"'))
-
-    expect(vaporImport).toContain('effect')
-    expect(vaporImport).toContain('_$reconcileKeyed')
-    expect(vaporImport).toContain('_$createComponent')
-    expect(vaporImport).toContain('_$vaporMarkComponentRenderReactive')
-    expect(esm).not.toContain('from "@rue-js/rue/compiled"')
+    expect(esm).toContain('effect')
+    expect(esm).toContain('_$reconcileKeyed')
+    expect(esm).toContain('_$createComponent')
+    expect(esm).toContain('_$compiledText')
+    expect(esm).toContain('from "@rue-js/rue/internal"')
+    expect(esm).not.toContain('from "@rue-js/rue/internal/compiler"')
 
     const compiled = evaluate(transform('commonjs'))
     const host = document.createElement('div')
@@ -197,7 +169,7 @@ describe('compiled/Vapor fallback boundary', () => {
     expect(document.activeElement).toBe(currentInput)
     expect(currentInput.selectionStart).toBe(1)
     expect(currentInput.selectionEnd).toBe(3)
-    expect(compiled.trace.childRenders).toBeGreaterThan(initialChildRenders)
+    expect(compiled.trace.childRenders).toBe(initialChildRenders)
     expect(compiled.trace.mounted).toBe(1)
 
     const button = host.querySelector('[data-testid="child-click"]') as HTMLButtonElement

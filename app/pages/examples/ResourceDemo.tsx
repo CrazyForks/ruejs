@@ -1,13 +1,4 @@
-import {
-  createResource,
-  renderAnchor,
-  type SignalHandle,
-  type FC,
-  ref,
-  signal,
-  vapor,
-  watchEffect,
-} from '@rue-js/rue'
+import { createResource, type SignalHandle, type FC, ref, signal } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -184,9 +175,6 @@ const renderResourceResult = (resource: CommitResource) => {
   ) : null
 }
 
-const ResourceContent: FC<{ resource: CommitResource }> = props =>
-  renderResourceResult(props.resource)
-
 const renderPreviewCard = (currentBranch: BranchSignal, resource: CommitResource) => {
   return (
     <div className="card bg-base-100 shadow">
@@ -230,7 +218,7 @@ const renderPreviewCard = (currentBranch: BranchSignal, resource: CommitResource
           </div>
         )}
 
-        {!resource.loading.get() && <ResourceContent resource={resource} />}
+        {!resource.loading.get() && renderResourceResult(resource)}
       </div>
     </div>
   )
@@ -248,18 +236,7 @@ const PreviewPanel: FC = () => {
     return Array.isArray(data) ? data : []
   })
 
-  return vapor(() => {
-    const root = document.createDocumentFragment()
-    const anchor = document.createComment('rue:resource-demo-preview-anchor')
-    root.appendChild(anchor)
-
-    watchEffect(() => {
-      const parent = (anchor.parentNode || root) as any
-      renderAnchor(renderPreviewCard(currentBranch, resource) as any, parent, anchor as any)
-    })
-
-    return root as any
-  }) as any
+  return renderPreviewCard(currentBranch, resource)
 }
 
 const ResourceDemo: FC = () => {

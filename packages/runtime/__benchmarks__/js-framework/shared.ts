@@ -117,6 +117,7 @@ export const installBenchmarkApi = (
     prepare,
     perform,
     async measure(operation) {
+      const iterations = ['replace1k', 'update10th', 'swap1k'].includes(operation) ? 10 : 1
       const root = document.querySelector('#app')!
       const observer = new MutationObserver(() => {})
       observer.observe(root, {
@@ -126,9 +127,9 @@ export const installBenchmarkApi = (
         subtree: true,
       })
       const startedAt = performance.now()
-      await perform(operation)
-      const durationMs = performance.now() - startedAt
-      const mutations = observer.takeRecords().length
+      for (let iteration = 0; iteration < iterations; iteration += 1) await perform(operation)
+      const durationMs = (performance.now() - startedAt) / iterations
+      const mutations = observer.takeRecords().length / iterations
       observer.disconnect()
       return { durationMs, mutations, rowCount: document.querySelectorAll('tbody > tr').length }
     },

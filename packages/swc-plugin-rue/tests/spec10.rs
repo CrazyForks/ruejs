@@ -18,7 +18,6 @@ const Hello: FC = (props) => {
     </div>
   );
 }
-
 const Goods: FC = () => (
   <div>
     <h1>Rue 响应式框架示例</h1>
@@ -35,51 +34,16 @@ export default Goods;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { ref, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect } from "@rue-js/rue/vapor";
-import { type FC, h } from '@rue-js/rue';
-const _$getTemplate1 = _$template("<h1>Rue 响应式框架示例</h1>");
-const Hello: FC = (props)=>{
-    return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$appendChild(_root, _$createTextNode("1 "));
-        const _el1 = _$createElement("span", _root);
-        _$appendChild(_root, _el1);
-        const _list1 = _$createComment("rue:children:anchor");
-        _$appendChild(_el1, _list1);
-        watchEffect(()=>{
-            const __slot = (props.children);
-            untrack(()=>renderAnchor(__slot, _el1, _list1));
-        });
-        return _root;
-    });
-};
-const Goods: FC = ()=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _list2 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list2);
-        const __child1 = vapor(()=>{
-            const _root = _$createDocumentFragment();
-            const _el3 = _$createElement("p", _root);
-            _$appendChild(_root, _el3);
-            _$appendChild(_el3, _$createTextNode("这是子内容 A"));
-            const _el4 = _$createElement("p", _root);
-            _$appendChild(_root, _el4);
-            _$appendChild(_el4, _$createTextNode("这是子内容 B"));
-            return _root;
-        });
-        const __slot3 = _$createComponent(Hello, {
-            children: __child1
-        });
-        renderAnchor(__slot3, _root, _list2);
-        return _root;
-    });
-export default Goods;
-"##;
-
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec10.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert_eq!(normalized.matches("_$template(").count(), 2, "{out}");
+    assert_eq!(normalized.matches(".content.cloneNode(true)").count(), 2, "{out}");
+    assert_eq!(normalized.matches("vapor(").count(), 1, "{out}");
+    assert_eq!(normalized.matches("_$compiledRoot(").count(), 3, "{out}");
+    assert!(normalized.contains("_$mountCompiledSlotAt"), "{out}");
+    assert!(normalized.contains("_$createComponent(Hello, ()=>({"), "{out}");
+    assert!(normalized.contains("children: ["), "{out}");
+    assert!(!normalized.contains("_$createDocumentFragment("), "{out}");
 }

@@ -361,6 +361,7 @@ const Root: FC<TooltipProps> = ({
   const Component = as as any
   const bodyId = `rue-tooltip-${tooltipIdSeed++}`
   const uncontrolledOpen = ref(defaultOpen ?? false)
+  let openIntent = defaultOpen ?? false
   const resolvedContent = resolveTooltipContent(overlay, title, content, tip)
   const hasContent =
     resolvedContent !== undefined && resolvedContent !== null && resolvedContent !== false
@@ -384,9 +385,9 @@ const Root: FC<TooltipProps> = ({
   const shouldForceHidden = !disabled && (open === false || (!currentOpen && manualOnly))
 
   const updateOpen = (nextOpen: boolean) => {
-    const latestOpen = open ?? uncontrolledOpen.value
+    const latestOpen = open ?? openIntent
     if (disabled || nextOpen === latestOpen) return
-    if (open === undefined) uncontrolledOpen.value = nextOpen
+    if (open === undefined) openIntent = nextOpen
     if (onOpenChange) onOpenChange(nextOpen)
   }
 
@@ -447,7 +448,7 @@ const Root: FC<TooltipProps> = ({
     onClick: (event: any) => {
       callHandler(onClick, event)
       if (!event?.defaultPrevented && allowClick) {
-        const nextOpen = !(open ?? uncontrolledOpen.value)
+        const nextOpen = !(open ?? openIntent)
         updateOpen(nextOpen)
         if (open === undefined) {
           syncTooltipOpenState(event?.currentTarget, nextOpen, manualOnly, openClassName)
@@ -458,7 +459,7 @@ const Root: FC<TooltipProps> = ({
       callHandler(onContextMenu, event)
       if (!event?.defaultPrevented && allowContextMenu) {
         if (typeof event?.preventDefault === 'function') event.preventDefault()
-        const nextOpen = !(open ?? uncontrolledOpen.value)
+        const nextOpen = !(open ?? openIntent)
         updateOpen(nextOpen)
         if (open === undefined) {
           syncTooltipOpenState(event?.currentTarget, nextOpen, manualOnly, openClassName)
@@ -557,7 +558,7 @@ type TooltipCompound = FC<TooltipProps> & {
   Content: FC<TooltipContentProps>
 }
 
-const Tooltip: TooltipCompound = Object.assign(Root, {
+const Tooltip: TooltipCompound = /*#__PURE__*/ Object.assign(Root, {
   Content,
 })
 

@@ -8,7 +8,7 @@ use swc_core::ecma::codegen::{Emitter, text_writer::JsWriter};
 use swc_ecma_parser::{Parser, StringInput, Syntax, TsSyntax};
 
 pub fn strip_marker(s: &str) -> String {
-    s.lines().filter(|l| !l.contains("RUE_VAPOR_TRANSFORMED")).collect::<Vec<_>>().join("\n")
+    s.lines().filter(|l| !l.contains("RUE_TRANSFORMED")).collect::<Vec<_>>().join("\n")
 }
 
 fn strip_create_element_parent_arg(s: &str) -> String {
@@ -83,6 +83,29 @@ pub fn normalize(s: &str) -> String {
         }
     }
     out.trim().to_string()
+}
+
+/// Normalize setup snapshots across the compiler-only runtime boundary migration.
+///
+/// These tests primarily verify which declarations stay in setup and how their
+/// dependencies are rewritten. Runtime import placement and the equivalent
+/// `compiledWithHookId(useSetup(...))`/`compiledSetup(...)` wrapper are covered
+/// by dedicated boundary tests, so ignore those two representation details here.
+pub fn normalize_setup_snapshot(s: &str) -> String {
+    let normalized = normalize(s)
+        .replace("_$compiledWithHookId(\"useSetup:", "_$compiledSetup(\"useSetup:")
+        .replace(", ()=>useSetup(()=>{", ", ()=>{")
+        .replace("})); const {", "}); const {")
+        .replace("})); let {", "}); let {");
+
+    let mut body = normalized.as_str();
+    while body.starts_with("import ") {
+        let Some(end) = body.find("; ") else {
+            break;
+        };
+        body = &body[end + 2..];
+    }
+    body.to_string()
 }
 
 /// 将 TSX 源码解析为 Program 与 SourceMap

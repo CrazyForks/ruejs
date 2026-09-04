@@ -348,7 +348,7 @@ export async function handleSsr(
           return createServerElement(
             ElementsContext.Provider,
             { value: elements },
-            (routeElement ?? null) as TextCompatNode,
+            createServerElement(Fragment, null, (routeElement ?? null) as TextCompatNode),
           )
         }
 

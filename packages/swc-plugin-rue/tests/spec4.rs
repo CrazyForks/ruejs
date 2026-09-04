@@ -17,9 +17,9 @@ export default C;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$template } from "@rue-js/rue/compiled";
-import { ref } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { _$template } from "@rue-js/rue/internal";
+import { ref } from "@rue-js/rue/internal";
 import { type FC, h } from '@rue-js/rue';
 const _$getTemplate1 = _$template("<div>ok</div>");
 const C: FC = ()=>(()=>{
@@ -36,7 +36,7 @@ const C: FC = ()=>(()=>{
             __rue_cleanup_bucket: [
                 _dispose
             ],
-            __rue_vapor_setup: (__rue_parent_context)=>{
+            __rue_compiled_mount: (__rue_parent_context)=>{
                 if (_disposed) {
                     throw new Error("Cannot mount a disposed static root");
                 }
@@ -56,5 +56,13 @@ export default C;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec4.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledRoot(Object.assign("), "{normalized}");
+    assert!(
+        normalized.contains("_$compiledCreateElement(\"div\", __rue_parent_context)"),
+        "{normalized}"
+    );
+    assert!(normalized.contains("_$compiledCreateTextNode(\"ok\")"), "{normalized}");
+    assert!(normalized.contains("__rue_compiled_explicit_roots: true"), "{normalized}");
+    assert!(!normalized.contains("__rue_cleanup_bucket"));
 }

@@ -154,6 +154,22 @@ const Hover3D: FC<Hover3DProps> = ({
     )
   }
 
+  if (!wrappedSurface) {
+    return (
+      <div {...rest} className={rootClassName}>
+        {children}
+        {Array.from({ length: overlays ? 8 : 0 }).map((_, index) => (
+          <div
+            key={index}
+            aria-hidden="true"
+            data-hover3d-overlay=""
+            className={overlayClass}
+          ></div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div {...rest} className={rootClassName}>
       {wrappedSurface ? (

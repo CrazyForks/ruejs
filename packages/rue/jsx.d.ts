@@ -1,10 +1,10 @@
 // global JSX namespace registration
 // somehow we have to copy=pase the jsx-runtime types here to make TypeScript happy
-import type { RenderableOutput } from '@rue-js/runtime'
+import type { RenderOutput } from '@rue-js/runtime'
 
 declare global {
   namespace JSX {
-    export type Element = RenderableOutput
+    export type Element = RenderOutput
     export interface ElementClass {
       $props: {}
     }
@@ -19,8 +19,8 @@ declare global {
     export interface IntrinsicAttributes {
       key?: string | number
       'client:load'?: boolean | ''
-      'client:idle'?: boolean | ''
-      'client:visible'?: boolean | ''
+      'client:idle'?: boolean | '' | { timeout: number }
+      'client:visible'?: boolean | '' | { rootMargin: string }
       'client:media'?: string | boolean
       'client:interaction'?: string | string[] | boolean
       'client:none'?: boolean | ''

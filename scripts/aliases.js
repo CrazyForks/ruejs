@@ -4,44 +4,43 @@
 
 // these aliases are shared between vitest and rollup
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import path from 'node:path'
 
-const resolveEntryForPkg = (/** @type {string} */ p) =>
-  path.resolve(fileURLToPath(import.meta.url), `../../packages/${p}/src/index.ts`)
+/**
+ * @param {string} metaUrl
+ * @param {string} [cwd]
+ */
+export const resolveScriptsDirectory = (metaUrl, cwd = process.cwd()) =>
+  metaUrl.startsWith('file:') ? path.dirname(fileURLToPath(metaUrl)) : path.resolve(cwd, 'scripts')
+
+const scriptsDir = resolveScriptsDirectory(import.meta.url)
+const packagesDir = path.resolve(scriptsDir, '../packages')
+
+const resolveEntryForPkg = (/** @type {string} */ p) => {
+  const packageDir = path.resolve(packagesDir, p)
+  const tsxEntry = path.resolve(packageDir, 'src/index.tsx')
+  return existsSync(tsxEntry) ? tsxEntry : path.resolve(packageDir, 'src/index.ts')
+}
 
 const resolveSubEntryForPkg = (/** @type {string} */ p, /** @type {string} */ subEntry) =>
-  path.resolve(fileURLToPath(import.meta.url), `../../packages/${p}/src/${subEntry}.ts`)
+  path.resolve(packagesDir, p, `src/${subEntry}.ts`)
 
-const dirs = readdirSync(new URL('../packages', import.meta.url))
+const dirs = readdirSync(packagesDir)
 
 /** @type {Array<{ find: string | RegExp; replacement: string; exact?: boolean }> } */
 const entries = []
 
 const nonSrcPackages = ['sfc-playground']
 
-for (const subEntry of ['protocol', 'reactive', 'vapor']) {
-  entries.push({
-    find: new RegExp(`^@rue-js/runtime-vapor/${subEntry}$`),
-    replacement: resolveSubEntryForPkg('runtime-vapor', subEntry),
-  })
-}
-entries.push({
-  find: /^@rue-js\/runtime-vapor$/,
-  replacement: resolveEntryForPkg('runtime-vapor'),
-})
-
 for (const dir of dirs) {
   const key = `rue-${dir}`
-  const isDir = statSync(new URL(`../packages/${dir}`, import.meta.url)).isDirectory()
+  const isDir = statSync(path.resolve(packagesDir, dir)).isDirectory()
   if (!isDir || dir === '@rue-js') continue
-  if (dir === 'runtime-vapor') {
-    continue
-  }
   if (!nonSrcPackages.includes(dir)) {
     entries.push({ find: key, replacement: resolveEntryForPkg(dir) })
 
-    for (const subEntry of ['vapor', 'island']) {
+    for (const subEntry of ['island']) {
       const entry = resolveSubEntryForPkg(dir, subEntry)
       if (existsSync(entry)) {
         entries.push({
@@ -55,5 +54,13 @@ for (const dir of dirs) {
 
 export { entries }
 
+entries.push({
+  find: /^@rue-js\/rue\/internal\/compiler$/,
+  replacement: resolveSubEntryForPkg('rue', 'compiler-internal'),
+})
+entries.push({
+  find: /^@rue-js\/rue\/internal$/,
+  replacement: resolveSubEntryForPkg('rue', 'internal'),
+})
 // additional alias for legacy '@rue-js/rue' import path
 entries.push({ find: '@rue-js/rue', replacement: resolveEntryForPkg('rue') })

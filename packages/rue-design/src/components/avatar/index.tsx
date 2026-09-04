@@ -467,7 +467,7 @@ type AvatarCompound = FC<AvatarProps> & {
   Group: FC<AvatarGroupProps>
 }
 
-const AvatarCompound: AvatarCompound = Object.assign(Avatar, {
+const AvatarCompound: AvatarCompound = /*#__PURE__*/ Object.assign(Avatar, {
   Group,
 })
 

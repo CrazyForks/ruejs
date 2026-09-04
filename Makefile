@@ -7,12 +7,10 @@ CLOC_INCLUDE_EXT := ts,tsx,js,jsx,mjs,cjs,rs,css,scss,less,html
 
 dev:
 	cd $(ROOT)/packages/swc-plugin-rue && npm run build
-	cd $(ROOT)/packages/runtime-vapor && npm run build-dev
 	cd $(ROOT) && npm run app-dev
 
 build:
 	cd $(ROOT)/packages/swc-plugin-rue && npm run build
-	cd $(ROOT)/packages/runtime-vapor && npm run build
 	cd $(ROOT) && npm run app-build
 
 app-build:

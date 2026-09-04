@@ -29,26 +29,29 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-import { type FC } from '@rue-js/rue';
+    let expected_fragment = r##"import { computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
+import { type FC, ref } from '@rue-js/rue';
 const Comp: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
-            const b = _$vaporWithHookId("computed:1:1", ()=>computed(()=>a.value + 2));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(1);
+            const b = computed(()=>a.value + 2);
+            b.get();
             const __rue_phase2_b = b;
             const base = {
                 k: 'v'
             };
-            const extra = _$vaporWithHookId("computed:1:2", ()=>computed(()=>({
+            const extra = computed(()=>({
                         z: ()=>a.value + __rue_phase2_b.get()
-                    })));
+                }));
+            extra.get();
             const __rue_phase2_extra = extra;
-            const arr0 = _$vaporWithHookId("computed:1:3", ()=>computed(()=>[
+            const arr0 = computed(()=>[
                         a.value,
                         __rue_phase2_b.get()
-                    ]));
+                ]);
+            arr0.get();
             const __rue_phase2_arr0 = arr0;
-            const obj = _$vaporWithHookId("computed:1:4", ()=>computed(()=>({
+            const obj = computed(()=>({
                         ...base,
                         ...__rue_phase2_extra.get(),
                         arr: [
@@ -58,28 +61,36 @@ const Comp: FC = ()=>{
                         meth () {
                             return a.value + __rue_phase2_b.get();
                         }
-                    })));
+                }));
+            obj.get();
             const __rue_phase2_obj = obj;
             return {
                 a: a,
                 b: b,
+                __rue_phase2_b: __rue_phase2_b,
                 base: base,
                 extra: extra,
+                __rue_phase2_extra: __rue_phase2_extra,
                 arr0: arr0,
-                obj: obj
+                __rue_phase2_arr0: __rue_phase2_arr0,
+                obj: obj,
+                __rue_phase2_obj: __rue_phase2_obj
             };
         }));
-    const { a: a, b: b, base: base, extra: extra, arr0: arr0, obj: obj } = _$useSetup;
+    const { a: a, b: b, __rue_phase2_b: __rue_phase2_b, base: base, extra: extra, __rue_phase2_extra: __rue_phase2_extra, arr0: arr0, __rue_phase2_arr0: __rue_phase2_arr0, obj: obj, __rue_phase2_obj: __rue_phase2_obj } = _$useSetup;
     return <div>{obj.get().meth()}-{obj.get().arr[2]()}-{obj.get().z()}</div>;
 };
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_spread_chain_methods.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

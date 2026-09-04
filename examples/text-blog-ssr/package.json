@@ -9,7 +9,6 @@
     "preview": "node run-with-port.mjs preview 3021"
   },
   "dependencies": {
-    "@rue-js/jsx-runtime": "workspace:*",
     "@rue-js/rue": "workspace:*",
     "@rue-js/text": "workspace:*",
     "@rue-js/vite-plugin-rue": "workspace:*",

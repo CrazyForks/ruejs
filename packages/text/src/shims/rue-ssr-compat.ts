@@ -1,8 +1,5 @@
-import {
-  createContext as createRueContext,
-  createElement as createRueElement,
-  useContext as useRueContext,
-} from '@rue-js/runtime'
+import { createContext as createRueContext, useContext as useRueContext } from '@rue-js/runtime'
+import { createTextElement } from '../runtime/render-protocol.js'
 import {
   createSafeTextElement,
   isTextCompatRendererActive,
@@ -234,7 +231,7 @@ export function createContext<T>(defaultValue: T): SsrCompatContext<T> {
           props.children,
         )
       }
-      return createRueElement(rueContext.Provider, { value: props.value }, props.children as never)
+      return createTextElement(rueContext.Provider as never, { value: props.value }, props.children)
     },
   }
   markTextCompatContextProvider(context.Provider, context as object)
@@ -249,7 +246,7 @@ export function createElement(
 ): unknown {
   const runtime = getActiveCompatRuntime()
   if (runtime) return createSafeTextElement(runtime.createElement, type, props, ...children)
-  return createRueElement(type as never, props as never, ...(children as never[]))
+  return createTextElement(type as never, props, ...(children as never[]))
 }
 
 export function useContext<T>(context: SsrCompatContext<T> | unknown): T {

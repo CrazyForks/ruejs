@@ -86,6 +86,32 @@ describe('customRef api', () => {
     effect.dispose()
   })
 
+  it('preserves custom setter timing when nested in reactive state', () => {
+    setReactiveScheduling('sync')
+    vi.useFakeTimers()
+
+    let value = 'ready'
+    const state = customRef<string>((track, trigger) => ({
+      get() {
+        track()
+        return value
+      },
+      set(next) {
+        setTimeout(() => {
+          value = next
+          trigger()
+        }, 100)
+      },
+    }))
+    const wrapper = ref({ state })
+
+    wrapper.value.state.value = 'done'
+
+    expect(wrapper.value.state.value).toBe('ready')
+    vi.advanceTimersByTime(100)
+    expect(wrapper.value.state.value).toBe('done')
+  })
+
   it('does not subscribe effects when get omits track', () => {
     setReactiveScheduling('sync')
 

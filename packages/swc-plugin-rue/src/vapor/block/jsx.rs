@@ -18,6 +18,9 @@ impl VaporTransform {
         if let Some(router_link_el) = crate::router_link::rewrite_router_link_fast_path(el) {
             return self.jsx_to_block(&router_link_el);
         }
+        if let Some(block) = crate::vapor::template::dynamic_template_to_vapor_block(self, el) {
+            return block;
+        }
 
         // 声明块级根节点标识符（统一命名为 _root）
         let root = ident("_root");

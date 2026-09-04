@@ -4,7 +4,15 @@ Notification 模块概述
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
 import type { FC } from '@rue-js/rue'
-import { onUnmounted, ref, render, useRef, useState, watch } from '@rue-js/rue'
+import {
+  Component as DynamicComponent,
+  onUnmounted,
+  ref,
+  render,
+  useRef,
+  useState,
+  watch,
+} from '@rue-js/rue'
 
 /** NotificationPlacements 常量。 */
 export const NotificationPlacements = [
@@ -786,7 +794,8 @@ const NotificationItem: FC<NotificationItemProps> = ({
 
   return (
     <div style={{ display: 'contents' }}>
-      <Component
+      <DynamicComponent
+        is={Component}
         {...componentProps}
         className={mergeClassNames(ITEM_BASE_CLASS, rootToneClass, classNames?.root, className)}
         style={mergedRootStyle}
@@ -909,7 +918,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
             <div className={mergeClassNames('h-full w-full rounded-full', toneStyles.progress)} />
           </div>
         ) : null}
-      </Component>
+      </DynamicComponent>
     </div>
   )
 }
@@ -941,7 +950,8 @@ const NotificationRoot: FC<NotificationProps> = ({
   }
 
   return (
-    <Component
+    <DynamicComponent
+      is={Component}
       {...rest}
       className={mergeClassNames(
         inline ? 'absolute' : 'fixed',
@@ -953,7 +963,7 @@ const NotificationRoot: FC<NotificationProps> = ({
       style={mergedStyle}
     >
       {toChildArray(children)}
-    </Component>
+    </DynamicComponent>
   )
 }
 
@@ -1265,7 +1275,7 @@ type NotificationCompound = FC<NotificationProps> & {
   config: (options: NotificationGlobalConfig) => void
 }
 
-const NotificationCompound: NotificationCompound = Object.assign(NotificationRoot, {
+const NotificationCompound: NotificationCompound = /*#__PURE__*/ Object.assign(NotificationRoot, {
   Item: NotificationItem,
   useNotification,
   open: openGlobalNotification,

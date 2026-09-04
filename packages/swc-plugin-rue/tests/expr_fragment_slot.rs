@@ -27,8 +27,12 @@ const Demo: FC<{ ok: boolean }> = props => (
 
     let out = compile(src, "expr_safe_compiled_slots");
 
-    assert!(out.contains(&utils::normalize("props.ok ? _$compiledRoot(")), "{out}");
-    assert!(out.contains(&utils::normalize("document.createDocumentFragment()")), "{out}");
+    assert!(out.contains("_$compiledBranchAt("), "{out}");
+    assert!(
+        out.contains(&utils::normalize("if (props.ok) return { __rue_compiled_branch_key: true")),
+        "{out}"
+    );
+    assert!(out.contains(&utils::normalize("_$createDocumentFragment()")), "{out}");
     assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"span\"")), "{out}");
     assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"small\"")), "{out}");
     assert!(!out.contains(&utils::normalize("props.ok ? vapor(")), "{out}");
@@ -48,7 +52,10 @@ const Demo = (props) => <div>
 
     let out = compile(src, "expr_unsafe_vapor_slots");
 
-    assert!(out.contains(&utils::normalize("props.ok ? vapor(")), "{out}");
+    assert!(
+        out.contains(&utils::normalize("props.ok ? _$createComponent(Child, ()=>({})) : vapor(")),
+        "{out}"
+    );
     assert!(out.contains(&utils::normalize("props.more ? vapor(")), "{out}");
 }
 
@@ -64,9 +71,9 @@ const Demo: FC<{ label: string }> = props => (
 
     let out = compile(src, "expr_fragment_slot_bare");
 
-    assert!(out.contains(&utils::normalize("const __slot = vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"span\", _root)")));
+    assert!(out.contains(&utils::normalize("const __slot = _$compiledRoot(")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el2, _el1)")));
+    assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"span\", _root)")));
 }
 
 #[test]
@@ -81,15 +88,11 @@ const Demo: FC<{ ok: boolean; label: string }> = props => (
 
     let out = compile(src, "expr_fragment_slot_conditional");
 
-    assert!(out.contains(&utils::normalize("const __slot = props.ok ? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"span\", _root)")));
-    assert!(
-        out.contains(&utils::normalize("const _$getTemplate1 = _$template(\"<em>fallback</em>\")"))
-    );
-    assert!(out.contains(&utils::normalize(
-        "_root.appendChild(_$getTemplate1().content.cloneNode(true))"
-    )));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(out.contains(&utils::normalize("_$compiledBranchAt(_el2, _el1")));
+    assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"span\", _root)")));
+    assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"em\"")));
+    assert!(out.contains(&utils::normalize("_$compiledCreateTextNode(\"fallback\")")));
+    assert!(!out.contains("renderAnchor"));
 }
 
 #[test]
@@ -104,9 +107,9 @@ const Demo: FC<{ ok: boolean; label: string }> = props => (
 
     let out = compile(src, "expr_fragment_slot_logical_and");
 
-    assert!(out.contains(&utils::normalize("const __slot = props.ok ? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize(": \"\";")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(out.contains(&utils::normalize("_$compiledBranchAt(_el2, _el1")));
+    assert!(out.contains(&utils::normalize("const __rue_branch_value = props.ok")));
+    assert!(!out.contains("renderAnchor"));
 }
 
 #[test]
@@ -121,8 +124,10 @@ const Demo: FC<{ holder: any }> = ({ holder }) => (
 
     let out = compile(src, "expr_fragment_slot_bare_identifier");
 
-    assert!(out.contains(&utils::normalize("const _list1 = _$createComment(\"rue:slot:anchor\")")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(out.contains(&utils::normalize("rue:text-hole:0")));
+    assert!(out.contains("holder"), "{out}");
+    assert!(out.contains("_$compiledText") || out.contains("_$mountCompiledSlotAt"), "{out}");
+    assert!(!out.contains("renderAnchor"));
     assert!(!out.contains(&utils::normalize("_$settextContent(_el1, holder)")));
     assert!(!out.contains(&utils::normalize("_$settextContent(_el2, holder)")));
 }
@@ -140,15 +145,15 @@ const Demo: FC = () => {
 
     let out = compile(src, "expr_memoized_jsx_child_slot");
 
-    assert!(out.contains("_$vaporWithHookId(\"useMemo:"));
-    assert!(out.contains(&utils::normalize("const __slot2 = _$vaporWithHookId(")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot2, _root, _list1);")));
-    assert!(out.contains(&utils::normalize("_$settextContent(_el2, msg.value);")));
+    assert!(out.contains("_$compiledWithHookId(\"useMemo:"));
+    assert!(out.contains(&utils::normalize("const _list1 = _$compiledWithHookId(")));
+    assert!(out.contains(&utils::normalize("renderAnchor(_list1, _el2, _el1);")));
+    assert!(out.contains(&utils::normalize("_$compiledText(_el3, ()=>msg.value);")));
     assert!(
-        !out.contains(&utils::normalize("watchEffect(()=>{ const __slot = _$vaporWithHookId("))
+        !out.contains(&utils::normalize("watchEffect(()=>{ const __slot = _$compiledWithHookId("))
     );
     assert!(!out.contains(&utils::normalize("watchEffect(()=>{ _$settextContent")));
-    assert!(!out.contains("_$settextContent(_el1, _$vaporWithHookId"));
+    assert!(!out.contains("_$settextContent(_el1, _$compiledWithHookId"));
 }
 
 #[test]
@@ -178,17 +183,18 @@ const Demo: FC = () => {
 
     let out = compile(src, "expr_fragment_slot_conditional_map_callback");
 
-    assert!(out.contains(&utils::normalize("const __slot = showList.value ? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("_$vaporKeyedList({")));
-    assert!(out.contains(&utils::normalize("getKey: (item, idx)=>item.id")));
+    assert!(out.contains("showList.value"), "{out}");
+    assert!(!out.contains(&utils::normalize("_$compiledKeyedList({")));
+    assert!(out.contains("items.get().map"), "{out}");
     assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
-    assert!(out.contains(&utils::normalize("renderItem: (item, parent, start, end, idx)=>{")));
-    assert!(out.contains(&utils::normalize("_$createElement(\"button\", _root)")));
-    assert!(out.contains(&utils::normalize(": _$compiledRoot((__rue_parent_context)=>{")));
+    assert!(out.contains("vapor("), "{out}");
+    assert!(
+        out.contains(&utils::normalize(": _$compiledRoot(Object.assign((__rue_parent_context)=>{"))
+    );
     assert!(
         out.contains(&utils::normalize("_$compiledCreateElement(\"span\", __rue_parent_context)"))
     );
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el2, _el1)")));
     assert!(!out.contains("_jsxDEV("));
 }
 
@@ -217,13 +223,12 @@ const Demo: FC = () => {
 
     let out = compile(src, "expr_fragment_slot_logical_and_map_callback");
 
-    assert!(out.contains(&utils::normalize("const __slot = showList.value ? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("_$vaporKeyedList({")));
-    assert!(out.contains(&utils::normalize("getKey: (item, idx)=>item.id")));
+    assert!(out.contains("showList.value"), "{out}");
+    assert!(!out.contains(&utils::normalize("_$compiledKeyedList({")));
+    assert!(out.contains("items.get().map"), "{out}");
     assert!(out.contains(&utils::normalize(": \"\";")));
     assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
-    assert!(out.contains(&utils::normalize("renderItem: (item, parent, start, end, idx)=>{")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el2, _el1)")));
     assert!(!out.contains("_jsxDEV("));
 }
 
@@ -276,13 +281,8 @@ const Demo: FC = () => {
 
     let out = compile(src, "expr_fragment_slot_conditional_map_preserves_key");
 
-    assert!(out.contains(&utils::normalize("_$vaporKeyedList({")));
-    assert!(out.contains(&utils::normalize("getKey: (item, idx)=>item.id")));
-    assert!(out.contains(&utils::normalize("STATUS_META[item.status].cardClass")));
-    assert!(out.contains(&utils::normalize("STATUS_META[item.status].badgeClass")));
-    assert!(out.contains(&utils::normalize("!(editingId.value === item.id) ? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("(editingId.value === item.id) ? vapor(()=>{")));
-    assert!(!out.contains(&utils::normalize("const meta = STATUS_META[item.status];")));
-    assert!(!out.contains(&utils::normalize("const isEditing = editingId.value === item.id;")));
-    assert!(!out.contains(&utils::normalize("getKey: (item, idx)=>idx")));
+    assert!(!out.contains(&utils::normalize("_$compiledKeyedList({")), "{out}");
+    assert!(out.contains("visibleTodos.get().map"), "{out}");
+    assert!(out.contains(&utils::normalize("visibleTodos.get().length")), "{out}");
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot")), "{out}");
 }

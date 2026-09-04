@@ -560,7 +560,7 @@ const ResultBase: FC<ResultProps> = ({
   )
 }
 
-const Result = Object.assign(ResultBase, {
+const Result = /*#__PURE__*/ Object.assign(ResultBase, {
   PRESENTED_IMAGE_403: PresentedImage403,
   PRESENTED_IMAGE_404: PresentedImage404,
   PRESENTED_IMAGE_500: PresentedImage500,

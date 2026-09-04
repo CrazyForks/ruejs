@@ -5,7 +5,7 @@ Client runtime ownership
 - Runtime DOM binding and error-bridge installation happen on one path.
 */
 
-import { createRue as createRueRuntime } from '@rue-js/runtime-vapor'
+import { createRue as createRueRuntime } from './runtime-core/index'
 import { BrowserDOMAdapter, registerDOMBridgeConsumer, setDOMAdapter } from './dom'
 import { dispatchErrorCaptured, wasErrorCapturedDispatched } from './error-capture'
 import { runWithRuntime } from './runtime-context'
@@ -16,11 +16,13 @@ const RUE_JS_ERROR_BRIDGE_KEY = '__rue_js_error_bridge_installed'
 
 type ClientRuntimeGlobal = typeof globalThis & {
   __rue?: Rue
+  __rue_client_error_handlers__?: Set<(error: any, instance?: any) => void>
   __rue_dom?: unknown
-  __rue_runtime_vapor_shared_bridge?: {
+  __rue_compiled_runtime_bridge?: {
     popCurrentContainer?(): void
     pushCurrentContainer?(container: unknown): void
   }
+  __rue_root_mount_error_rethrow_depth__?: number
   [RUE_CLIENT_RUNTIME_CACHE_KEY]?: WeakMap<object, Rue>
 }
 
@@ -28,6 +30,36 @@ const clientRuntimeGlobal = globalThis as ClientRuntimeGlobal
 const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
 const registeredDOMBridgeConsumers = new WeakSet<object>()
 const runtimeErrorHandlers = new WeakMap<object, Set<(error: any, instance?: any) => void>>()
+const clientErrorHandlers = (clientRuntimeGlobal.__rue_client_error_handlers__ ??= new Set())
+
+export const registerClientErrorHandler = (
+  handler: (error: any, instance?: any) => void,
+): (() => void) => {
+  clientErrorHandlers.add(handler)
+  return () => clientErrorHandlers.delete(handler)
+}
+
+/** 根挂载入口要求未消费错误同步返回给应用控制器，以便执行完整回滚。 */
+export const runWithRootMountErrorRethrow = <T>(runner: () => T): T => {
+  clientRuntimeGlobal.__rue_root_mount_error_rethrow_depth__ =
+    (clientRuntimeGlobal.__rue_root_mount_error_rethrow_depth__ ?? 0) + 1
+  try {
+    return runner()
+  } finally {
+    const depth = (clientRuntimeGlobal.__rue_root_mount_error_rethrow_depth__ ?? 1) - 1
+    if (depth === 0) delete clientRuntimeGlobal.__rue_root_mount_error_rethrow_depth__
+    else clientRuntimeGlobal.__rue_root_mount_error_rethrow_depth__ = depth
+  }
+}
+
+;(
+  clientRuntimeGlobal as ClientRuntimeGlobal & {
+    __rue_report_client_error__?: (error: any, instance?: any) => boolean
+  }
+).__rue_report_client_error__ = (error, instance) => {
+  for (const handler of clientErrorHandlers) handler(error, instance)
+  return clientErrorHandlers.size > 0
+}
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
   (typeof runtime === 'object' || typeof runtime === 'function') && runtime != null
@@ -73,8 +105,10 @@ const installRuntimeErrorBridge = <T>(runtime: T): T => {
     }
 
     handlers.add(fn)
+    clientErrorHandlers.add(fn)
     return () => {
       handlers.delete(fn)
+      clientErrorHandlers.delete(fn)
     }
   }
 
@@ -173,7 +207,7 @@ export const getClientRuntime = (): Rue => {
 export const runWithClientRuntime = <T>(runtime: Rue, runner: () => T, container?: unknown): T => {
   ensureRuntimeDOMBridge(runtime)
   return runWithRuntime(runtime, () => {
-    const bridge = clientRuntimeGlobal.__rue_runtime_vapor_shared_bridge
+    const bridge = clientRuntimeGlobal.__rue_compiled_runtime_bridge
     const didPush = container != null && typeof bridge?.pushCurrentContainer === 'function'
     if (didPush) {
       bridge.pushCurrentContainer!(container)

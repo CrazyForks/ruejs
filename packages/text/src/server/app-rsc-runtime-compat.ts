@@ -11,7 +11,11 @@ import {
   RUE_FRAGMENT_SYMBOL,
   RUE_SUSPENSE_SYMBOL,
 } from '@rue-js/rsc/core/payload'
-import { adaptAppServerRenderable, type AppServerRenderable } from './app-server-tree.js'
+import {
+  adaptAppServerRenderable,
+  createAppServerElement,
+  type AppServerRenderable,
+} from './app-server-tree.js'
 import {
   ServerProtocolFragment,
   ServerProtocolSuspense,
@@ -21,6 +25,7 @@ import { isRueRenderableHandle } from './renderable.js'
 import { runWithServerElementRuntimeStream } from './server-element-runtime.js'
 import { readAppRenderDependencySsrUnwrap } from './app-render-dependency-protocol.js'
 import { installCompatAppClientReferenceResolver } from './app-rsc-ssr-plugin-runtime-compat.js'
+import { isAppRscServerClientReference } from './app-rsc-client-reference-protocol.js'
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {
   return (
@@ -36,18 +41,79 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return prototype === Object.prototype || prototype === null
 }
 
+const RUE_SERVER_OPERATION = Symbol.for('rue.server.operation')
+const RUE_SERVER_REFERENCE = Symbol.for('rue.server.reference')
+const RUE_SUSPENSE_COMPONENT = Symbol.for('rue.suspense.component')
+
+function adaptCompiledServerOperation(model: unknown): unknown {
+  if (!model || typeof model !== 'object' || !(RUE_SERVER_OPERATION in model)) return model
+  const operation = model as Record<PropertyKey, unknown>
+  const children = Array.isArray(operation.children) ? operation.children : []
+  if (operation[RUE_SERVER_OPERATION] === 'fragment') return children
+  const props =
+    operation.props && typeof operation.props === 'object'
+      ? (operation.props as Record<string, unknown>)
+      : null
+  return createAppServerElement(operation.type as never, props, ...(children as never[]))
+}
+
 function adaptAppRscPayloadModel(model: unknown): unknown {
   if (isThenable(model)) {
-    return Promise.resolve(model).then(resolved => adaptAppRscPayloadModel(resolved))
+    return Promise.resolve(model).then(
+      resolved => adaptAppRscPayloadModel(resolved),
+      error => error,
+    )
+  }
+
+  const compiledOperation = adaptCompiledServerOperation(model)
+  if (compiledOperation !== model) {
+    return adaptAppRscPayloadModel(compiledOperation)
   }
 
   if (isServerProtocolElement(model)) {
-    const adapted = adaptAppServerRenderable(model as AppServerRenderable)
+    if (isAppRscServerClientReference(model.type)) {
+      const adaptedProps = adaptAppRscPayloadModel(model.props)
+      const createClientReferenceElement = (props: unknown): unknown =>
+        props === model.props && (model as { $$typeof?: unknown }).$$typeof === RUE_ELEMENT_SYMBOL
+          ? model
+          : {
+              ...model,
+              props,
+              $$typeof: RUE_ELEMENT_SYMBOL,
+            }
+      return isThenable(adaptedProps)
+        ? Promise.resolve(adaptedProps).then(createClientReferenceElement)
+        : createClientReferenceElement(adaptedProps)
+    }
+
+    let adapted: AppServerRenderable
+    try {
+      adapted = adaptAppServerRenderable(model as AppServerRenderable)
+    } catch (error) {
+      return error
+    }
     if (isThenable(adapted)) {
-      return Promise.resolve(adapted).then(resolved => adaptAppRscPayloadModel(resolved))
+      return Promise.resolve(adapted).then(
+        resolved => adaptAppRscPayloadModel(resolved),
+        error => error,
+      )
     }
     if (adapted !== model) {
       return adaptAppRscPayloadModel(adapted)
+    }
+
+    if (
+      typeof model.type === 'function' &&
+      !isAppRscServerClientReference(model.type) &&
+      (model.type as Record<PropertyKey, unknown>).$$typeof !== RUE_SERVER_REFERENCE &&
+      (model.type as Record<PropertyKey, unknown>)[RUE_SUSPENSE_COMPONENT] !== true
+    ) {
+      const component = model.type as (props: Record<string, unknown>) => unknown
+      try {
+        return adaptAppRscPayloadModel(component(model.props ?? {}))
+      } catch (error) {
+        return error
+      }
     }
 
     const unwrapped = readAppRenderDependencySsrUnwrap(model.type)
@@ -74,9 +140,17 @@ function adaptAppRscPayloadModel(model: unknown): unknown {
   if (model === ServerProtocolSuspense) return RUE_SUSPENSE_SYMBOL
 
   if (isRueRenderableHandle(model)) {
-    const adapted = adaptAppServerRenderable(model as AppServerRenderable)
+    let adapted: AppServerRenderable
+    try {
+      adapted = adaptAppServerRenderable(model as AppServerRenderable)
+    } catch (error) {
+      return error
+    }
     return isThenable(adapted)
-      ? Promise.resolve(adapted).then(resolved => adaptAppRscPayloadModel(resolved))
+      ? Promise.resolve(adapted).then(
+          resolved => adaptAppRscPayloadModel(resolved),
+          error => error,
+        )
       : adaptAppRscPayloadModel(adapted)
   }
 

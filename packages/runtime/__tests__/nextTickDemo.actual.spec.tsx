@@ -8,7 +8,8 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
   default: () => null,
 }))
 
-import { h, render, setReactiveScheduling } from '../src'
+import { render, setReactiveScheduling } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import NextTickDemo from '../../../app/pages/examples/NextTick'
 
 afterEach(() => {
@@ -47,7 +48,7 @@ describe('nextTick demo actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(NextTickDemo as any, null), container)
+    render(createTestRenderable(NextTickDemo as any, null), container)
     await flush()
 
     const readText = () => container.textContent?.replace(/\s+/g, '') ?? ''

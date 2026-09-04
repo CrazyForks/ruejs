@@ -5,7 +5,7 @@ InputNumber 组件概述
 - 默认保持文本输入，不依赖原生 type=number，避免浏览器内建步进与格式化行为干扰。
 */
 import type { FC } from '@rue-js/rue'
-import { computed, onUnmounted, ref } from '@rue-js/rue'
+import { computed, ref } from '@rue-js/rue'
 import type {
   InputAllowClearConfig,
   InputColor,
@@ -131,6 +131,24 @@ type InputNumberStepHandler = (
 
 const STEP_REPEAT_START_DELAY = 450
 const STEP_REPEAT_INTERVAL = 80
+const activeControlStepRepeats = /*#__PURE__*/ new WeakMap<Window, () => void>()
+const controlStepRepeatWindows = /*#__PURE__*/ new WeakSet<Window>()
+
+const registerControlStepRepeat = (targetWindow: Window, stop: () => void) => {
+  activeControlStepRepeats.set(targetWindow, stop)
+  if (controlStepRepeatWindows.has(targetWindow)) return
+
+  const stopActiveRepeat = () => {
+    const activeStop = activeControlStepRepeats.get(targetWindow)
+    activeControlStepRepeats.delete(targetWindow)
+    activeStop?.()
+  }
+  targetWindow.addEventListener('pointerup', stopActiveRepeat)
+  targetWindow.addEventListener('pointercancel', stopActiveRepeat)
+  targetWindow.addEventListener('mouseup', stopActiveRepeat)
+  targetWindow.addEventListener('blur', stopActiveRepeat)
+  controlStepRepeatWindows.add(targetWindow)
+}
 
 interface InputNumberControlsProps {
   controlsConfig?: InputNumberControlsConfig
@@ -846,16 +864,16 @@ const InputNumber: FC<InputNumberProps> = ({
 
   let repeatDelayTimer: ReturnType<typeof setTimeout> | null = null
   let repeatIntervalTimer: ReturnType<typeof setInterval> | null = null
-  let repeatWindow: Window | null = null
+  const repeatWindows = /*#__PURE__*/ new Set<Window>()
   let repeatTarget: HTMLButtonElement | null = null
   let suppressNextControlClick = false
 
   const clearRepeatTimers = () => {
-    if (repeatDelayTimer) {
+    if (repeatDelayTimer !== null) {
       clearTimeout(repeatDelayTimer)
       repeatDelayTimer = null
     }
-    if (repeatIntervalTimer) {
+    if (repeatIntervalTimer !== null) {
       clearInterval(repeatIntervalTimer)
       repeatIntervalTimer = null
     }
@@ -863,14 +881,15 @@ const InputNumber: FC<InputNumberProps> = ({
 
   const stopControlStepRepeat = (event?: Event) => {
     clearRepeatTimers()
-    repeatWindow?.removeEventListener('pointerup', stopControlStepRepeat)
-    repeatWindow?.removeEventListener('pointercancel', stopControlStepRepeat)
-    repeatWindow?.removeEventListener('mouseup', stopControlStepRepeat)
-    repeatWindow?.removeEventListener('blur', stopControlStepRepeat)
+    repeatWindows.forEach(repeatWindow => {
+      if (activeControlStepRepeats.get(repeatWindow) === stopControlStepRepeat) {
+        activeControlStepRepeats.delete(repeatWindow)
+      }
+    })
+    repeatWindows.clear()
     if (event?.type === 'pointercancel' || event?.type === 'blur') {
       suppressNextControlClick = false
     }
-    repeatWindow = null
     repeatTarget = null
   }
 
@@ -910,8 +929,8 @@ const InputNumber: FC<InputNumberProps> = ({
     return committedValue.get()
   }
 
-  const renderValue = () => {
-    const committedValue = getCommittedValue()
+  const renderValue = (valueSnapshot = getCommittedValue()) => {
+    const committedValue = valueSnapshot
 
     if (userTyping.value) {
       const parsedDraft = parseInputValue(draftText.value, parser, decimalSeparator)
@@ -939,16 +958,16 @@ const InputNumber: FC<InputNumberProps> = ({
     return currentNumeric == null ? undefined : String(currentNumeric)
   })
   const ariaValueText = computed(() => inputDisplay.get() || undefined)
-  const syncInputElement = () => {
+  const syncInputElement = (valueSnapshot = getCommittedValue()) => {
     const element = inputElement
     if (!element) return
 
-    const displayValue = renderValue()
+    const displayValue = renderValue(valueSnapshot)
     if (element.value !== displayValue) {
       element.value = displayValue
     }
 
-    const committedValue = getCommittedValue()
+    const committedValue = valueSnapshot
     const currentNumeric = committedValue == null ? undefined : toFiniteNumber(committedValue)
     const valueNow = currentNumeric == null ? undefined : String(currentNumeric)
     if (valueNow !== undefined) {
@@ -988,6 +1007,7 @@ const InputNumber: FC<InputNumberProps> = ({
 
   const handleDraftInput = (rawInput: string) => {
     const parsed = parseInputValue(rawInput, parser, decimalSeparator)
+    let valueSnapshot = getCommittedValue()
 
     userTyping.value = true
     draftText.value = parsed.display
@@ -995,6 +1015,7 @@ const InputNumber: FC<InputNumberProps> = ({
     if (parsed.empty) {
       updateInternalValue(null)
       emitNormalizedChange(null)
+      valueSnapshot = null
     } else if (parsed.numeric !== undefined) {
       const nextValue = serializeNumericValue(
         parsed.numeric,
@@ -1004,8 +1025,9 @@ const InputNumber: FC<InputNumberProps> = ({
       )
       updateInternalValue(nextValue)
       emitNormalizedChange(nextValue)
+      valueSnapshot = nextValue
     }
-    syncInputElement()
+    syncInputElement(valueSnapshot)
   }
 
   const commitParsedValue = (parsed: ParsedInputNumberValue, clampToRange: boolean) => {
@@ -1036,7 +1058,7 @@ const InputNumber: FC<InputNumberProps> = ({
     if (nextValue !== committedValue) {
       emitNormalizedChange(nextValue)
     }
-    syncInputElement()
+    syncInputElement(nextValue)
 
     return nextValue
   }
@@ -1070,7 +1092,7 @@ const InputNumber: FC<InputNumberProps> = ({
     if (nextValue !== committedValue) {
       emitNormalizedChange(nextValue)
     }
-    syncInputElement()
+    syncInputElement(nextValue)
 
     onStep?.(nextValue, {
       offset: type === 'up' ? resolvedStepValue : -resolvedStepValue,
@@ -1093,12 +1115,13 @@ const InputNumber: FC<InputNumberProps> = ({
 
     const target = event.currentTarget as HTMLButtonElement
     repeatTarget = target
-    repeatWindow = target.ownerDocument?.defaultView ?? window
+    const ownerWindow = target.ownerDocument?.defaultView
+    if (ownerWindow) repeatWindows.add(ownerWindow)
+    if (typeof window !== 'undefined') repeatWindows.add(window)
 
-    repeatWindow.addEventListener('pointerup', stopControlStepRepeat)
-    repeatWindow.addEventListener('pointercancel', stopControlStepRepeat)
-    repeatWindow.addEventListener('mouseup', stopControlStepRepeat)
-    repeatWindow.addEventListener('blur', stopControlStepRepeat)
+    repeatWindows.forEach(repeatWindow =>
+      registerControlStepRepeat(repeatWindow, stopControlStepRepeat),
+    )
 
     rememberInputElement(resolveInputElementFromEvent(event))
     blurExternalActiveElementAfterPointerStep(event)
@@ -1125,8 +1148,6 @@ const InputNumber: FC<InputNumberProps> = ({
 
     stepValueBy(type, 'handler', event)
   }
-
-  onUnmounted(stopControlStepRepeat)
 
   const controlsConfig = controls && typeof controls === 'object' ? controls : undefined
   const showControls = controls !== false && !disabled && !readOnly

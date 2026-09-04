@@ -993,7 +993,7 @@ type CarouselCompound = FC<CarouselProps> & {
   Item: FC<CarouselItemProps>
 }
 
-const CarouselCompound: CarouselCompound = Object.assign(Carousel, {
+const CarouselCompound: CarouselCompound = /*#__PURE__*/ Object.assign(Carousel, {
   Item,
 })
 

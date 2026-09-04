@@ -60,7 +60,6 @@ describe('fixture dev server helper', () => {
         readinessPollIntervalMs: 10,
         readyRequestTimeoutMs: 20,
         serverSettleDelayMs: 0,
-        prepareRuntimeVaporArtifacts: false,
         onSpawn: proc => {
           fixtureProcess = proc
         },

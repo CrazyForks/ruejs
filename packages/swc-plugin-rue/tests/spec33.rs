@@ -124,13 +124,13 @@ export default HelloWorld
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let _expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$compiledWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$compiledKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const ThemePicker: FC<{
     value: string;
     onChange: (t: string) => void;
 }> = (props)=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const themes = [
                 'light',
                 'dark',
@@ -220,7 +220,7 @@ const ThemePicker: FC<{
         let _map1_elements = new Map;
         watchEffect(()=>{
             const _map1_current = themes || [];
-            const _map1_newElements = _$vaporKeyedList({
+            const _map1_newElements = _$compiledKeyedList({
                 items: _map1_current,
                 getKey: (name, idx)=>name,
                 elements: _map1_elements,
@@ -253,8 +253,8 @@ const ThemePicker: FC<{
     });
 };
 const HelloWorld: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
-            const theme = _$vaporWithHookId("ref:1:0", ()=>ref('light'));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
+            const theme = ref('light');
             return {
                 theme: theme
             };
@@ -308,14 +308,13 @@ export default HelloWorld;
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec33.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
-    assert!(normalized.contains("_$reconcileKeyed"));
+    assert!(normalized.contains("themes.map((name)=>vapor("));
+    assert!(normalized.contains("_$createDocumentFragment()"));
     assert!(!normalized.contains(concat!("direct", "Root:")));
-    assert!(normalized.contains("_el1.value = name == null ? \"\" : String(name)"));
+    assert!(normalized.contains("_$setValue(_el2, name)"));
     assert!(
-        normalized.contains(
-            "const _$rowBindingNext0 = labels[name] ? `${labels[name]} (${name})` : name"
-        )
+        normalized.contains("const __slot = labels[name] ? `${labels[name]} (${name})` : name")
     );
-    assert!(normalized.contains("_el1.textContent = _$rowBindingNext0"));
-    assert!(normalized.contains("_$createComponent(ThemePicker"));
+    assert!(normalized.contains("renderAnchor(__slot, _el4, _el3)"));
+    assert!(normalized.contains("_$createComponent(ThemePicker, ()=>({"));
 }

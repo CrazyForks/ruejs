@@ -1580,13 +1580,15 @@ const ThemeCssVarExtractionPreview: FC = () => {
 }
 
 const ThemeTogglePreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
-  const isChecked = activeDemo.value === 'toggle' && activeTheme.value === 'synthwave'
-  const previewTheme = isChecked ? 'synthwave' : 'default'
+  const isChecked = computed(
+    () => activeDemo.value === 'toggle' && activeTheme.value === 'synthwave',
+  )
+  const previewTheme = computed(() => (isChecked.get() ? 'synthwave' : 'default'))
 
   return (
     <ThemeController.Provider
       data-testid="theme-toggle-scope"
-      theme={previewTheme}
+      theme={previewTheme.get()}
       className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
       render={runtime => (
         <div className="flex flex-wrap items-center gap-3">
@@ -1595,7 +1597,7 @@ const ThemeTogglePreview: FC<ControllerPreviewProps> = ({ activeDemo, activeThem
             data-testid="theme-toggle"
             className="toggle"
             value="synthwave"
-            checked={isChecked}
+            checked={isChecked.get()}
             onChange={(event: Event) => {
               const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
               if (nextChecked) {
@@ -1611,7 +1613,7 @@ const ThemeTogglePreview: FC<ControllerPreviewProps> = ({ activeDemo, activeThem
           />
           <span className="label-text">Synthwave</span>
           <span className="text-sm text-base-content/70">
-            当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+            当前 controller 值：{isChecked.get() ? 'synthwave' : '未激活'}
           </span>
           <span className="badge badge-outline">preview theme {runtime.theme}</span>
         </div>
@@ -1621,13 +1623,15 @@ const ThemeTogglePreview: FC<ControllerPreviewProps> = ({ activeDemo, activeThem
 }
 
 const ThemeCheckboxPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
-  const isChecked = activeDemo.value === 'checkbox' && activeTheme.value === 'synthwave'
-  const previewTheme = isChecked ? 'synthwave' : 'default'
+  const isChecked = computed(
+    () => activeDemo.value === 'checkbox' && activeTheme.value === 'synthwave',
+  )
+  const previewTheme = computed(() => (isChecked.get() ? 'synthwave' : 'default'))
 
   return (
     <ThemeController.Provider
       data-testid="theme-checkbox-scope"
-      theme={previewTheme}
+      theme={previewTheme.get()}
       className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
       render={runtime => (
         <div className="flex flex-wrap items-center gap-3">
@@ -1635,7 +1639,7 @@ const ThemeCheckboxPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTh
             data-testid="theme-checkbox"
             className="checkbox"
             value="synthwave"
-            checked={isChecked}
+            checked={isChecked.get()}
             onChange={(event: Event) => {
               const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
               if (nextChecked) {
@@ -1650,7 +1654,7 @@ const ThemeCheckboxPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTh
             }}
           />
           <span className="text-sm text-base-content/70">
-            当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+            当前 controller 值：{isChecked.get() ? 'synthwave' : '未激活'}
           </span>
           <span className="badge badge-outline">preview theme {runtime.theme}</span>
         </div>
@@ -1660,13 +1664,13 @@ const ThemeCheckboxPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTh
 }
 
 const ThemeSwapPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
-  const isChecked = activeDemo.value === 'swap' && activeTheme.value === 'synthwave'
-  const previewTheme = isChecked ? 'synthwave' : 'default'
+  const isChecked = computed(() => activeDemo.value === 'swap' && activeTheme.value === 'synthwave')
+  const previewTheme = computed(() => (isChecked.get() ? 'synthwave' : 'default'))
 
   return (
     <ThemeController.Provider
       data-testid="theme-swap-scope"
-      theme={previewTheme}
+      theme={previewTheme.get()}
       className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
       render={runtime => (
         <div className="flex flex-wrap items-center gap-3">
@@ -1674,7 +1678,7 @@ const ThemeSwapPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme 
             <ThemeController
               data-testid="theme-swap"
               value="synthwave"
-              checked={isChecked}
+              checked={isChecked.get()}
               onChange={(event: Event) => {
                 const nextChecked = (event.target as HTMLInputElement | null)?.checked === true
                 if (nextChecked) {
@@ -1696,7 +1700,7 @@ const ThemeSwapPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme 
             </span>
           </label>
           <span className="text-sm text-base-content/70">
-            当前 controller 值：{isChecked ? 'synthwave' : '未激活'}
+            当前 controller 值：{isChecked.get() ? 'synthwave' : '未激活'}
           </span>
           <span className="badge badge-outline">preview theme {runtime.theme}</span>
         </div>
@@ -1706,18 +1710,18 @@ const ThemeSwapPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme 
 }
 
 const ThemeRadioPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
-  const selectedTheme = activeDemo.value === 'radio' ? activeTheme.value : null
-  const previewTheme = selectedTheme ?? 'default'
+  const selectedTheme = computed(() => (activeDemo.value === 'radio' ? activeTheme.value : null))
+  const previewTheme = computed(() => selectedTheme.get() ?? 'default')
 
   return (
     <ThemeController.Provider
       data-testid="theme-radio-scope"
-      theme={previewTheme}
+      theme={previewTheme.get()}
       className="w-full max-w-md rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
       render={runtime => (
         <Fieldset className="w-full gap-2">
           {['default', 'retro', 'cyberpunk'].map(theme => {
-            const isSelected = selectedTheme === theme
+            const isSelected = selectedTheme.get() === theme
             return (
               <label
                 key={theme}
@@ -1744,7 +1748,7 @@ const ThemeRadioPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme
             )
           })}
           <div className="flex flex-wrap items-center gap-2 pt-1 text-sm text-base-content/70">
-            <span>当前 controller 值：{selectedTheme ?? '未激活'}</span>
+            <span>当前 controller 值：{selectedTheme.get() ?? '未激活'}</span>
             <span className="badge badge-outline">preview theme {runtime.theme}</span>
           </div>
         </Fieldset>
@@ -1754,13 +1758,13 @@ const ThemeRadioPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme
 }
 
 const ThemeButtonGroupPreview: FC<ControllerPreviewProps> = ({ activeDemo, activeTheme }) => {
-  const selectedTheme = activeDemo.value === 'buttons' ? activeTheme.value : null
-  const previewTheme = selectedTheme ?? 'default'
+  const selectedTheme = computed(() => (activeDemo.value === 'buttons' ? activeTheme.value : null))
+  const previewTheme = computed(() => selectedTheme.get() ?? 'default')
 
   return (
     <ThemeController.Provider
       data-testid="theme-buttons-scope"
-      theme={previewTheme}
+      theme={previewTheme.get()}
       className="w-full max-w-xl rounded-[1.5rem] border border-base-300 bg-base-100 p-4 text-base-content shadow-sm transition-colors"
       render={runtime => (
         <div className="space-y-3">
@@ -1772,7 +1776,7 @@ const ThemeButtonGroupPreview: FC<ControllerPreviewProps> = ({ activeDemo, activ
                 type="radio"
                 name="theme-buttons"
                 value={theme}
-                checked={selectedTheme === theme}
+                checked={selectedTheme.get() === theme}
                 onChange={() => {
                   activeDemo.value = 'buttons'
                   activeTheme.value = theme as ThemePresetName
@@ -1783,7 +1787,7 @@ const ThemeButtonGroupPreview: FC<ControllerPreviewProps> = ({ activeDemo, activ
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/70">
-            <span>当前 controller 值：{selectedTheme ?? '未激活'}</span>
+            <span>当前 controller 值：{selectedTheme.get() ?? '未激活'}</span>
             <span className="badge badge-outline">preview theme {runtime.theme}</span>
           </div>
         </div>

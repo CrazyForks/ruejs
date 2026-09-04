@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { TextRenderable } from '../src/server/renderable.js'
 import {
+  createPagesDocumentElement,
   renderPagesRenderableToReadableStream,
   renderPagesRenderableToString,
 } from '../src/server/pages-renderer-adapter.js'
+import Document from '../src/shims/document.js'
+import CompiledDocument from './fixtures/pages-compiled-document.js'
 import {
   ServerProtocolFragment,
   createServerProtocolElement,
@@ -32,6 +35,22 @@ async function readStream(stream: ReadableStream<Uint8Array>): Promise<string> {
 }
 
 describe('pages renderer adapter', () => {
+  it('renders compiled document component output through the Rue server renderer', async () => {
+    const html = await renderPagesRenderableToString(createPagesDocumentElement(Document))
+
+    expect(html).toContain('<html')
+    expect(html).toContain('__TEXT_MAIN__')
+    expect(html).toContain('__TEXT_SCRIPTS__')
+  })
+
+  it('renders a compiler-only custom document through the Rue server renderer', async () => {
+    const html = await renderPagesRenderableToString(createPagesDocumentElement(CompiledDocument))
+
+    expect(html).toContain('<html')
+    expect(html).toContain('__TEXT_MAIN__')
+    expect(html).toContain('__TEXT_SCRIPTS__')
+  })
+
   it('renders host-only Rue protocol trees through the native Pages renderer', async () => {
     const element = createLegacyElement('main', {
       children: [

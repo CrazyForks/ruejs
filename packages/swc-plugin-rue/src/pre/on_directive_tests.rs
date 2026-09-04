@@ -213,7 +213,7 @@ fn rewrites_standard_native_and_safe_event_directives() {
 
     let dom_attr = ident_attr(&dom_opening, "onClick");
     let dom_expr = normalize(&emit_expr(attr_expr(dom_attr).clone()));
-    assert!(dom_expr.contains("_$vaporWithEventModifiers"));
+    assert!(dom_expr.contains("_$compiledWithEventModifiers"));
     assert!(dom_expr.contains(&normalize("submit($event)")));
     assert!(dom_expr.contains(&normalize("\"stop\"")));
     assert!(dom_expr.contains(&normalize("\"prevent\"")));
@@ -223,7 +223,7 @@ fn rewrites_standard_native_and_safe_event_directives() {
 
     let component_attr = ident_attr(&component_opening, "__rueNativeOnClick");
     let component_expr = normalize(&emit_expr(attr_expr(component_attr).clone()));
-    assert!(component_expr.contains("_$vaporWithEventModifiers"));
+    assert!(component_expr.contains("_$compiledWithEventModifiers"));
     assert!(component_expr.contains(&normalize("handleClick($event)")));
     assert!(component_expr.contains(&normalize("\"once\"")));
     assert!(!component_expr.contains(&normalize("\"native\"")));
@@ -233,7 +233,7 @@ fn rewrites_standard_native_and_safe_event_directives() {
 
     let safe_attr = ident_attr(&safe_opening, "onKeyup");
     let safe_expr = normalize(&emit_expr(attr_expr(safe_attr).clone()));
-    assert!(safe_expr.contains("_$vaporWithEventModifiers"));
+    assert!(safe_expr.contains("_$compiledWithEventModifiers"));
     assert!(safe_expr.contains(&normalize("($event)=>{}")));
     assert!(safe_expr.contains(&normalize("\"enter\"")));
 }
@@ -349,7 +349,7 @@ fn hardens_event_parser_empty_modifier_and_namespace_edges() {
     transform_opening(&mut component);
     let native = ident_attr(&component, "__rueNativeOnFocus");
     let native_src = normalize(&emit_expr(attr_expr(native).clone()));
-    assert!(native_src.contains("_$vaporWithEventModifiers"));
+    assert!(native_src.contains("_$compiledWithEventModifiers"));
     assert!(native_src.contains("\"001\""));
     assert!(!native_src.contains("\"native\""));
 
@@ -383,7 +383,7 @@ fn hardens_more_event_suffix_and_hyphen_modifier_fallbacks() {
     transform_opening(&mut opening);
     let attr = ident_attr(&opening, "onKeyup");
     let out = normalize(&emit_expr(attr_expr(attr).clone()));
-    assert!(out.contains("_$vaporWithEventModifiers"));
+    assert!(out.contains("_$compiledWithEventModifiers"));
     assert!(out.contains("\"enter\""));
     assert!(out.contains("\"once\""));
 }
@@ -405,7 +405,7 @@ fn hardens_safe_native_event_names_and_inline_statement_handlers() {
 
     let attr = ident_attr(&component, "__rueNativeOnPointerDown");
     let out = normalize(&emit_expr(attr_expr(attr).clone()));
-    assert!(out.contains("_$vaporWithEventModifiers"), "{out}");
+    assert!(out.contains("_$compiledWithEventModifiers"), "{out}");
     assert!(out.contains("count++"), "{out}");
     assert!(out.contains("submit($event)"), "{out}");
     assert!(out.contains("\"capture\""), "{out}");
@@ -416,7 +416,7 @@ fn hardens_safe_native_event_names_and_inline_statement_handlers() {
     transform_opening(&mut dom);
     let dom_attr = ident_attr(&dom, "onKeyup");
     let dom_out = normalize(&emit_expr(attr_expr(dom_attr).clone()));
-    assert!(dom_out.contains("_$vaporWithEventModifiers"), "{dom_out}");
+    assert!(dom_out.contains("_$compiledWithEventModifiers"), "{dom_out}");
     assert!(dom_out.contains("\"enter\""), "{dom_out}");
     assert!(dom_out.contains("\"once\""), "{dom_out}");
 }
@@ -437,7 +437,7 @@ fn hardens_dot_native_events_and_empty_string_handlers() {
 
     let attr = ident_attr(&component, "__rueNativeOnClick");
     let out = normalize(&emit_expr(attr_expr(attr).clone()));
-    assert!(out.contains("_$vaporWithEventModifiers"), "{out}");
+    assert!(out.contains("_$compiledWithEventModifiers"), "{out}");
     assert!(out.contains("($event)=>{}"), "{out}");
     assert!(out.contains("\"once\""), "{out}");
     assert!(!out.contains("\"native\""), "{out}");

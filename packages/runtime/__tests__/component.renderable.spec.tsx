@@ -1,9 +1,22 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+import swc from '@swc/core'
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   Component,
   Teleport,
-  h,
   render,
   renderAnchor,
   setReactiveScheduling,
@@ -11,16 +24,19 @@ import {
   useSetup,
   useState,
   useApp,
-  vapor,
   watchEffect,
   type FC,
 } from '../src'
 import {
   _$createComponent,
-  _$vaporMarkComponentRenderReactive,
-  _$vaporWithHookId,
-} from '../src/vapor'
+  _$compiledMarkComponentRenderReactive,
+  _$compiledWithHookId,
+} from './legacy-test-render'
+import { vapor } from './legacy-test-render'
 import { waitForContent } from './page-test-utils'
+
+const createLegacyVapor = (renderFn: Parameters<typeof _$compiledVapor>[0]) =>
+  _$compiledVapor(renderFn)
 
 setReactiveScheduling('sync')
 
@@ -33,22 +49,62 @@ const flush = async () => {
   await Promise.resolve()
 }
 
+const compileRuntimeFixture = (source: string) => {
+  const pluginPath = resolve(process.cwd(), 'packages/swc-plugin-rue/swc-plugin-rue.wasm')
+  expect(readFileSync(pluginPath).byteLength).toBeGreaterThan(0)
+  return swc.transformSync(source, {
+    filename: 'runtime-compiler-only-fixture.tsx',
+    jsc: {
+      parser: { syntax: 'typescript', tsx: true },
+      target: 'es2020',
+      transform: {
+        react: {
+          runtime: 'automatic',
+          importSource: '@rue-js',
+          development: false,
+          throwIfNamespace: false,
+        },
+      },
+      experimental: { plugins: [[pluginPath, {}]] },
+    },
+    module: { type: 'es6' },
+  }).code
+}
+
 describe('Component renderable boundary', () => {
+  it('compiles representative runtime TSX without a tree factory or JSX runtime fallback', () => {
+    const output = compileRuntimeFixture(`
+      const Child = props => <strong>{props.label}</strong>
+      export const View = () => <main><Child label="compiled" /></main>
+    `)
+
+    expect(output).toContain('_$mountCompiledComponent')
+    expect(output).not.toMatch(/\bh\s*\(/)
+    expect(output).not.toContain('jsx-runtime')
+  })
+
   it('tracks an explicitly marked portable JSX render closure', async () => {
     const host = document.createElement('div')
     const active = signal(false)
-    const Preview = _$vaporMarkComponentRenderReactive((() =>
-      h(
-        'button',
-        {
-          'data-testid': 'reactive-preview',
-          onClick: () => active.set(!active.get()),
-        },
-        active.get() ? 'active' : 'idle',
-      )) as FC)
+    const Preview = _$compiledMarkComponentRenderReactive((() =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('button', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'reactive-preview',
+            onClick: () => active.set(!active.get()),
+            children: active.get() ? 'active' : 'idle',
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })) as FC)
 
     document.body.appendChild(host)
-    render(h(Preview, null) as any, host)
+    render(_$createDynamic(Preview, null) as any, host)
     await flush()
 
     const button = host.querySelector('[data-testid="reactive-preview"]') as HTMLButtonElement
@@ -73,11 +129,24 @@ describe('Component renderable boundary', () => {
       }
 
       render() {
-        return <span data-testid="class-shell">{this.props.label}</span>
+        return _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('span', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = {
+              'data-testid': 'class-shell',
+              children: this.props.label,
+            } as Record<string, any>
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        })
       }
     }
 
-    render(h(ClassShell as any, { label: 'class' }) as any, host)
+    render(_$createDynamic(ClassShell as any, { label: 'class' }) as any, host)
     await flush()
 
     expect(host.querySelector('[data-testid="class-shell"]')?.textContent).toBe('class')
@@ -119,7 +188,10 @@ describe('Component renderable boundary', () => {
     }
 
     render(
-      h(Boundary as any, { onCatch: () => catchCount++ }, h(Thrower as any, null)) as any,
+      _$createDynamic(Boundary as any, {
+        onCatch: () => catchCount++,
+        children: _$createDynamic(Thrower as any, null),
+      }) as any,
       host,
     )
     await flush()
@@ -135,9 +207,11 @@ describe('Component renderable boundary', () => {
     document.body.appendChild(host)
 
     render(
-      <component is="a" href="#docs" data-testid="link">
-        docs
-      </component>,
+      _$createDynamic('a', {
+        href: '#docs',
+        'data-testid': 'link',
+        children: 'docs',
+      }),
       host,
     )
     await flush()
@@ -155,11 +229,27 @@ describe('Component renderable boundary', () => {
     document.body.appendChild(host)
 
     render(
-      <section>
-        <component is={null as any}>missing</component>
-        <component is="component">reserved</component>
-        <Component is={Component}>self</Component>
-      </section>,
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('section', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            children: [
+              _$createDynamic((null as any) === 'component' ? null : (null as any), {
+                children: 'missing',
+              }),
+              _$createDynamic('component' === 'component' ? null : 'component', {
+                children: 'reserved',
+              }),
+              _$createDynamic(Component, { is: Component, children: 'self' }),
+            ],
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      }),
       host,
     )
     await flush()
@@ -177,7 +267,21 @@ describe('Component renderable boundary', () => {
 
     document.body.appendChild(host)
 
-    const StrongView: FC = props => <strong data-testid="strong">{props.children}</strong>
+    const StrongView: FC = props =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('strong', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'strong',
+            children: props.children,
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const App: FC = () =>
       vapor(() => {
@@ -186,11 +290,10 @@ describe('Component renderable boundary', () => {
 
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
+          const target = asComponent.get() ? StrongView : 'span'
           renderAnchor(
-            <component is={asComponent.get() ? StrongView : 'span'} data-testid="dynamic">
-              {label.get()}
-            </component>,
+            _$createDynamic(target, { 'data-testid': 'dynamic', children: label.get() }),
             root as any,
             anchor as any,
           )
@@ -199,7 +302,7 @@ describe('Component renderable boundary', () => {
         return root as any
       }) as any
 
-    render(<App />, host)
+    render(_$createDynamic(App, null), host)
     await flush()
 
     expect(host.querySelector('[data-testid="dynamic"]')?.tagName.toLowerCase()).toBe('span')
@@ -219,8 +322,22 @@ describe('Component renderable boundary', () => {
 
     document.body.appendChild(host)
 
-    const CardView: FC = props => <article data-testid="card">{props.children}</article>
-    const App: FC = () => <Component is="CardView">registered</Component>
+    const CardView: FC = props =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('article', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'card',
+            children: props.children,
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
+    const App: FC = () => _$createDynamic(Component, { is: 'CardView', children: 'registered' })
 
     useApp(App).component('CardView', CardView).mount(host)
 
@@ -236,11 +353,22 @@ describe('Component renderable boundary', () => {
 
     document.body.appendChild(host)
 
-    const Shell: FC<{ active: boolean }> = props => (
-      <div data-testid="shell" className={props.active ? 'on' : 'off'}>
-        {props.children}
-      </div>
-    )
+    const Shell: FC<{ active: boolean }> = props =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('div', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'shell',
+            className: props.active ? 'on' : 'off',
+            children: props.children,
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const App: FC = () =>
       vapor(() => {
@@ -249,13 +377,41 @@ describe('Component renderable boundary', () => {
 
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(
-            <Shell active={active.get()}>
-              <svg data-testid="shell-icon" viewBox="0 0 10 10" aria-hidden="true">
-                <circle cx="5" cy="5" r="4" />
-              </svg>
-            </Shell>,
+            _$createDynamic(Shell, {
+              active: active.get(),
+              children: _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('svg', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    'data-testid': 'shell-icon',
+                    viewBox: '0 0 10 10',
+                    'aria-hidden': 'true',
+                    children: _$compiledVapor(_$parentContext => {
+                      const _$root = _$compiledCreateElement('circle', _$parentContext)
+                      const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                      _$compiledAppendChild(_$root, _$anchor)
+                      _$compiledWatchEffect(() => {
+                        const { children: _$children, ..._$attributes } = {
+                          cx: '5',
+                          cy: '5',
+                          r: '4',
+                        } as Record<string, any>
+                        _$compiledSpreadAttributes(_$root, _$attributes)
+                        _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                      })
+                      return _$root
+                    }),
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
+              }),
+            }),
             root as any,
             anchor as any,
           )
@@ -264,7 +420,7 @@ describe('Component renderable boundary', () => {
         return root as any
       }) as any
 
-    render(<App />, host)
+    render(_$createDynamic(App, null), host)
     await flush()
 
     expect((host.querySelector('[data-testid="shell"]') as HTMLElement).className).toContain('on')
@@ -286,24 +442,100 @@ describe('Component renderable boundary', () => {
 
     document.body.appendChild(host)
 
-    const MailGlyph: FC = () => (
-      <svg data-testid="mail-icon" viewBox="0 0 10 10" aria-hidden="true">
-        <rect x="1" y="2" width="8" height="6" rx="1" />
-      </svg>
-    )
+    const MailGlyph: FC = () =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('svg', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'mail-icon',
+            viewBox: '0 0 10 10',
+            'aria-hidden': 'true',
+            children: _$compiledVapor(_$parentContext => {
+              const _$root = _$compiledCreateElement('rect', _$parentContext)
+              const _$anchor = _$compiledCreateComment('rue:children:anchor')
+              _$compiledAppendChild(_$root, _$anchor)
+              _$compiledWatchEffect(() => {
+                const { children: _$children, ..._$attributes } = {
+                  x: '1',
+                  y: '2',
+                  width: '8',
+                  height: '6',
+                  rx: '1',
+                } as Record<string, any>
+                _$compiledSpreadAttributes(_$root, _$attributes)
+                _$compiledRenderAnchor(_$children, _$root, _$anchor)
+              })
+              return _$root
+            }),
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
-    const BellGlyph: FC = () => (
-      <svg data-testid="bell-icon" viewBox="0 0 10 10" aria-hidden="true">
-        <path d="M5 1.5a2.5 2.5 0 0 1 2.5 2.5c0 2 .8 2.8.8 2.8H1.7S2.5 6 2.5 4A2.5 2.5 0 0 1 5 1.5Z" />
-      </svg>
-    )
+    const BellGlyph: FC = () =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('svg', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'bell-icon',
+            viewBox: '0 0 10 10',
+            'aria-hidden': 'true',
+            children: _$compiledVapor(_$parentContext => {
+              const _$root = _$compiledCreateElement('path', _$parentContext)
+              const _$anchor = _$compiledCreateComment('rue:children:anchor')
+              _$compiledAppendChild(_$root, _$anchor)
+              _$compiledWatchEffect(() => {
+                const { children: _$children, ..._$attributes } = {
+                  d: 'M5 1.5a2.5 2.5 0 0 1 2.5 2.5c0 2 .8 2.8.8 2.8H1.7S2.5 6 2.5 4A2.5 2.5 0 0 1 5 1.5Z',
+                } as Record<string, any>
+                _$compiledSpreadAttributes(_$root, _$attributes)
+                _$compiledRenderAnchor(_$children, _$root, _$anchor)
+              })
+              return _$root
+            }),
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
-    const IconShell: FC<{ icon: any; label: string }> = props => (
-      <button data-testid="icon-shell">
-        {props.icon}
-        <span>{props.label}</span>
-      </button>
-    )
+    const IconShell: FC<{ icon: any; label: string }> = props =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('button', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'icon-shell',
+            children: [
+              props.icon,
+              _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('span', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    children: props.label,
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
+              }),
+            ],
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const App: FC = () =>
       vapor(() => {
@@ -312,12 +544,15 @@ describe('Component renderable boundary', () => {
 
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(
-            <IconShell
-              icon={iconTone.get() === 'mail' ? <MailGlyph /> : <BellGlyph />}
-              label="channel"
-            />,
+            _$createDynamic(IconShell, {
+              icon:
+                iconTone.get() === 'mail'
+                  ? _$createDynamic(MailGlyph, null)
+                  : _$createDynamic(BellGlyph, null),
+              label: 'channel',
+            }),
             root as any,
             anchor as any,
           )
@@ -326,7 +561,7 @@ describe('Component renderable boundary', () => {
         return root as any
       }) as any
 
-    render(<App />, host)
+    render(_$createDynamic(App, null), host)
     await flush()
 
     expect(host.querySelector('[data-testid="mail-icon"]')).toBeTruthy()
@@ -341,7 +576,7 @@ describe('Component renderable boundary', () => {
     expect(host.textContent).toContain('channel')
   })
 
-  it('keeps ref props read by h-created child components live across updates', async () => {
+  it('keeps ref props read by compiled child components live across updates', async () => {
     const host = document.createElement('div')
     let setCount: (value: number | ((ref: { value: number }) => number | void)) => void = () => {}
 
@@ -355,7 +590,7 @@ describe('Component renderable boundary', () => {
         root.setAttribute('data-testid', 'counter-value')
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(props.count.value, root as any, anchor as any)
         })
 
@@ -366,10 +601,22 @@ describe('Component renderable boundary', () => {
       const [count, updateCount] = useState(0, { kind: 'ref' })
       setCount = updateCount
 
-      return h('section', null, h(CounterValue, { count }))
+      return _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('section', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            children: _$createDynamic(CounterValue, { count }),
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     }
 
-    render(h(App, null), host)
+    render(_$createDynamic(App, null), host)
     await flush()
 
     expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')
@@ -425,7 +672,7 @@ describe('Component renderable boundary', () => {
       )
     }
 
-    render(<Parent />, host)
+    render(_$createDynamic(Parent, null), host)
     await flush()
 
     ;(target.querySelector('[data-testid="format"]') as HTMLButtonElement).click()
@@ -455,7 +702,7 @@ describe('Component renderable boundary', () => {
         root.setAttribute('data-testid', 'counter-value')
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(props.count.value, root as any, anchor as any)
         })
 
@@ -463,15 +710,15 @@ describe('Component renderable boundary', () => {
       }) as any
 
     const CounterDemo: FC = () => {
-      const setupState = _$vaporWithHookId('useSetup:counter-demo', () =>
+      const setupState = _$compiledWithHookId('useSetup:counter-demo', () =>
         useSetup(() => {
-          const [count, setCount] = _$vaporWithHookId('useState:counter-demo', () =>
+          const [count, setCount] = _$compiledWithHookId('useState:counter-demo', () =>
             useState(0, { kind: 'ref' }),
           )
-          _$vaporWithHookId('useSetup:counter-demo-watch', () =>
+          _$compiledWithHookId('useSetup:counter-demo-watch', () =>
             useSetup(() => {
-              _$vaporWithHookId('watchEffect:counter-demo', () =>
-                watchEffect(() => {
+              _$compiledWithHookId('watchEffect:counter-demo', () =>
+                _$compiledWatchEffect(() => {
                   void count.value
                 }),
               )
@@ -483,29 +730,59 @@ describe('Component renderable boundary', () => {
       )
       const { count, setCount } = setupState
 
-      return h(
-        'div',
-        null,
-        h(CounterValue, { count }),
-        h(
-          'button',
-          {
-            onClick: () =>
-              setCount(value => {
-                value.value += 1
+      return _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('div', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            children: [
+              _$createDynamic(CounterValue, { count }),
+              _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('button', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    onClick: () =>
+                      setCount(value => {
+                        value.value += 1
+                      }),
+                    children: '+1',
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
               }),
-          },
-          '+1',
-        ),
-      )
+            ],
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     }
 
     const renderPlaygroundContent = (props: { children?: unknown }) => {
-      const content = showingPreview.get() ? (
-        <section data-testid="preview">{props.children}</section>
-      ) : (
-        <section data-testid="code">code</section>
-      )
+      const createContent = (testId: string, children: unknown) =>
+        createLegacyVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('section', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = {
+              'data-testid': testId,
+              children,
+            } as Record<string, any>
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        })
+      const content = showingPreview.get()
+        ? createContent('preview', props.children)
+        : createContent('code', 'code')
 
       return vapor(() => {
         const root = document.createDocumentFragment()
@@ -525,14 +802,28 @@ describe('Component renderable boundary', () => {
 
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(renderPlaygroundContent(props), root as any, anchor as any)
         })
 
         return root as any
       }) as any
 
-    const MockSidebar: FC = props => <div data-testid="mock-sidebar">{props.children}</div>
+    const MockSidebar: FC = props =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('div', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'mock-sidebar',
+            children: props.children,
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const ExamplePage: FC = () => {
       const child = _$createComponent(CounterDemo, {})
@@ -543,7 +834,7 @@ describe('Component renderable boundary', () => {
 
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(_$createComponent(PreviewSwitcher, { children: child }), root as any, anchor)
         })
 
@@ -551,7 +842,7 @@ describe('Component renderable boundary', () => {
       }) as any
     }
 
-    render(<ExamplePage />, host)
+    render(_$createDynamic(ExamplePage, null), host)
     await flush()
 
     expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')

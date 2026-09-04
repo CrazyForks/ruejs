@@ -72,6 +72,11 @@ export const SECTIONS_BY_TYPE: Record<'examples', SidebarSection[]> = {
           href: '/examples/conditionals-and-loops',
         },
         {
+          id: 'compiled-control-flow',
+          title: 'Compiled 顶层控制流',
+          href: '/examples/compiled-control-flow',
+        },
+        {
           id: 'form-bindings',
           title: '表单绑定',
           href: '/examples/form-bindings',

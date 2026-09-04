@@ -4,7 +4,8 @@
  * onErrorCaptured 将处理器登记在当前组件实例及其关联 Context owner 上；
  * dispatchErrorCaptured 则沿组件父链向上冒泡，遇到返回 false 的处理器即停止继续传播。
  */
-import { getCurrentInstance, withHookSlot } from '@rue-js/runtime-vapor/reactive'
+import { getCurrentInstance, withHookSlot } from './runtime-core/reactive'
+import { getOwnerParent } from './reactive-core'
 
 /** 组件实例上保存 errorCaptured handlers 的非枚举内部字段。 */
 const RUE_ERROR_CAPTURE_HANDLERS_KEY = '__rue_error_capture_handlers__'
@@ -41,6 +42,15 @@ type ErrorCaptureRuntimeBridge = {
 
 /** 已经走过 errorCaptured 冒泡的 Error 对象，用于避免全局桥接重复派发。 */
 const dispatchedErrors = new WeakSet<object>()
+const retainedRootMountErrors = new WeakSet<object>()
+
+/** 标记根 render 已失败；其容器保留原错误，避免在未知组件状态上接管。 */
+export const retainRootMountError = (error: unknown): void => {
+  if (isObjectLike(error)) retainedRootMountErrors.add(error)
+}
+
+export const shouldRetainRootMountError = (error: unknown): boolean =>
+  isObjectLike(error) && retainedRootMountErrors.has(error)
 
 /** 判断值是否能承载内部 owner 字段。 */
 const isObjectLike = (value: unknown): value is Record<string, unknown> =>
@@ -71,6 +81,11 @@ const getParentErrorCaptureInstance = (instance: unknown) => {
   const directParent = owner[RUE_CONTEXT_PARENT_INSTANCE_PROP]
   if (directParent != null && directParent !== instance) {
     return directParent
+  }
+
+  const compiledParent = getOwnerParent(owner)
+  if (compiledParent != null && compiledParent !== instance) {
+    return compiledParent
   }
 
   const props = owner.propsRO
@@ -137,9 +152,9 @@ export const onErrorCaptured = (fn: ErrorCapturedHook) => {
     if (slot.registered.length > 0) {
       ;(
         globalThis as typeof globalThis & {
-          __rue_runtime_vapor_shared_bridge?: ErrorCaptureRuntimeBridge
+          __rue_compiled_runtime_bridge?: ErrorCaptureRuntimeBridge
         }
-      ).__rue_runtime_vapor_shared_bridge?.activateEffectOwnerTracking?.()
+      ).__rue_compiled_runtime_bridge?.activateEffectOwnerTracking?.()
     }
   }
 

@@ -90,7 +90,7 @@ describe('Rue Design package contract', () => {
     vi.unstubAllGlobals()
   }, packageSetupTimeout)
 
-  it('packs component runtimes, shared chunks, and declarations without source tests', () => {
+  it('packs self-contained component runtimes and declarations without source tests', () => {
     expect(packedFiles).toEqual(
       expect.arrayContaining([
         'dist/components/esm/button.js',
@@ -101,7 +101,7 @@ describe('Rue Design package contract', () => {
         'dist/__types/src/components/color-picker/index.d.ts',
       ]),
     )
-    expect(packedFiles.some(file => file.startsWith('dist/components/esm/_chunks/'))).toBe(true)
+    expect(packedFiles.some(file => file.startsWith('dist/components/esm/_chunks/'))).toBe(false)
     expect(packedFiles.some(file => file.startsWith('dist/components/cjs/'))).toBe(false)
     expect(packedFiles.some(file => file.startsWith('src/'))).toBe(false)
     expect(packedFiles.some(file => /(?:^|\/)__tests__(?:\/|$)|\.(?:spec|test)\./.test(file))).toBe(
@@ -133,7 +133,8 @@ describe('Rue Design package contract', () => {
           emptyOutDir: true,
           rollupOptions: {
             input: entryFile,
-            external: ['@rue-js/router', '@rue-js/rue', '@rue-js/rue/vapor', '@rue-js/shared'],
+            external: id =>
+              /^@rue-js\/(?:router|rue|runtime|shared)(?:\/|$)/.test(id) || id === 'csstype',
           },
         },
       }),
@@ -199,14 +200,15 @@ describe('Rue Design package contract', () => {
         '--moduleResolution',
         'Bundler',
         '--target',
-        'ES2021',
+        'ES2022',
         '--skipLibCheck',
         'contract.ts',
       ],
       { cwd: consumerDir, encoding: 'utf8', stdio: 'pipe' },
     )
-    expect(`${typeCheck.stdout}${typeCheck.stderr}`).toBe('')
-    expect(typeCheck.status).toBe(0)
+    const typeCheckOutput = `${typeCheck.stdout}${typeCheck.stderr}`
+    expect(typeCheck.status, typeCheckOutput).toBe(0)
+    expect(typeCheckOutput).toBe('')
   })
 
   it('uses the published ESM artifact for the root development condition', async () => {

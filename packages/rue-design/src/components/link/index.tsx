@@ -212,6 +212,7 @@ const toText = (value: any): string => {
   if (value == null || value === false || value === true) return ''
   if (typeof value === 'string' || typeof value === 'number') return String(value)
   if (Array.isArray(value)) return value.map(item => toText(item)).join('')
+  if (typeof value === 'function' && value.length === 0) return toText(value())
   if (typeof value === 'object') {
     if ('props' in value && (value as any).props?.children !== undefined) {
       return toText((value as any).props.children)
@@ -733,6 +734,12 @@ const Link: FC<LinkProps> = ({
 
   const setEllipsisTextRef = (element: HTMLElement | null) => {
     ellipsisTextElement = element ?? undefined
+    if (element && title === undefined && ellipsisConfig.tooltip !== false) {
+      Promise.resolve().then(() => {
+        const fallbackTitle = element.textContent ?? ''
+        if (fallbackTitle) element.setAttribute('title', fallbackTitle)
+      })
+    }
 
     if (resizeObserver) {
       resizeObserver.disconnect()
@@ -964,7 +971,6 @@ const Link: FC<LinkProps> = ({
       )
     }
 
-    const titleProps = titleValue !== undefined ? { title: titleValue } : {}
     const resolveTextClassName = () =>
       getIsExpanded()
         ? 'min-w-0 max-w-full whitespace-normal break-words align-bottom'
@@ -990,7 +996,7 @@ const Link: FC<LinkProps> = ({
             data-rue-link-ellipsis-rows={String(ellipsisConfig.rows)}
             className={resolveTextClassName()}
             style={mergeStyles(resolveTextStyle(), { minWidth: 0 })}
-            {...titleProps}
+            title={titleValue}
           >
             <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
               {children}
@@ -1010,7 +1016,7 @@ const Link: FC<LinkProps> = ({
         data-rue-link-ellipsis-rows={String(ellipsisConfig.rows)}
         className={resolveTextClassName()}
         style={resolveTextStyle()}
-        {...titleProps}
+        title={titleValue}
       >
         <DecoratedContent mark={mark} code={code} keyboard={keyboard}>
           {children}

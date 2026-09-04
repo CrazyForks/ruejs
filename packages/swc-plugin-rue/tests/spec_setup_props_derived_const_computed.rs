@@ -46,20 +46,12 @@ const Comp: FC<Props> = ({ showSearch, label = 'fallback' }) => {
     )
     .ok();
 
-    assert!(normalized.contains(&utils::normalize(
-        r#"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";"#,
-    )));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+
+    assert!(normalized.contains(&utils::normalize(r#"const count = ref(0);"#,)));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#,
-    )));
-
-    assert!(normalized.contains(&utils::normalize(
-        r#"const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));"#,
-    )));
-
-    assert!(normalized.contains(&utils::normalize(
-      r#"const searchConfig = _$vaporWithHookId("computed:1:1", ()=>computed(()=>normalizeSearchConfig(__rue_props.showSearch)));"#,
+        r#"const searchConfig = computed(()=>normalizeSearchConfig(__rue_props.showSearch));"#,
     )));
 
     assert!(
@@ -68,15 +60,15 @@ const Comp: FC<Props> = ({ showSearch, label = 'fallback' }) => {
     );
 
     assert!(normalized.contains(&utils::normalize(
-      r#"const summary = _$vaporWithHookId("computed:1:2", ()=>computed(()=>`${(__rue_props.label === void 0 ? 'fallback' : __rue_props.label)}:${__rue_phase2_searchConfig.get().placeholder}`));"#,
+      r#"const summary = computed(()=>`${(__rue_props.label === void 0 ? 'fallback' : __rue_props.label)}:${__rue_phase2_searchConfig.get().placeholder}`);"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"return { count: count, searchConfig: searchConfig, summary: summary };"#,
+        r#"return { count: count, searchConfig: searchConfig, __rue_phase2_searchConfig: __rue_phase2_searchConfig, summary: summary, __rue_phase2_summary: __rue_phase2_summary };"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const { count: count, searchConfig: searchConfig, summary: summary } = _$useSetup;"#,
+        r#"const { count: count, searchConfig: searchConfig, __rue_phase2_searchConfig: __rue_phase2_searchConfig, summary: summary, __rue_phase2_summary: __rue_phase2_summary } = _$useSetup;"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(
@@ -113,16 +105,14 @@ const Comp: FC = () => {
     let normalized = utils::normalize(&utils::strip_marker(&out));
     println!("{}", normalized);
 
-    assert!(normalized.contains(&utils::normalize(
-        r#"const rows = _$vaporWithHookId("computed:1:3", ()=>computed(()=>["#,
-    )));
+    assert!(normalized.contains(&utils::normalize(r#"const rows = computed(()=>["#,)));
     assert!(normalized.contains(&utils::normalize(r#"{ name: 'ref', value: count.value }"#,)));
     assert!(normalized.contains(&utils::normalize(r#"{ name: 'reactive', value: state.name }"#,)));
     assert!(normalized.contains(&utils::normalize(
         r#"return <table>{rows.get().map((row, idx)=><tr key={idx}><td>{row.value}</td></tr>)}</table>;"#,
     )));
     assert!(normalized.contains(&utils::normalize(
-        r#"const { count: count, shallow: shallow, state: state, nameRef: nameRef, doubled: doubled, rows: rows } = _$useSetup;"#,
+        r#"const { count: count, shallow: shallow, state: state, nameRef: nameRef, doubled: doubled, rows: rows, __rue_phase2_rows: __rue_phase2_rows } = _$useSetup;"#,
     )));
 }
 
@@ -156,19 +146,22 @@ fn preserves_hygiene_for_nested_props_derived_computed_reads() {
 
     assert!(normalized.contains(&utils::normalize(
       r#"const __rue_phase2_count = count;
-      const meterWidth = _$vaporWithHookId("computed:1:1", ()=>computed(()=>`${Math.max(8, Math.min(__rue_phase2_count.get() * 9, 100))}%`));"#,
+      const meterWidth = computed(()=>`${Math.max(8, Math.min(__rue_phase2_count.get() * 9, 100))}%`);"#,
     )));
 
     assert!(!normalized.contains(&utils::normalize(
-      r#"const meterWidth = _$vaporWithHookId("computed:1:1", ()=>computed(()=>`${Math.max(8, Math.min(count.get() * 9, 100))}%`));"#,
+      r#"const meterWidth = _$compiledWithHookId("computed:1:1", ()=>computed(()=>`${Math.max(8, Math.min(count.get() * 9, 100))}%`));"#,
     )));
 
+    assert!(normalized.contains(&utils::normalize(r#"const __child1_raw = count.get();"#,)));
     assert!(normalized.contains(&utils::normalize(
-        r#"_$setAttribute(_root, "data-count", String(count.get()));"#,
+        r#"_el1.setAttribute("data-count", String(__child1_next));"#,
     )));
 
-    assert!(normalized.contains(&utils::normalize(r#"const __slot = meterWidth.get();"#,)));
-    assert!(normalized.contains(&utils::normalize(r#"renderAnchor(__slot, _root, _list1)"#,)));
+    assert!(
+        normalized.contains(&utils::normalize(r#"_$compiledText(_el4, ()=>meterWidth.get());"#,))
+    );
+    assert!(!normalized.contains("renderAnchor("));
 }
 
 #[test]
@@ -203,9 +196,9 @@ const Comp: FC<Props> = ({ showSearch }) => {
     println!("{}", normalized);
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+        r#"const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
         const searchConfig = normalizeSearchConfig(__rue_props.showSearch);
-        const searchValueRef = _$vaporWithHookId("ref:1:0", ()=>ref(searchConfig.defaultValue));
+        const searchValueRef = ref(searchConfig.defaultValue);
         return {
             searchConfig: searchConfig,
             searchValueRef: searchValueRef
@@ -253,9 +246,11 @@ const Comp: FC<Props> = ({ showSearch }) => {
     assert!(normalized.contains(&utils::normalize(
         r#"const searchConfig = normalizeSearchConfig(__rue_props.showSearch);"#,
     )));
-    assert!(normalized.contains(&utils::normalize(
-        r#"const state = _$vaporWithHookId("useState:1:0", ()=>useState(()=>searchConfig.defaultValue));"#,
-    )));
+    assert!(
+        normalized.contains(&utils::normalize(
+            r#"const state = useState(()=>searchConfig.defaultValue);"#,
+        ))
+    );
     assert!(!normalized.contains("computed(()=>normalizeSearchConfig(__rue_props.showSearch))"));
     assert!(normalized.contains(&utils::normalize(r#"return <div>{state[0].value}</div>;"#,)));
 }
@@ -303,9 +298,10 @@ const Comp: FC<Props> = ({ showSearch }) => {
         normalized
             .contains(&utils::normalize(r#"const initialSearchValue = getInitialSearchValue();"#,))
     );
-    assert!(normalized.contains(&utils::normalize(
-        r#"const searchValueRef = _$vaporWithHookId("ref:1:0", ()=>ref(initialSearchValue));"#,
-    )));
+    assert!(
+        normalized
+            .contains(&utils::normalize(r#"const searchValueRef = ref(initialSearchValue);"#,))
+    );
     assert!(!normalized.contains("computed(()=>normalizeSearchConfig(__rue_props.showSearch))"));
     assert!(
         normalized.contains(&utils::normalize(r#"return <div>{searchValueRef.value}</div>;"#,))
@@ -352,9 +348,7 @@ const Comp: FC<Props> = ({ showSearch }) => {
         r#"const getInitialSearchValue = ()=>searchConfig.defaultValue.trim();"#,
     )));
     assert!(normalized.contains(&utils::normalize(r#"const lazyInit = getInitialSearchValue;"#,)));
-    assert!(normalized.contains(&utils::normalize(
-        r#"const state = _$vaporWithHookId("useState:1:0", ()=>useState(lazyInit));"#,
-    )));
+    assert!(normalized.contains(&utils::normalize(r#"const state = useState(lazyInit);"#,)));
     assert!(!normalized.contains("computed(()=>normalizeSearchConfig(__rue_props.showSearch))"));
     assert!(normalized.contains(&utils::normalize(r#"return <div>{state[0].value}</div>;"#,)));
 }
@@ -392,7 +386,7 @@ const Comp: FC<Props> = ({ showSearch }) => {
     println!("{}", normalized);
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const searchConfig = _$vaporWithHookId("computed:1:0", ()=>computed(()=>normalizeSearchConfig(__rue_props.showSearch)));"#,
+        r#"const searchConfig = computed(()=>normalizeSearchConfig(__rue_props.showSearch));"#,
     )));
     assert!(normalized.contains(&utils::normalize(
         r#"const __rue_phase2_searchConfig = searchConfig;

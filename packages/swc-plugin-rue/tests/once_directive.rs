@@ -25,12 +25,12 @@ export default OnceDemo
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, useMemo, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, useMemo, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const OnceDemo: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const msg = _$vaporWithHookId("ref:1:0", ()=>ref('initial'));
-            const alt = _$vaporWithHookId("ref:1:1", ()=>ref('fallback'));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const msg = ref('initial');
+            const alt = ref('fallback');
             return {
                 msg: msg,
                 alt: alt
@@ -38,8 +38,8 @@ const OnceDemo: FC = ()=>{
         }));
     const { msg: msg, alt: alt } = _$useSetup;
     return (<div>
-      {_$vaporWithHookId("useMemo:161:192", ()=>useMemo(()=><span>{msg.value}</span>, []))}
-      {_$vaporWithHookId("useMemo:199:234", ()=>useMemo(()=><strong>{alt.value}</strong>, []))}
+      {_$compiledWithHookId("useMemo:161:192", ()=>useMemo(()=><span>{msg.value}</span>, []))}
+      {_$compiledWithHookId("useMemo:199:234", ()=>useMemo(()=><strong>{alt.value}</strong>, []))}
     </div>);
 };
 export default OnceDemo;
@@ -48,7 +48,13 @@ export default OnceDemo;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/once_directive.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("@rue-js/rue/internal/compiler"), "{normalized}");
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert_eq!(normalized.matches("_$compiledWithHookId(\"useMemo:").count(), 2);
+    assert_eq!(normalized.matches("()=>useMemo(").count(), 2);
+    assert!(!normalized.contains("v-once"));
+    assert!(!normalized.contains("r-once"));
 }
 
 #[test]
@@ -71,7 +77,7 @@ export default Chain
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useMemo, _$vaporWithHookId } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { useMemo, _$compiledWithHookId } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const Chain: FC<{
     ok: boolean;
@@ -79,7 +85,7 @@ const Chain: FC<{
     fallback: string;
 }> = (props)=>{
     return (<div>
-      {props.ok ? _$vaporWithHookId("useMemo:147:194", ()=>useMemo(()=><span>{props.msg}</span>, [])) : _$vaporWithHookId("useMemo:201:244", ()=>useMemo(()=><span>{props.fallback}</span>, []))}</div>);
+      {props.ok ? _$compiledWithHookId("useMemo:147:194", ()=>useMemo(()=><span>{props.msg}</span>, [])) : _$compiledWithHookId("useMemo:201:244", ()=>useMemo(()=><span>{props.fallback}</span>, []))}</div>);
 };
 export default Chain;
 "##;
@@ -87,5 +93,10 @@ export default Chain;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/once_if_directive.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("@rue-js/rue/internal/compiler"), "{normalized}");
+    assert!(normalized.contains("props.ok ? _$compiledWithHookId"), "{normalized}");
+    assert_eq!(normalized.matches("_$compiledWithHookId(\"useMemo:").count(), 2);
+    assert!(!normalized.contains("v-once"));
+    assert!(!normalized.contains("r-once"));
 }

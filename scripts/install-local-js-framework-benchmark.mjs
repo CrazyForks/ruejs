@@ -2,16 +2,14 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { auditBuiltBenchmark, BENCHMARK_GZIP_LIMIT } from './js-framework-benchmark-size.js'
 
 const workspaceRoot = path.resolve(import.meta.dirname, '..')
 const localPackageDirectories = [
   'packages/shared',
-  'packages/runtime-vapor',
   'packages/runtime',
   'packages/server-renderer',
   'packages/rue',
-  'packages/jsx-runtime',
-  'packages/jsx-dev-runtime',
   'packages/swc-plugin-rue',
   'packages/vite-plugin-rue',
 ]
@@ -111,7 +109,6 @@ const main = async () => {
 
   try {
     console.info('Building local Rue runtime and compiler packages...')
-    await runCommand('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build'])
     await runCommand('pnpm', ['--filter', '@rue-js/swc-plugin-rue', 'run', 'build'])
     await runCommand('node', [
       'scripts/build.js',
@@ -119,8 +116,6 @@ const main = async () => {
       '^runtime$',
       '^server-renderer$',
       '^rue$',
-      '^jsx-runtime$',
-      '^jsx-dev-runtime$',
     ])
 
     console.info(`Packing local Rue packages into ${packDirectory}...`)
@@ -134,9 +129,16 @@ const main = async () => {
     )
 
     const version = await verifyInstalledPackages(benchmarkDirectory)
+    console.info(
+      `Verified ${localPackageDirectories.length} local tarball package versions at ${version}.`,
+    )
     console.info(`Building rue-signal with local Rue ${version}...`)
     await runCommand('npm', ['run', 'build-prod'], benchmarkDirectory)
-    console.info(`rue-signal is ready and uses local Rue ${version}.`)
+    const size = await auditBuiltBenchmark(path.resolve(benchmarkDirectory, 'dist'))
+    console.info(
+      `rue-signal is ready and uses local Rue ${version}: raw ${size.rawBytes} B, gzip ${size.gzipBytes} B ` +
+        `(limit ${BENCHMARK_GZIP_LIMIT} B; ${size.files.join(', ')}).`,
+    )
   } finally {
     await fs.rm(packDirectory, { recursive: true, force: true })
   }

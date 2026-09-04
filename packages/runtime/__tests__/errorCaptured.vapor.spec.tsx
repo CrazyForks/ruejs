@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { h, onError, onErrorCaptured, ref, render, setReactiveScheduling, type FC } from '../src'
+import { onError, onErrorCaptured, ref, render, setReactiveScheduling, type FC } from '../src'
 import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -64,7 +64,7 @@ describe('onErrorCaptured Vapor updates', () => {
       )
     }
 
-    render(h(Parent, null), container)
+    render(<Parent />, container)
 
     await waitForContent(() => {
       expect(container.textContent).toContain('captured 0')
@@ -118,7 +118,7 @@ describe('onErrorCaptured Vapor updates', () => {
       )
     }
 
-    render(h(Parent, null), container)
+    render(<Parent />, container)
 
     await waitForContent(() => {
       expect(container.textContent).toContain('captured 0')

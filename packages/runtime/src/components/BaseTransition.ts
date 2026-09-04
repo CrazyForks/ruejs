@@ -120,7 +120,7 @@ function getPhaseClasses(name: string, props: BaseTransitionProps, phase: Transi
 export function createTransitionRunner(props: BaseTransitionProps) {
   const name = props.name || 'rue'
   const css = props.css !== false
-  const em = useEmit(props)
+  const em = useEmit(props as unknown as Record<string, unknown>)
 
   function runPhase(
     el: HTMLElement,

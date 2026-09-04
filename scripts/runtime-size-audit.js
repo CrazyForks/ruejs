@@ -25,112 +25,136 @@ const compatSignatures = Object.freeze({
   'stable-host': Object.freeze(['__rue_stable_component_host__']),
 })
 
-const vaporInput = Object.freeze({
-  entry: '@rue-js/rue/vapor',
-  imports: Object.freeze(['vapor']),
+const clientInput = Object.freeze({
+  entry: '@rue-js/rue/internal/compiler',
+  imports: Object.freeze(['_$compiledRoot']),
 })
 
-const compiledInput = Object.freeze({
-  entry: '@rue-js/rue/compiled',
-  imports: Object.freeze(['signal', 'effect', 'createSelector']),
+const componentInput = Object.freeze({
+  entry: '@rue-js/rue/internal',
+  imports: Object.freeze(['_$compiledComponent', '_$mountCompiledComponent']),
+})
+const listInput = Object.freeze({
+  entry: '@rue-js/rue/internal/compiler',
+  imports: Object.freeze(['signal', 'effect', '_$reconcileKeyed', '_$mountCompiledKeyedRow']),
+})
+const builtinsInput = Object.freeze({
+  entry: '@rue-js/rue/internal',
+  imports: Object.freeze(['KeepAlive', 'Suspense', 'Teleport', 'Transition', 'TransitionGroup']),
+})
+const hydrateInput = Object.freeze({
+  entry: '@rue-js/rue/island',
+  imports: Object.freeze(['hydrateRoot']),
 })
 
-const vaporAppInput = Object.freeze({
-  entry: '@rue-js/rue/vapor',
-  imports: Object.freeze(['vapor', 'useApp']),
+const compiledKeyedAppInput = Object.freeze({
+  entry: '@rue-js/rue/internal/compiler',
+  imports: Object.freeze([
+    'signal',
+    'effect',
+    'createSelector',
+    '_$compiledSetup',
+    '_$compiledRoot',
+    '_$reconcileKeyed',
+    '_$compiledCreateElement',
+    '_$compiledCreateTextNode',
+    '_$compiledAppendChild',
+  ]),
 })
 
-/** @param {ReadonlyArray<string>} imports */
-const vaporEntryInput = imports =>
-  Object.freeze({
-    entry: '@rue-js/rue/vapor',
-    imports: Object.freeze(imports),
+export const COMPILED_KEYED_APP_FIXTURE_SOURCE = `
+import {
+  signal,
+  effect,
+  createSelector,
+  _$compiledSetup,
+  _$compiledRoot,
+  _$reconcileKeyed,
+  _$compiledCreateElement,
+  _$compiledCreateTextNode,
+  _$compiledAppendChild,
+} from '@rue-js/rue/internal/compiler'
+
+export const createCompiledKeyedApp = () => _$compiledRoot(parent => {
+  if (parent == null) throw new Error('compiled keyed app requires a parent')
+  const { rows, selected } = _$compiledSetup('js-framework-benchmark:setup', () => ({
+    rows: signal([]),
+    selected: signal(undefined),
+  }))
+  const isSelected = createSelector(() => selected.get())
+  const table = _$compiledCreateElement('table', parent)
+  const body = _$compiledCreateElement('tbody', table)
+  _$compiledAppendChild(table, body)
+  _$compiledAppendChild(parent, table)
+  let renderedRows = []
+
+  const mountRow = (item, index) => {
+    const row = _$compiledCreateElement('tr', body)
+    const idCell = _$compiledCreateElement('td', row)
+    const labelCell = _$compiledCreateElement('td', row)
+    const idText = _$compiledCreateTextNode(String(item.id))
+    const labelText = _$compiledCreateTextNode(item.label)
+    _$compiledAppendChild(idCell, idText)
+    _$compiledAppendChild(labelCell, labelText)
+    _$compiledAppendChild(row, idCell)
+    _$compiledAppendChild(row, labelCell)
+    const patch = next => {
+      const nextId = String(next.id)
+      if (idText.data !== nextId) idText.data = nextId
+      if (labelText.data !== next.label) labelText.data = next.label
+      const nextClass = isSelected(next.id) ? 'danger' : ''
+      if (row.className !== nextClass) row.className = nextClass
+    }
+    patch(item, index)
+    return { node: row, patch, dispose: () => {} }
+  }
+
+  effect(() => {
+    const nextRows = rows.get()
+    renderedRows = _$reconcileKeyed(body, null, renderedRows, nextRows, item => item.id, mountRow)
   })
 
-/** @param {ReadonlyArray<string>} imports */
-const rootInput = imports =>
-  Object.freeze({
-    entry: '@rue-js/rue',
-    imports: Object.freeze(imports),
-  })
-
-/** @param {ReadonlyArray<string>} imports */
-const jsxRuntimeInput = imports =>
-  Object.freeze({
-    entry: '@rue-js/jsx-runtime',
-    imports: Object.freeze(imports),
-  })
+  table.run = nextRows => rows.set(nextRows)
+  table.select = id => selected.set(id)
+  table.swap = () => {
+    const nextRows = rows.get().slice()
+    if (nextRows.length > 998) {
+      const item = nextRows[1]
+      nextRows[1] = nextRows[998]
+      nextRows[998] = item
+      rows.set(nextRows)
+    }
+  }
+  return table
+})
+`
 
 /** @type {ReadonlyArray<{name: string, input: ReadonlyArray<{entry: string, imports: ReadonlyArray<string>}>, fixtureSource?: string, builtin: boolean}>} */
 export const RUNTIME_SIZE_PRESETS = Object.freeze([
   Object.freeze({
-    name: 'compiled-core',
-    input: Object.freeze([compiledInput]),
+    name: 'client-core',
+    input: Object.freeze([clientInput]),
     builtin: false,
   }),
-  Object.freeze({ name: 'vapor-core', input: Object.freeze([vaporInput]), builtin: false }),
   Object.freeze({
     name: 'compiled-component',
-    input: Object.freeze([vaporEntryInput(['vapor', '_$createComponent', 'renderAnchor'])]),
-    fixtureSource: `
-import { vapor, _$createComponent, renderAnchor } from '@rue-js/rue/vapor'
-const CompiledChild = props => vapor(() => document.createTextNode(String(props.value)))
-const compiledHandle = _$createComponent(CompiledChild, { value: 1 })
-export const mountCompiledComponent = (parent, anchor) =>
-  renderAnchor(compiledHandle, parent, anchor)
-`,
+    input: Object.freeze([componentInput]),
     builtin: false,
   }),
   Object.freeze({
-    name: 'h-only',
-    input: Object.freeze([rootInput(['h', 'render'])]),
-    fixtureSource: `
-import { h, render } from '@rue-js/rue'
-export const mountRenderFunction = target => render(h('div', { class: 'rue-size-fixture' }, 'Rue'), target)
-`,
+    name: 'compiled-list',
+    input: Object.freeze([listInput]),
     builtin: false,
   }),
   Object.freeze({
-    name: 'jsx-runtime-only',
-    input: Object.freeze([jsxRuntimeInput(['jsx'])]),
-    fixtureSource: `
-import { jsx } from '@rue-js/jsx-runtime'
-export const automaticJsxNode = jsx('div', { class: 'rue-size-fixture', children: 'Rue' })
-`,
+    name: 'compiled-builtins',
+    input: Object.freeze([builtinsInput]),
+    builtin: true,
+  }),
+  Object.freeze({
+    name: 'hydrate',
+    input: Object.freeze([hydrateInput]),
     builtin: false,
-  }),
-  Object.freeze({
-    name: 'vapor-app',
-    input: Object.freeze([vaporAppInput]),
-    builtin: false,
-  }),
-  Object.freeze({ name: 'full-core', input: Object.freeze([rootInput(['ref'])]), builtin: false }),
-  Object.freeze({
-    name: 'keep-alive',
-    input: Object.freeze([vaporEntryInput(['vapor', 'KeepAlive'])]),
-    builtin: true,
-  }),
-  Object.freeze({
-    name: 'suspense',
-    input: Object.freeze([vaporEntryInput(['vapor', 'Suspense'])]),
-    builtin: true,
-  }),
-  Object.freeze({
-    name: 'transition',
-    input: Object.freeze([vaporEntryInput(['vapor', 'Transition'])]),
-    builtin: true,
-  }),
-  Object.freeze({
-    name: 'transition-group',
-    input: Object.freeze([vaporEntryInput(['vapor', 'TransitionGroup'])]),
-    builtin: true,
-  }),
-  Object.freeze({
-    name: 'all-builtins',
-    input: Object.freeze([
-      vaporEntryInput(['vapor', 'KeepAlive', 'Suspense', 'Transition', 'TransitionGroup']),
-    ]),
-    builtin: true,
   }),
 ])
 
@@ -158,10 +182,10 @@ export function calculateSizeDelta(measurement, core) {
  * @param {string} presetName
  */
 export function checkSizeImprovement(report, baseline, presetName) {
-  const currentCore = report.presets['vapor-core']
-  const previousCore = baseline.presets?.['vapor-core']
-  const current = report.presets[presetName]?.deltaFromVaporCore
-  const previous = baseline.presets?.[presetName]?.deltaFromVaporCore
+  const currentCore = report.presets['client-core']
+  const previousCore = baseline.presets?.['client-core']
+  const current = report.presets[presetName]?.deltaFromClientCore
+  const previous = baseline.presets?.[presetName]?.deltaFromClientCore
 
   if (!currentCore || !previousCore || !current || !previous) {
     throw new Error(`runtime size improvement check is missing baseline data for ${presetName}`)
@@ -170,7 +194,7 @@ export function checkSizeImprovement(report, baseline, presetName) {
   const failures = []
   for (const metric of ['min', 'gzip']) {
     if (currentCore[metric] > previousCore[metric]) {
-      failures.push(`vapor-core ${metric} ${currentCore[metric]} > ${previousCore[metric]}`)
+      failures.push(`client-core ${metric} ${currentCore[metric]} > ${previousCore[metric]}`)
     }
     if (current[metric] >= previous[metric]) {
       failures.push(`${presetName} ${metric} ${current[metric]} >= ${previous[metric]}`)
@@ -210,7 +234,7 @@ export function checkRuntimeSizeBudget(report, budget) {
   for (const [presetName, presetBudget] of Object.entries(budget.presets ?? {})) {
     const preset = report.presets?.[presetName]
     const measurement =
-      presetBudget.measurement === 'deltaFromVaporCore' ? preset?.deltaFromVaporCore : preset
+      presetBudget.measurement === 'deltaFromClientCore' ? preset?.deltaFromClientCore : preset
 
     if (!preset || !measurement) {
       failures.push({
@@ -265,15 +289,6 @@ export function checkRuntimeSizeBudget(report, budget) {
         preset: presetName,
         dimension: 'sources.defaultRuntime',
         actual: preset.sources.modules?.join(', ') || 'detected',
-        limit: 'forbidden',
-      })
-    }
-
-    if (presetBudget.forbidVaporRuntime && preset.sources?.vaporRuntime) {
-      failures.push({
-        preset: presetName,
-        dimension: 'sources.vaporRuntime',
-        actual: preset.sources?.vaporModules?.join(', ') || 'detected',
         limit: 'forbidden',
       })
     }
@@ -387,9 +402,7 @@ export { measureCodeSizes }
  *   brotli: number,
  *   sources: {
  *     defaultRuntime: boolean,
- *     vaporRuntime: boolean,
  *     compiledRuntime: boolean,
- *     both: boolean,
  *     modules: string[],
  *     allModules?: string[],
  *     moduleRenderSizes?: Record<string, number>,
@@ -408,14 +421,11 @@ export { measureCodeSizes }
  * }>} measurements
  */
 export function createAuditReport(measurements) {
-  const core = measurements.find(result => result.name === 'vapor-core')
+  const core = measurements.find(result => result.name === 'client-core')
   if (!core) {
-    throw new Error('runtime size audit requires a vapor-core measurement')
+    throw new Error('runtime size audit requires a client-core measurement')
   }
 
-  const builtinNames = new Set(
-    RUNTIME_SIZE_PRESETS.filter(preset => preset.builtin).map(preset => preset.name),
-  )
   const presets = Object.fromEntries(
     measurements.map(result => {
       const metrics = {
@@ -431,9 +441,6 @@ export function createAuditReport(measurements) {
           input: result.input,
           buildMode: result.buildMode,
           ...metrics,
-          deltaFromVaporCore: builtinNames.has(result.name)
-            ? calculateSizeDelta(metrics, core)
-            : null,
           sources: result.sources,
         },
       ]
@@ -441,7 +448,7 @@ export function createAuditReport(measurements) {
   )
 
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     build: {
       mode: 'production',
       target: 'es2020',
@@ -488,28 +495,24 @@ function detectRuntimeSources(moduleIds, code, renderedModules) {
   const normalized = [...new Set(moduleIds.map(normalizeModuleId))].sort()
   const defaultPattern =
     /(?:^|\/)packages\/(?:rue\/dist\/rue\.runtime|runtime\/(?:dist\/runtime\.esm-bundler|src\/rue))\.(?:js|ts)$/
-  const vaporPattern =
-    /(?:^|\/)packages\/(?:rue\/dist\/rue\.vapor|runtime\/(?:dist\/runtime\.vapor(?:-core)?\.esm-bundler|src\/vapor(?:-runtime|-core)))\.(?:js|ts)$/
   const compiledPattern =
-    /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.compiled\.esm-bundler\.js|src\/compiled\.ts)|runtime\/(?:dist\/runtime\.compiled\.esm-bundler\.js|src\/compiled\.ts)|runtime-vapor\/dist\/compiled\.js)$/
+    /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.internal(?:-compiler)?\.esm-bundler\.js|src\/(?:compiler-internal|internal)\.ts)|runtime\/(?:dist\/runtime\.internal(?:-compiler)?\.esm-bundler\.js|src\/(?:compiler-internal|internal|reactive-core\/index|runtime-core\/compiled)\.ts))$/
   const ssrRendererPattern =
     /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.server-renderer\.esm-bundler\.js|src\/server-renderer\.ts)|runtime\/(?:dist\/runtime\.server\.esm-bundler\.js|src\/server\.ts)|server-renderer\/(?:dist\/server-renderer\.esm-bundler\.js|src\/index\.ts))$/
-  const modules = normalized.filter(
-    id => defaultPattern.test(id) || vaporPattern.test(id) || compiledPattern.test(id),
-  )
+  const modules = normalized.filter(id => defaultPattern.test(id) || compiledPattern.test(id))
   const defaultRuntime = modules.some(id => defaultPattern.test(id))
-  const vaporRuntime = modules.some(id => vaporPattern.test(id))
   const compiledModules = modules.filter(id => compiledPattern.test(id))
-  const vaporModules = modules.filter(id => vaporPattern.test(id))
   const ssrModules = normalized.filter(id => ssrRendererPattern.test(id))
   const reactiveKernelModules = normalized.filter(
     id =>
-      /(?:^|\/)packages\/runtime-vapor\/dist\/reactive-kernel\/[^/]+\.js$/.test(id) ||
-      /(?:^|\/)packages\/runtime-vapor\/dist\/compiled\.js$/.test(id),
+      /(?:^|\/)packages\/runtime\/src\/runtime-core\/reactive-kernel\/[^/]+\.ts$/.test(id) ||
+      /(?:^|\/)packages\/runtime\/src\/reactive-core\/index\.ts$/.test(id) ||
+      /(?:^|\/)packages\/runtime\/src\/runtime-core\/compiled\.ts$/.test(id) ||
+      /(?:^|\/)packages\/runtime\/dist\/runtime\.internal-compiler\.esm-bundler\.js$/.test(id),
   )
   const wasmModules = normalized.filter(id => id.endsWith('.wasm'))
   const compatModules = normalized.filter(id =>
-    /(?:^|\/)packages\/runtime-vapor\/(?:dist\/)?js-runtime\/mount-compat\.(?:js|ts)$/.test(id),
+    /(?:^|\/)packages\/runtime\/src\/runtime-core\/js-runtime\/mount-compat\.ts$/.test(id),
   )
   const compatTokens = Object.entries(compatSignatures)
     .filter(([, signatures]) => signatures.some(signature => code.includes(signature)))
@@ -526,11 +529,8 @@ function detectRuntimeSources(moduleIds, code, renderedModules) {
 
   return {
     defaultRuntime,
-    vaporRuntime,
     compiledRuntime: compiledModules.length > 0,
     compiledModules,
-    vaporModules,
-    both: defaultRuntime && vaporRuntime,
     modules,
     allModules: normalized,
     moduleRenderSizes: Object.fromEntries(
@@ -581,12 +581,19 @@ async function buildPreset(preset) {
       resolve: {
         alias: [
           {
-            find: /^@rue-js\/rue\/compiled$/,
-            replacement: path.resolve(projectRoot, 'packages/rue/src/compiled.ts'),
+            find: /^@rue-js\/rue\/internal\/compiler$/,
+            replacement: path.resolve(
+              projectRoot,
+              'packages/rue/dist/rue.internal-compiler.esm-bundler.js',
+            ),
           },
           {
-            find: /^@rue-js\/runtime\/compiled$/,
-            replacement: path.resolve(projectRoot, 'packages/runtime/src/compiled.ts'),
+            find: /^@rue-js\/runtime\/internal\/compiler$/,
+            replacement: path.resolve(projectRoot, 'packages/runtime/src/compiler-internal.ts'),
+          },
+          {
+            find: /^@rue-js\/rue\/internal$/,
+            replacement: path.resolve(projectRoot, 'packages/rue/dist/rue.internal.esm-bundler.js'),
           },
         ],
       },
@@ -597,6 +604,11 @@ async function buildPreset(preset) {
         target: 'es2020',
         minify: false,
         write: false,
+        rollupOptions: {
+          treeshake: {
+            moduleSideEffects: false,
+          },
+        },
         lib: {
           entry: entryFile,
           formats: ['es'],
@@ -692,16 +704,12 @@ async function main(options) {
   console.log(`\nRuntime size audit: ${path.relative(projectRoot, options.output)}`)
   for (const result of Object.values(report.presets)) {
     const sourceLabel = result.sources.compiledRuntime
-      ? result.sources.defaultRuntime || result.sources.vaporRuntime
-        ? 'compiled+other'
+      ? result.sources.defaultRuntime
+        ? 'compiled+public'
         : 'compiled'
-      : result.sources.both
-        ? 'default+vapor'
-        : result.sources.defaultRuntime
-          ? 'default'
-          : result.sources.vaporRuntime
-            ? 'vapor'
-            : 'unknown'
+      : result.sources.defaultRuntime
+        ? 'public'
+        : 'explicit'
     console.log(
       `${pico.green(pico.bold(result.name))} - ` +
         `raw:${formatBytes(result.raw)} / min:${formatBytes(result.min)} / ` +

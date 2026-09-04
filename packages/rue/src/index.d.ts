@@ -1,20 +1,10 @@
 export type {
-  /** 可被 Rue 渲染器直接消费的节点、组件、数组或空值联合类型。 */
-  Renderable,
-  /** render/mount 接受的输入形态，兼容已挂载句柄和嵌套 renderable。 */
-  RenderableInput,
-  /** 渲染流程返回的输出形态，通常用于后续卸载或增量插入。 */
-  RenderableOutput,
-  /** mount/render 返回的挂载句柄，提供卸载等生命周期操作。 */
-  RueMountHandle,
-  /** 标准化 renderable 后挂载到 DOM、锚点或片段时使用的目标描述。 */
-  RenderTarget,
-  /** Block 渲染路径中的实例对象，记录节点集合和清理逻辑。 */
-  BlockInstance,
-  /** Block 渲染路径的工厂函数类型，用于延迟创建可挂载块。 */
-  BlockFactory,
-  /** normalizeRenderable 的结果类型，描述标准化后的节点、块和清理信息。 */
-  NormalizeRenderableResult,
+  /** render 接受的编译值。 */
+  RenderInput,
+  /** 组件和 JSX 工厂的编译输出。 */
+  RenderOutput,
+  /** 编译运行时句柄。 */
+  RuntimeHandle,
   /** 组件 props 的基础字典类型，事件与普通属性都会经过该结构传递。 */
   ComponentProps,
   /** 为组件 props 附加 children 字段的辅助类型。 */
@@ -35,8 +25,6 @@ export type {
   HydrationStrategyFactory,
   /** Rue 应用实例类型，代表 createRue 创建的运行时对象。 */
   Rue,
-  /** Vapor setup 函数的返回结果，通常是可挂载的 DOM-like 节点。 */
-  VaporSetupResult,
   /** 插槽集合，按插槽名称保存插槽值或渲染函数。 */
   SlotBag,
   /** Slot 组件属性，包含插槽名称、传参和默认 children。 */
@@ -105,12 +93,8 @@ export {
   version,
   /** 创建跨组件树传值的 Rue context。 */
   createContext,
-  /** 创建 JSX/TSX 元素或组件节点，是 h 的底层实现入口。 */
-  createElement,
   /** 将 renderable 挂载到指定容器。 */
   render,
-  /** 在两个锚点之间渲染内容，常用于局部更新和编译产物。 */
-  renderBetween,
   /** 基于锚点渲染内容，适合 Vapor 编译输出插入节点。 */
   renderAnchor,
   /** 渲染静态内容并返回标准挂载句柄。 */
@@ -121,10 +105,6 @@ export {
   use,
   /** 从组件 props 中创建 emit 事件调用器。 */
   useEmit,
-  /** 声明 Vapor setup 渲染块。 */
-  vapor,
-  /** 将任意 renderable 输入标准化为运行时可挂载结构。 */
-  normalizeRenderable,
   /** 注册组件创建前生命周期回调。 */
   onBeforeCreate,
   /** 注册组件创建后生命周期回调。 */
@@ -161,16 +141,6 @@ export {
   getCurrentContainer,
   /** 创建独立 Rue 应用实例。 */
   createRue,
-  /** JSX 工厂函数别名，用于手写渲染函数或非 JSX 场景。 */
-  h,
-  /** 自动 JSX runtime 入口。 */
-  jsx,
-  /** 自动 JSX runtime 多 children 入口。 */
-  jsxs,
-  /** 开发 JSX runtime 入口。 */
-  jsxDEV,
-  /** Fragment 标记，用于返回多个兄弟节点而不创建额外 DOM。 */
-  Fragment,
   /** 动态组件入口，根据 is/component 参数选择实际组件。 */
   Component,
   /** 缓存动态组件实例，保留组件状态。 */

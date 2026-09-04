@@ -1,17 +1,29 @@
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   Template,
-  h,
   render,
   renderAnchor,
   setReactiveScheduling,
   signal,
-  vapor,
   watchEffect,
   type FC,
 } from '../src'
+import { vapor } from './legacy-test-render'
 import { waitForContent } from './page-test-utils'
+
+const createLegacyVapor = (renderFn: Parameters<typeof _$compiledVapor>[0]) =>
+  _$compiledVapor(renderFn)
 
 setReactiveScheduling('sync')
 
@@ -36,7 +48,41 @@ describe('Template renderable boundary', () => {
 
     document.body.appendChild(host)
 
-    render(h(Template, null, h('strong', null, 'A'), h('em', null, 'B')), host)
+    render(
+      _$createDynamic(Template, {
+        children: [
+          _$compiledVapor(_$parentContext => {
+            const _$root = _$compiledCreateElement('strong', _$parentContext)
+            const _$anchor = _$compiledCreateComment('rue:children:anchor')
+            _$compiledAppendChild(_$root, _$anchor)
+            _$compiledWatchEffect(() => {
+              const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+                string,
+                any
+              >
+              _$compiledSpreadAttributes(_$root, _$attributes)
+              _$compiledRenderAnchor(_$children, _$root, _$anchor)
+            })
+            return _$root
+          }),
+          _$compiledVapor(_$parentContext => {
+            const _$root = _$compiledCreateElement('em', _$parentContext)
+            const _$anchor = _$compiledCreateComment('rue:children:anchor')
+            _$compiledAppendChild(_$root, _$anchor)
+            _$compiledWatchEffect(() => {
+              const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+                string,
+                any
+              >
+              _$compiledSpreadAttributes(_$root, _$attributes)
+              _$compiledRenderAnchor(_$children, _$root, _$anchor)
+            })
+            return _$root
+          }),
+        ],
+      }),
+      host,
+    )
 
     await waitForContent(() => {
       expect(host.querySelector('span')).toBeNull()
@@ -52,20 +98,47 @@ describe('Template renderable boundary', () => {
 
     document.body.appendChild(host)
 
+    const createTail = () =>
+      createLegacyVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('em', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            children: 'tail',
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
+
     const App: FC = () =>
       vapor(() => {
         const root = document.createDocumentFragment()
         const anchor = document.createComment('rue:component:anchor')
         root.appendChild(anchor)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(
-            h(
-              Template,
-              null,
-              h('strong', null, label.get()),
-              showTail.get() ? h('em', null, 'tail') : null,
-            ),
+            _$createDynamic(Template, {
+              children: [
+                _$compiledVapor(_$parentContext => {
+                  const _$root = _$compiledCreateElement('strong', _$parentContext)
+                  const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                  _$compiledAppendChild(_$root, _$anchor)
+                  _$compiledWatchEffect(() => {
+                    const { children: _$children, ..._$attributes } = {
+                      children: label.get(),
+                    } as Record<string, any>
+                    _$compiledSpreadAttributes(_$root, _$attributes)
+                    _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                  })
+                  return _$root
+                }),
+                showTail.get() ? createTail() : null,
+              ],
+            }),
             root as any,
             anchor as any,
           )
@@ -74,7 +147,7 @@ describe('Template renderable boundary', () => {
         return root as any
       }) as any
 
-    render(h(App, null), host)
+    render(_$createDynamic(App, null), host)
 
     await waitForContent(() => {
       expect(host.textContent).toBe('Atail')

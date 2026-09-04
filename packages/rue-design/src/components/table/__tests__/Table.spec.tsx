@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h, ref } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import { Table } from '@rue-js/design'
 import {
@@ -22,7 +23,7 @@ afterEach(() => {
 describe('Table', () => {
   it('renders with base class and children', async () => {
     const c = document.createElement('div')
-    render(h(Table, null, 'hello'), c)
+    render(<Table>{'hello'}</Table>, c)
     await waitTableRender()
     const el = c.querySelector('table.table') as HTMLElement
     expect(el).toBeTruthy()
@@ -33,7 +34,7 @@ describe('Table', () => {
   it('applies size classes', async () => {
     const c = document.createElement('div')
     ;(['xs', 'sm', 'md', 'lg', 'xl'] as const).forEach(s => {
-      render(h(Table, { size: s }, 'x'), c)
+      render(<Table size={s}>{'x'}</Table>, c)
     })
     await waitTableRender()
     const el = c.querySelector('table.table') as HTMLElement
@@ -43,7 +44,12 @@ describe('Table', () => {
 
   it('applies zebra, pinRows, pinCols classes', async () => {
     const c = document.createElement('div')
-    render(h(Table, { zebra: true, pinRows: true, pinCols: true }, 'x'), c)
+    render(
+      <Table zebra={true} pinRows={true} pinCols={true}>
+        {'x'}
+      </Table>,
+      c,
+    )
     await waitTableRender()
     const el = c.querySelector('table.table') as HTMLElement
     expect(el.classList.contains('table-zebra')).toBe(true)
@@ -53,7 +59,7 @@ describe('Table', () => {
 
   it('appends custom className', async () => {
     const c = document.createElement('div')
-    render(h(Table, { className: 'w-full' }, 'x'), c)
+    render(<Table className={'w-full'}>{'x'}</Table>, c)
     await waitTableRender()
     const el = c.querySelector('table.table') as HTMLElement
     expect(el.classList.contains('w-full')).toBe(true)
@@ -62,13 +68,26 @@ describe('Table', () => {
   it('renders Head, Body, Foot, TR, TH, TD subcomponents', async () => {
     const c = document.createElement('div')
     render(
-      h(
-        Table,
-        null,
-        h(Table.Head, null, h(Table.TR, null, h(Table.TH, null, 'h1'), h(Table.TH, null, 'h2'))),
-        h(Table.Body, null, h(Table.TR, null, h(Table.TD, null, 'a1'), h(Table.TD, null, 'a2'))),
-        h(Table.Foot, null, h(Table.TR, null, h(Table.TH, null, 'f1'), h(Table.TH, null, 'f2'))),
-      ),
+      <Table>
+        <Table.Head>
+          <Table.TR>
+            <Table.TH>{'h1'}</Table.TH>
+            <Table.TH>{'h2'}</Table.TH>
+          </Table.TR>
+        </Table.Head>
+        <Table.Body>
+          <Table.TR>
+            <Table.TD>{'a1'}</Table.TD>
+            <Table.TD>{'a2'}</Table.TD>
+          </Table.TR>
+        </Table.Body>
+        <Table.Foot>
+          <Table.TR>
+            <Table.TH>{'f1'}</Table.TH>
+            <Table.TH>{'f2'}</Table.TH>
+          </Table.TR>
+        </Table.Foot>
+      </Table>,
       c,
     )
     await waitTableRender()
@@ -97,7 +116,7 @@ describe('Table', () => {
       { title: 'Job', dataIndex: 'job' },
       { title: 'Favorite Color', dataIndex: 'color' },
     ]
-    render(h(Table, { columns, dataSource }), c)
+    render(<Table columns={columns} dataSource={dataSource} />, c)
     await waitTableRender()
     const head = c.querySelector('thead') as HTMLElement
     const ths = Array.from(c.querySelectorAll('thead th')).map(el => el.textContent?.trim())
@@ -115,11 +134,11 @@ describe('Table', () => {
     ]
     const columns = [{ title: 'Name', dataIndex: 'name' }]
     render(
-      h(Table, {
-        columns,
-        dataSource,
-        rowSelection: { defaultSelectedRowKeys: ['1'] },
-      }),
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        rowSelection={{ defaultSelectedRowKeys: ['1'] }}
+      />,
       c,
     )
     await waitTableRender()
@@ -140,11 +159,7 @@ describe('Table', () => {
     ]
     const columns = [{ title: 'Name', dataIndex: 'name' }]
     render(
-      h(Table, {
-        columns,
-        dataSource,
-        pagination: { current: 1, pageSize: 1 },
-      }),
+      <Table columns={columns} dataSource={dataSource} pagination={{ current: 1, pageSize: 1 }} />,
       c,
     )
     await waitTableRender()
@@ -163,7 +178,7 @@ describe('Table', () => {
     const columns = [
       { title: 'Name', dataIndex: 'name', sorter: true, defaultSortOrder: 'ascend' as const },
     ]
-    render(h(Table, { columns, dataSource }), c)
+    render(<Table columns={columns} dataSource={dataSource} />, c)
     await waitTableRender()
     const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
     expect(tds).toEqual(['A', 'B'])
@@ -276,14 +291,14 @@ describe('Table', () => {
     ]
     const columns = [{ title: 'Name', dataIndex: 'name' }]
     render(
-      h(Table, {
-        columns,
-        dataSource,
-        expandable: {
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        expandable={{
           defaultExpandAllRows: true,
-          expandedRowRender: (r: any) => h('div', null, `extra-${r.name}`),
-        },
-      }),
+          expandedRowRender: (r: any) => <div>{`extra-${r.name}`}</div>,
+        }}
+      />,
       c,
     )
     await waitTableRender()
@@ -302,7 +317,7 @@ describe('Table', () => {
       { title: 'Name', dataIndex: 'name', filteredValue: ['A'] },
       { title: 'Job', dataIndex: 'job' },
     ]
-    render(h(Table, { columns, dataSource }), c)
+    render(<Table columns={columns} dataSource={dataSource} />, c)
     await waitTableRender()
     const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
     expect(tds).toEqual(['A', 'Dev'])
@@ -471,7 +486,7 @@ describe('Table', () => {
         },
       },
     ]
-    render(h(Table, { columns, dataSource }), c)
+    render(<Table columns={columns} dataSource={dataSource} />, c)
     await waitTableRender()
     const ages = Array.from(c.querySelectorAll('tbody td')).map(el => Number(el.textContent || 0))
     expect(ages).toEqual([42, 40])
@@ -523,7 +538,7 @@ describe('Table', () => {
       { title: 'Name', dataIndex: 'name' },
       { title: 'Job', dataIndex: 'job', hidden: true },
     ]
-    render(h(Table, { columns, dataSource }), c)
+    render(<Table columns={columns} dataSource={dataSource} />, c)
     await waitTableRender()
     const ths = Array.from(c.querySelectorAll('thead th')).map(el => el.textContent?.trim())
     const tds = Array.from(c.querySelectorAll('tbody td')).map(el => el.textContent?.trim())
@@ -650,8 +665,16 @@ describe('Table', () => {
       { key: '2', name: 'B' },
     ]
     const columns = [{ title: 'Name', dataIndex: 'name' }]
-    const summary = (rows: any[]) => h('div', null, `Total: ${rows.length}`)
-    render(h(Table, { columns, dataSource, pagination: { current: 1, pageSize: 1 }, summary }), c)
+    const summary = (rows: any[]) => <div>{`Total: ${rows.length}`}</div>
+    render(
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        pagination={{ current: 1, pageSize: 1 }}
+        summary={summary}
+      />,
+      c,
+    )
     await waitTableRender()
     const foot = c.querySelector('tfoot') as HTMLElement
     expect(foot).toBeTruthy()
@@ -662,7 +685,7 @@ describe('Table', () => {
     const c = document.createElement('div')
     const dataSource: any[] = []
     const columns = [{ title: 'Name', dataIndex: 'name' }]
-    render(h(Table, { columns, dataSource, emptyText: 'Empty' }), c)
+    render(<Table columns={columns} dataSource={dataSource} emptyText={'Empty'} />, c)
     await waitTableRender()
     const tbody = c.querySelector('tbody') as HTMLElement
     expect(tbody.textContent || '').toContain('Empty')
@@ -674,11 +697,11 @@ describe('Table', () => {
     const dataSource = [{ key: '1', name: 'A' }]
     const columns = [{ title: 'Name', dataIndex: 'name' }]
     render(
-      h(Table, {
-        columns,
-        dataSource,
-        onRow: () => ({ onClick: () => (spy.count += 1) }),
-      }),
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        onRow={() => ({ onClick: () => (spy.count += 1) })}
+      />,
       c,
     )
     await waitTableRender()
@@ -695,7 +718,15 @@ describe('Table', () => {
     }))
     const columns = [{ title: 'Name', dataIndex: 'name' }]
     let called = 0
-    render(h(Table, { columns, dataSource, scroll: { y: 100 }, onScroll: () => (called += 1) }), c)
+    render(
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        scroll={{ y: 100 }}
+        onScroll={() => (called += 1)}
+      />,
+      c,
+    )
     await waitTableRender()
     const table = c.querySelector('table.table') as HTMLElement
     const wrapper = table.parentElement as HTMLElement
@@ -731,13 +762,13 @@ describe('Table', () => {
     const columns = [{ title: 'Name', dataIndex: 'name' }]
     resetActiveRuntime()
     render(
-      h(Table, {
-        columns,
-        dataSource,
-        scroll: { x: true },
-        title: () => h('div', null, 'CustomTitle'),
-        footer: () => h('div', null, 'CustomFooter'),
-      }),
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        scroll={{ x: true }}
+        title={() => <div>{'CustomTitle'}</div>}
+        footer={() => <div>{'CustomFooter'}</div>}
+      />,
       c,
     )
     await waitForContent(() => {
@@ -753,7 +784,12 @@ describe('Table', () => {
     const dataSource = [{ key: '1', name: 'A' }]
     const columns = [{ title: 'Name', dataIndex: 'name' }]
     render(
-      h(Table, { columns, dataSource, rowHoverable: true, rowHoverClass: 'hover:bg-red-200' }),
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        rowHoverable={true}
+        rowHoverClass={'hover:bg-red-200'}
+      />,
       c,
     )
     await waitTableRender()

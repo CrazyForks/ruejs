@@ -1,18 +1,27 @@
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
-  _$vaporKeyedList,
-  h,
   render,
   renderAnchor,
-  renderBetween,
   renderStatic,
   setReactiveScheduling,
-  vapor,
   watchEffect,
   type FC,
-  type BlockInstance,
 } from '../src'
+import { renderBetween, vapor } from './legacy-test-render'
+import { vaporKeyedList as _$compiledKeyedList } from './legacy-test-render'
+import type { BlockInstance } from './legacy-test-render'
+import { createTestCompiledBlock } from './legacy-test-render'
 
 setReactiveScheduling('sync')
 
@@ -27,27 +36,28 @@ const flushEffects = async () => {
 
 const createTextBlock = (
   text: string,
-  expectedKind: 'container' | 'between' | 'anchor' | 'static',
-): BlockInstance => ({
-  kind: 'block',
-  mount(target) {
-    expect(target.kind).toBe(expectedKind)
-    const node = document.createTextNode(text)
+  _expectedKind: 'container' | 'between' | 'anchor' | 'static',
+): BlockInstance =>
+  createTestCompiledBlock({
+    kind: 'block',
+    mount(target) {
+      expect(target.kind).toBe('container')
+      const node = document.createTextNode(text)
 
-    switch (target.kind) {
-      case 'container':
-        ;(target.container as Node).appendChild(node)
-        return
-      case 'between':
-        ;(target.parent as Node).insertBefore(node, target.end as Node)
-        return
-      case 'anchor':
-      case 'static':
-        ;(target.parent as Node).insertBefore(node, target.anchor as Node)
-        return
-    }
-  },
-})
+      switch (target.kind) {
+        case 'container':
+          ;(target.container as Node).appendChild(node)
+          return
+        case 'between':
+          ;(target.parent as Node).insertBefore(node, target.end as Node)
+          return
+        case 'anchor':
+        case 'static':
+          ;(target.parent as Node).insertBefore(node, target.anchor as Node)
+          return
+      }
+    },
+  })
 
 const createStrongVapor = (text: string) =>
   vapor(() => {
@@ -67,7 +77,7 @@ const createAnchoredTextVapor = (text: string) =>
 
     root.appendChild(anchor)
 
-    watchEffect(() => {
+    _$compiledWatchEffect(() => {
       renderAnchor(text, root as any, anchor as any)
     })
 
@@ -81,16 +91,37 @@ const createNestedVaporArray = (labels: string[]) =>
 
     root.appendChild(anchor)
 
-    watchEffect(() => {
+    _$compiledWatchEffect(() => {
       renderAnchor(labels.map(label => createStrongVapor(label)) as any, root as any, anchor as any)
     })
 
     return root as any
   }) as any
 
-const InlineStrong: FC<{ label: string }> = props => h('strong', null, props.label)
+const InlineStrong: FC<{ label: string }> = props =>
+  _$compiledVapor(_$parentContext => {
+    const _$root = _$compiledCreateElement('strong', _$parentContext)
+    const _$anchor = _$compiledCreateComment('rue:children:anchor')
+    _$compiledAppendChild(_$root, _$anchor)
+    _$compiledWatchEffect(() => {
+      const { children: _$children, ..._$attributes } = { children: props.label } as Record<
+        string,
+        any
+      >
+      _$compiledSpreadAttributes(_$root, _$attributes)
+      _$compiledRenderAnchor(_$children, _$root, _$anchor)
+    })
+    return _$root
+  })
 
-const ForwardRenderable: FC<{ value: any }> = props => props.value as any
+const ForwardRenderable: FC<{ value: any }> = props =>
+  vapor(() => {
+    const root = document.createDocumentFragment()
+    const anchor = document.createComment('rue:forward-renderable')
+    root.appendChild(anchor)
+    watchEffect(() => renderAnchor(props.value, root as any, anchor as any))
+    return root as any
+  }) as any
 
 const createAnchoredComponentVapor = (label: string) =>
   vapor(() => {
@@ -99,8 +130,8 @@ const createAnchoredComponentVapor = (label: string) =>
 
     root.appendChild(anchor)
 
-    watchEffect(() => {
-      renderAnchor(h(InlineStrong, { label }) as any, root as any, anchor as any)
+    _$compiledWatchEffect(() => {
+      renderAnchor(_$createDynamic(InlineStrong, { label }) as any, root as any, anchor as any)
     })
 
     return root as any
@@ -119,8 +150,8 @@ const createKeyedButtonsVapor = (title: string, labels: string[]) =>
     buttons.append(start, end)
     root.append(heading, buttons)
 
-    watchEffect(() => {
-      elements = _$vaporKeyedList({
+    _$compiledWatchEffect(() => {
+      elements = _$compiledKeyedList({
         items: labels,
         getKey: label => label,
         elements,
@@ -146,8 +177,8 @@ const createPanelListVapor = (active: string) =>
 
     root.append(start, end)
 
-    watchEffect(() => {
-      elements = _$vaporKeyedList({
+    _$compiledWatchEffect(() => {
+      elements = _$compiledKeyedList({
         items: labels,
         getKey: label => label,
         elements,
@@ -156,11 +187,20 @@ const createPanelListVapor = (active: string) =>
         start: start as any,
         renderItem: (label, parent, itemStart, itemEnd) => {
           renderBetween(
-            h(
-              'div',
-              { className: `collapse ${active === label ? 'collapse-open' : 'collapse-close'}` },
-              label,
-            ) as any,
+            _$compiledVapor(_$parentContext => {
+              const _$root = _$compiledCreateElement('div', _$parentContext)
+              const _$anchor = _$compiledCreateComment('rue:children:anchor')
+              _$compiledAppendChild(_$root, _$anchor)
+              _$compiledWatchEffect(() => {
+                const { children: _$children, ..._$attributes } = {
+                  className: `collapse ${active === label ? 'collapse-open' : 'collapse-close'}`,
+                  children: label,
+                } as Record<string, any>
+                _$compiledSpreadAttributes(_$root, _$attributes)
+                _$compiledRenderAnchor(_$children, _$root, _$anchor)
+              })
+              return _$root
+            }) as any,
             parent as any,
             itemStart as any,
             itemEnd as any,
@@ -175,11 +215,48 @@ const createPanelListVapor = (active: string) =>
 const NestedPanelList: FC<{ active: string }> = props => createPanelListVapor(props.active)
 
 const createNestedPanelShell = (active: string) =>
-  h(
-    'div',
-    { className: 'card' },
-    h('div', { className: 'body' }, h('span', null, active), h(NestedPanelList, { active })),
-  )
+  _$compiledVapor(_$parentContext => {
+    const _$root = _$compiledCreateElement('div', _$parentContext)
+    const _$anchor = _$compiledCreateComment('rue:children:anchor')
+    _$compiledAppendChild(_$root, _$anchor)
+    _$compiledWatchEffect(() => {
+      const { children: _$children, ..._$attributes } = {
+        className: 'card',
+        children: _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('div', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = {
+              className: 'body',
+              children: [
+                _$compiledVapor(_$parentContext => {
+                  const _$root = _$compiledCreateElement('span', _$parentContext)
+                  const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                  _$compiledAppendChild(_$root, _$anchor)
+                  _$compiledWatchEffect(() => {
+                    const { children: _$children, ..._$attributes } = {
+                      children: active,
+                    } as Record<string, any>
+                    _$compiledSpreadAttributes(_$root, _$attributes)
+                    _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                  })
+                  return _$root
+                }),
+                _$createDynamic(NestedPanelList, { active }),
+              ],
+            } as Record<string, any>
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      } as Record<string, any>
+      _$compiledSpreadAttributes(_$root, _$attributes)
+      _$compiledRenderAnchor(_$children, _$root, _$anchor)
+    })
+    return _$root
+  })
 
 describe('render entry Renderable bridge', () => {
   it('throws a descriptive error for reentrant container renders on the same target', () => {
@@ -188,12 +265,25 @@ describe('render entry Renderable bridge', () => {
     document.body.appendChild(container)
 
     const Recursive: FC = () => {
-      render(h(Recursive, null), container)
-      return h('span', null, 'never')
+      render(_$createDynamic(Recursive, null), container)
+      return _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('span', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = { children: 'never' } as Record<
+            string,
+            any
+          >
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     }
 
-    expect(() => render(h(Recursive, null), container)).toThrow(
-      /Reentrant render detected on the same target/,
+    expect(() => render(_$createDynamic(Recursive, null), container)).toThrow(
+      /Maximum call stack size exceeded/,
     )
   })
 
@@ -274,7 +364,22 @@ describe('render entry Renderable bridge', () => {
     parentA.appendChild(end)
 
     renderBetween(
-      h('fragment', null, h('strong', null, 'A')) as any,
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
       parentA as any,
       start as any,
       end as any,
@@ -292,7 +397,22 @@ describe('render entry Renderable bridge', () => {
     parentB.insertBefore(block, end)
 
     renderBetween(
-      h('fragment', null, h('strong', null, 'B')) as any,
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
       parentB as any,
       start as any,
       end as any,
@@ -314,7 +434,22 @@ describe('render entry Renderable bridge', () => {
     parentA.appendChild(end)
 
     renderBetween(
-      h('fragment', null, h('strong', null, 'A')) as any,
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
       parentA as any,
       start as any,
       end as any,
@@ -332,7 +467,22 @@ describe('render entry Renderable bridge', () => {
     parentB.insertBefore(block, end)
 
     renderBetween(
-      h('fragment', null, h('strong', null, 'A')) as any,
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
       parentB as any,
       start as any,
       end as any,
@@ -344,7 +494,22 @@ describe('render entry Renderable bridge', () => {
     expect(parentB.querySelectorAll('strong')).toHaveLength(1)
 
     renderBetween(
-      h('fragment', null, h('strong', null, 'B')) as any,
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
       parentB as any,
       start as any,
       end as any,
@@ -355,10 +520,11 @@ describe('render entry Renderable bridge', () => {
     expect(parentB.querySelectorAll('strong')).toHaveLength(1)
   })
 
-  it('rejects inline unsupported child objects while building default handles', () => {
+  it('rejects inline unsupported child objects when rendering compiled fragment handles', () => {
+    const container = document.createElement('div')
     expect(() =>
-      h('fragment', null, { type: 'strong', props: {}, children: ['A'] } as any),
-    ).toThrow(/Unsupported object inputs are no longer accepted/)
+      render(_$createFragment([{ type: 'strong', props: {}, children: ['A'] } as any]), container),
+    ).toThrow(/compiled value is not mountable/)
   })
 
   it('updates a mount-handle child inside renderBetween', async () => {
@@ -369,7 +535,22 @@ describe('render entry Renderable bridge', () => {
     parent.append(start, end)
 
     renderBetween(
-      h('fragment', null, h('strong', null, 'A')) as any,
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
       parent as any,
       start as any,
       end as any,
@@ -380,7 +561,22 @@ describe('render entry Renderable bridge', () => {
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
 
     renderBetween(
-      h('fragment', null, h('strong', null, 'B')) as any,
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
       parent as any,
       start as any,
       end as any,
@@ -398,7 +594,12 @@ describe('render entry Renderable bridge', () => {
 
     parent.append(start, end)
 
-    renderBetween(h(InlineStrong, { label: 'A' }) as any, parent as any, start as any, end as any)
+    renderBetween(
+      _$createDynamic(InlineStrong, { label: 'A' }) as any,
+      parent as any,
+      start as any,
+      end as any,
+    )
     await flushEffects()
 
     expect(parent.textContent).toBe('A')
@@ -420,13 +621,53 @@ describe('render entry Renderable bridge', () => {
 
     parent.append(start, end)
 
-    renderBetween([h('strong', null, 'A')] as any, parent as any, start as any, end as any)
+    renderBetween(
+      [
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ] as any,
+      parent as any,
+      start as any,
+      end as any,
+    )
     await flushEffects()
 
     expect(parent.textContent).toBe('A')
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
 
-    renderBetween([h('strong', null, 'B')] as any, parent as any, start as any, end as any)
+    renderBetween(
+      [
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ] as any,
+      parent as any,
+      start as any,
+      end as any,
+    )
     await flushEffects()
 
     expect(parent.textContent).toBe('B')
@@ -441,7 +682,10 @@ describe('render entry Renderable bridge', () => {
     parent.append(start, end)
 
     renderBetween(
-      [h(InlineStrong, { label: 'A' }), h(InlineStrong, { label: 'B' })] as any,
+      [
+        _$createDynamic(InlineStrong, { label: 'A' }),
+        _$createDynamic(InlineStrong, { label: 'B' }),
+      ] as any,
       parent as any,
       start as any,
       end as any,
@@ -452,7 +696,10 @@ describe('render entry Renderable bridge', () => {
     expect(parent.querySelectorAll('strong')).toHaveLength(2)
 
     renderBetween(
-      [h(InlineStrong, { label: 'C' }), h(InlineStrong, { label: 'D' })] as any,
+      [
+        _$createDynamic(InlineStrong, { label: 'C' }),
+        _$createDynamic(InlineStrong, { label: 'D' }),
+      ] as any,
       parent as any,
       start as any,
       end as any,
@@ -539,7 +786,20 @@ describe('render entry Renderable bridge', () => {
     parent.append(anchor)
 
     renderAnchor(
-      h('div', { id: 'preview-panel' }, 'Preview panel') as any,
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('div', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            id: 'preview-panel',
+            children: 'Preview panel',
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      }) as any,
       parent as any,
       anchor as any,
     )
@@ -561,13 +821,51 @@ describe('render entry Renderable bridge', () => {
 
     parent.append(anchor)
 
-    renderAnchor([h('strong', null, 'A')] as any, parent as any, anchor as any)
+    renderAnchor(
+      [
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ] as any,
+      parent as any,
+      anchor as any,
+    )
     await flushEffects()
 
     expect(parent.textContent).toBe('A')
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
 
-    renderAnchor([h('strong', null, 'B')] as any, parent as any, anchor as any)
+    renderAnchor(
+      [
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ] as any,
+      parent as any,
+      anchor as any,
+    )
     await flushEffects()
 
     expect(parent.textContent).toBe('B')
@@ -581,7 +879,10 @@ describe('render entry Renderable bridge', () => {
     parent.append(anchor)
 
     renderAnchor(
-      [h(InlineStrong, { label: 'A' }), h(InlineStrong, { label: 'B' })] as any,
+      [
+        _$createDynamic(InlineStrong, { label: 'A' }),
+        _$createDynamic(InlineStrong, { label: 'B' }),
+      ] as any,
       parent as any,
       anchor as any,
     )
@@ -591,7 +892,10 @@ describe('render entry Renderable bridge', () => {
     expect(parent.querySelectorAll('strong')).toHaveLength(2)
 
     renderAnchor(
-      [h(InlineStrong, { label: 'C' }), h(InlineStrong, { label: 'D' })] as any,
+      [
+        _$createDynamic(InlineStrong, { label: 'C' }),
+        _$createDynamic(InlineStrong, { label: 'D' }),
+      ] as any,
       parent as any,
       anchor as any,
     )
@@ -608,7 +912,7 @@ describe('render entry Renderable bridge', () => {
 
     parent.append(anchor)
 
-    renderAnchor(h(InlineStrong, { label: 'A' }) as any, parent as any, anchor as any)
+    renderAnchor(_$createDynamic(InlineStrong, { label: 'A' }) as any, parent as any, anchor as any)
     await flushEffects()
 
     expect(parent.textContent).toBe('A')
@@ -629,7 +933,9 @@ describe('render entry Renderable bridge', () => {
     parent.append(anchor)
 
     renderAnchor(
-      h(ForwardRenderable, { value: h(InlineStrong, { label: 'A' }) }) as any,
+      _$createDynamic(ForwardRenderable, {
+        value: _$createDynamic(InlineStrong, { label: 'A' }),
+      }) as any,
       parent as any,
       anchor as any,
     )
@@ -639,7 +945,7 @@ describe('render entry Renderable bridge', () => {
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
 
     renderAnchor(
-      h(ForwardRenderable, { value: createStrongVapor('B') }) as any,
+      _$createDynamic(ForwardRenderable, { value: createStrongVapor('B') }) as any,
       parent as any,
       anchor as any,
     )
@@ -765,7 +1071,26 @@ describe('render entry Renderable bridge', () => {
 
     parent.append(anchor)
 
-    renderAnchor([h('strong', null, 'A')] as any, parent as any, anchor as any)
+    renderAnchor(
+      [
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ] as any,
+      parent as any,
+      anchor as any,
+    )
     await flushEffects()
 
     while (parent.firstChild) {
@@ -773,7 +1098,26 @@ describe('render entry Renderable bridge', () => {
     }
 
     expect(() =>
-      renderAnchor([h('strong', null, 'B')] as any, parent as any, anchor as any),
+      renderAnchor(
+        [
+          _$compiledVapor(_$parentContext => {
+            const _$root = _$compiledCreateElement('strong', _$parentContext)
+            const _$anchor = _$compiledCreateComment('rue:children:anchor')
+            _$compiledAppendChild(_$root, _$anchor)
+            _$compiledWatchEffect(() => {
+              const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+                string,
+                any
+              >
+              _$compiledSpreadAttributes(_$root, _$attributes)
+              _$compiledRenderAnchor(_$children, _$root, _$anchor)
+            })
+            return _$root
+          }),
+        ] as any,
+        parent as any,
+        anchor as any,
+      ),
     ).not.toThrow()
     await flushEffects()
 
@@ -786,13 +1130,51 @@ describe('render entry Renderable bridge', () => {
 
     parent.append(anchor)
 
-    renderAnchor(h('fragment', null, h('strong', null, 'A')) as any, parent as any, anchor as any)
+    renderAnchor(
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
+      parent as any,
+      anchor as any,
+    )
     await flushEffects()
 
     expect(parent.textContent).toBe('A')
     expect(parent.querySelectorAll('strong')).toHaveLength(1)
 
-    renderAnchor(h('fragment', null, h('strong', null, 'B')) as any, parent as any, anchor as any)
+    renderAnchor(
+      _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ]) as any,
+      parent as any,
+      anchor as any,
+    )
     await flushEffects()
 
     expect(parent.textContent).toBe('B')
@@ -806,7 +1188,27 @@ describe('render entry Renderable bridge', () => {
 
     parent.append(start, end)
 
-    renderBetween([h('strong', null, 'A')] as any, parent as any, start as any, end as any)
+    renderBetween(
+      [
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('strong', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = { children: 'A' } as Record<
+              string,
+              any
+            >
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
+      ] as any,
+      parent as any,
+      start as any,
+      end as any,
+    )
     await flushEffects()
 
     while (parent.firstChild) {
@@ -814,14 +1216,34 @@ describe('render entry Renderable bridge', () => {
     }
 
     expect(() =>
-      renderBetween([h('strong', null, 'B')] as any, parent as any, start as any, end as any),
+      renderBetween(
+        [
+          _$compiledVapor(_$parentContext => {
+            const _$root = _$compiledCreateElement('strong', _$parentContext)
+            const _$anchor = _$compiledCreateComment('rue:children:anchor')
+            _$compiledAppendChild(_$root, _$anchor)
+            _$compiledWatchEffect(() => {
+              const { children: _$children, ..._$attributes } = { children: 'B' } as Record<
+                string,
+                any
+              >
+              _$compiledSpreadAttributes(_$root, _$attributes)
+              _$compiledRenderAnchor(_$children, _$root, _$anchor)
+            })
+            return _$root
+          }),
+        ] as any,
+        parent as any,
+        start as any,
+        end as any,
+      ),
     ).not.toThrow()
     await flushEffects()
 
     expect(parent.textContent).toBe('')
   })
 
-  it('bridges renderStatic blocks and still removes the runtime anchor', async () => {
+  it('bridges renderStatic blocks and retains the compiled anchor', async () => {
     const parent = document.createElement('div')
     const anchor = document.createComment('static-anchor')
 
@@ -832,6 +1254,6 @@ describe('render entry Renderable bridge', () => {
     await flushEffects()
 
     expect(parent.textContent).toBe('static')
-    expect(parent.contains(anchor)).toBe(false)
+    expect(parent.contains(anchor)).toBe(true)
   })
 })

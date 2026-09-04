@@ -28,8 +28,8 @@
   "types": "dist/router.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "development": "./src/index.ts",
+      "types": "./src/index.tsx",
+      "development": "./src/index.tsx",
       "module": "./dist/router.esm-bundler.js",
       "import": "./dist/router.esm-bundler.js"
     },
@@ -44,6 +44,7 @@
   },
   "buildOptions": {
     "name": "RueRouterCore",
+    "rueTransform": true,
     "formats": [
       "esm-bundler"
     ]

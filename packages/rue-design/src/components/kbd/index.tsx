@@ -384,7 +384,7 @@ const Root: FC<KbdProps> = ({
   return <KeyRoot {...rest} />
 }
 
-const Kbd: KbdCompound = Object.assign(Root, {
+const Kbd: KbdCompound = /*#__PURE__*/ Object.assign(Root, {
   Group,
   Combo,
   Separator,

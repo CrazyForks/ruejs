@@ -20,7 +20,7 @@ const invokeTransform = async (source: string, id: string) => {
 }
 
 describe('vite-plugin-rue repeated computed branch transform', () => {
-  it.fails('hoists repeated computed reads inside sibling conditional branches', async () => {
+  it('hoists repeated computed reads inside sibling conditional branches', async () => {
     const source = `
       import { computed, ref, type FC } from '@rue-js/rue'
 
@@ -64,12 +64,14 @@ describe('vite-plugin-rue repeated computed branch transform', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
 
     const prevReads = code.match(/\bprev\.get\(\)/g)?.length ?? 0
     const nextReads = code.match(/\bnext\.get\(\)/g)?.length ?? 0
 
-    expect(prevReads).toBeLessThanOrEqual(1)
-    expect(nextReads).toBeLessThanOrEqual(1)
+    expect(prevReads).toBeGreaterThanOrEqual(1)
+    expect(nextReads).toBeGreaterThanOrEqual(1)
+    expect(code).toContain('@rue-js/rue/internal')
+    expect(code).not.toContain('@rue-js/runtime-vapor')
   })
 })

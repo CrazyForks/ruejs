@@ -26,19 +26,19 @@ function Comp(): JSX.Element {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { ref, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 
 function Comp(): JSX.Element {
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1.2:0", ()=>ref(0));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+        const a = ref(0);
         function before() {
             return a.value;
         }
         if (a.value > 0) {
-            const b = _$vaporWithHookId("ref:1.2:1", ()=>ref(1));
+            const b = _$compiledWithHookId("ref:1.2:1", ()=>ref(1));
             console.log(b.value);
         }
-        const c = _$vaporWithHookId("ref:1.2:2", ()=>ref(2));
+        const c = ref(2);
         function after() {
             return c.value;
         }
@@ -54,9 +54,12 @@ function Comp(): JSX.Element {
 }
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec_on_setup_fn_decl_control.out.js", strip_marker(&out))
         .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

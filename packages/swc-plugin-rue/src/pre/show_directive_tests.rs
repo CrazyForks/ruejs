@@ -213,7 +213,7 @@ fn rewrites_existing_style_attribute_without_value() {
     match unwrap_expr(expr) {
         Expr::Call(call) => {
             assert!(
-                matches!(&call.callee, Callee::Expr(expr) if matches!(unwrap_expr(expr.as_ref()), Expr::Ident(id) if id.sym.as_ref() == "_$vaporShowStyle"))
+                matches!(&call.callee, Callee::Expr(expr) if matches!(unwrap_expr(expr.as_ref()), Expr::Ident(id) if id.sym.as_ref() == "_$compiledShowStyle"))
             );
             assert_eq!(call.args.len(), 2);
             assert!(
@@ -292,7 +292,7 @@ fn rewrites_existing_style_expr_with_dynamic_condition_to_runtime_call() {
     match unwrap_expr(style_expr(&opening)) {
         Expr::Call(call) => {
             assert!(
-                matches!(&call.callee, Callee::Expr(expr) if matches!(unwrap_expr(expr.as_ref()), Expr::Ident(id) if id.sym.as_ref() == "_$vaporShowStyle"))
+                matches!(&call.callee, Callee::Expr(expr) if matches!(unwrap_expr(expr.as_ref()), Expr::Ident(id) if id.sym.as_ref() == "_$compiledShowStyle"))
             );
             assert!(
                 matches!(unwrap_expr(call.args[0].expr.as_ref()), Expr::Ident(id) if id.sym.as_ref() == "styleObj")

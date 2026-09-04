@@ -410,7 +410,7 @@ export function clientReferenceDedupPlugin(options: ClientReferenceDedupOptions 
         code: '@rue-js/rue',
       },
       handler(code) {
-        if (this.environment?.name !== 'ssr') return null
+        if (this.environment?.name !== 'ssr' && this.environment?.name !== 'rsc') return null
         if (!hasUseClientDirective(code)) return null
         if (!code.includes('@rue-js/rue')) return null
 

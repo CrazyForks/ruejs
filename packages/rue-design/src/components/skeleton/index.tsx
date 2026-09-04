@@ -471,12 +471,12 @@ const SkeletonNode: FC<SkeletonNodeProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const resolvedActive = resolveReactiveValue(active)
+  const resolvedActive = () => resolveReactiveValue(active)
 
   return (
     <Component
       {...rest}
-      className={buildSkeletonNodeClassName(className, resolvedActive)}
+      className={buildSkeletonNodeClassName(className, resolvedActive())}
       style={style}
     >
       {children}
@@ -613,8 +613,8 @@ const SkeletonRoot: FC<SkeletonProps> = props => {
     return <PrimitiveSkeleton {...props} />
   }
 
-  if (loading === false) {
-    return children ?? null
+  if (props.loading === false) {
+    return props.children ?? null
   }
 
   const avatarConfig = normalizeToggleProps<SkeletonAvatarProps>(avatar, false)
@@ -686,7 +686,7 @@ type SkeletonCompound = FC<SkeletonProps> & {
   Node: FC<SkeletonNodeProps>
 }
 
-const Skeleton: SkeletonCompound = Object.assign(SkeletonRoot, {
+const Skeleton: SkeletonCompound = /*#__PURE__*/ Object.assign(SkeletonRoot, {
   Avatar: SkeletonAvatar,
   Button: SkeletonButton,
   Input: SkeletonInput,

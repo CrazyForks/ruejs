@@ -349,6 +349,10 @@ const toChildArray = (children: any): any[] => {
 /** 判断是否存在 Renderable Content 的内部工具函数。 */
 const hasRenderableContent = (value: any) => toChildArray(value).length > 0
 
+/** 物化 compiled JSX 生成的动态子插槽，避免将 block factory 传入默认渲染路径。 */
+const materializeBlockFactory = (value: any) =>
+  typeof value === 'function' && value.kind === 'block-factory' ? value() : value
+
 /** 解析 Width Style 的内部工具函数。 */
 const resolveWidthStyle = (width?: ModalWidth) => {
   if (width == null) return undefined
@@ -691,6 +695,9 @@ const Modal: FC<ModalProps> = ({
 
   const renderCancelButtonNode = (buttonOverrides?: Record<string, any>) => {
     const { children: buttonChildren, onClick, ...buttonRest } = buttonOverrides ?? {}
+    const resolvedChildren = materializeBlockFactory(
+      buttonChildren ?? cancelButtonProps?.children ?? defaultCancelText,
+    )
     return (
       <Button
         {...cancelButtonProps}
@@ -701,14 +708,16 @@ const Modal: FC<ModalProps> = ({
           notifyCancel(event)
         }}
         disabled={buttonRest.disabled ?? cancelButtonProps?.disabled}
-      >
-        {buttonChildren ?? cancelButtonProps?.children ?? defaultCancelText}
-      </Button>
+        children={resolvedChildren}
+      />
     )
   }
 
   const renderOkButtonNode = (buttonOverrides?: Record<string, any>) => {
     const { children: buttonChildren, onClick, ...buttonRest } = buttonOverrides ?? {}
+    const resolvedChildren = materializeBlockFactory(
+      buttonChildren ?? okButtonProps?.children ?? okText,
+    )
     return (
       <Button
         {...okButtonProps}
@@ -720,9 +729,8 @@ const Modal: FC<ModalProps> = ({
           if (event.defaultPrevented) return
           handleOk(event)
         }}
-      >
-        {buttonChildren ?? okButtonProps?.children ?? okText}
-      </Button>
+        children={resolvedChildren}
+      />
     )
   }
 
@@ -767,12 +775,12 @@ const Modal: FC<ModalProps> = ({
     >
       {mask ? (
         <div
+          {...{ style: mergeStyleValue(styles?.mask, maskStyle) }}
           aria-hidden="true"
           className={mergeClassName(
             'absolute inset-0 bg-base-content/40',
             mergeClassName(maskClassName, classNames?.mask),
           )}
-          style={mergeStyleValue(styles?.mask, maskStyle)}
           data-rue-modal-mask="true"
         />
       ) : null}
@@ -814,13 +822,13 @@ const Modal: FC<ModalProps> = ({
           >
             {closable ? (
               <button
+                {...{ style: mergeStyleValue(styles?.close) }}
                 type="button"
                 aria-label="关闭"
                 className={mergeClassName(
                   'btn btn-sm btn-circle btn-ghost absolute right-4 top-4 z-10',
                   classNames?.close,
                 )}
-                style={mergeStyleValue(styles?.close)}
                 onClick={(event: MouseEvent) => notifyCancel(event)}
               >
                 {closeIcon ?? <DefaultCloseIcon />}
@@ -828,15 +836,15 @@ const Modal: FC<ModalProps> = ({
             ) : null}
             {title ? (
               <div
+                {...{ style: mergeStyleValue(styles?.header) }}
                 className={mergeClassName(
                   'mb-4 pr-10',
                   mergeClassName(headerClassName, classNames?.header),
                 )}
-                style={mergeStyleValue(styles?.header)}
               >
                 <div
+                  {...{ style: mergeStyleValue(styles?.title) }}
                   className={mergeClassName('text-lg font-semibold leading-6', classNames?.title)}
-                  style={mergeStyleValue(styles?.title)}
                 >
                   {title}
                 </div>
@@ -854,11 +862,11 @@ const Modal: FC<ModalProps> = ({
             </div>
             {footerContent ? (
               <div
+                {...{ style: mergeStyleValue(styles?.footer) }}
                 className={mergeClassName(
                   'modal-action mt-6 flex flex-wrap items-center justify-end gap-2',
                   mergeClassName(footerClassName, classNames?.footer),
                 )}
-                style={mergeStyleValue(styles?.footer)}
               >
                 {footerContent}
               </div>
@@ -1338,7 +1346,7 @@ type ModalCompound = FC<ModalProps> &
     config: (options: ModalGlobalConfig) => void
   }
 
-const ModalCompound: ModalCompound = Object.assign(Modal, {
+const ModalCompound: ModalCompound = /*#__PURE__*/ Object.assign(Modal, {
   useModal,
   open: (config: ModalFuncProps) => openGlobalModal('open', config),
   info: (config: ModalFuncProps) => openGlobalModal('info', config),

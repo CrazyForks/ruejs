@@ -186,12 +186,12 @@ Rue 组件实例经历一个生命周期。例如，它被创建、挂载、更�
 在 Rue 中，_prop_ 这个术语有三种常见用法：
 
 - 组件 props
-- 渲染输出 props
+- JSX props
 - 插槽 props
 
 *组件 props*是大多数人想到的 props。这些通常由组件的 `props` 选项，或等价的编译期声明方式显式定义。
 
-*渲染输出 props*这个术语指的是作为第二个参数传递给 `h()` 的对象属性。这些可以包括组件 props，但它们也可以包括组件事件、DOM 事件、DOM 属性和 DOM attribute。只要你在手写渲染函数边界里直接调用 `h()`，通常就会接触到这一层 props。
+*JSX props*是写在 JSX 标签上的属性。它们可以表示组件 props、组件事件、DOM 事件、DOM property 或 DOM attribute，并由 Rue 编译器转换为对应的窄操作。
 
 *插槽 props*是传递给作用域插槽的属性。
 
@@ -275,7 +275,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 ## 渲染函数 {#render-function}
 
-*渲染函数*是组件中生成渲染输出的部分。模板或 JSX 可以被编译成更接近 Renderable / Block 的产物，而手写渲染函数则通过 `h()` 等 API 显式描述输出边界。
+*渲染函数*是函数组件中返回 JSX / TSX 的部分。Rue 编译器会把这段源码转换为 Renderable / Block 及相应的窄挂载操作。
 
 更多详情请参见：
 
@@ -341,7 +341,7 @@ Rue 只能在响应式副作用内跟踪响应式依赖项。如果在响应式�
 
 <span id="vnode"></span>
 
-这个锚点同样保留给历史跳转使用。对 Rue 当前主路径来说，更准确的理解是：`h()` 产出的是公开渲染输出对象，它属于显式手写渲染边界，而不是默认内部渲染货币。
+这个锚点保留给历史跳转使用。Rue 当前的公开边界是经过编译的 JSX / TSX；生成的 Renderable / Block 和挂载 helper 属于编译 ABI，不是应用手写的通用树对象。
 
 更多信息请参见[指南 - 渲染机制](/guide/guide/extras/rendering-mechanism#public-render-output)。
 

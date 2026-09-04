@@ -29,15 +29,12 @@ const listStyles = `
 
 .list-enter-active,
 .list-leave-active {
-  transition:
-    opacity ${TRANSITION_MS}ms cubic-bezier(0.55, 0, 0.1, 1),
-    transform ${TRANSITION_MS}ms cubic-bezier(0.55, 0, 0.1, 1);
+  transition: opacity ${TRANSITION_MS}ms cubic-bezier(0.55, 0, 0.1, 1);
 }
 
 .list-enter-from,
 .list-leave-to {
   opacity: 0;
-  transform: translateY(12px) scale(0.96);
 }
 
 .list-leave-active {
@@ -48,6 +45,10 @@ const listStyles = `
 .list-move {
   transition: transform ${TRANSITION_MS}ms cubic-bezier(0.55, 0, 0.1, 1);
 }
+
+.list-shell.is-resetting .list-move {
+  transition: none;
+}
 `
 
 const demoCode = `import { type FC, TransitionGroup, ref } from '@rue-js/rue';
@@ -57,6 +58,7 @@ const INITIAL_IDS = [1, 2, 3, 4, 5];
 const ListTransitionExample: FC = () => {
   const items = ref<number[]>([...INITIAL_IDS]);
   const nextId = ref(INITIAL_IDS.length + 1);
+  const resetting = ref(false);
 
   const insert = () => {
     const nextItems = items.value.slice();
@@ -84,8 +86,12 @@ const ListTransitionExample: FC = () => {
   };
 
   const reset = () => {
+    resetting.value = true;
     items.value = [...INITIAL_IDS];
     nextId.value = INITIAL_IDS.length + 1;
+    setTimeout(() => {
+      resetting.value = false;
+    }, 350);
   };
 
   return (
@@ -97,7 +103,7 @@ const ListTransitionExample: FC = () => {
           <button className="btn" onClick={shuffle}>Shuffle</button>
         </div>
 
-        <div className="list-shell rounded-xl border border-base-200 bg-base-100 p-3">
+        <div className={'list-shell ' + (resetting.value ? 'is-resetting ' : '') + 'rounded-xl border border-base-200 bg-base-100 p-3'}>
           <TransitionGroup tag="ul" name="list" type="transition" duration={350}>
             {items.value.map((item) => (
               <li key={item} className="rounded-md border border-base-200 bg-base-100 px-3 py-2 shadow-sm">
@@ -117,6 +123,7 @@ export default ListTransitionExample;`
 const ListTransitionExample: FC = () => {
   const items = ref<number[]>([...INITIAL_IDS])
   const nextId = ref(INITIAL_IDS.length + 1)
+  const resetting = ref(false)
   const activeTab = ref<'preview' | 'code'>('preview')
 
   const insert = () => {
@@ -145,8 +152,12 @@ const ListTransitionExample: FC = () => {
   }
 
   const reset = () => {
+    resetting.value = true
     items.value = [...INITIAL_IDS]
     nextId.value = INITIAL_IDS.length + 1
+    setTimeout(() => {
+      resetting.value = false
+    }, TRANSITION_MS)
   }
 
   return (
@@ -198,7 +209,9 @@ const ListTransitionExample: FC = () => {
                 </button>
               </div>
 
-              <div className="list-shell rounded-xl border border-base-200 bg-base-100 p-3">
+              <div
+                className={`list-shell ${resetting.value ? 'is-resetting' : ''} rounded-xl border border-base-200 bg-base-100 p-3`}
+              >
                 <TransitionGroup tag="ul" name="list" type="transition" duration={TRANSITION_MS}>
                   {items.value.map(item => (
                     <li

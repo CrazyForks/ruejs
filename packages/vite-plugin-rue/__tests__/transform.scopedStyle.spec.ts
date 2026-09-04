@@ -112,7 +112,7 @@ describe('vite-plugin-rue scoped style transform', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
     const scopeAttr = code.match(/data-rue-scope-[a-z0-9]+/)?.[0]
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
     expect(scopeAttr).toBeTruthy()
     expect(code).toContain(`.scoped-card[${scopeAttr}]:hover::before`)
     expect(code).toContain(`h2[${scopeAttr}]`)
@@ -159,7 +159,7 @@ describe('vite-plugin-rue scoped style transform', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
     expect(code).toContain('.plain-card { color: red; }')
     expect(code).not.toContain('data-rue-scope-')
   })

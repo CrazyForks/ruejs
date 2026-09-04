@@ -224,7 +224,16 @@ const Indicator: FC<IndicatorProps> = ({
           </Item>
         ))
       ) : item != null ? (
-        <Item key="__indicator_item__" {...itemProps}>
+        <Item
+          key="__indicator_item__"
+          {...itemProps}
+          placement={itemProps?.placement}
+          horizontal={itemProps?.horizontal}
+          vertical={itemProps?.vertical}
+          offset={itemProps?.offset}
+          className={itemProps?.className}
+          style={itemProps?.style}
+        >
           {item}
         </Item>
       ) : null}
@@ -254,6 +263,12 @@ const Item: FC<IndicatorItemProps> = ({
   return (
     <Component
       {...rest}
+      ref={(element: HTMLElement | null) => {
+        if (!element || !offsetStyle) return
+        Object.entries(offsetStyle).forEach(([name, value]) =>
+          element.style.setProperty(name, value),
+        )
+      }}
       className={buildItemClassName(resolvedHorizontal, resolvedVertical, className)}
       style={mergeItemStyle(style, offsetStyle)}
     >
@@ -266,7 +281,7 @@ type IndicatorCompound = FC<IndicatorProps> & {
   Item: FC<IndicatorItemProps>
 }
 
-const IndicatorCompound: IndicatorCompound = Object.assign(Indicator, {
+const IndicatorCompound: IndicatorCompound = /*#__PURE__*/ Object.assign(Indicator, {
   Item,
 })
 

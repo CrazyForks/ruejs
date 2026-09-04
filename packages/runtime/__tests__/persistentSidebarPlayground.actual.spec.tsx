@@ -134,6 +134,8 @@ describe('persistentSidebarPlayground actual', () => {
 
     const input = getSearchInput()
     expect(input).not.toBeNull()
+    input!.focus()
+    expect(document.activeElement).toBe(input)
 
     input!.value = 'button'
     input!.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))
@@ -144,6 +146,8 @@ describe('persistentSidebarPlayground actual', () => {
       expect(container.textContent).not.toContain('介绍')
       expect(getTotalCount()).toBe('1')
     })
+    expect(getSearchInput()).toBe(input)
+    expect(document.activeElement).toBe(input)
 
     input!.value = '介绍'
     input!.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }))

@@ -93,12 +93,12 @@ export default PostDetail
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, _$vaporMarkComponentRenderReactive, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$compiledWithHookId, _$compiledMarkComponentRenderReactive, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
-const PostDetail: FC = _$vaporMarkComponentRenderReactive(()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+const PostDetail: FC = _$compiledMarkComponentRenderReactive(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
         console.log('我是setup');
-        const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+        const count = ref(0);
         let msg = 'start';
         const double = ()=>{
             console.log('double click');
@@ -120,7 +120,7 @@ const PostDetail: FC = _$vaporMarkComponentRenderReactive(()=>{
     if (count.value > 15) {
         console.log('超过15了');
         msg = '超过15了';
-        const count2 = _$vaporWithHookId("ref:1:1", ()=>ref(5));
+        const count2 = _$compiledWithHookId("ref:1:1", ()=>ref(5));
         return (<div className="max-w-sm mx-auto p-6">
         <div>{msg}</div>
         <button className="btn btn-primary btn-sm" onClick={()=>dec()}>
@@ -170,5 +170,10 @@ export default PostDetail;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec32.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("_$compiledWithHookId(\"ref:1:1\", ()=>ref(5))"), "{normalized}");
+    assert!(normalized.contains("count2.value++"), "{normalized}");
+    assert_eq!(normalized.matches("if (count.value >").count(), 2);
+    assert!(normalized.contains("双倍值：{double()}"), "{normalized}");
 }

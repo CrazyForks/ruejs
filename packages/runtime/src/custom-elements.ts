@@ -2,27 +2,26 @@
 自定义元素包装概述
 - 目标：把 Rue 组件包装为原生 Custom Element，便于通过 customElements.define 注册。
 - 挂载策略：每个宿主元素维护独立的 useApp 实例，在 connected/disconnected 生命周期里挂载与卸载。
-- 更新策略：属性变化与 props bag 变化同步到同一个响应式 props 容器，避免整棵子树重挂载。
+- 更新策略：属性变化与 props bag 变化同步到同一个响应式 props 容器，并合并同一微任务内的内部子树更新。
 - 样式策略：支持把内联样式注入到 shadow root 或 light DOM 宿主，覆盖最小可用场景。
 */
+import { getCurrentContainer, type ComponentInstance } from './rue'
 import {
-  createRue,
-  renderAnchor,
-  getCurrentContainer,
-  createElement as createRueElement,
-  runWithRuntime,
-  type ComponentInstance,
-  type RenderableOutput,
-} from './rue'
-import { ref, shallowReactive, watchEffect } from './reactivity'
-import { useSetup } from '@rue-js/runtime-vapor/reactive'
+  _$compiledBranch,
+  _$compiledComponent,
+  type CompiledComponentFactory,
+} from './compiled-component'
+import { _$compiledRoot } from './compiled-root'
+import { onOwnerCleanup } from './internal-reactive'
+import { getCurrentInstance, ref, shallowReactive } from './reactivity'
+import { useSetup } from './compiler-runtime/hooks'
 import { appendChild, createComment, createElement as createDomElement } from './dom'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   CUSTOM_ELEMENT_SYNC_PROPS_KEY,
   type CustomElementEmitBridge,
 } from './custom-elements.shared'
-import { preserveParentContextProps } from './context'
+import { linkCurrentOwnerToParentContextProps, preserveParentContextProps } from './context'
 import { useApp } from './hooks/useApp'
 
 /** useCustomElement 的包装配置。 */
@@ -52,7 +51,7 @@ type CustomElementComponent<P = Record<string, unknown>> =
   | ComponentInstance<P>
   | {
       setup?: (props: Partial<P>) => any
-      render?: (ctx: any) => RenderableOutput
+      render?: (ctx: any) => ReturnType<CompiledComponentFactory<any>>
     }
 
 const INTERNAL_ATTRIBUTES = new Set(['data-rue-app'])
@@ -68,6 +67,7 @@ const observerByHost = new WeakMap<HTMLElement, MutationObserver>()
 const propsByHost = new WeakMap<HTMLElement, Record<string, unknown>>()
 const propsStateByHost = new WeakMap<HTMLElement, Record<string, unknown>>()
 const propsVersionByHost = new WeakMap<HTMLElement, { value: number }>()
+const pendingPropsVersionHosts = new WeakSet<HTMLElement>()
 const targetByHost = new WeakMap<HTMLElement, CustomElementMountTarget>()
 const hostByContainer = new WeakMap<object, HTMLElement>()
 const shadowRootByContainer = new WeakMap<object, ShadowRoot>()
@@ -239,10 +239,13 @@ const setPropsVersion = (host: HTMLElement, version: { value: number } | null) =
 
 const bumpPropsVersion = (host: HTMLElement) => {
   const version = propsVersionByHost.get(host)
-  if (!version) {
-    return
-  }
-  version.value += 1
+  if (!version || pendingPropsVersionHosts.has(host)) return
+  pendingPropsVersionHosts.add(host)
+  queueTask(() => {
+    pendingPropsVersionHosts.delete(host)
+    const currentVersion = propsVersionByHost.get(host)
+    if (currentVersion) currentVersion.value += 1
+  })
 }
 
 const syncPropsState = (host: HTMLElement) => {
@@ -354,18 +357,22 @@ export function useCustomElement<P = Record<string, unknown>>(
 ): RueCustomElementConstructor<P> {
   const { shadowRoot = true, styles, configureApp, nonce } = options
 
-  const ResolvedComponent: ComponentInstance<any> =
+  const ResolvedComponent =
     typeof component === 'function'
       ? (component as ComponentInstance<any>)
       : (props: Partial<P>) => {
           const ctx =
             typeof component.setup === 'function' ? useSetup(() => component.setup!(props)) : props
-          return typeof component.render === 'function' ? component.render(ctx) : []
+          return typeof component.render === 'function'
+            ? component.render(ctx)
+            : _$compiledRoot(() => null)
         }
 
   const mountHost = (host: HTMLElement) => {
+    const parentContextInstance =
+      (host as unknown as Record<string, unknown>).__rue_context_parent_instance__ ??
+      getCurrentInstance()
     const target = createMountTarget(host, shadowRoot)
-    const runtime = createRue()
     const customElementContext: ActiveCustomElementContext = {
       host,
       shadowRoot: target instanceof ShadowRoot ? target : null,
@@ -377,30 +384,47 @@ export function useCustomElement<P = Record<string, unknown>>(
     syncPropsState(host)
     setMountTarget(host, target)
 
-    const ScopedResolvedComponent: ComponentInstance<any> = props =>
-      withActiveCustomElementContext(customElementContext, () =>
+    const ScopedResolvedComponent = (props: Record<string, unknown>) => {
+      linkCurrentOwnerToParentContextProps(props)
+      return withActiveCustomElementContext(customElementContext, () =>
         ResolvedComponent(props as Partial<P>),
       )
+    }
 
-    const wrapper: ComponentInstance = () =>
-      runtime.vapor(() => {
+    const readScopedProps = () => {
+      const props = {
+        ...(getPropsState<P>(host) ?? ({} as Partial<P>)),
+      } as Record<string, unknown>
+      if (parentContextInstance != null && props.__rue_context_parent_instance__ == null) {
+        props.__rue_context_parent_instance__ = parentContextInstance
+      }
+      preserveParentContextProps(props)
+      return props
+    }
+
+    const wrapper = (() =>
+      _$compiledRoot(() => {
         const root = createDomElement('span') as HTMLElement
         root.style.display = 'contents'
-        const anchor = createComment('rue:custom-element:anchor')
-        appendChild(root, anchor)
-        watchEffect(() => {
-          void propsVersion.value
-          runWithRuntime(runtime, () => {
-            const props = { ...(getPropsState<P>(host) ?? ({} as Partial<P>)) }
-            preserveParentContextProps(props as Record<string, unknown>)
-            const child = createRueElement(ScopedResolvedComponent as any, props as any)
-            renderAnchor(child as any, root as any, anchor as any)
-          })
+        const component = _$compiledBranch(() => {
+          const version = propsVersion.value
+          return {
+            __rue_compiled_branch_key: version,
+            create: () =>
+              _$compiledComponent(
+                ScopedResolvedComponent as unknown as CompiledComponentFactory<
+                  Record<string, unknown>
+                >,
+                readScopedProps,
+              ),
+          }
         })
+        component.__rue_compiled_mount(root)
+        onOwnerCleanup(() => component.dispose())
         return root as any
-      })
+      })) as unknown as ComponentInstance
 
-    const app = useApp(wrapper, runtime)
+    const app = useApp(wrapper)
     configureApp?.(app)
     setApp(host, app)
     app.mount(target as any)

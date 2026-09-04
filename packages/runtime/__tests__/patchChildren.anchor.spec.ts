@@ -1,7 +1,16 @@
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { FC } from '../src'
-import { Fragment, h, ref, render, setReactiveScheduling, signal } from '../src'
-import { _$vaporMarkComponentRenderReactive } from '../src/vapor'
+import { ref, render, setReactiveScheduling, signal } from '../src'
 
 setReactiveScheduling('sync')
 
@@ -10,21 +19,41 @@ afterEach(() => {
 })
 
 describe('patch_children_keyed anchor isolation', () => {
-  it('patches h fragments in place while inserting and deleting compatible children', async () => {
+  it('patches compiled fragments in place while inserting and deleting compatible children', async () => {
     const container = document.createElement('div')
     const label = signal('one')
     const extra = signal(true)
-    const View = _$vaporMarkComponentRenderReactive(() =>
-      h(
-        Fragment,
-        null,
-        h('span', { key: 'stable', 'data-testid': 'fragment-stable' }, label.get()),
-        extra.get() ? h('i', { key: 'extra', 'data-testid': 'fragment-extra' }, 'extra') : null,
-      ),
-    )
+    const View = () =>
+      _$compiledVapor(() => {
+        const root = document.createDocumentFragment()
+        const stable = document.createElement('span')
+        const stableAnchor = document.createComment('rue:slot:anchor')
+        const extraAnchor = document.createComment('rue:slot:anchor')
+
+        stable.dataset.testid = 'fragment-stable'
+        stable.appendChild(stableAnchor)
+        root.append(stable, extraAnchor)
+
+        _$compiledWatchEffect(() => {
+          _$compiledRenderAnchor(label.get(), stable, stableAnchor)
+        })
+        _$compiledWatchEffect(() => {
+          const value = extra.get()
+            ? _$compiledVapor(() => {
+                const element = document.createElement('i')
+                element.dataset.testid = 'fragment-extra'
+                element.textContent = 'extra'
+                return element
+              })
+            : null
+          _$compiledRenderAnchor(value, root, extraAnchor)
+        })
+
+        return root
+      })
 
     document.body.appendChild(container)
-    render(h(View, null), container)
+    render(_$createDynamic(View, null), container)
     await Promise.resolve()
     const first = container.querySelector('[data-testid="fragment-stable"]')
 
@@ -51,33 +80,95 @@ describe('patch_children_keyed anchor isolation', () => {
     const active = ref<'preview' | 'code'>('preview')
 
     const view = () =>
-      h(
-        'section',
-        null,
-        h(
-          'div',
-          { role: 'tablist', className: 'tabs tabs-box' },
-          h(
-            'button',
-            {
-              role: 'tab',
-              className: active.value === 'preview' ? 'tab tab-active' : 'tab',
-            },
-            '预览',
-          ),
-          h(
-            'button',
-            {
-              role: 'tab',
-              className: active.value === 'code' ? 'tab tab-active' : 'tab',
-            },
-            'JSX代码',
-          ),
-        ),
-        active.value === 'preview'
-          ? h('div', { id: 'preview-panel' }, 'Preview panel')
-          : h('div', { id: 'code-panel' }, 'Code panel'),
-      )
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('section', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            children: [
+              _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('div', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    role: 'tablist',
+                    className: 'tabs tabs-box',
+                    children: [
+                      _$compiledVapor(_$parentContext => {
+                        const _$root = _$compiledCreateElement('button', _$parentContext)
+                        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                        _$compiledAppendChild(_$root, _$anchor)
+                        _$compiledWatchEffect(() => {
+                          const { children: _$children, ..._$attributes } = {
+                            role: 'tab',
+                            className: active.value === 'preview' ? 'tab tab-active' : 'tab',
+                            children: '预览',
+                          } as Record<string, any>
+                          _$compiledSpreadAttributes(_$root, _$attributes)
+                          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                        })
+                        return _$root
+                      }),
+                      _$compiledVapor(_$parentContext => {
+                        const _$root = _$compiledCreateElement('button', _$parentContext)
+                        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                        _$compiledAppendChild(_$root, _$anchor)
+                        _$compiledWatchEffect(() => {
+                          const { children: _$children, ..._$attributes } = {
+                            role: 'tab',
+                            className: active.value === 'code' ? 'tab tab-active' : 'tab',
+                            children: 'JSX代码',
+                          } as Record<string, any>
+                          _$compiledSpreadAttributes(_$root, _$attributes)
+                          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                        })
+                        return _$root
+                      }),
+                    ],
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
+              }),
+              active.value === 'preview'
+                ? _$compiledVapor(_$parentContext => {
+                    const _$root = _$compiledCreateElement('div', _$parentContext)
+                    const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                    _$compiledAppendChild(_$root, _$anchor)
+                    _$compiledWatchEffect(() => {
+                      const { children: _$children, ..._$attributes } = {
+                        id: 'preview-panel',
+                        children: 'Preview panel',
+                      } as Record<string, any>
+                      _$compiledSpreadAttributes(_$root, _$attributes)
+                      _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                    })
+                    return _$root
+                  })
+                : _$compiledVapor(_$parentContext => {
+                    const _$root = _$compiledCreateElement('div', _$parentContext)
+                    const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                    _$compiledAppendChild(_$root, _$anchor)
+                    _$compiledWatchEffect(() => {
+                      const { children: _$children, ..._$attributes } = {
+                        id: 'code-panel',
+                        children: 'Code panel',
+                      } as Record<string, any>
+                      _$compiledSpreadAttributes(_$root, _$attributes)
+                      _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                    })
+                    return _$root
+                  }),
+            ],
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -105,60 +196,182 @@ describe('patch_children_keyed anchor isolation', () => {
     const active = ref<'preview' | 'code'>('preview')
 
     const CodePanel: FC<{ code: string }> = props =>
-      h(
-        'div',
-        { className: 'mt-2' },
-        h(
-          'div',
-          { className: 'relative group' },
-          h('button', { 'aria-label': '复制代码' }, '复制'),
-          h('div', {
-            dangerouslySetInnerHTML: {
-              __html: `<pre><code>${props.code}</code></pre>`,
-            },
-          }),
-        ),
-      )
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('div', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            className: 'mt-2',
+            children: _$compiledVapor(_$parentContext => {
+              const _$root = _$compiledCreateElement('div', _$parentContext)
+              const _$anchor = _$compiledCreateComment('rue:children:anchor')
+              _$compiledAppendChild(_$root, _$anchor)
+              _$compiledWatchEffect(() => {
+                const { children: _$children, ..._$attributes } = {
+                  className: 'relative group',
+                  children: [
+                    _$compiledVapor(_$parentContext => {
+                      const _$root = _$compiledCreateElement('button', _$parentContext)
+                      const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                      _$compiledAppendChild(_$root, _$anchor)
+                      _$compiledWatchEffect(() => {
+                        const { children: _$children, ..._$attributes } = {
+                          'aria-label': '复制代码',
+                          children: '复制',
+                        } as Record<string, any>
+                        _$compiledSpreadAttributes(_$root, _$attributes)
+                        _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                      })
+                      return _$root
+                    }),
+                    _$compiledVapor(_$parentContext => {
+                      const _$root = _$compiledCreateElement('div', _$parentContext)
+                      const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                      _$compiledAppendChild(_$root, _$anchor)
+                      _$compiledWatchEffect(() => {
+                        const { children: _$children, ..._$attributes } = {
+                          dangerouslySetInnerHTML: {
+                            __html: `<pre><code>${props.code}</code></pre>`,
+                          },
+                        } as Record<string, any>
+                        _$compiledSpreadAttributes(_$root, _$attributes)
+                        _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                      })
+                      return _$root
+                    }),
+                  ],
+                } as Record<string, any>
+                _$compiledSpreadAttributes(_$root, _$attributes)
+                _$compiledRenderAnchor(_$children, _$root, _$anchor)
+              })
+              return _$root
+            }),
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const view = () =>
-      h(
-        'section',
-        null,
-        h('h2', null, '# Button'),
-        h(
-          'div',
-          { role: 'tablist', className: 'tabs tabs-box mb-3' },
-          h(
-            'button',
-            {
-              role: 'tab',
-              className: active.value === 'preview' ? 'tab tab-active' : 'tab',
-            },
-            '预览',
-          ),
-          h(
-            'button',
-            {
-              role: 'tab',
-              className: active.value === 'code' ? 'tab tab-active' : 'tab',
-            },
-            'JSX代码',
-          ),
-        ),
-        active.value === 'preview'
-          ? h(
-              'div',
-              { className: 'card bg-base-100 shadow' },
-              h(
-                'div',
-                { className: 'card-body flex flex-wrap gap-2' },
-                h('button', { className: 'btn' }, 'Default'),
-              ),
-            )
-          : h(CodePanel, {
-              code: "import { Button } from '@rue-js/design';\nexport default () => <Button>Default</Button>;",
-            }),
-      )
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('section', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            children: [
+              _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('h2', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    children: '# Button',
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
+              }),
+              _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('div', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    role: 'tablist',
+                    className: 'tabs tabs-box mb-3',
+                    children: [
+                      _$compiledVapor(_$parentContext => {
+                        const _$root = _$compiledCreateElement('button', _$parentContext)
+                        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                        _$compiledAppendChild(_$root, _$anchor)
+                        _$compiledWatchEffect(() => {
+                          const { children: _$children, ..._$attributes } = {
+                            role: 'tab',
+                            className: active.value === 'preview' ? 'tab tab-active' : 'tab',
+                            children: '预览',
+                          } as Record<string, any>
+                          _$compiledSpreadAttributes(_$root, _$attributes)
+                          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                        })
+                        return _$root
+                      }),
+                      _$compiledVapor(_$parentContext => {
+                        const _$root = _$compiledCreateElement('button', _$parentContext)
+                        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                        _$compiledAppendChild(_$root, _$anchor)
+                        _$compiledWatchEffect(() => {
+                          const { children: _$children, ..._$attributes } = {
+                            role: 'tab',
+                            className: active.value === 'code' ? 'tab tab-active' : 'tab',
+                            children: 'JSX代码',
+                          } as Record<string, any>
+                          _$compiledSpreadAttributes(_$root, _$attributes)
+                          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                        })
+                        return _$root
+                      }),
+                    ],
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
+              }),
+              active.value === 'preview'
+                ? _$compiledVapor(_$parentContext => {
+                    const _$root = _$compiledCreateElement('div', _$parentContext)
+                    const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                    _$compiledAppendChild(_$root, _$anchor)
+                    _$compiledWatchEffect(() => {
+                      const { children: _$children, ..._$attributes } = {
+                        className: 'card bg-base-100 shadow',
+                        children: _$compiledVapor(_$parentContext => {
+                          const _$root = _$compiledCreateElement('div', _$parentContext)
+                          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                          _$compiledAppendChild(_$root, _$anchor)
+                          _$compiledWatchEffect(() => {
+                            const { children: _$children, ..._$attributes } = {
+                              className: 'card-body flex flex-wrap gap-2',
+                              children: _$compiledVapor(_$parentContext => {
+                                const _$root = _$compiledCreateElement('button', _$parentContext)
+                                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                                _$compiledAppendChild(_$root, _$anchor)
+                                _$compiledWatchEffect(() => {
+                                  const { children: _$children, ..._$attributes } = {
+                                    className: 'btn',
+                                    children: 'Default',
+                                  } as Record<string, any>
+                                  _$compiledSpreadAttributes(_$root, _$attributes)
+                                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                                })
+                                return _$root
+                              }),
+                            } as Record<string, any>
+                            _$compiledSpreadAttributes(_$root, _$attributes)
+                            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                          })
+                          return _$root
+                        }),
+                      } as Record<string, any>
+                      _$compiledSpreadAttributes(_$root, _$attributes)
+                      _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                    })
+                    return _$root
+                  })
+                : _$createDynamic(CodePanel, {
+                    code: "import { Button } from '@rue-js/design';\nexport default () => <Button>Default</Button>;",
+                  }),
+            ],
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const container = document.createElement('div')
     document.body.appendChild(container)

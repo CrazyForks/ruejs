@@ -358,7 +358,7 @@ const WatermarkCustomControlsDemo: FC = () => {
                 参数调整后的实时预览
               </div>
             </div>
-            <Badge outline>z-index {zIndex.value}</Badge>
+            <Badge outline>{`z-index ${zIndex.value}`}</Badge>
           </div>
           <p className="m-0 max-w-2xl text-sm leading-7 text-base-content/65">
             这里故意放了文字、徽标和按钮，方便观察水印对不同内容密度与层次关系的影响。

@@ -328,7 +328,7 @@ const parseTimerFormat = (format: string): StatTimerFormatToken[] => {
 
 /** 读取 Timer Unit Values 的内部工具函数。 */
 const getTimerUnitValues = (duration: number, tokens: StatTimerFormatToken[]) => {
-  const requiredUnits = new Set<StatTimerFormatUnit>()
+  const requiredUnits = /*#__PURE__*/ new Set<StatTimerFormatUnit>()
   tokens.forEach(token => {
     if (token.type === 'unit') requiredUnits.add(token.unit)
   })
@@ -762,7 +762,7 @@ type StatCompound = FC<StatsProps> & {
   Countdown: FC<StatCountdownProps>
 }
 
-const StatCompound: StatCompound = Object.assign(Stat, {
+const StatCompound: StatCompound = /*#__PURE__*/ Object.assign(Stat, {
   Item,
   Title,
   Value,

@@ -8,7 +8,6 @@ const createPlugin = () =>
   VitePluginRue({
     include: ['/app/'],
     transformTimeoutMs: 0,
-    transformExecutor: ({ code }) => code,
   }) as any
 
 const callHook = async (hook: any, ctx: any, ...args: any[]) => {
@@ -18,7 +17,7 @@ const callHook = async (hook: any, ctx: any, ...args: any[]) => {
 
 const transform = async (source: string, ssr: boolean) => {
   const plugin = createPlugin()
-  plugin.configResolved?.({ command: 'build' })
+  plugin.configResolved?.({ command: 'serve' })
   const context = { environment: { name: ssr ? 'ssr' : 'client' } }
   const result = await callHook(
     plugin.transform,
@@ -52,7 +51,8 @@ describe('vite-plugin-rue server:defer', () => {
     expect(code).toContain('id: "rue-server-')
     expect(code).toContain('props: {')
     expect(code).toContain('"accountId": "a-1"')
-    expect(code).toContain('fallback: <p>Loading report</p>')
+    expect(code).toContain('fallback: _$serverElement("p"')
+    expect(code).not.toContain('<p>Loading report</p>')
     expect(code).not.toMatch(/component:\s*(?:Report|RevenueChart)/)
 
     const resolved = await callHook(
@@ -96,7 +96,8 @@ describe('vite-plugin-rue server:defer', () => {
     expect(code).not.toContain('server:defer')
     expect(code).not.toContain('./server-only/Report')
     expect(code).not.toContain('createRueServerIslandDescriptor')
-    expect(code).toContain('<p>Loading report</p>')
+    expect(code).toContain('_$compiledCreateElement("p"')
+    expect(code).toContain('_$compiledCreateTextNode("Loading report")')
   })
 
   it('keeps an import binding that has another browser reference', async () => {
@@ -111,7 +112,8 @@ describe('vite-plugin-rue server:defer', () => {
 
     expect(code).toContain("import Report from './Report'")
     expect(code).toContain('export const eager = Report')
-    expect(code).toContain('<p>Loading</p>')
+    expect(code).toContain('_$compiledCreateElement("p"')
+    expect(code).toContain('_$compiledCreateTextNode("Loading")')
   })
 
   it('rejects mixed client directives and unsupported targets', async () => {

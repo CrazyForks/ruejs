@@ -1,14 +1,67 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 use swc_core::ecma::ast::*;
 
+fn unwrap_direct_hook_id(expr: &mut Box<Expr>) {
+    let Expr::Call(wrapper) = expr.as_mut() else {
+        return;
+    };
+    let Callee::Expr(callee) = &wrapper.callee else {
+        return;
+    };
+    let Expr::Ident(callee) = callee.as_ref() else {
+        return;
+    };
+    if callee.sym != *"_$compiledWithHookId" || wrapper.args.len() != 2 {
+        return;
+    }
+
+    let id = &wrapper.args[0];
+    if id.spread.is_some() || !matches!(id.expr.as_ref(), Expr::Lit(Lit::Str(_))) {
+        return;
+    }
+
+    let runner = &wrapper.args[1];
+    if runner.spread.is_some() {
+        return;
+    }
+    let Expr::Arrow(runner) = runner.expr.as_ref() else {
+        return;
+    };
+    if !runner.params.is_empty() || runner.is_async || runner.is_generator {
+        return;
+    }
+    let BlockStmtOrExpr::Expr(body) = runner.body.as_ref() else {
+        return;
+    };
+    if !matches!(body.as_ref(), Expr::Call(_)) {
+        return;
+    }
+
+    *expr = body.clone();
+}
+
+fn normalize_setup_stmt(stmt: &mut Stmt) {
+    match stmt {
+        Stmt::Decl(Decl::Var(var)) => {
+            for decl in &mut var.decls {
+                if let Some(init) = &mut decl.init {
+                    unwrap_direct_hook_id(init);
+                }
+            }
+        }
+        Stmt::Expr(expr) => unwrap_direct_hook_id(&mut expr.expr),
+        _ => {}
+    }
+}
+
 /*
 本模块职责：
 - 构造组件层面的 `useSetup(() => { ...; return { ... } })` 包裹与解构绑定；
-- 以统一的 Hook 包裹 `_$vaporWithHookId("useSetup:0:0", runner)` 固定其 Hook 槽位索引；
+- 以调用者提供的 Hook ID 包裹 `_$compiledWithHookId(hook_id, runner)` 固定其 Hook 槽位索引；
 - 输出三部分代码：
-  1) `const _$useSetup = _$vaporWithHookId("useSetup:0:0", () => useSetup(() => { ...; return {...} }))`
-  2) `const { <const names> } = _$useSetup`
-  3) `let { <let names> } = _$useSetup`
+  1) `const <setup_ident> = _$compiledWithHookId(hook_id, () => useSetup(() => { ...; return {...} }))`
+  2) `const { <const names> } = <setup_ident>`
+  3) `let { <let names> } = <setup_ident>`
 
 相关 SWC AST 类型与用法：
 - Ident：标识符（变量名、属性名等）；
@@ -19,18 +72,25 @@ use swc_core::ecma::ast::*;
 - VarDecl/VarDeclarator：变量声明语句与单个声明。
 */
 /// 构造组件的 `useSetup(() => { ...; return { ... } })` 注入：
-/// - 输入：在返回 JSX 前收集到的“安全声明与副作用”的语句，以及需要暴露到模板中的 `const/let` 名称列表
+/// - 输入：稳定 Hook ID、无冲突的 setup 容器标识符、在返回 JSX 前收集到的“安全声明与副作用”的语句，
+///   以及需要暴露到模板中的 `const/let` 名称列表
 /// - 产出：
 ///   1) `const _$useSetup = useSetup(() => { <collected>; return { names... } })`
 ///   2) `const { <const names> } = _$useSetup; let { <let names> } = _$useSetup;`
 /// - 设计动机：将组件内的初始化逻辑封装到 `useSetup` 中，保持与运行时 Hook 框架一致的生命周期与作用域绑定。
-pub fn build_setup_with_binds(
+fn build_setup_with_runtime(
+    hook_id: &str,
+    setup_ident: Ident,
     names_const: Vec<String>,
     names_let: Vec<String>,
     collected: Vec<Stmt>,
+    compiled: bool,
 ) -> Vec<Stmt> {
     // 1) 组装 useSetup 的函数体：先放入已收集的语句，稍后补上 return { ... }
     let mut setup_body_stmts: Vec<Stmt> = collected.clone();
+    for stmt in &mut setup_body_stmts {
+        normalize_setup_stmt(stmt);
+    }
     // 建立声明名到 Ident 的映射，用于 return 对象的值侧引用（保持原始标识符）
     let mut decl_map: std::collections::HashMap<String, Ident> = std::collections::HashMap::new();
     for s in &collected {
@@ -109,25 +169,31 @@ pub fn build_setup_with_binds(
         return_type: None,
         ctxt: SyntaxContext::empty(),
     });
-    // 4) 内层调用：useSetup(setup_arrow)
-    // 说明：runner 箭头函数仅返回 inner_call，使得 `_@$vaporWithHookId` 包装后仍然按固定槽位执行
-    let inner_call = crate::emit::call_ident("useSetup", vec![setup_arrow]);
-    let runner = Expr::Arrow(ArrowExpr {
-        span: DUMMY_SP,
-        params: vec![],
-        body: Box::new(BlockStmtOrExpr::Expr(Box::new(inner_call))),
-        is_async: false,
-        is_generator: false,
-        type_params: None,
-        return_type: None,
-        ctxt: SyntaxContext::empty(),
-    });
-    let setup_call = crate::emit::call_ident(
-        "_$vaporWithHookId",
-        vec![crate::emit::string_expr("useSetup:0:0"), runner],
-    );
-    // 5) 生成 `const _$useSetup = _$vaporWithHookId(...);`
-    let setup_ident = crate::emit::ident("_$useSetup");
+    // 4) Proven compiled-only regions use the owner-local cache directly. All other regions
+    // retain the Vapor hook boundary and its lifecycle semantics.
+    let setup_call = if compiled {
+        crate::emit::call_ident(
+            "_$compiledSetup",
+            vec![crate::emit::string_expr(hook_id), setup_arrow],
+        )
+    } else {
+        let inner_call = crate::emit::call_ident("useSetup", vec![setup_arrow]);
+        let runner = Expr::Arrow(ArrowExpr {
+            span: DUMMY_SP,
+            params: vec![],
+            body: Box::new(BlockStmtOrExpr::Expr(Box::new(inner_call))),
+            is_async: false,
+            is_generator: false,
+            type_params: None,
+            return_type: None,
+            ctxt: SyntaxContext::empty(),
+        });
+        crate::emit::call_ident(
+            "_$compiledWithHookId",
+            vec![crate::emit::string_expr(hook_id), runner],
+        )
+    };
+    // 5) 使用调用者提供的无冲突容器名生成 setup 声明
     let setup_decl = Stmt::Decl(Decl::Var(Box::new(VarDecl {
         span: DUMMY_SP,
         kind: VarDeclKind::Const,
@@ -205,6 +271,26 @@ pub fn build_setup_with_binds(
         }))));
     }
     out
+}
+
+pub fn build_setup_with_binds(
+    hook_id: &str,
+    setup_ident: Ident,
+    names_const: Vec<String>,
+    names_let: Vec<String>,
+    collected: Vec<Stmt>,
+) -> Vec<Stmt> {
+    build_setup_with_runtime(hook_id, setup_ident, names_const, names_let, collected, false)
+}
+
+pub fn build_compiled_setup_with_binds(
+    hook_id: &str,
+    setup_ident: Ident,
+    names_const: Vec<String>,
+    names_let: Vec<String>,
+    collected: Vec<Stmt>,
+) -> Vec<Stmt> {
+    build_setup_with_runtime(hook_id, setup_ident, names_const, names_let, collected, true)
 }
 
 #[cfg(test)]

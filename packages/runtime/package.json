@@ -40,23 +40,17 @@
       "import": "./dist/runtime.server.esm-bundler.js",
       "development": "./src/server.ts"
     },
-    "./vapor": {
-      "types": "./src/vapor.ts",
-      "module": "./dist/runtime.vapor.esm-bundler.js",
-      "import": "./dist/runtime.vapor.esm-bundler.js",
-      "development": "./src/vapor.ts"
+    "./internal": {
+      "types": "./src/internal.ts",
+      "module": "./dist/runtime.internal.esm-bundler.js",
+      "import": "./dist/runtime.internal.esm-bundler.js",
+      "development": "./src/internal.ts"
     },
-    "./compiled": {
-      "types": "./src/compiled.ts",
-      "module": "./dist/runtime.compiled.esm-bundler.js",
-      "import": "./dist/runtime.compiled.esm-bundler.js",
-      "development": "./src/compiled.ts"
-    },
-    "./vapor-core": {
-      "types": "./src/vapor-core.ts",
-      "module": "./dist/runtime.vapor-core.esm-bundler.js",
-      "import": "./dist/runtime.vapor-core.esm-bundler.js",
-      "development": "./src/vapor-core.ts"
+    "./internal/compiler": {
+      "types": "./src/compiler-internal.ts",
+      "module": "./dist/runtime.internal-compiler.esm-bundler.js",
+      "import": "./dist/runtime.internal-compiler.esm-bundler.js",
+      "development": "./src/compiler-internal.ts"
     },
     "./island": {
       "types": "./src/island.ts",
@@ -79,7 +73,6 @@
     "./*": "./*"
   },
   "dependencies": {
-    "@rue-js/runtime-vapor": "workspace:*",
     "@rue-js/shared": "workspace:*",
     "csstype": "^3.2.3"
   },
@@ -105,22 +98,15 @@
         ]
       },
       {
-        "entry": "src/vapor.ts",
-        "filename": "runtime.vapor",
+        "entry": "src/internal.ts",
+        "filename": "runtime.internal",
         "formats": [
           "esm-bundler"
         ]
       },
       {
-        "entry": "src/compiled.ts",
-        "filename": "runtime.compiled",
-        "formats": [
-          "esm-bundler"
-        ]
-      },
-      {
-        "entry": "src/vapor-core.ts",
-        "filename": "runtime.vapor-core",
+        "entry": "src/compiler-internal.ts",
+        "filename": "runtime.internal-compiler",
         "formats": [
           "esm-bundler"
         ]

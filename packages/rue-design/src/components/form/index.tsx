@@ -5,9 +5,9 @@ Form 模块概述
 */
 import type { FC } from '@rue-js/rue'
 import {
+  Component as DynamicComponent,
   Slot,
   getCurrentInstance,
-  h,
   onCleanup,
   onMounted,
   onUpdated,
@@ -1022,10 +1022,10 @@ const shouldKeepField = (entity: RegisteredFieldEntity, formPreserve?: boolean) 
 /** 创建 Form Instance 的内部工具函数。 */
 const createFormInstance = (): InternalFormInstance => {
   const version = ref(0)
-  const fields = new Map<string, RegisteredFieldEntity>()
-  const fieldRegistrationKeys = new Map<string, string>()
-  const fieldMeta = new Map<string, InternalFieldMeta>()
-  const subscribers = new Set<() => void>()
+  const fields = /*#__PURE__*/ new Map<string, RegisteredFieldEntity>()
+  const fieldRegistrationKeys = /*#__PURE__*/ new Map<string, string>()
+  const fieldMeta = /*#__PURE__*/ new Map<string, InternalFieldMeta>()
+  const subscribers = /*#__PURE__*/ new Set<() => void>()
   let notifyQueued = false
   let values: Record<string, any> = {}
   let initialValues: Record<string, any> = {}
@@ -1038,7 +1038,9 @@ const createFormInstance = (): InternalFormInstance => {
 
   const notify = () => {
     version.value += 1
-    subscribers.forEach(subscriber => subscriber())
+    // A synchronous subscriber can rerender, unsubscribe, and subscribe again. Iterating the live
+    // Set would then revisit that newly inserted entry forever, so dispatch from a stable snapshot.
+    Array.from(subscribers).forEach(subscriber => subscriber())
   }
 
   const scheduleNotify = () => {
@@ -1235,7 +1237,7 @@ const createFormInstance = (): InternalFormInstance => {
     const names = nameList?.map(name => toNamePathArray(name))
     const errorFields: FieldError[] = []
     const entities = Array.from(fields.values())
-    const validatedKeys = new Set<string>()
+    const validatedKeys = /*#__PURE__*/ new Set<string>()
 
     for (const entity of entities) {
       const registrationKey = getEntityRegistrationKey(entity)
@@ -1269,7 +1271,13 @@ const createFormInstance = (): InternalFormInstance => {
     const ids = formName ? [`${formName}__${fieldId}`, fieldId] : [fieldId]
     const target =
       ids
-        .map(id => rootElement?.querySelector(`#${CSS.escape(id)}`) as HTMLElement | null)
+        .map(id => {
+          const escapedId =
+            typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+              ? CSS.escape(id)
+              : id.replace(/([ #;?%&,.+*~':"!^$[\]()=>|/@])/g, '\\$1')
+          return rootElement?.querySelector(`#${escapedId}`) as HTMLElement | null
+        })
         .find(Boolean) ??
       ids
         .map(id =>
@@ -1362,7 +1370,7 @@ const createFormInstance = (): InternalFormInstance => {
     },
     getFieldsError(nameList?: NamePath[]) {
       if (!nameList?.length) {
-        const seenKeys = new Set<string>()
+        const seenKeys = /*#__PURE__*/ new Set<string>()
         return Array.from(fields.values())
           .filter(entity => {
             const registrationKey = getEntityRegistrationKey(entity)
@@ -1823,7 +1831,7 @@ const FormList: FC<FormListProps> = props => {
   const unsubscribeRenderRef = useRef<(() => void) | null>(null)
   const [renderVersion, setRenderVersion] = useState(0, { kind: 'ref' })
   const latestRulesRef = useRef<FormRule[] | undefined>(rules)
-  const latestInitialValueRef = useRef<any[]>(initialValue)
+  const latestInitialValueRef = useRef<any[] | undefined>(initialValue)
   const keyListRef = useRef<number[]>([])
   const nextKeyRef = useRef(0)
   latestRulesRef.current = rules
@@ -2151,26 +2159,13 @@ const FormRoot: FC<FormProps> = ({
     )
   }
 
-  if (typeof component === 'string') {
-    return h(
-      component,
-      rootProps,
-      (() => {
-        void renderVersion.value
-        return resolveContent()
-      })(),
-    )
-  }
-
-  const Component = component as any
-
   return (
-    <Component {...rootProps}>
+    <DynamicComponent is={component as any} {...rootProps}>
       {(() => {
         void renderVersion.value
         return resolveContent()
       })()}
-    </Component>
+    </DynamicComponent>
   )
 }
 
@@ -2183,7 +2178,7 @@ type FormCompound = FC<FormProps> & {
   useWatch: (name: NamePath, form?: FormInstance) => any
 }
 
-const Form = Object.assign(FormRoot, {
+const Form = /*#__PURE__*/ Object.assign(FormRoot, {
   Item: FormItem,
   List: FormList,
   ErrorList,

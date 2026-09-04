@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from 'vitest'
 
-import { h, render, setReactiveScheduling } from '../src'
+import { render, setReactiveScheduling } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import { click, mountContainer, waitForContent } from './page-test-utils'
 
 const normalizeText = (value: string | null | undefined) => value?.replace(/\s+/g, ' ').trim() ?? ''
@@ -37,7 +38,7 @@ it('preserves row identity when LocalTodoList deletes the middle item under micr
     await import('../../../app/pages/examples/home-demos/LocalTodoListDemo')
   const container = mountContainer()
 
-  render(h(LocalTodoListDemo as any, null), container)
+  render(createTestRenderable(LocalTodoListDemo as any, null), container)
 
   await waitForContent(() => {
     expect(normalizeText(container.textContent)).toContain('总计: 3 | 已完成: 1')

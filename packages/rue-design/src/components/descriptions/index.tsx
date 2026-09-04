@@ -5,17 +5,9 @@ Descriptions 组件概述
 - 视觉保持 Rue 当前偏柔和的卡片式信息呈现，不直接复刻特定组件库的表格外观。
 */
 import type { FC } from '@rue-js/rue'
-import {
-  Fragment,
-  Slot,
-  getCurrentInstance,
-  onMounted,
-  onUnmounted,
-  ref,
-  render as renderRue,
-  useRef,
-  watch,
-} from '@rue-js/rue'
+import { Slot, getCurrentInstance, onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+
+const Fragment = 'fragment'
 
 /** DescriptionsSize 尺寸类型。 */
 export type DescriptionsSize = 'small' | 'default' | 'middle' | 'large' | 'sm' | 'md' | 'lg'
@@ -205,8 +197,8 @@ const BREAKPOINT_MIN_WIDTH: Record<DescriptionsBreakpoint, number> = {
   xl: 1200,
   xxl: 1600,
 }
-const viewportSubscribers = new Set<() => void>()
-const descriptionsProxyMetaMap = new WeakMap<HTMLElement, DescriptionsItemProps>()
+const viewportSubscribers = /*#__PURE__*/ new Set<() => void>()
+const descriptionsProxyMetaMap = /*#__PURE__*/ new WeakMap<HTMLElement, DescriptionsItemProps>()
 
 /** Descriptions Item 的内部工具函数。 */
 const DescriptionsItem: FC<DescriptionsItemProps> = ({
@@ -272,7 +264,10 @@ const joinClassName = (...parts: Array<string | false | null | undefined>) => {
 
 /** merge Styles 的内部工具函数。 */
 const mergeStyles = (...parts: Array<Record<string, any> | undefined>) => {
-  const next = Object.assign({}, ...parts.filter(part => part && typeof part === 'object'))
+  const next = /*#__PURE__*/ Object.assign(
+    {},
+    ...parts.filter(part => part && typeof part === 'object'),
+  )
   return Object.keys(next).length ? next : undefined
 }
 
@@ -646,7 +641,8 @@ const Descriptions: FC<DescriptionsProps> = ({
   const collectedItemsRef = ref<DescriptionsItemProps[]>([])
   const collectorRef = useRef<HTMLElement | null>(null)
   const collectorObserverRef = useRef<MutationObserver | undefined>(undefined)
-  const tableHostRef = useRef<HTMLElement | null>(null)
+  const tableBodyRef = useRef<HTMLTableSectionElement | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const rawChildren = resolveDefaultSlotChildren(slotSource, children)
   const headerSizeConfig = resolveSizeConfig(size)
   const headerTitleClassName =
@@ -682,9 +678,6 @@ const Descriptions: FC<DescriptionsProps> = ({
     )
 
     collectedItemsRef.value = nextItems
-    if (items === undefined) {
-      syncTableView()
-    }
   }
 
   const renderTableView = () => {
@@ -697,11 +690,13 @@ const Descriptions: FC<DescriptionsProps> = ({
     const rows = groupRows(mergedItems, mergedColumn)
     const vertical = layout === 'vertical'
     const sizeConfig = resolveSizeConfig(size)
-    const tableKey = `${vertical ? 'vertical' : 'horizontal'}:${bordered ? 'bordered' : 'plain'}:${mergedColumn}:${rows.length}`
-
     return (
-      <table key={tableKey} className="w-full table-fixed border-separate border-spacing-0">
-        <tbody>
+      <table className="w-full table-fixed border-separate border-spacing-0">
+        <tbody
+          ref={(element: HTMLTableSectionElement | null) => {
+            tableBodyRef.current = element
+          }}
+        >
           {rows.map((row, rowIndex) => {
             const isLastRow = rowIndex === rows.length - 1
             const rowClassName = joinClassName('align-top', classNames?.row)
@@ -893,23 +888,30 @@ const Descriptions: FC<DescriptionsProps> = ({
     )
   }
 
-  const syncTableView = () => {
-    if (!tableHostRef.current) return
-    renderRue(null, tableHostRef.current)
-    renderRue(renderTableView(), tableHostRef.current)
-  }
-
-  const applyTableHostRef = (element: HTMLElement | null) => {
-    tableHostRef.current = element
-    if (element) {
-      syncTableView()
-    }
-  }
-
   onMounted(() => {
     unsubscribeRef.value = subscribeViewport(() => {
-      viewportWidth.value = getViewportWidth()
-      syncTableView()
+      const nextWidth = getViewportWidth()
+      viewportWidth.value = nextWidth
+      queueMicrotask(() => {
+        const root = rootRef.current
+        if (root) {
+          const tables = Array.from(root.getElementsByTagName('table'))
+          tables.slice(0, -1).forEach(table => table.remove())
+        }
+        const body = tableBodyRef.current
+        if (!body) return
+        const expectedRows =
+          groupRows(
+            normalizeItems(items ?? collectedItemsRef.value, rawChildren, nextWidth),
+            resolveColumnCount(column, nextWidth),
+          ).length * (layout === 'vertical' ? 2 : 1)
+        const renderedRows = Array.from(body.children).filter(element =>
+          element.hasAttribute('data-rue-descriptions-row-type'),
+        )
+        renderedRows.slice(0, Math.max(0, renderedRows.length - expectedRows)).forEach(row => {
+          row.remove()
+        })
+      })
     })
 
     if (items === undefined && typeof MutationObserver === 'function' && collectorRef.current) {
@@ -926,8 +928,6 @@ const Descriptions: FC<DescriptionsProps> = ({
     if (items === undefined) {
       scheduleCollectedItemsSync()
     }
-
-    syncTableView()
   })
 
   onUnmounted(() => {
@@ -935,10 +935,6 @@ const Descriptions: FC<DescriptionsProps> = ({
     unsubscribeRef.value = null
     collectorObserverRef.current?.disconnect()
     collectorObserverRef.current = undefined
-    if (tableHostRef.current) {
-      renderRue(null, tableHostRef.current)
-      tableHostRef.current = null
-    }
   })
 
   watch(
@@ -946,7 +942,6 @@ const Descriptions: FC<DescriptionsProps> = ({
     enabled => {
       if (!enabled) {
         collectedItemsRef.value = []
-        syncTableView()
       } else {
         scheduleCollectedItemsSync()
       }
@@ -956,6 +951,9 @@ const Descriptions: FC<DescriptionsProps> = ({
 
   return (
     <div
+      ref={(element: HTMLDivElement | null) => {
+        rootRef.current = element
+      }}
       {...rest}
       data-rue-descriptions="true"
       className={joinClassName('rue-descriptions text-base-content', classNames?.root, className)}
@@ -1004,7 +1002,7 @@ const Descriptions: FC<DescriptionsProps> = ({
         )}
         style={styles?.body}
       >
-        <div ref={applyTableHostRef} />
+        {renderTableView()}
       </div>
 
       {items === undefined ? (
@@ -1018,7 +1016,7 @@ const Descriptions: FC<DescriptionsProps> = ({
 
 ;(DescriptionsItem as any)[RUE_COMPONENT_TYPE_KEY] = DescriptionsItem
 
-const DescriptionsCompound: DescriptionsCompound = Object.assign(Descriptions, {
+const DescriptionsCompound: DescriptionsCompound = /*#__PURE__*/ Object.assign(Descriptions, {
   Item: DescriptionsItem,
 })
 

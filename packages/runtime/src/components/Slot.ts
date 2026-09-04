@@ -5,10 +5,12 @@ Slot 组件概述
 - 协议：命名/作用域插槽优先来自隐藏 slot bag（__rue_slots），其次兼容同名普通 prop；默认插槽兼容 props.children。
 */
 
-import { appendChild, createComment, createDocumentFragment } from '../dom'
 import { getCurrentInstance } from '../reactivity'
-import { renderAnchor, vapor, type FC, type PropsWithChildren, type RenderableOutput } from '../rue'
-import { vaporMarkComponentRenderReactive } from '../vapor-helpers'
+import type { FC, PropsWithChildren, RenderOutput } from '../rue'
+import type { CompiledRootHandle } from '../compiled-root'
+import { _$compiledValue } from '../compiled-render-anchor'
+import { _$compiledBranch, _$withCompiledPropsUpdater } from '../compiled-component'
+import { signal } from '../internal-reactive'
 
 /** 编译器注入作用域插槽表时使用的隐藏 prop 名。 */
 export const RUE_SLOT_BAG_PROP = '__rue_slots'
@@ -17,7 +19,7 @@ export const RUE_SLOT_BAG_PROP = '__rue_slots'
 export type SlotRenderProps = Record<string, unknown>
 
 /** 单个 slot 的值，可以是静态渲染输出或 scoped slot 函数。 */
-export type SlotValue = RenderableOutput | ((props: SlotRenderProps) => RenderableOutput)
+export type SlotValue = RenderOutput | ((props: SlotRenderProps) => RenderOutput)
 
 /** 按 slot 名分组的插槽表。 */
 export type SlotBag = Record<string, SlotValue | undefined>
@@ -36,7 +38,7 @@ const DEFAULT_SLOT_NAME = 'default'
 
 const hasOwn = (target: object, key: string) => Object.prototype.hasOwnProperty.call(target, key)
 
-const isScopedSlot = (value: unknown): value is (props: SlotRenderProps) => RenderableOutput =>
+const isScopedSlot = (value: unknown): value is (props: SlotRenderProps) => RenderOutput =>
   typeof value === 'function' && (value as { kind?: unknown }).kind !== 'block-factory'
 
 const isMissingSlotValue = (value: SlotValue | undefined) =>
@@ -45,19 +47,8 @@ const isMissingSlotValue = (value: SlotValue | undefined) =>
 const isEmptySlotValue = (value: unknown) =>
   value == null || (Array.isArray(value) && value.length === 0)
 
-const createSlotValueHandle = (value: unknown): RenderableOutput => {
-  if (isEmptySlotValue(value)) {
-    return null
-  }
-
-  return vapor(() => {
-    const root = createDocumentFragment()
-    const anchor = createComment('rue-slot-anchor')
-
-    appendChild(root, anchor)
-    renderAnchor(value as any, root as any, anchor as any)
-    return root as any
-  })
+const createSlotValueHandle = (value: unknown): CompiledRootHandle => {
+  return _$compiledValue(isEmptySlotValue(value) ? null : value)
 }
 
 const resolveSlotSource = (source?: Record<string, unknown> | null) => {
@@ -123,21 +114,26 @@ const resolveSlotValue = (
 }
 
 /** 渲染命名插槽或默认插槽，缺失时渲染 fallback children。 */
-const SlotImpl: FC<SlotProps> = props => {
-  const name = props.name ?? DEFAULT_SLOT_NAME
-  const source = resolveSlotSource(props.source)
-  const resolved = resolveSlotValue(source, name)
+const SlotImpl: FC<SlotProps> = initialProps => {
+  const propsState = signal(initialProps)
+  const root = _$compiledBranch(() => {
+    const props = propsState.get()
+    const name = props.name ?? DEFAULT_SLOT_NAME
+    const source = resolveSlotSource(props.source)
+    const resolved = resolveSlotValue(source, name)
 
-  if (!resolved.found || isMissingSlotValue(resolved.value)) {
-    return createSlotValueHandle(props.children)
-  }
+    if (!resolved.found || isMissingSlotValue(resolved.value)) {
+      return createSlotValueHandle(props.children)
+    }
 
-  const value = resolved.value
-  if (isScopedSlot(value)) {
-    return createSlotValueHandle(value(props.props ?? {}))
-  }
+    const value = resolved.value
+    if (isScopedSlot(value)) {
+      return createSlotValueHandle(value(props.props ?? {}))
+    }
 
-  return createSlotValueHandle(value)
+    return createSlotValueHandle(value)
+  })
+  return _$withCompiledPropsUpdater<SlotProps>(root, next => propsState.set(next))
 }
 
-export const Slot = vaporMarkComponentRenderReactive(SlotImpl)
+export const Slot = SlotImpl

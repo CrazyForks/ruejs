@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { compileRueStatic } from '@rue-js/vite-plugin-rue'
 import { defineConfig } from 'vite-plus'
 
 const textRuntimeVirtualModules = [
@@ -8,6 +9,19 @@ const textRuntimeVirtualModules = [
 ]
 
 export default defineConfig({
+  plugins: [
+    {
+      name: 'text:test-client-compile',
+      enforce: 'pre',
+      async transform(code, id) {
+        if (!/\.(?:tsx|jsx)(?:\?.*)?$/.test(id)) return null
+        return {
+          code: await compileRueStatic(code, { id, target: 'client', production: false }),
+          map: null,
+        }
+      },
+    },
+  ],
   define: {
     __VERSION__: JSON.stringify('test'),
   },
@@ -74,45 +88,37 @@ export default defineConfig({
       { find: /^text\/(.+)$/, replacement: path.resolve(import.meta.dirname, 'src/$1') },
       { find: 'text', replacement: path.resolve(import.meta.dirname, 'src/index.ts') },
       {
-        find: '@rue-js/jsx-runtime',
-        replacement: path.resolve(import.meta.dirname, 'src/shims/jsx-runtime-compat.ts'),
+        find: /^@rue-js\/rue\/internal\/compiler$/,
+        replacement: path.resolve(import.meta.dirname, '../rue/src/compiler-internal.ts'),
       },
       {
-        find: '@rue-js/jsx-dev-runtime',
-        replacement: path.resolve(import.meta.dirname, 'src/shims/jsx-dev-runtime-compat.ts'),
+        find: /^@rue-js\/rue\/internal$/,
+        replacement: path.resolve(import.meta.dirname, '../rue/src/internal.ts'),
+      },
+      { find: /^@rue-js\/rue$/, replacement: path.resolve(import.meta.dirname, '../rue/src') },
+      {
+        find: /^@rue-js\/runtime\/internal\/compiler$/,
+        replacement: path.resolve(import.meta.dirname, '../runtime/src/compiler-internal.ts'),
       },
       {
-        find: '@rue-js/runtime-vapor/protocol',
-        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/src/protocol.ts'),
+        find: /^@rue-js\/runtime\/internal$/,
+        replacement: path.resolve(import.meta.dirname, '../runtime/src/internal.ts'),
       },
       {
-        find: '@rue-js/runtime-vapor/reactive',
-        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/dist/reactive.node.js'),
+        find: /^@rue-js\/runtime\/server$/,
+        replacement: path.resolve(import.meta.dirname, '../runtime/src/server.ts'),
       },
       {
-        find: '@rue-js/runtime-vapor/vapor',
-        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/dist/vapor.node.js'),
+        find: /^@rue-js\/runtime$/,
+        replacement: path.resolve(import.meta.dirname, '../runtime/src'),
       },
       {
-        find: '@rue-js/runtime-vapor',
-        replacement: path.resolve(import.meta.dirname, '../runtime-vapor/dist/index.node.js'),
-      },
-      { find: '@rue-js/rue', replacement: path.resolve(import.meta.dirname, '../rue/src') },
-      { find: '@rue-js/runtime', replacement: path.resolve(import.meta.dirname, '../runtime/src') },
-      {
-        find: '@rue-js/server-renderer',
+        find: /^@rue-js\/server-renderer$/,
         replacement: path.resolve(import.meta.dirname, '../server-renderer/src'),
       },
     ],
   },
   pack: {
-    alias: {
-      '@rue-js/jsx-runtime': path.resolve(import.meta.dirname, 'src/shims/jsx-runtime-compat.ts'),
-      '@rue-js/jsx-dev-runtime': path.resolve(
-        import.meta.dirname,
-        'src/shims/jsx-dev-runtime-compat.ts',
-      ),
-    },
     entry: ['src/**/*.ts', 'src/**/*.tsx', '!src/**/*.d.ts'],
     clean: true,
     deps: {

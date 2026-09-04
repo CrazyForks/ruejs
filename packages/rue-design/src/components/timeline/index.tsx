@@ -443,7 +443,7 @@ type TimelineCompound = FC<TimelineProps> & {
   End: FC<TimelinePartProps>
 }
 
-const TimelineCompound: TimelineCompound = Object.assign(Timeline, {
+const TimelineCompound: TimelineCompound = /*#__PURE__*/ Object.assign(Timeline, {
   Start,
   Middle,
   End,

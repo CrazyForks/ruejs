@@ -34,11 +34,11 @@ function Comp(): JSX.Element {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 function Comp(): JSX.Element {
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1.2:0", ()=>ref(1));
-            const obj = _$vaporWithHookId("computed:1.2:1", ()=>computed(()=>({
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(1);
+            const obj = computed(()=>({
                         z: a.value,
                         arr: [
                             a.value,
@@ -46,38 +46,43 @@ function Comp(): JSX.Element {
                                 w: a.value > 0 ? 'ok' : 'no'
                             }
                         ]
-                    })));
-            const __rue_phase2_obj = obj;
-            _$vaporWithHookId("watchEffect:1.2:2", ()=>watchEffect(()=>{
-                    onBeforeUnmount(()=>console.log('phase1', a.value));
                 }));
+            obj.get();
+            const __rue_phase2_obj = obj;
+            watchEffect(()=>{
+                    onBeforeUnmount(()=>console.log('phase1', a.value));
+                });
             try {
                 const k = a.value + 3;
             } finally{
                 try {
                     const m = a.value + 4;
                 } finally{
-                    _$vaporWithHookId("watchEffect:1.2:4", ()=>watchEffect(()=>{
-                            onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1.2:3", ()=>watchEffect(()=>console.log('phase3', __rue_phase2_obj.get().arr[1].w))));
+                    _$compiledWithHookId("watchEffect:1.2:4", ()=>watchEffect(()=>{
+                            onBeforeUnmount(()=>_$compiledWithHookId("watchEffect:1.2:3", ()=>watchEffect(()=>console.log('phase3', __rue_phase2_obj.get().arr[1].w))));
                         }));
                 }
             }
             return {
                 a: a,
-                obj: obj
+                obj: obj,
+                __rue_phase2_obj: __rue_phase2_obj
             };
         }));
-    const { a: a, obj: obj } = _$useSetup;
+    const { a: a, obj: obj, __rue_phase2_obj: __rue_phase2_obj } = _$useSetup;
     return <div>{obj.get().arr[0]}</div>;
 }
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_finally_multi_nested_whitelist.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

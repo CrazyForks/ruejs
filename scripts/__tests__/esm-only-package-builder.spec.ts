@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { resolveScriptsDirectory } from '../aliases.js'
 import { buildDistributionPackage } from '../vite-package-builder.js'
 
 const projectRoot = process.cwd()
@@ -43,6 +44,18 @@ beforeAll(() => {
 })
 
 describe('ESM-only package builder', () => {
+  it('resolves the repository scripts directory for file and transformed module URLs', () => {
+    expect(resolveScriptsDirectory('https://vitest.invalid/scripts/aliases.js', projectRoot)).toBe(
+      path.resolve(projectRoot, 'scripts'),
+    )
+    expect(resolveScriptsDirectory('virtual:vitest/scripts/aliases.js', projectRoot)).toBe(
+      path.resolve(projectRoot, 'scripts'),
+    )
+    expect(
+      resolveScriptsDirectory(new URL('../aliases.js', import.meta.url).href, projectRoot),
+    ).toBe(path.resolve(projectRoot, 'scripts'))
+  })
+
   it('defaults to the ESM bundler format', async () => {
     const { fixtureDir, target } = await createFixture()
 

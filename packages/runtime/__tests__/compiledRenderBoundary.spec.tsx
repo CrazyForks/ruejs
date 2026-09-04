@@ -6,12 +6,11 @@ import { resolve } from 'node:path'
 import swc from '@swc/core'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import * as jsxRuntime from '../../jsx-runtime/src'
-import * as compiledRuntime from '../src/compiled'
+import * as compiledRuntime from '../src/internal'
+import * as internalRuntime from '../src/internal'
 import * as runtimeRoot from '../src'
-import * as vaporRuntime from '../src/vapor'
 
-vaporRuntime.setReactiveScheduling('sync')
+runtimeRoot.setReactiveScheduling('sync')
 
 type BoundaryModule = {
   View: () => unknown
@@ -30,12 +29,9 @@ const pluginPath = resolve(process.cwd(), 'packages/swc-plugin-rue/swc-plugin-ru
 const source = `
 import {
   type FC,
-  _$setValue,
   onMounted,
   onUnmounted,
   signal,
-  vapor,
-  watchEffect,
 } from '@rue-js/rue'
 
 const label = signal('one')
@@ -50,20 +46,10 @@ export const trace = {
 
 const PlainFallback: FC = () => {
   trace.plainRenders += 1
-  return vapor(() => {
-    const root = document.createElement('section')
-    const input = document.createElement('input')
-    const text = document.createElement('span')
-    root.dataset.testid = 'plain-root'
-    input.dataset.testid = 'plain-input'
-    text.dataset.testid = 'plain-label'
-    root.append(input, text)
-    watchEffect(() => {
-      _$setValue(input, label.get())
-      text.textContent = label.get()
-    })
-    return root
-  })
+  return <section data-testid="plain-root">
+    <input data-testid="plain-input" tabIndex={0} value={label.get()} />
+    <span data-testid="plain-label">{label.get()}</span>
+  </section>
 }
 
 const LifecycleLeaf: FC = () => {
@@ -76,13 +62,13 @@ const BranchBoundary: FC = () => {
   if (branch.get()) {
     trace.branchRenders += 1
     return <section data-testid="branch-root" data-state="active">
-      <input data-testid="branch-input" value="active" />
+      <input data-testid="branch-input" tabIndex={0} value="active" />
       <span>active</span>
     </section>
   }
   trace.branchRenders += 1
   return <section data-testid="branch-root" data-state="idle">
-    <input data-testid="branch-input" value="idle" />
+    <input data-testid="branch-input" tabIndex={0} value="idle" />
     <span>idle</span>
   </section>
 }
@@ -116,10 +102,9 @@ const compile = (moduleType: 'es6' | 'commonjs'): string => {
 const evaluate = (): BoundaryModule => {
   const module = { exports: {} as Record<string, unknown> }
   const runtimeRequire = (id: string): Record<string, unknown> => {
-    if (id === '@rue-js/rue/compiled') return compiledRuntime
-    if (id === '@rue-js/rue/vapor') return vaporRuntime
+    if (id === '@rue-js/rue/internal/compiler') return compiledRuntime
+    if (id === '@rue-js/rue/internal') return internalRuntime
     if (id === '@rue-js/rue') return runtimeRoot
-    if (id === '@rue-js/jsx-runtime') return jsxRuntime
     throw new Error(`Unexpected generated import: ${id}`)
   }
   new Function('require', 'module', 'exports', compile('commonjs'))(
@@ -137,7 +122,7 @@ const flush = async (): Promise<void> => {
 }
 
 afterEach(() => {
-  vaporRuntime.setReactiveScheduling('sync')
+  runtimeRoot.setReactiveScheduling('sync')
   document.body.innerHTML = ''
 })
 
@@ -146,9 +131,9 @@ describe('compiled component render boundary', () => {
     const esm = compile('es6')
     const plainOutput = esm.split('const BranchBoundary')[0]
     const branchOutput = esm.split('const BranchBoundary')[1].split('export const setLabel')[0]
-    expect(plainOutput).not.toContain('_$vaporMarkComponentRenderReactive()')
-    expect(plainOutput).not.toContain('const PlainFallback = _$vaporMarkComponentRenderReactive')
-    expect(branchOutput).toContain('_$vaporMarkComponentRenderReactive(')
+    expect(plainOutput).not.toContain('_$compiledMarkComponentRenderReactive()')
+    expect(plainOutput).not.toContain('const PlainFallback = _$compiledMarkComponentRenderReactive')
+    expect(branchOutput).toContain('_$compiledBranch(')
 
     const compiled = evaluate()
     const host = document.createElement('div')

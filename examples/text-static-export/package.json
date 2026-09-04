@@ -9,7 +9,6 @@
     "preview": "node serve-static.mjs dist/client 3031"
   },
   "dependencies": {
-    "@rue-js/jsx-runtime": "workspace:*",
     "@rue-js/rue": "workspace:*",
     "@rue-js/text": "workspace:*",
     "text": "workspace:@rue-js/text@*",

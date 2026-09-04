@@ -1,4 +1,4 @@
-import { type FC, ref, renderAnchor, vapor, watchEffect } from '@rue-js/rue'
+import { type FC, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -11,7 +11,7 @@ type ExamplePlaygroundProps = {
 
 const renderPlaygroundContent = (
   props: ExamplePlaygroundProps & { children?: unknown },
-  activeTab: 'preview' | 'code',
+  activeTab: { value: 'preview' | 'code' },
   setActiveTab: (next: 'preview' | 'code') => void,
 ) => {
   const content = (
@@ -20,7 +20,7 @@ const renderPlaygroundContent = (
       <div role="tablist" className="tabs tabs-box">
         <button
           role="tab"
-          className={`tab ${activeTab === 'preview' ? 'tab-active' : ''}`}
+          className={`tab ${activeTab.value === 'preview' ? 'tab-active' : ''}`}
           onClick={() => {
             setActiveTab('preview')
           }}
@@ -29,7 +29,7 @@ const renderPlaygroundContent = (
         </button>
         <button
           role="tab"
-          className={`tab ${activeTab === 'code' ? 'tab-active' : ''}`}
+          className={`tab ${activeTab.value === 'code' ? 'tab-active' : ''}`}
           onClick={() => {
             setActiveTab('code')
           }}
@@ -39,7 +39,7 @@ const renderPlaygroundContent = (
       </div>
 
       <div className="mt-4 grid md:grid-cols-1 gap-6 items-start">
-        {activeTab === 'code' && (
+        {activeTab.value === 'code' && (
           <div
             className={`card bg-base-100 shadow overflow-auto ${props.codeCardClassName ?? ''}`.trim()}
           >
@@ -49,7 +49,7 @@ const renderPlaygroundContent = (
           </div>
         )}
 
-        {activeTab === 'preview' && <div>{props.children}</div>}
+        {activeTab.value === 'preview' && <div>{props.children}</div>}
       </div>
     </>
   )
@@ -67,26 +67,11 @@ const ExamplePlayground: FC<ExamplePlaygroundProps> = props => {
     activeTab.value = next
   }
 
-  return vapor(() => {
-    const root = document.createDocumentFragment()
-    const anchor = document.createComment('rue:example-playground-anchor')
-    root.appendChild(anchor)
-
-    watchEffect(() => {
-      const parent = (anchor.parentNode || root) as any
-      renderAnchor(
-        renderPlaygroundContent(
-          props as ExamplePlaygroundProps & { children?: unknown },
-          activeTab.value,
-          setActiveTab,
-        ) as any,
-        parent,
-        anchor as any,
-      )
-    })
-
-    return root as any
-  }) as any
+  return renderPlaygroundContent(
+    props as ExamplePlaygroundProps & { children?: unknown },
+    activeTab,
+    setActiveTab,
+  )
 }
 
 export default ExamplePlayground

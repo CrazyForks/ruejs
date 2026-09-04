@@ -5,8 +5,9 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { getCurrentScope, ref, render, setReactiveScheduling, vapor, watchEffect } from '../src'
+import { getCurrentScope, ref, render, setReactiveScheduling, watchEffect } from '../src'
 import type { EffectScope } from '../src'
+import { vapor } from './legacy-test-render'
 
 afterEach(() => {
   render(null as any, document.body as any)

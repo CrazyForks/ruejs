@@ -12,24 +12,18 @@ const rootDir = import.meta.dirname
 const testMaxWorkers = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '4', 10)
 const rueClientChunkByPackage = new Map([
   ['@rue-js/i18n', 'rue-i18n'],
-  ['@rue-js/jsx-dev-runtime', 'rue-runtime'],
-  ['@rue-js/jsx-runtime', 'rue-runtime'],
   ['@rue-js/router', 'rue-router'],
   ['@rue-js/rue', 'rue-runtime'],
   ['@rue-js/runtime', 'rue-runtime'],
-  ['@rue-js/runtime-vapor', 'rue-runtime'],
   ['@rue-js/shared', 'rue-runtime'],
   ['@rue-js/store', 'rue-store'],
 ])
 
 const rueClientSourceChunks = [
   ['i18n', 'rue-i18n'],
-  ['jsx-dev-runtime', 'rue-runtime'],
-  ['jsx-runtime', 'rue-runtime'],
   ['router', 'rue-router'],
   ['rue', 'rue-runtime'],
   ['runtime', 'rue-runtime'],
-  ['runtime-vapor', 'rue-runtime'],
   ['shared', 'rue-runtime'],
   ['store', 'rue-store'],
 ].map(([packageDir, chunkName]) => [
@@ -71,7 +65,7 @@ const createSatteriMdxPlugin = (options: Pick<MdxCompileOptions, 'development'> 
     }
 
     const result = await mdxToJs(source, {
-      jsxImportSource: '@rue-js',
+      jsx: true,
       fileURL: pathToFileURL(filePath),
       features: {
         headingAttributes: true,
@@ -126,9 +120,10 @@ const vitestProjects = [
         '**/e2e/**',
         'temp/**',
         'packages/text/**',
-        '**/{rue,rue-design,runtime,jsx-runtime}/**',
+        '**/{rue,runtime}/**',
         'packages/runtime/__tests__/transition-utils.spec.ts',
       ],
+      environment: 'jsdom',
     },
   },
   {
@@ -136,18 +131,9 @@ const vitestProjects = [
     test: {
       name: 'unit-jsdom',
       include: [
-        'packages/{rue,runtime,jsx-runtime}/**/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}',
+        'packages/{rue,runtime}/**/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}',
         'packages/runtime/__tests__/transition-utils.spec.ts',
       ],
-      exclude: [...configDefaults.exclude, '**/e2e/**', 'temp/**'],
-      environment: 'jsdom',
-    },
-  },
-  {
-    extends: true as const,
-    test: {
-      name: 'rue-design-jsdom',
-      include: ['packages/rue-design/**/*.{test,spec}.{js,ts,jsx,tsx,mjs,cjs}'],
       exclude: [...configDefaults.exclude, '**/e2e/**', 'temp/**'],
       environment: 'jsdom',
     },
@@ -181,6 +167,42 @@ export default defineConfig(({ command, isSsrBuild }) => {
       tailwindcss() as any,
       createSatteriMdxPlugin({ development: command === 'serve' && !isVitest }),
       VitePluginRue({
+        include: isVitest
+          ? [
+              '/app/',
+              '/docs/',
+              '/packages/router/src/',
+              '/packages/rue-design/src/',
+              '/packages/rue/__tests__/',
+              '/packages/runtime/__tests__/',
+              '/app/pages/examples/LocalTodoList.tsx',
+              '/app/pages/examples/HelloWorld.tsx',
+              '/app/pages/examples/home-demos/LocalTodoListDemo.tsx',
+              '/packages/runtime/__tests__/custom-elements.spec.tsx',
+              '/packages/runtime/__tests__/nativeControlledInput.actual.spec.tsx',
+              '/packages/rue-design/src/components/auto-complete/index.tsx',
+              '/packages/rue-design/src/components/checkbox/index.tsx',
+              '/packages/rue-design/src/components/color-picker/index.tsx',
+              '/packages/rue-design/src/components/descriptions/index.tsx',
+              '/packages/rue-design/src/components/drawer-sidebar/index.tsx',
+              '/packages/rue-design/src/components/dropdown/index.tsx',
+              '/packages/rue-design/src/components/filter/index.tsx',
+              '/packages/rue-design/src/components/input-number/index.tsx',
+              '/packages/rue-design/src/components/list/index.tsx',
+              '/packages/rue-design/src/components/modal/index.tsx',
+              '/packages/rue-design/src/components/range/index.tsx',
+              '/packages/rue-design/src/components/segmented/index.tsx',
+              '/packages/rue-design/src/components/select/index.tsx',
+              '/packages/rue-design/src/components/stat/index.tsx',
+              '/packages/rue-design/src/components/table/index.tsx',
+              '/packages/rue-design/src/components/toast/index.tsx',
+              '/packages/rue-design/src/components/tree/index.tsx',
+              '/packages/rue-design/src/components/validator/index.tsx',
+              '/packages/rue-design/src/components/watermark/index.tsx',
+            ]
+          : [],
+        exclude: [],
+        includeExtensions: ['tsx', 'jsx', 'mdx'],
         debug: command === 'serve' && !isVitest,
         transformTimeoutMs: command === 'build' || isVitest ? 60000 : undefined,
       }),
@@ -217,6 +239,11 @@ export default defineConfig(({ command, isSsrBuild }) => {
     css: {
       devSourcemap: true,
     },
+    esbuild: {
+      jsx: 'automatic',
+      jsxImportSource: '@rue-js/rue',
+    },
+    oxc: false,
     server: {
       port: 5173,
       strictPort: false,
@@ -249,7 +276,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
     },
     test: {
       globals: true,
-      pool: 'threads',
+      pool: 'forks',
       maxWorkers: Number.isFinite(testMaxWorkers) && testMaxWorkers > 0 ? testMaxWorkers : 4,
       vmMemoryLimit: process.env.VITEST_VM_MEMORY_LIMIT ?? '2GB',
       setupFiles: 'scripts/setup-vitest.ts',
@@ -292,34 +319,22 @@ export default defineConfig(({ command, isSsrBuild }) => {
     resolve: {
       conditions: ['development', 'browser'],
       alias: {
-        '@rue-js/runtime-vapor/compiled': path.resolve(
+        '@rue-js/rue/internal/compiler': path.resolve(rootDir, 'packages/runtime/src/internal.ts'),
+        '@rue-js/runtime/internal/compiler': path.resolve(
           rootDir,
-          'packages/runtime-vapor/dist/compiled.js',
+          'packages/runtime/src/internal.ts',
         ),
-        '@rue-js/runtime-vapor/protocol': path.resolve(
-          rootDir,
-          'packages/runtime-vapor/src/protocol.ts',
-        ),
-        '@rue-js/runtime-vapor/vapor': process.env.VITEST
-          ? path.resolve(rootDir, 'packages/runtime-vapor/dist/vapor.node.js')
-          : path.resolve(rootDir, 'packages/runtime-vapor/src/vapor.ts'),
-        '@rue-js/runtime-vapor/reactive': process.env.VITEST
-          ? path.resolve(rootDir, 'packages/runtime-vapor/dist/reactive.node.js')
-          : path.resolve(rootDir, 'packages/runtime-vapor/src/reactive.ts'),
+        '@rue-js/rue/internal': path.resolve(rootDir, 'packages/runtime/src/internal.ts'),
+        '@rue-js/runtime/internal': path.resolve(rootDir, 'packages/runtime/src/internal.ts'),
         '@rue-js/rue': path.resolve(rootDir, 'packages/rue/src'),
         '@rue-js/router': path.resolve(rootDir, 'packages/router/src'),
         '@rue-js/store': path.resolve(rootDir, 'packages/store/src'),
         '@rue-js/i18n': path.resolve(rootDir, 'packages/i18n/src'),
-        '@rue-js/jsx-runtime': path.resolve(rootDir, 'packages/jsx-runtime/src'),
-        '@rue-js/jsx-dev-runtime': path.resolve(rootDir, 'packages/jsx-dev-runtime/src'),
         '@rue-js/runtime': path.resolve(rootDir, 'packages/runtime/src'),
         '@rue-js/server-renderer': path.resolve(rootDir, 'packages/server-renderer/src'),
         '@rue-js/vite-plugin-rue': path.resolve(rootDir, 'packages/vite-plugin-rue/index.mjs'),
         '@rue-js/shared': path.resolve(rootDir, 'packages/shared/src'),
         '@rue-js/design': path.resolve(rootDir, 'packages/rue-design/src'),
-        '@rue-js/runtime-vapor': process.env.VITEST
-          ? path.resolve(rootDir, 'packages/runtime-vapor/dist/index.node.js')
-          : path.resolve(rootDir, 'packages/runtime-vapor/src/index.ts'),
       },
     },
   }

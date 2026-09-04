@@ -109,6 +109,7 @@ interface SplitterRuntimeState {
   layoutRestorePending: boolean
   mutationSyncPending: boolean
   mutationSyncPreferCurrent: boolean
+  lastAvailableSize: number
 }
 
 /** EPSILON 内部常量。 */
@@ -116,13 +117,14 @@ const EPSILON = 0.5
 /** HANDLE_SIZE 内部常量。 */
 const HANDLE_SIZE = 3
 /** 影响 Splitter 布局计算的 Panel 配置属性。 */
-const PANEL_CONFIG_ATTRIBUTES = new Set([
+const PANEL_CONFIG_ATTRIBUTES = /*#__PURE__*/ new Set([
   'data-rue-splitter-min',
   'data-rue-splitter-max',
   'data-rue-splitter-size',
   'data-rue-splitter-default-size',
   'data-rue-splitter-resizable',
 ])
+const SPLITTER_AVAILABLE_SIZE_BY_PARENT = /*#__PURE__*/ new WeakMap<object, number>()
 
 const isServerRendering = () => {
   const count = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
@@ -472,6 +474,7 @@ const SplitterRoot: FC<SplitterProps> = ({
       layoutRestorePending: false,
       mutationSyncPending: false,
       mutationSyncPreferCurrent: true,
+      lastAvailableSize: 0,
     }),
   )
 
@@ -492,8 +495,21 @@ const SplitterRoot: FC<SplitterProps> = ({
     ) as HTMLElement[]
   }
 
-  const getAvailableSize = () =>
-    getContainerSize(state.rootElement ?? undefined, resolvedOrientation)
+  const getAvailableSize = () => {
+    const root = state.rootElement
+    const measured = getContainerSize(root ?? undefined, resolvedOrientation)
+    const parent = root?.parentElement
+    if (measured > 0) {
+      state.lastAvailableSize = measured
+      if (parent) SPLITTER_AVAILABLE_SIZE_BY_PARENT.set(parent, measured)
+    }
+    return (
+      (measured > 0 ? measured : 0) ||
+      state.lastAvailableSize ||
+      (parent ? SPLITTER_AVAILABLE_SIZE_BY_PARENT.get(parent) : 0) ||
+      0
+    )
+  }
 
   const emitResize = (sizes: number[]) => {
     if (onResize) {
@@ -962,7 +978,7 @@ type SplitterCompound = FC<SplitterProps> & {
   Panel: FC<SplitterPanelProps>
 }
 
-const Splitter = Object.assign(SplitterRoot, {
+const Splitter = /*#__PURE__*/ Object.assign(SplitterRoot, {
   Panel: SplitterPanelRoot,
 }) as SplitterCompound
 

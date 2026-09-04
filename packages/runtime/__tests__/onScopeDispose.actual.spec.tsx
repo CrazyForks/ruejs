@@ -8,7 +8,8 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
   default: () => null,
 }))
 
-import { h, render, setReactiveScheduling } from '../src'
+import { render, setReactiveScheduling } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import OnScopeDispose from '../../../app/pages/examples/OnScopeDispose'
 
 afterEach(() => {
@@ -24,26 +25,38 @@ const flush = async () => {
 }
 
 describe('onScopeDispose actual page', () => {
-  it('records cleanup when the scoped child is unmounted', async () => {
+  it('records every cleanup across rapid remounts without duplicate keys', async () => {
     vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-04T08:00:00.000Z'))
     setReactiveScheduling('sync')
 
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(OnScopeDispose as any, null), container)
+    render(createTestRenderable(OnScopeDispose as any, null), container)
 
-    const unmountButton = Array.from(container.querySelectorAll('button')).find(button =>
-      button.textContent?.includes('卸载子作用域'),
-    )
+    const findToggleButton = (label: string) =>
+      Array.from(container.querySelectorAll('button')).find(button =>
+        button.textContent?.includes(label),
+      )
 
-    expect(unmountButton).toBeTruthy()
-    unmountButton?.click()
+    expect(vi.getTimerCount()).toBe(1)
+    expect(() => findToggleButton('卸载子作用域')?.click()).not.toThrow()
     await flush()
+    expect(vi.getTimerCount()).toBe(0)
+
+    expect(() => findToggleButton('重新挂载子作用域')?.click()).not.toThrow()
+    await flush()
+    expect(vi.getTimerCount()).toBe(1)
+
+    expect(() => findToggleButton('卸载子作用域')?.click()).not.toThrow()
+    await flush()
+    expect(vi.getTimerCount()).toBe(0)
 
     const text = container.textContent?.replace(/\s+/g, '') ?? ''
     expect(text).toContain('子组件已卸载')
-    expect(text).toContain('清理timer')
+    expect(container.querySelectorAll('[data-cleanup-log]')).toHaveLength(2)
+    expect(text.match(/清理timer/g)).toHaveLength(2)
     expect(text).not.toContain('还没有清理记录')
   })
 })

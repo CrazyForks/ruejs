@@ -25,10 +25,10 @@ const ThemePicker: FC = () => {
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+import { _$compiledSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const ThemePicker: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledSetup("useSetup:0:0", ()=>{
         const themes = [
             'light',
             'dark'
@@ -41,7 +41,7 @@ const ThemePicker: FC = ()=>{
             themes: themes,
             labels: labels
         };
-    }));
+        });
     const { themes: themes, labels: labels } = _$useSetup;
     return (<select value={labels.light}>
       {themes.map((n)=><option key={n} value={n}>{labels[n] ? `${labels[n]} (${n})` : n}</option>)}
@@ -49,9 +49,12 @@ const ThemePicker: FC = ()=>{
 };
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec_setup_ident_consistency.out.js", strip_marker(&out))
         .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

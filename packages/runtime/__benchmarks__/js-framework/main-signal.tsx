@@ -1,4 +1,4 @@
-import { setReactiveScheduling, signal } from '@rue-js/rue/compiled'
+import { setReactiveScheduling, signal } from '@rue-js/rue/internal/compiler'
 
 import { buildData, installBenchmarkApi, type Row } from './shared'
 
@@ -103,6 +103,6 @@ const SignalBenchmark = () => (
 const container = document.querySelector('#app')
 if (!container) throw new Error('Missing #app benchmark container')
 const handle = SignalBenchmark() as unknown as {
-  __rue_vapor_setup: (parent: Element) => Node
+  __rue_compiled_mount: (parent: Element) => Node
 }
-container.appendChild(handle.__rue_vapor_setup(container))
+container.appendChild(handle.__rue_compiled_mount(container))

@@ -1,4 +1,4 @@
-import { type FC, computed, renderAnchor, vapor, watchEffect } from '@rue-js/rue'
+import { type FC, computed } from '@rue-js/rue'
 import { RouterLink, useRoute } from '@rue-js/router'
 import { manifest as compilerManifest } from 'virtual:rue-island-manifest'
 import { CompilerDirectiveFixture } from './rue-islands/CompilerDirectiveFixture'
@@ -261,26 +261,7 @@ const RueIslands: FC = () => {
   })
   const currentPage = computed(() => findPage(currentPath.get()))
 
-  if (import.meta.env.SSR) {
-    const path = currentPath.get()
-    return renderPage(currentPage.get(), path) as any
-  }
-
-  return vapor(() => {
-    const root = document.createDocumentFragment()
-    const anchor = document.createComment('rue:islands-example')
-    root.appendChild(anchor)
-
-    watchEffect(() => {
-      const page = currentPage.get()
-      const path = currentPath.get()
-      const parent = (anchor.parentNode || root) as any
-
-      renderAnchor(renderPage(page, path) as any, parent, anchor as any)
-    })
-
-    return root as any
-  }) as any
+  return renderPage(currentPage.get(), currentPath.get()) as any
 }
 
 export default RueIslands

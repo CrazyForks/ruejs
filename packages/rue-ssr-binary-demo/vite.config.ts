@@ -63,8 +63,7 @@ export default defineConfig(({ mode }) => {
       gzipBuiltEntry(),
     ],
     esbuild: {
-      jsx: 'automatic',
-      jsxImportSource: '@rue-js',
+      jsx: 'preserve',
     },
     define: {
       __BROWSER__: JSON.stringify(isClient),
@@ -84,20 +83,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       conditions: ['development', 'browser'],
       alias: {
-        '@rue-js/jsx-runtime': path.resolve(repoRoot, 'packages/jsx-runtime/src'),
-        '@rue-js/runtime-vapor/protocol': path.resolve(
-          repoRoot,
-          'packages/runtime-vapor/src/protocol.ts',
-        ),
-        '@rue-js/runtime-vapor/vapor': path.resolve(
-          repoRoot,
-          'packages/runtime-vapor/dist/vapor.js',
-        ),
-        '@rue-js/runtime-vapor/reactive': path.resolve(
-          repoRoot,
-          'packages/runtime-vapor/dist/reactive.js',
-        ),
-        '@rue-js/runtime-vapor': path.resolve(repoRoot, 'packages/runtime-vapor/dist/index.js'),
+        '@rue-js/runtime/internal': path.resolve(repoRoot, 'packages/runtime/src/internal.ts'),
         '@rue-js/runtime/server': path.resolve(repoRoot, 'packages/runtime/src/server.ts'),
         '@rue-js/runtime': path.resolve(repoRoot, 'packages/runtime/src'),
         '@rue-js/rue': path.resolve(repoRoot, 'packages/rue/src'),

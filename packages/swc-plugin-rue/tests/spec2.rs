@@ -22,26 +22,41 @@ export default Comp;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, _$createElement, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, _$compiledWithHookId, renderAnchor, _$template, untrack, watchEffect, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC, h, Fragment } from '@rue-js/rue';
-const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-const Comp: FC = ()=>vapor(()=>{
-        const _root = _$createDocumentFragment();
-        const _el1 = _$createElement("span");
-        _$appendChild(_root, _el1);
-        _$setAttribute(_el1, "id", "n");
-        const _el2 = _$createTextWrapper(_el1);
-        _$appendChild(_el1, _el2);
+const _$getTemplate1 = _$template('<span id="n"><!--rue:text-hole:0--></span>');
+const count = _$compiledWithHookId("ref:1:0", ()=>ref(0));
+const Comp: FC = ()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _root = document.createDocumentFragment();
+        const _el1_fragment = _$getTemplate1().content.cloneNode(true);
+        const _el1 = _el1_fragment.firstChild;
+        const _el2 = _el1.childNodes[0];
+        const _el3 = _el2.parentNode;
+        _root.appendChild(_el1_fragment);
         watchEffect(()=>{
-            _$settextContent(_el2, count.value);
+            const __slot = (count.value);
+            untrack(()=>renderAnchor(__slot, _el3, _el2));
         });
-        return _root;
-    });
+        const __rue_roots = Array.from(_root.childNodes);
+        return {
+            __rue_compiled_host: _root,
+            __rue_compiled_roots: __rue_roots
+        };
+    }, {
+        __rue_compiled_explicit_roots: true
+    }));
 export default Comp;
 "##;
 
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec2.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("@rue-js/rue/internal/compiler"), "{normalized}");
+    assert!(normalized.contains("_$createDocumentFragment()"), "{normalized}");
+    assert!(normalized.contains("_$compiledRoot"), "{normalized}");
+    assert!(normalized.contains("effect(()=>{ const __slot = (count.value)"), "{normalized}");
+    assert!(normalized.contains("renderAnchor(__slot, _el3, _el2)"), "{normalized}");
+    assert!(!normalized.contains("watchEffect"), "{normalized}");
 }

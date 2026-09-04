@@ -12,6 +12,7 @@
 
 import type { AsyncLocalStorage } from 'node:async_hooks'
 import { getOrCreateAls } from './internal/als-registry.js'
+import { installAppRouterRenderPhaseReader, type AppRouterRenderPhase } from './app-render-phase.js'
 import type {
   CacheState,
   ExecutionContextLike,
@@ -37,6 +38,12 @@ import type {
  * Each field group is documented with its source shim module.
  */
 export type UnifiedRequestContext = {
+  // ── App Router rendering ───────────────────────────────────────────
+  /** Distinguishes the RSC pass from the HTML SSR pass for async components. */
+  appRouterRenderPhase: AppRouterRenderPhase
+  /** Request-local AppElements reader and rendered-slot bookkeeping for HTML SSR. */
+  ssrAppElementsState: unknown
+
   // ── request-context.ts ─────────────────────────────────────────────
   /** Cloudflare Workers ExecutionContext, or null on Node.js dev. */
   executionContext: ExecutionContextLike | null
@@ -63,6 +70,7 @@ export type UnifiedRequestContext = {
 const _REQUEST_CONTEXT_ALS_KEY = Symbol.for('text.requestContext.als')
 const _g = globalThis as unknown as Record<PropertyKey, unknown>
 const _als = getOrCreateAls<UnifiedRequestContext>('text.unifiedRequestContext.als')
+installAppRouterRenderPhaseReader(() => _als.getStore()?.appRouterRenderPhase ?? null)
 
 function _getInheritedExecutionContext(): ExecutionContextLike | null {
   const unifiedStore = _als.getStore()
@@ -84,6 +92,8 @@ function _getInheritedExecutionContext(): ExecutionContextLike | null {
  */
 export function createRequestContext(opts?: Partial<UnifiedRequestContext>): UnifiedRequestContext {
   return {
+    appRouterRenderPhase: null,
+    ssrAppElementsState: null,
     headersContext: null,
     actionRevalidationKind: 0,
     dynamicUsageDetected: false,

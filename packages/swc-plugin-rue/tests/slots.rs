@@ -37,9 +37,7 @@ const Demo: FC = () => (
 
     let out = compile(src, "slots_named_default");
 
-    assert!(out.contains(&utils::normalize(
-        "source: getCurrentInstance() && getCurrentInstance().propsRO",
-    )));
+    assert!(out.contains("_$createComponent(Panel, ()=>({"), "{out}");
     assert!(out.contains("__rue_slots"));
     assert!(out.contains(&utils::normalize("\"title\": __child")));
     assert!(out.contains(&utils::normalize("\"default\": __child")));
@@ -68,9 +66,7 @@ const Demo: FC = () => (
 
     assert!(out.contains("__rue_slots"));
     assert!(out.contains(&utils::normalize("\"default\": ({ label })=>")));
-    assert!(out.contains(&utils::normalize(
-        "source: getCurrentInstance() && getCurrentInstance().propsRO",
-    )));
+    assert!(out.contains("_$createComponent(List, ()=>({"), "{out}");
 }
 
 #[test]
@@ -108,7 +104,7 @@ const Demo: FC = () => {
     let out = compile(src, "slots_conditional_named");
 
     assert!(out.contains("__rue_slots"));
-    assert!(out.contains(&utils::normalize("\"title\": showTitle.value ? __child")));
+    assert!(out.contains(&utils::normalize("\"title\": showTitle.value ? [")));
     assert!(out.contains(&utils::normalize("\"actions\": showActions.value ? __child")));
     assert!(out.contains(&utils::normalize("\"default\": __child")));
     assert!(!out.contains(&utils::normalize("createComponent(Template")));
@@ -141,9 +137,7 @@ const Demo: FC = () => {
 
     assert!(out.contains(&utils::normalize("children: showBody.value ? __child")));
     assert!(out.contains(&utils::normalize(": undefined")));
-    assert!(out.contains(&utils::normalize(
-        "source: getCurrentInstance() && getCurrentInstance().propsRO",
-    )));
+    assert!(out.contains("_$createComponent(Panel, ()=>({"), "{out}");
 }
 
 #[test]
@@ -177,8 +171,9 @@ const Demo: FC = () => {
 
     let out = compile(src, "slots_conditional_default_map");
 
-    assert!(out.contains(&utils::normalize("children: showBody.value ? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("const _map1_newElements = _$vaporKeyedList({")));
+    assert!(
+        out.contains(&utils::normalize("children: showBody.value ? items.value.map((item)=>{"))
+    );
     assert!(out.contains(&utils::normalize("const label = item.label.toUpperCase();")));
     assert!(out.contains(&utils::normalize(": undefined")));
     assert!(!out.contains("_jsxDEV("));
@@ -210,9 +205,9 @@ const Demo: FC = () => {
 
     let out = compile(src, "custom_element_slots_context");
 
-    assert!(out.contains("getCurrentInstance"));
+    assert!(out.contains("getCurrentOwner"));
     assert!(out.contains(&utils::normalize(
-        r#"_$setProperty(_el1, "__rue_context_parent_instance__", getCurrentInstance())"#,
+        r#"_$setProperty(_el1, "__rue_context_parent_instance__", getCurrentOwner())"#,
     )));
     assert!(
         out.contains(&utils::normalize(r#"_$setProperty(_el1, "props", { count: count.value })"#,))
@@ -290,7 +285,7 @@ const Demo: FC = () => {
     let out = compile(src, "custom_element_native_expression_children");
 
     assert!(!out.contains("__rue_slots"));
-    assert!(out.contains("_$vaporKeyedList"));
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
     assert!(out.contains(&utils::normalize("items.value || []")));
     assert!(out.contains(&utils::normalize(r#""slot", "native""#)));
 }

@@ -1,7 +1,6 @@
 import { builtinModules, createRequire } from 'node:module'
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { minify as minifySwc } from '@swc/core'
 import MagicString from 'magic-string'
 import { build } from 'vite'
@@ -11,8 +10,8 @@ import { inlineEnums } from './inline-enums.js'
 import { createLiteralReplacePlugin } from './literal-replace-plugin.js'
 import { createRollupWasmPlugin } from './wasm-plugin.js'
 
-const require = createRequire(import.meta.url)
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = import.meta.dirname
+const require = createRequire(path.resolve(__dirname, 'vite-package-builder.js'))
 const rootDir = path.resolve(__dirname, '..')
 const rootPkg = require(path.resolve(rootDir, 'package.json'))
 
@@ -33,11 +32,6 @@ const workspaceAliasEntries = [
   { find: '@rue-js/router', replacement: path.resolve(rootDir, 'packages/router/src') },
   { find: '@rue-js/store', replacement: path.resolve(rootDir, 'packages/store/src') },
   { find: '@rue-js/i18n', replacement: path.resolve(rootDir, 'packages/i18n/src') },
-  { find: '@rue-js/jsx-runtime', replacement: path.resolve(rootDir, 'packages/jsx-runtime/src') },
-  {
-    find: '@rue-js/jsx-dev-runtime',
-    replacement: path.resolve(rootDir, 'packages/jsx-dev-runtime/src'),
-  },
   { find: '@rue-js/runtime', replacement: path.resolve(rootDir, 'packages/runtime/src') },
   {
     find: '@rue-js/server-renderer',
@@ -325,9 +319,10 @@ function createDistributionRequest(packageInfo, buildEntry, format, prod, source
     isBundlerESMBuild,
     isBrowserESMBuild,
     isGlobalBuild,
-    entryFile: resolveEntryFile(buildEntry, format),
+    entryFile: resolveEntryFile(buildEntry, format, packageInfo.packageDir),
     outputFileBase: resolveOutputFileBase(buildEntry.fileName, format, prod),
-    enableRueVaporTransform: packageInfo.target === 'rue-design',
+    enableRueVaporTransform:
+      packageInfo.target === 'rue-design' || packageInfo.packageOptions.rueTransform === true,
     preserveModules: packageInfo.packageOptions.preserveModules === true,
     watch: false,
   }
@@ -360,9 +355,10 @@ function createWatchRequest(packageInfo, format, prod, inlineDeps) {
     isBundlerESMBuild,
     isBrowserESMBuild,
     isGlobalBuild,
-    entryFile: path.resolve(packageInfo.packageDir, 'src/index.ts'),
+    entryFile: path.resolve(packageInfo.packageDir, resolveSourceIndex(packageInfo.packageDir)),
     outputFileBase: `${packageInfo.target === 'rue-compat' ? 'rue' : packageInfo.target}.${format}${prod ? '.prod' : ''}`,
-    enableRueVaporTransform: packageInfo.target === 'rue-design',
+    enableRueVaporTransform:
+      packageInfo.target === 'rue-design' || packageInfo.packageOptions.rueTransform === true,
     preserveModules: false,
     watch: true,
   }
@@ -376,11 +372,15 @@ function resolveViteFormat(format) {
   return viteFormat
 }
 
-function resolveEntryFile(buildEntry, format) {
+function resolveEntryFile(buildEntry, format, packageDir) {
   if (buildEntry.entryFile) {
     return buildEntry.entryFile
   }
-  return format.endsWith('runtime') ? 'src/runtime.ts' : 'src/index.ts'
+  return format.endsWith('runtime') ? 'src/runtime.ts' : resolveSourceIndex(packageDir)
+}
+
+function resolveSourceIndex(packageDir) {
+  return existsSync(path.resolve(packageDir, 'src/index.tsx')) ? 'src/index.tsx' : 'src/index.ts'
 }
 
 function resolveOutputFileBase(fileName, format, prod) {
@@ -422,7 +422,6 @@ function createViteConfig(request) {
     logLevel: 'info',
     plugins: [
       createRollupWasmPlugin(),
-      createVaporRuntimeImportPlugin(request),
       enumPlugin,
       createLiteralReplacePlugin(resolveReplaceValues(request, enumDefines)),
       request.packageInfo.target === 'rue-design' ? createPureCompoundComponentPlugin() : null,
@@ -488,35 +487,13 @@ function createViteConfig(request) {
   }
 }
 
-function isMinimalVaporBuild(request) {
-  return (
-    request.outputPlatform !== 'node' &&
-    /\.vapor(?:-core)?$/.test(request.buildEntry?.fileName ?? '')
-  )
-}
-
-function createVaporRuntimeImportPlugin(request) {
-  if (!isMinimalVaporBuild(request)) return null
-
-  return {
-    name: 'rue-vapor-single-runtime-entry',
-    transform(code) {
-      const rewritten = code
-        .replaceAll("'@rue-js/runtime-vapor/reactive'", "'@rue-js/runtime-vapor/vapor'")
-        .replaceAll('"@rue-js/runtime-vapor/reactive"', '"@rue-js/runtime-vapor/vapor"')
-        .replaceAll("'@rue-js/runtime-vapor'", "'@rue-js/runtime-vapor/vapor'")
-        .replaceAll('"@rue-js/runtime-vapor"', '"@rue-js/runtime-vapor/vapor"')
-      return rewritten === code ? null : { code: rewritten, map: null }
-    },
-  }
-}
-
 function createPureCompoundComponentPlugin() {
   const componentSourceDir = `${path
     .resolve(rootDir, 'packages/rue-design/src/components')
     .replaceAll('\\', '/')}/`
   const compoundAssignment = /^((?:const|let|var)\s+[^=\r\n]+?=\s*)Object\.assign\(/gm
-  const renderReactiveFactoryCall = /_\$vaporMarkComponentRenderReactive\(/g
+  const renderReactiveFactoryCall = /_\$(?:vapor|compiled)MarkComponentRenderReactive\(/g
+  const templateFactoryCall = /_\$template\(/g
 
   return {
     name: 'rue-design-pure-compound-components',
@@ -543,6 +520,15 @@ function createPureCompoundComponentPlugin() {
         magic.appendLeft(match.index, '/* @__PURE__ */ ')
       }
 
+      // Compiler-emitted template factories only cache inert DOM blueprints. Marking
+      // their module-scope initialization as pure lets consumers remove an entire
+      // unused component when they import a single symbol from the package root.
+      for (const match of code.matchAll(templateFactoryCall)) {
+        if (match.index == null) continue
+        magic ||= new MagicString(code)
+        magic.appendLeft(match.index, '/* @__PURE__ */ ')
+      }
+
       return magic
         ? {
             code: magic.toString(),
@@ -554,39 +540,7 @@ function createPureCompoundComponentPlugin() {
 }
 
 function resolveAliasEntries(request) {
-  const runtimeVaporDist = path.resolve(rootDir, 'packages/runtime-vapor/dist')
-  const nodeRuntime = request.outputPlatform === 'node'
-  const minimalVaporRuntime = isMinimalVaporBuild(request)
-
-  return [
-    ...workspaceAliasEntries,
-    {
-      find: '@rue-js/runtime-vapor/protocol',
-      replacement: path.resolve(runtimeVaporDist, 'protocol.js'),
-    },
-    {
-      find: '@rue-js/runtime-vapor/vapor',
-      replacement: path.resolve(runtimeVaporDist, nodeRuntime ? 'vapor.node.js' : 'vapor.js'),
-    },
-    {
-      find: '@rue-js/runtime-vapor/reactive',
-      replacement: path.resolve(
-        runtimeVaporDist,
-        nodeRuntime
-          ? 'reactive.node.js'
-          : minimalVaporRuntime
-            ? 'reactive.vapor.js'
-            : 'reactive.js',
-      ),
-    },
-    {
-      find: '@rue-js/runtime-vapor',
-      replacement: path.resolve(
-        runtimeVaporDist,
-        nodeRuntime ? 'index.node.js' : minimalVaporRuntime ? 'vapor.js' : 'index.js',
-      ),
-    },
-  ]
+  return workspaceAliasEntries
 }
 
 function resolveDefineValues(request) {

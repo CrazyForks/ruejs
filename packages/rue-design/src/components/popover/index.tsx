@@ -5,7 +5,14 @@ Popover 组件概述
 - 实现保持为原生 TSX 源文件，交给 Rue 编译器参与优化，而不是预先写入变换结果。
 */
 import type { FC } from '@rue-js/rue'
-import { h, onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
+import {
+  Component as DynamicComponent,
+  onMounted,
+  onUnmounted,
+  ref,
+  useRef,
+  watch,
+} from '@rue-js/rue'
 
 /** PopoverPlacement 位置或方向类型。 */
 export type PopoverPlacement =
@@ -420,20 +427,21 @@ const renderRoot = (
     )
   }
 
-  return h(
-    Component,
-    {
-      ...domProps,
-      className,
-      style,
-      ref: setRootElement,
-      onMouseEnter: handleRootMouseEnter,
-      onMouseLeave: handleRootMouseLeave,
-      onFocus: handleRootFocus,
-      onBlur: handleRootBlur,
-    },
-    triggerNode,
-    overlayNode,
+  return (
+    <DynamicComponent
+      is={Component}
+      {...domProps}
+      className={className}
+      style={style}
+      ref={setRootElement}
+      onMouseEnter={handleRootMouseEnter}
+      onMouseLeave={handleRootMouseLeave}
+      onFocus={handleRootFocus}
+      onBlur={handleRootBlur}
+    >
+      {triggerNode}
+      {overlayNode}
+    </DynamicComponent>
   )
 }
 
@@ -466,9 +474,12 @@ const Root: FC<PopoverProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const uncontrolledOpen = ref(defaultOpen ?? false)
-  const currentOpen = ref(open ?? defaultOpen ?? false)
-  const currentTriggers = ref(normalizeTrigger(trigger))
+  const uncontrolledOpenRef = useRef(ref(defaultOpen ?? false))
+  const currentOpenRef = useRef(ref(open ?? defaultOpen ?? false))
+  const currentTriggersRef = useRef(ref(normalizeTrigger(trigger)))
+  const uncontrolledOpen = uncontrolledOpenRef.current!
+  const currentOpen = currentOpenRef.current!
+  const currentTriggers = currentTriggersRef.current!
   const isControlled = open !== undefined
   let rootElement: HTMLElement | null = null
   let triggerElement: HTMLElement | null = null
@@ -532,16 +543,21 @@ const Root: FC<PopoverProps> = ({
     }
   }
 
-  const getCurrentOpen = () => currentOpen.value
+  const getCurrentOpen = () =>
+    triggerElement?.getAttribute('aria-expanded') === 'true' || currentOpen.value
 
   const updateOpen = (nextOpen: boolean) => {
     if (disabled || !hasOverlay) return
     if (nextOpen === getCurrentOpen()) return
-    if (!isControlled) {
-      uncontrolledOpen.value = nextOpen
-    }
-    currentOpen.value = nextOpen
+    // Trigger-driven changes are synchronized directly to the mounted nodes.
+    // Avoid invalidating and recreating this component before the next native
+    // event can observe the updated state; controlled changes still flow
+    // through the prop watcher above.
     syncPopoverDom(nextOpen)
+    if (!nextOpen && destroyOnHidden) {
+      overlayElement?.remove()
+      overlayElement = null
+    }
     if (typeof onOpenChange === 'function') {
       onOpenChange(nextOpen)
     }
@@ -632,7 +648,7 @@ const Root: FC<PopoverProps> = ({
   const allowFocus = currentTriggers.value.includes('focus')
   const allowClick = currentTriggers.value.includes('click')
   const allowContextMenu = currentTriggers.value.includes('contextMenu')
-  const showOverlay = hasOverlay && (currentOpen.value || !destroyOnHidden)
+  const showOverlay = hasOverlay
   const pointAtCenter = typeof arrow === 'object' && !!arrow.pointAtCenter
   const showArrow = arrow !== false
   const { onMouseEnter, onMouseLeave, onFocus, onBlur, onClick, onContextMenu, ...domProps } = rest

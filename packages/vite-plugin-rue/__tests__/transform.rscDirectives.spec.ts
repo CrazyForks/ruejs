@@ -48,14 +48,16 @@ describe('vite-plugin-rue RSC directives', () => {
     const useClientIndex = code.indexOf('"use client";')
     const importIndex = code.indexOf('import ')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
     expect(useClientIndex).toBeGreaterThan(-1)
     expect(importIndex).toBeGreaterThan(-1)
     expect(useClientIndex).toBeLessThan(importIndex)
     expect(code.match(/["']use client["'];?/g)).toHaveLength(1)
+    expect(code).toContain('@rue-js/rue/internal')
+    expect(code).not.toMatch(/@rue-js\/(?:rue\/vapor|runtime-vapor)/)
   })
 
-  it('leaves the RSC server environment to the RSC plugin', async () => {
+  it('compiles RSC JSX with server renderer operations', async () => {
     const source = `
       import LikeButton from '../components/LikeButton'
 
@@ -67,7 +69,10 @@ describe('vite-plugin-rue RSC directives', () => {
     const result = await invokeTransform(source, '/Users/dyhb/code/rue/app/page.tsx', {
       environment: { name: 'rsc' },
     })
+    const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(result).toBeNull()
+    expect(code).toContain('@rue-js/server-renderer')
+    expect(code).toContain('_$serverComponent(LikeButton')
+    expect(code).not.toContain('@rue-js/rue/internal')
   })
 })

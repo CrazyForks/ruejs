@@ -179,6 +179,7 @@ const Affix: FC<AffixProps> = ({
   ...rest
 }) => {
   const affixed = ref(false)
+  let currentAffixed = false
   const affixStyle = ref<Record<string, any> | undefined>(undefined)
   const placeholderStyle = ref<Record<string, any> | undefined>(undefined)
   const placeholderRef = useRef<HTMLDivElement>()
@@ -215,12 +216,26 @@ const Affix: FC<AffixProps> = ({
     nextPlaceholderStyle?: Record<string, any>,
   ) => {
     const nextAffixed = !!nextAffixStyle
-    if (affixed.value !== nextAffixed) {
-      affixed.value = nextAffixed
+    if (currentAffixed !== nextAffixed) {
+      currentAffixed = nextAffixed
       onChange?.(nextAffixed)
     }
-    affixStyle.value = nextAffixStyle
-    placeholderStyle.value = nextPlaceholderStyle
+    const root = placeholderRef.current
+    const fixed = root?.querySelector('[data-rue-affix-fixed]') as HTMLElement | null
+    root?.setAttribute('data-rue-affixed', nextAffixed ? 'true' : 'false')
+    fixed?.setAttribute('data-rue-affix-fixed', nextAffixed ? 'true' : 'false')
+    if (root) {
+      root.style.width = nextPlaceholderStyle?.width ?? ''
+      root.style.height = nextPlaceholderStyle?.height ?? ''
+    }
+    if (fixed) {
+      fixed.style.position = nextAffixStyle?.position ?? ''
+      fixed.style.top = nextAffixStyle?.top ?? ''
+      fixed.style.bottom = nextAffixStyle?.bottom ?? ''
+      fixed.style.left = nextAffixStyle?.left ?? ''
+      fixed.style.width = nextAffixStyle?.width ?? ''
+      fixed.style.height = nextAffixStyle?.height ?? ''
+    }
   }
 
   const measure = () => {

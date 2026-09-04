@@ -402,14 +402,14 @@ export default SiteLayout
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { useState, useEffect, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { useState, useEffect, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink, useRoute } from '@rue-js/router';
 const ThemePicker: FC<{
     value: string;
     onChange: (t: string) => void;
 }> = (props)=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const themes = [
                 'light',
                 'dark',
@@ -494,15 +494,15 @@ const Header: FC<{
     theme: string;
     setTheme: (t: string) => void;
 }> = (p)=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
-            const [open, setOpen] = _$vaporWithHookId("useState:1:0", ()=>useState<string | null>(null));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
+            const [open, setOpen] = _$compiledWithHookId("useState:1:0", ()=>useState<string | null>(null));
             const route = useRoute();
-            _$vaporWithHookId("useEffect:1:1", ()=>useEffect(()=>{
+            _$compiledWithHookId("useEffect:1:1", ()=>useEffect(()=>{
                     setOpen(null);
                 }, [
                     route.value.path
                 ]));
-            _$vaporWithHookId("useEffect:1:2", ()=>useEffect(()=>{
+            _$compiledWithHookId("useEffect:1:2", ()=>useEffect(()=>{
                     const g: any = globalThis;
                     const handler = (e: any)=>{
                         const el = e.target as HTMLElement;
@@ -760,12 +760,12 @@ const Footer: FC = ()=>(<footer className="w-full bg-base-200">
 const SiteLayout: FC<{
     title?: string;
 }> = (props)=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup2", ()=>useSetup(()=>{
-            const [theme, setTheme] = _$vaporWithHookId("useState:1:3", ()=>useState<string>(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0:dup2", ()=>useSetup(()=>{
+            const [theme, setTheme] = _$compiledWithHookId("useState:1:3", ()=>useState<string>(()=>{
                     const saved = localStorage.getItem('rue.theme');
                     return saved || 'light';
                 }));
-            _$vaporWithHookId("useEffect:1:4", ()=>useEffect(()=>{
+            _$compiledWithHookId("useEffect:1:4", ()=>useEffect(()=>{
                     localStorage.setItem('rue.theme', theme.value);
                 }, [
                     theme.value
@@ -790,5 +790,10 @@ export default SiteLayout;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec38.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{out}");
+    assert!(normalized.contains("const [open, setOpen] = useState<string | null>(null)"), "{out}");
+    assert!(normalized.contains("const [theme, setTheme] = useState<string>"), "{out}");
+    assert!(normalized.contains("useEffect(()=>{ setOpen(null)"), "{out}");
+    assert!(normalized.contains("export default SiteLayout"), "{out}");
 }

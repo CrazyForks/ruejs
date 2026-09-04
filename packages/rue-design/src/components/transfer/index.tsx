@@ -5,7 +5,7 @@ Transfer 组件概述
 - 数据模型保持 `dataSource + targetKeys + selectedKeys` 主线，便于延续常见穿梭框组件的使用心智。
 */
 import type { FC } from '@rue-js/rue'
-import { h, onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
+import { onMounted, ref, render as renderRue, useRef, watch } from '@rue-js/rue'
 
 /** TransferKey 标识键类型。 */
 export type TransferKey = string | number
@@ -311,7 +311,7 @@ const toKeyText = (key: TransferKey) => `${typeof key}:${String(key)}`
 /** uniq Keys 的内部工具函数。 */
 const uniqKeys = (keys?: ReadonlyArray<TransferKey>) => {
   const next: TransferKey[] = []
-  const seen = new Set<string>()
+  const seen = /*#__PURE__*/ new Set<string>()
 
   ;(keys ?? []).forEach(key => {
     const keyText = toKeyText(key)
@@ -331,7 +331,7 @@ const hasKey = (keys: ReadonlyArray<TransferKey>, key: TransferKey) => {
 
 /** remove Keys 的内部工具函数。 */
 const removeKeys = (keys: ReadonlyArray<TransferKey>, keysToRemove: ReadonlyArray<TransferKey>) => {
-  const removeSet = new Set(keysToRemove.map(toKeyText))
+  const removeSet = /*#__PURE__*/ new Set(keysToRemove.map(toKeyText))
   return keys.filter(key => !removeSet.has(toKeyText(key)))
 }
 
@@ -427,7 +427,7 @@ const normalizeDataSource = <RecordType,>(
   rowKey?: (record: RecordType) => TransferKey,
   render?: TransferRender<RecordType>,
 ) => {
-  const seen = new Set<string>()
+  const seen = /*#__PURE__*/ new Set<string>()
 
   return (dataSource ?? []).flatMap<NormalizedTransferItem<RecordType>>((record, index) => {
     const key = resolveRecordKey(record, index, rowKey)
@@ -692,7 +692,7 @@ interface TransferManagedPanelProps {
   onMoveItems: (direction: TransferDirection, moveKeys: TransferKey[]) => void
   onSearchInput: (value: string) => void
   assignSearchInputRef: (element: HTMLInputElement | null) => void
-  searchComposingRef: { current: boolean }
+  searchComposingRef: { current: boolean | undefined }
   runManagedRenderCallback: <T>(runner: () => T) => T
   setCurrentPage: (nextPage: number) => void
 }
@@ -1190,7 +1190,7 @@ const Transfer: FC<TransferProps<any>> = ({
 
   const normalizedItems = normalizeDataSource(dataSource, rowKey, render)
   const readNormalizedItems = () => (Array.isArray(normalizedItems) ? normalizedItems : [])
-  const itemMap = new Map(readNormalizedItems().map(item => [item.keyText, item]))
+  const itemMap = /*#__PURE__*/ new Map(readNormalizedItems().map(item => [item.keyText, item]))
 
   const mergedActions = Array.isArray(actions)
     ? actions
@@ -1213,7 +1213,7 @@ const Transfer: FC<TransferProps<any>> = ({
     const mergedTargetKeys = (
       targetKeys !== undefined ? uniqKeys(targetKeys) : readUncontrolledTargetKeys()
     ).filter(key => itemMap.has(toKeyText(key)))
-    const targetKeySet = new Set(mergedTargetKeys.map(toKeyText))
+    const targetKeySet = /*#__PURE__*/ new Set(mergedTargetKeys.map(toKeyText))
     const mergedSelectedKeys = (
       selectedKeys !== undefined ? uniqKeys(selectedKeys) : readUncontrolledSelectedKeys()
     ).filter(key => itemMap.has(toKeyText(key)))
@@ -1238,7 +1238,7 @@ const Transfer: FC<TransferProps<any>> = ({
     nextTargetKeys = getTransferStateSnapshot().mergedTargetKeys,
   ) => {
     if (!onSelectChange) return
-    const nextTargetSet = new Set(nextTargetKeys.map(toKeyText))
+    const nextTargetSet = /*#__PURE__*/ new Set(nextTargetKeys.map(toKeyText))
     const partitions = partitionSelectedKeys(nextSelectedKeys, nextTargetSet, itemMap)
     onSelectChange(partitions.left, partitions.right)
   }
@@ -1335,43 +1335,47 @@ const Transfer: FC<TransferProps<any>> = ({
     if (leftPanelHostRef.current) {
       renderManagedTarget(
         'left',
-        h(TransferManagedPanel, {
-          ...managedPanelSharedProps,
-          direction: 'left',
-          rawItems: snapshot.sourceItems,
-          sideSelectedKeys: snapshot.sourceSelectedKeys,
-          searchValue: leftSearchValueRef.value,
-          currentPage: leftPageRef.value,
-          paginationPageSize: paginationConfig?.pageSize,
-          searchEnabled: searchConfig.enabled,
-          sizeConfig,
-          mergedLocale,
-          title: sourceTitle,
-          sharedSearchPlaceholder,
-          customListRenderer,
-          getTransferStateSnapshot,
-          onItemSelect: (key: TransferKey, selected: boolean) =>
-            handleItemSelect('left', key, selected),
-          onItemSelectAll: (keys: TransferKey[], selected: boolean) =>
-            handleItemSelectAll('left', keys, selected),
-          onReplaceSideSelection: (nextSideSelectedKeys: TransferKey[]) =>
-            mergeSideSelection('left', nextSideSelectedKeys),
-          onMoveItems: moveItems,
-          onSearchInput: (value: string) => handleSearchInput('left', value),
-          assignSearchInputRef: (element: HTMLInputElement | null) => {
+        <TransferManagedPanel
+          {...managedPanelSharedProps}
+          direction="left"
+          rawItems={snapshot.sourceItems}
+          sideSelectedKeys={snapshot.sourceSelectedKeys}
+          searchValue={leftSearchValueRef.value}
+          currentPage={leftPageRef.value}
+          paginationPageSize={paginationConfig?.pageSize}
+          searchEnabled={searchConfig.enabled}
+          sizeConfig={sizeConfig}
+          mergedLocale={mergedLocale}
+          title={sourceTitle}
+          sharedSearchPlaceholder={sharedSearchPlaceholder}
+          customListRenderer={customListRenderer}
+          getTransferStateSnapshot={getTransferStateSnapshot}
+          onItemSelect={(key: TransferKey, selected: boolean) =>
+            handleItemSelect('left', key, selected)
+          }
+          onItemSelectAll={(keys: TransferKey[], selected: boolean) =>
+            handleItemSelectAll('left', keys, selected)
+          }
+          onReplaceSideSelection={(nextSideSelectedKeys: TransferKey[]) =>
+            mergeSideSelection('left', nextSideSelectedKeys)
+          }
+          onMoveItems={moveItems}
+          onSearchInput={(value: string) => handleSearchInput('left', value)}
+          assignSearchInputRef={(element: HTMLInputElement | null) => {
             leftSearchInputRef.current = element ?? undefined
             if (element && pendingSearchFocusRef.current === 'left') {
               requestSearchInputFocus('left')
             }
-          },
-          searchComposingRef: leftSearchComposingRef,
-          runManagedRenderCallback: <T,>(runner: () => T) =>
-            runManagedRenderCallback('left', runner),
-          setCurrentPage: (nextPage: number) => {
+          }}
+          searchComposingRef={leftSearchComposingRef}
+          runManagedRenderCallback={<T,>(runner: () => T) =>
+            runManagedRenderCallback('left', runner)
+          }
+          setCurrentPage={(nextPage: number) => {
             requestSearchInputFocus('left')
             leftPageRef.value = nextPage
-          },
-        }),
+          }}
+        />,
         leftPanelHostRef.current,
       )
     }
@@ -1383,43 +1387,47 @@ const Transfer: FC<TransferProps<any>> = ({
     if (rightPanelHostRef.current) {
       renderManagedTarget(
         'right',
-        h(TransferManagedPanel, {
-          ...managedPanelSharedProps,
-          direction: 'right',
-          rawItems: snapshot.targetItems,
-          sideSelectedKeys: snapshot.targetSelectedKeys,
-          searchValue: rightSearchValueRef.value,
-          currentPage: rightPageRef.value,
-          paginationPageSize: paginationConfig?.pageSize,
-          searchEnabled: searchConfig.enabled,
-          sizeConfig,
-          mergedLocale,
-          title: targetTitle,
-          sharedSearchPlaceholder,
-          customListRenderer,
-          getTransferStateSnapshot,
-          onItemSelect: (key: TransferKey, selected: boolean) =>
-            handleItemSelect('right', key, selected),
-          onItemSelectAll: (keys: TransferKey[], selected: boolean) =>
-            handleItemSelectAll('right', keys, selected),
-          onReplaceSideSelection: (nextSideSelectedKeys: TransferKey[]) =>
-            mergeSideSelection('right', nextSideSelectedKeys),
-          onMoveItems: moveItems,
-          onSearchInput: (value: string) => handleSearchInput('right', value),
-          assignSearchInputRef: (element: HTMLInputElement | null) => {
+        <TransferManagedPanel
+          {...managedPanelSharedProps}
+          direction="right"
+          rawItems={snapshot.targetItems}
+          sideSelectedKeys={snapshot.targetSelectedKeys}
+          searchValue={rightSearchValueRef.value}
+          currentPage={rightPageRef.value}
+          paginationPageSize={paginationConfig?.pageSize}
+          searchEnabled={searchConfig.enabled}
+          sizeConfig={sizeConfig}
+          mergedLocale={mergedLocale}
+          title={targetTitle}
+          sharedSearchPlaceholder={sharedSearchPlaceholder}
+          customListRenderer={customListRenderer}
+          getTransferStateSnapshot={getTransferStateSnapshot}
+          onItemSelect={(key: TransferKey, selected: boolean) =>
+            handleItemSelect('right', key, selected)
+          }
+          onItemSelectAll={(keys: TransferKey[], selected: boolean) =>
+            handleItemSelectAll('right', keys, selected)
+          }
+          onReplaceSideSelection={(nextSideSelectedKeys: TransferKey[]) =>
+            mergeSideSelection('right', nextSideSelectedKeys)
+          }
+          onMoveItems={moveItems}
+          onSearchInput={(value: string) => handleSearchInput('right', value)}
+          assignSearchInputRef={(element: HTMLInputElement | null) => {
             rightSearchInputRef.current = element ?? undefined
             if (element && pendingSearchFocusRef.current === 'right') {
               requestSearchInputFocus('right')
             }
-          },
-          searchComposingRef: rightSearchComposingRef,
-          runManagedRenderCallback: <T,>(runner: () => T) =>
-            runManagedRenderCallback('right', runner),
-          setCurrentPage: (nextPage: number) => {
+          }}
+          searchComposingRef={rightSearchComposingRef}
+          runManagedRenderCallback={<T,>(runner: () => T) =>
+            runManagedRenderCallback('right', runner)
+          }
+          setCurrentPage={(nextPage: number) => {
             requestSearchInputFocus('right')
             rightPageRef.value = nextPage
-          },
-        }),
+          }}
+        />,
         rightPanelHostRef.current,
       )
     }
@@ -1578,7 +1586,7 @@ const Transfer: FC<TransferProps<any>> = ({
       return
     }
 
-    const moveKeySet = new Set(moveKeys.map(toKeyText))
+    const moveKeySet = /*#__PURE__*/ new Set(moveKeys.map(toKeyText))
     const nextTargetKeys = snapshot.mergedTargetKeys.filter(key => !moveKeySet.has(toKeyText(key)))
     const nextSelectedKeys = removeKeys(snapshot.mergedSelectedKeys, moveKeys)
     commitTargetKeys(nextTargetKeys, 'left', moveKeys, nextSelectedKeys)
@@ -1630,21 +1638,19 @@ const Transfer: FC<TransferProps<any>> = ({
         : 'border-base-300',
     )
 
-    return h(
-      'button',
-      {
-        type: 'button',
-        disabled: buttonDisabled,
-        className: baseClassName,
-        onClick: direction === 'right' ? moveToRight : moveToLeft,
-      },
-      h(
-        'span',
-        { className: 'inline-flex items-center gap-2' },
-        direction === 'left' && !oneWay ? h(ArrowLeftIcon, null) : null,
-        h('span', null, content),
-        direction === 'right' ? h(ArrowRightIcon, null) : null,
-      ),
+    return (
+      <button
+        type="button"
+        disabled={buttonDisabled}
+        className={baseClassName}
+        onClick={direction === 'right' ? moveToRight : moveToLeft}
+      >
+        <span className="inline-flex items-center gap-2">
+          {direction === 'left' && !oneWay ? <ArrowLeftIcon /> : null}
+          <span>{content}</span>
+          {direction === 'right' ? <ArrowRightIcon /> : null}
+        </span>
+      </button>
     )
   }
 
@@ -1657,37 +1663,37 @@ const Transfer: FC<TransferProps<any>> = ({
       item => hasKey(snapshot.targetSelectedKeys, item.key) && !item.disabled,
     )
 
-    return h(
-      'div',
-      {
-        className: appendClassName(
+    return (
+      <div
+        className={appendClassName(
           'flex flex-row items-center justify-center gap-2 lg:flex-col',
           classNames?.operations,
-        ),
-        style: { ...styles?.operations, ...operationStyle },
-      },
-      renderOperationButton('right', moveRightLabel, disabled || !canMoveRight),
-      !oneWay ? renderOperationButton('left', moveLeftLabel, disabled || !canMoveLeft) : null,
+        )}
+        style={{ ...styles?.operations, ...operationStyle }}
+      >
+        {renderOperationButton('right', moveRightLabel, disabled || !canMoveRight)}
+        {!oneWay ? renderOperationButton('left', moveLeftLabel, disabled || !canMoveLeft) : null}
+      </div>
     )
   }
 
-  return h(
-    'div',
-    {
-      ...rest,
-      className: appendClassName(
+  return (
+    <div
+      {...rest}
+      className={appendClassName(
         appendClassName(
           'rue-transfer grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-stretch',
           classNames?.root,
         ),
         className,
-      ),
-      style: { ...styles?.root, ...style },
-      'data-rue-transfer': 'true',
-    },
-    h('div', { ref: leftPanelHostRef }),
-    h('div', { ref: operationsHostRef }),
-    h('div', { ref: rightPanelHostRef }),
+      )}
+      style={{ ...styles?.root, ...style }}
+      data-rue-transfer="true"
+    >
+      <div ref={leftPanelHostRef} />
+      <div ref={operationsHostRef} />
+      <div ref={rightPanelHostRef} />
+    </div>
   )
 }
 

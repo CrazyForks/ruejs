@@ -1,6 +1,6 @@
 # Rue.js
 
-> The Wasm Framework For Native DOM
+> The Compiler Framework For Native DOM
 
 Languages: English | [简体中文](./README.zh-CN.md)
 
@@ -55,14 +55,15 @@ pnpm run dev
 pnpm add @rue-js/rue @rue-js/router
 ```
 
-Enable Rue JSX in your Vite config:
+Enable Rue JSX with the compiler plugin in your Vite config:
 
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite'
+import Rue from '@rue-js/vite-plugin-rue'
 
 export default defineConfig({
-  esbuild: { jsxImportSource: '@rue-js/rue' },
+  plugins: [Rue()],
 })
 ```
 
@@ -126,7 +127,6 @@ This is a pnpm workspace-based monorepo. The main packages include:
 - `@rue-js/design`: design system and component library
 - `@rue-js/vite-plugin-rue`: Vite integration
 - `@rue-js/swc-plugin-rue`: SWC JSX transform plugin
-- `@rue-js/jsx-runtime` / `@rue-js/jsx-dev-runtime`: JSX runtime entry points
 
 ## Local Development
 

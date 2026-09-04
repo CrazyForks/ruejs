@@ -10,8 +10,8 @@ const SHOW_DIRECTIVE_NAMES: &[&str] = &["v-show", "r-show"];
 /*
 模块职责与 AST 说明：
 - 目标：将 JSXOpeningElement 上的 `v-show/r-show` 指令改写为样式驱动的显示控制：
-  - 若存在 style 属性：改写为 `style={_$vaporShowStyle(styleValue, cond)}`
-  - 若不存在 style 属性：插入 `style={_$vaporShowStyle(undefined, cond)}`
+  - 若存在 style 属性：改写为 `style={_$compiledShowStyle(styleValue, cond)}`
+  - 若不存在 style 属性：插入 `style={_$compiledShowStyle(undefined, cond)}`
     - 保留其他属性不变，并移除原 `v-show/r-show` 指令属性
 - 设计动机：统一以样式控制显隐，避免在编译期生成额外的条件控制流或包裹节点，从而保持 JSX 结构的稳定
 
@@ -22,15 +22,15 @@ const SHOW_DIRECTIVE_NAMES: &[&str] = &["v-show", "r-show"];
 - JSXAttrName：属性名，常见为 Ident（标识符）
 - JSXAttrValue：属性值，常见为 Str（字符串）或 JSXExprContainer（表达式容器）
 - JSXExprContainer：表达式容器，内部 expr 若为 JSXExpr::Expr(e) 则表示普通表达式 e
-- Expr：表达式总称，这里会构造 `emit::call_ident("_$vaporShowStyle", [style, cond])`
+- Expr：表达式总称，这里会构造 `emit::call_ident("_$compiledShowStyle", [style, cond])`
 
 输入→输出示例（概要）：
 - 输入：
   <div v-show={cond} style={{ display: 'block' }} />
 - 输出（改写后的 opening）：
-  <div style={_$vaporShowStyle({ display: 'block' }, cond)} />
+  <div style={_$compiledShowStyle({ display: 'block' }, cond)} />
 - 若无 style：
-  <div v-show={cond} /> → <div style={_$vaporShowStyle(undefined, cond)} />
+  <div v-show={cond} /> → <div style={_$compiledShowStyle(undefined, cond)} />
 */
 fn get_static_truthy_bool(e: &Expr) -> Option<bool> {
     match unwrap_expr(e) {
@@ -124,7 +124,7 @@ fn set_style_expr_value(style_attr: &mut JSXAttr, expr: Expr) {
 }
 
 /// `v-show/r-show` 指令改写：
-/// - 若存在 `style`，将其改为调用 `_$vaporShowStyle(style, cond)`；否则插入一个 `style={_$vaporShowStyle(undefined, cond)}`
+/// - 若存在 `style`，将其改为调用 `_$compiledShowStyle(style, cond)`；否则插入一个 `style={_$compiledShowStyle(undefined, cond)}`
 /// - 设计动机：统一以样式驱动显示隐藏，避免在编译期生成额外的控制流程与节点结构。
 pub fn transform_opening(opening: &mut JSXOpeningElement) {
     log::debug("pre: show_directive transform_opening");
@@ -171,7 +171,7 @@ pub fn transform_opening(opening: &mut JSXOpeningElement) {
             match style_idx {
                 Some(si) => {
                     log::debug("pre: patch existing style with vaporShowStyle");
-                    // 4a) 已存在 style：将其值包装为 _$vaporShowStyle(styleValue, cond)
+                    // 4a) 已存在 style：将其值包装为 _$compiledShowStyle(styleValue, cond)
                     if let JSXAttrOrSpread::JSXAttr(style_attr) = &mut opening.attrs[si] {
                         let style_expr = match &style_attr.value {
                             Some(JSXAttrValue::Str(s)) => {
@@ -193,7 +193,10 @@ pub fn transform_opening(opening: &mut JSXOpeningElement) {
                         let next_expr = static_cond
                             .and_then(|cond| fold_vapor_show_style(style_expr.clone(), cond))
                             .unwrap_or_else(|| {
-                                emit::call_ident("_$vaporShowStyle", vec![style_expr, cond.clone()])
+                                emit::call_ident(
+                                    "_$compiledShowStyle",
+                                    vec![style_expr, cond.clone()],
+                                )
                             });
                         set_style_expr_value(style_attr, next_expr);
                     }
@@ -207,7 +210,7 @@ pub fn transform_opening(opening: &mut JSXOpeningElement) {
                     let next_expr = static_cond
                         .and_then(|cond| fold_vapor_show_style(undef.clone(), cond))
                         .unwrap_or_else(|| {
-                            emit::call_ident("_$vaporShowStyle", vec![undef, cond.clone()])
+                            emit::call_ident("_$compiledShowStyle", vec![undef, cond.clone()])
                         });
                     if let JSXAttrOrSpread::JSXAttr(attr) = &opening.attrs[vi] {
                         let mut style_attr = attr.clone();

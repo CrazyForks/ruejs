@@ -8,7 +8,8 @@ vi.mock('../../../app/pages/site/components/Code', () => ({
   default: () => null,
 }))
 
-import { h, render, setReactiveScheduling } from '../src'
+import { render, setReactiveScheduling } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import GetCurrentScope from '../../../app/pages/examples/GetCurrentScope'
 
 afterEach(() => {
@@ -37,7 +38,7 @@ describe('getCurrentScope actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(GetCurrentScope as any, null), container)
+    render(createTestRenderable(GetCurrentScope as any, null), container)
 
     clickButton(container, '事件中读取')
     await flush()

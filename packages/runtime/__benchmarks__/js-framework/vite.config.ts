@@ -42,36 +42,16 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@rue-js\/rue\/vapor$/,
-        replacement: workspaceArtifact('packages/rue/dist/rue.vapor.esm-bundler.js'),
+        find: /^@rue-js\/rue\/internal\/compiler$/,
+        replacement: workspaceArtifact('packages/rue/dist/rue.internal-compiler.esm-bundler.js'),
       },
       {
-        find: /^@rue-js\/rue\/compiled$/,
-        replacement: workspaceArtifact('packages/rue/dist/rue.compiled.esm-bundler.js'),
+        find: /^@rue-js\/rue\/internal$/,
+        replacement: workspaceArtifact('packages/rue/dist/rue.internal.esm-bundler.js'),
       },
       {
         find: /^@rue-js\/rue$/,
         replacement: workspaceArtifact('packages/rue/dist/rue.esm-bundler.js'),
-      },
-      {
-        find: /^@rue-js\/runtime\/vapor$/,
-        replacement: workspaceArtifact('packages/runtime/dist/runtime.vapor.esm-bundler.js'),
-      },
-      {
-        find: /^@rue-js\/runtime\/compiled$/,
-        replacement: workspaceArtifact('packages/runtime/dist/runtime.compiled.esm-bundler.js'),
-      },
-      {
-        find: /^@rue-js\/runtime-vapor\/compiled$/,
-        replacement: workspaceArtifact('packages/runtime-vapor/dist/compiled.js'),
-      },
-      {
-        find: /^@rue-js\/runtime$/,
-        replacement: workspaceArtifact('packages/runtime/dist/runtime.esm-bundler.js'),
-      },
-      {
-        find: /^@rue-js\/runtime-vapor$/,
-        replacement: workspaceArtifact('packages/runtime-vapor/dist/index.js'),
       },
       {
         find: /^@rue-js\/shared$/,
@@ -96,6 +76,7 @@ export default defineConfig({
     outDir: workspaceArtifact('temp/js-framework-performance/dist'),
     target: 'es2022',
     rollupOptions: {
+      treeshake: { moduleSideEffects: false },
       input: {
         rue: path.resolve(benchmarkDir, 'index.html'),
         'rue-signal': path.resolve(benchmarkDir, 'rue-signal.html'),
@@ -104,17 +85,13 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const normalized = id.split(path.sep).join('/')
-          if (normalized.endsWith('/packages/runtime-vapor/dist/compiled.js')) {
-            return 'rue-compiled-core'
-          }
-          if (normalized.includes('/packages/runtime/dist/runtime.vapor.esm-bundler.js')) {
-            return 'rue-vapor-runtime'
+          if (normalized.endsWith('/packages/runtime/dist/runtime.internal.esm-bundler.js')) {
+            return 'rue-internal-runtime'
           }
           if (
-            normalized.includes('/packages/runtime-vapor/dist/') &&
-            !normalized.endsWith('/packages/runtime-vapor/dist/compiled.js')
+            normalized.endsWith('/packages/runtime/dist/runtime.internal-compiler.esm-bundler.js')
           ) {
-            return 'rue-vapor-runtime'
+            return 'rue-compiler-runtime'
           }
         },
       },

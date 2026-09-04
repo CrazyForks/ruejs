@@ -328,7 +328,6 @@ describe('Rue import guard', () => {
       'src/shims/component-adapter.ts',
       'src/shims/context-adapter.ts',
       'src/shims/hooks-adapter.ts',
-      'src/shims/jsx-runtime-compat.ts',
       'src/shims/link.tsx',
     ]
     const hits: string[] = []

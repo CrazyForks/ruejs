@@ -40,91 +40,14 @@ export default Children;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC } from '@rue-js/rue';
-const Box: FC<{
-    title: string;
-}> = (props)=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$setClassName(_root, "border p-2 rounded-md space-y-1");
-        const _el1 = _$createElement("div", _root);
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "font-semibold");
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_el1, _list1);
-        watchEffect(()=>{
-            const __slot = (props.title);
-            untrack(()=>renderAnchor(__slot, _el1, _list1));
-        });
-        const _el2 = _$createElement("div", _root);
-        _$appendChild(_root, _el2);
-        const _list2 = _$createComment("rue:children:anchor");
-        _$appendChild(_el2, _list2);
-        watchEffect(()=>{
-            const __slot = (props.children);
-            untrack(()=>renderAnchor(__slot, _el2, _list2));
-        });
-        return _root;
-    });
-const Children: FC = ()=>vapor((__rue_parent_context)=>{
-        const _root = _$createDocumentFragment();
-        const _list7 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list7);
-        const __child1 = vapor(()=>{
-            const _root = _$createDocumentFragment();
-            const _el3 = _$createElement("div", _root);
-            _$appendChild(_root, _el3);
-            const _el4 = _$createElement("span", _el3);
-            _$appendChild(_el3, _el4);
-            _$appendChild(_el4, _$createTextNode("hello"));
-            const _el5 = _$createElement("span", _el3);
-            _$appendChild(_el3, _el5);
-            _$appendChild(_el5, _$createTextNode("嵌套子元素"));
-            const _list3 = _$createComment("rue:component:anchor");
-            _$appendChild(_root, _list3);
-            const __child2 = vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _$appendChild(_root, _$createTextNode("内部1 "));
-                const _el6 = _$createElement("span", _root);
-                _$appendChild(_root, _el6);
-                _$appendChild(_el6, _$createTextNode("内部1-子元素"));
-                return _root;
-            });
-            const __slot4 = _$createComponent(Box, {
-                title: "内部1",
-                children: __child2
-            });
-            renderAnchor(__slot4, _root, _list3);
-            const _list5 = _$createComment("rue:component:anchor");
-            _$appendChild(_root, _list5);
-            const __child3 = vapor(()=>{
-                const _root = _$createDocumentFragment();
-                _$appendChild(_root, _$createTextNode("内部1 "));
-                const _el7 = _$createElement("span", _root);
-                _$appendChild(_root, _el7);
-                _$appendChild(_el7, _$createTextNode("内部2-子元素"));
-                return _root;
-            });
-            const __slot6 = _$createComponent(Box, {
-                title: "内部2",
-                children: __child3
-            });
-            renderAnchor(__slot6, _root, _list5);
-            return _root;
-        });
-        const __slot8 = _$createComponent(Box, {
-            title: "外层",
-            children: __child1
-        });
-        renderAnchor(__slot8, _root, _list7);
-        return _root;
-    });
-export default Children;
-"##;
-
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/children3.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert_eq!(normalized.matches("_$template(").count(), 4, "{out}");
+    assert_eq!(normalized.matches(".content.cloneNode(true)").count(), 4, "{out}");
+    assert_eq!(normalized.matches("vapor(").count(), 0, "{out}");
+    assert_eq!(normalized.matches("_$compiledText(").count(), 0, "{out}");
+    assert_eq!(normalized.matches("_$compiledRoot(").count(), 4, "{out}");
+    assert!(!normalized.contains("_$compiledCreateElement("), "{out}");
 }

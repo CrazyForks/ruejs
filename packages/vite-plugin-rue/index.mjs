@@ -17,19 +17,18 @@ import { Worker } from 'node:worker_threads'
 /** 当前 ESM 模块内使用的 require，用于解析 wasm 插件与 worker 文件路径。 */
 const requireFromHere = createRequire(import.meta.url)
 /** 已完成 Rue Vapor 转换的源码头标记，避免同一模块被重复处理。 */
-const RUE_TRANSFORM_HEADER = '/* RUE_VAPOR_TRANSFORMED */'
+const RUE_TRANSFORM_HEADER = '/* RUE_TRANSFORMED */'
 /** props 响应式解构转换的辅助头标记，供下游诊断或测试识别。 */
 const RUE_REACTIVE_PROPS_DESTRUCTURE_HEADER = '/* RUE_REACTIVE_PROPS_DESTRUCTURED */'
 /** Vite 插件名，也会写入转换错误对象，方便 Vite 定位来源。 */
 const RUE_VITE_PLUGIN_NAME = '@rue-js/vite-plugin-rue'
+const RUE_COMPILER_DIAGNOSTIC_MARKER = '__RUE_COMPILER_DIAGNOSTIC__'
 /** 默认转换超时时间，避免异常输入让开发服务器长时间无响应。 */
 const DEFAULT_TRANSFORM_TIMEOUT_MS = 5000
 /** 限制 Vite 并发 transform 时同时创建的 SWC worker 数量。 */
 const DEFAULT_TRANSFORM_CONCURRENCY = 8
 /** 执行 SWC 转换的 worker 入口文件路径。 */
 const TRANSFORM_WORKER_PATH = requireFromHere.resolve('./transform-worker.mjs')
-/** 暂时跳过二次转换的 rue-design 组件目录名。 */
-const RUE_DESIGN_PATH_SKIPPED_COMPONENTS = new Set(['calendar', 'time-picker'])
 /** Rue island manifest virtual module id. */
 export const RUE_ISLAND_MANIFEST_ID = 'virtual:rue-island-manifest'
 const RESOLVED_RUE_ISLAND_MANIFEST_ID = `\0${RUE_ISLAND_MANIFEST_ID}`
@@ -3035,37 +3034,140 @@ const deserializeWorkerError = rawError => {
 }
 
 /** 创建 Rue SWC wasm 插件使用的 @swc/core 转换配置。 */
-const createSwcTransformOptions = ({ pluginPath, isProduction, staticTemplates = false }) => ({
+const createSwcTransformOptions = ({ pluginPath, isProduction, target = 'client' }) => ({
   filename: 'rue.tsx',
   jsc: {
     parser: { syntax: 'typescript', tsx: true },
     target: 'es2020',
-    transform: {
-      [['re', 'act'].join('')]: {
-        runtime: 'automatic',
-        importSource: '@rue-js',
-        development: !isProduction,
-        throwIfNamespace: false,
-      },
-    },
     experimental: {
-      plugins: [[pluginPath, { staticTemplates }]],
+      plugins: [[pluginPath, { target }]],
     },
   },
   minify: isProduction,
 })
 
 /** 在当前线程内直接执行 SWC 转换，主要用于 build 阶段减少 worker 开销。 */
-const runSwcTransformInline = async ({ code, pluginPath, isProduction, staticTemplates }) => {
+const runSwcTransformInline = async ({ code, pluginPath, isProduction, target }) => {
   const out = await swc.transform(
     code,
     createSwcTransformOptions({
       pluginPath,
       isProduction: isProduction ?? process.env.NODE_ENV === 'production',
-      staticTemplates,
+      target,
     }),
   )
   return String(out?.code ?? '')
+}
+
+const JSX_RUNTIME_SOURCE_RE = /@rue-js\/(?:[^"']*\/)?jsx(?:-dev)?-runtime/
+const JSX_RUNTIME_CALLEE_RE = /^_?(?:jsx|jsxs|jsxDEV)$/
+
+const findCompilerOnlyViolation = ast => {
+  let violation = null
+  const visit = value => {
+    if (violation || !value || typeof value !== 'object') return
+    if (value.type === 'JSXElement' || value.type === 'JSXFragment') {
+      violation = { kind: 'residual JSX', span: value.span }
+      return
+    }
+    if (
+      value.type === 'ImportDeclaration' &&
+      typeof value.source?.value === 'string' &&
+      JSX_RUNTIME_SOURCE_RE.test(value.source.value)
+    ) {
+      violation = { kind: `forbidden JSX runtime import ${value.source.value}`, span: value.span }
+      return
+    }
+    if (
+      value.type === 'CallExpression' &&
+      value.callee?.type === 'Identifier' &&
+      JSX_RUNTIME_CALLEE_RE.test(value.callee.value)
+    ) {
+      violation = { kind: `forbidden JSX runtime call ${value.callee.value}`, span: value.span }
+      return
+    }
+    for (const child of Object.values(value)) {
+      if (Array.isArray(child)) {
+        for (const item of child) visit(item)
+      } else {
+        visit(child)
+      }
+    }
+  }
+  visit(ast)
+  return violation
+}
+
+const sourcePosition = (code, span) => {
+  const byteOffset = Math.max(0, Number(span?.start ?? 1) - 1)
+  const prefix = Buffer.from(code).subarray(0, byteOffset).toString()
+  const lines = prefix.split(/\r?\n/)
+  return { line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 }
+}
+
+/** Enforce the public compiler contract after every SWC execution path. */
+const validateCompilerOnlyOutput = (code, id) => {
+  const ast = swc.parseSync(code, {
+    syntax: 'typescript',
+    tsx: true,
+    target: 'es2020',
+  })
+  const violation = findCompilerOnlyViolation(ast)
+  if (!violation) return code
+
+  const { line, column } = sourcePosition(code, violation.span)
+  throw tagRueTransformError(
+    new Error(
+      `[${RUE_VITE_PLUGIN_NAME}] Rue compiler-only JSX contract failed for ${id}:${line}:${column}.\nThe compiler emitted ${violation.kind}; JSX must be fully consumed by the Rue compiler.`,
+    ),
+    'RUE_RESIDUAL_JSX',
+  )
+}
+
+const COMPILER_DIAGNOSTIC_LITERAL_RE =
+  /"__RUE_COMPILER_DIAGNOSTIC__(?:\\.|[^"\\])*";?|'__RUE_COMPILER_DIAGNOSTIC__(?:\\.|[^'\\])*';?/g
+
+/** Extract deterministic SWC diagnostic sentinels before any generated code reaches Vite. */
+const extractCompilerDiagnostics = (code, source, id) => {
+  const diagnostics = []
+  const cleanCode = code.replace(COMPILER_DIAGNOSTIC_LITERAL_RE, literal => {
+    const encoded = literal.endsWith(';') ? literal.slice(0, -1) : literal
+    const marker =
+      encoded[0] === '"'
+        ? JSON.parse(encoded)
+        : encoded.slice(1, -1).replace(/\\'/g, "'").replace(/\\\\/g, '\\')
+    const payload = JSON.parse(marker.slice(RUE_COMPILER_DIAGNOSTIC_MARKER.length))
+    const { line, column } = sourcePosition(source, { start: payload.start })
+    diagnostics.push({ ...payload, file: id, line, column })
+    return ''
+  })
+  diagnostics.sort((left, right) =>
+    `${left.file}:${String(left.line).padStart(9, '0')}:${String(left.column).padStart(9, '0')}:${left.category}`.localeCompare(
+      `${right.file}:${String(right.line).padStart(9, '0')}:${String(right.column).padStart(9, '0')}:${right.category}`,
+    ),
+  )
+  return { code: cleanCode, diagnostics }
+}
+
+const enforceStrictClientDiagnostics = (code, source, id, target, onCompilerDiagnostics) => {
+  const extracted = extractCompilerDiagnostics(code, source, id)
+  if (target === 'server' || extracted.diagnostics.length === 0) {
+    return extracted.code
+  }
+  onCompilerDiagnostics?.(extracted.diagnostics)
+  const details = extracted.diagnostics
+    .map(
+      diagnostic =>
+        `${diagnostic.file}:${diagnostic.line}:${diagnostic.column} category: ${diagnostic.category}\n` +
+        `  syntax: ${diagnostic.syntax}\n  suggestion: ${diagnostic.suggestion}`,
+    )
+    .join('\n')
+  throw tagRueTransformError(
+    new Error(
+      `[${RUE_VITE_PLUGIN_NAME}] Strict client compilation rejected ${extracted.diagnostics.length} compiler fallback(s).\n${details}`,
+    ),
+    'RUE_STRICT_CLIENT_COMPILE',
+  )
 }
 
 /** 执行 Rue 指令预处理和 v-model 降级，供 Vite 与静态编译 API 共用。 */
@@ -3087,7 +3189,8 @@ const preprocessRueSource = (code, id = '') => {
  * @param {string} [options.pluginPath] Rue SWC wasm 插件路径。
  * @param {boolean} [options.production] 是否按生产模式编译。
  * @param {boolean} [options.includeHeader] 是否附加 Rue 转换头，默认 true。
- * @param {boolean} [options.staticTemplates] 是否启用仅适用于浏览器 DOM 的静态模板快路径，默认 false。
+ * @param {'client' | 'hydrate' | 'server'} [options.target] JSX 编译目标，默认 client。
+ * @param {(payload: { code: string, id: string, pluginPath: string, isProduction: boolean, target: 'client' | 'hydrate' | 'server' }) => Promise<string> | string} [options.transformExecutor] 自定义转换执行器，主要用于契约测试。
  * @returns {Promise<string>} 编译后的 JavaScript 源码。
  */
 export async function compileRueStatic(code, options = {}) {
@@ -3096,8 +3199,13 @@ export async function compileRueStatic(code, options = {}) {
     pluginPath = requireFromHere.resolve('@rue-js/swc-plugin-rue'),
     production = process.env.NODE_ENV === 'production',
     includeHeader = true,
-    staticTemplates = false,
+    transformExecutor = runSwcTransformInline,
+    target = 'client',
+    onCompilerDiagnostics,
   } = options
+  if (target !== 'client' && target !== 'hydrate' && target !== 'server') {
+    throw new TypeError(`Unknown Rue JSX compiler target: ${String(target)}`)
+  }
 
   let loweredModel
   try {
@@ -3114,13 +3222,21 @@ export async function compileRueStatic(code, options = {}) {
   }
 
   try {
-    const out = await runSwcTransformInline({
+    const out = await transformExecutor({
       code: loweredModel,
+      id,
       pluginPath,
       isProduction: production,
-      staticTemplates,
+      target,
     })
-    const normalizedOut = preserveRscDirectivePrologue(code, out)
+    const strictOut = enforceStrictClientDiagnostics(
+      preserveRscDirectivePrologue(code, String(out ?? '')),
+      loweredModel,
+      id,
+      target,
+      onCompilerDiagnostics,
+    )
+    const normalizedOut = validateCompilerOnlyOutput(strictOut, id)
     if (!includeHeader) {
       return normalizedOut
     }
@@ -3139,22 +3255,12 @@ export async function compileRueStatic(code, options = {}) {
   }
 }
 
-const RUE_CUSTOM_ELEMENT_EXTERNALS = [
-  '@rue-js/rue',
-  '@rue-js/runtime',
-  '@rue-js/runtime/vapor',
-  '@rue-js/runtime-vapor',
-  '@rue-js/runtime-vapor/reactive',
-  '@rue-js/runtime-vapor/vapor',
-]
+const RUE_CUSTOM_ELEMENT_EXTERNALS = ['@rue-js/rue', '@rue-js/runtime', '@rue-js/runtime/internal']
 
 const RUE_CUSTOM_ELEMENT_GLOBALS = {
   '@rue-js/rue': 'Rue',
   '@rue-js/runtime': 'RueRuntime',
-  '@rue-js/runtime/vapor': 'RueRuntimeVapor',
-  '@rue-js/runtime-vapor': 'RueRuntimeVapor',
-  '@rue-js/runtime-vapor/reactive': 'RueRuntimeVaporReactive',
-  '@rue-js/runtime-vapor/vapor': 'RueRuntimeVapor',
+  '@rue-js/runtime/internal': 'RueRuntimeInternal',
 }
 
 const normalizePluginList = plugins => {
@@ -3246,14 +3352,7 @@ export function customElement(options = {}) {
 }
 
 /** 在 worker 线程内执行 SWC 转换，开发阶段可通过超时终止异常转换。 */
-const runSwcTransformInWorker = ({
-  code,
-  id,
-  pluginPath,
-  timeoutMs,
-  isProduction,
-  staticTemplates,
-}) =>
+const runSwcTransformInWorker = ({ code, id, pluginPath, timeoutMs, isProduction, target }) =>
   new Promise((resolve, reject) => {
     let settled = false
     let timer = null
@@ -3278,7 +3377,7 @@ const runSwcTransformInWorker = ({
           code,
           pluginPath,
           isProduction: isProduction ?? process.env.NODE_ENV === 'production',
-          staticTemplates,
+          target,
         },
       })
     } catch (error) {
@@ -3333,21 +3432,36 @@ const runSwcTransformInWorker = ({
  * @param {Object} options 插件配置项。
  * @param {string[]} [options.include] 包含路径关键字，任一命中则处理；为空时处理全部 TSX/JSX。
  * @param {string[]} [options.exclude] 排除路径关键字，任一命中则跳过。
+ * @param {string[]} [options.includeExtensions] 需要编译的 JSX 源文件扩展名。
  * @param {boolean} [options.debug] 是否输出转换调试日志。
  * @param {number} [options.transformTimeoutMs] SWC 转换超时时间，单位为毫秒。
  * @param {number} [options.transformConcurrency] 同时执行的 SWC 转换数，默认 8。
- * @param {(payload: { code: string, id: string, pluginPath: string, timeoutMs: number, staticTemplates: boolean }) => Promise<string> | string} [options.transformExecutor] 自定义转换执行器，主要用于测试。
+ * @param {'client' | 'hydrate' | 'server'} [options.target] JSX 编译目标；SSR/RSC 图会自动选择 server。
+ * @param {(payload: { code: string, id: string, pluginPath: string, timeoutMs: number, target: 'client' | 'server' }) => Promise<string> | string} [options.transformExecutor] 自定义转换执行器，主要用于测试。
  * @returns {import('vite').Plugin} Vite 插件对象。
  */
 export default function VitePluginRue(options = {}) {
   const {
     include = [],
     exclude = [],
+    includeExtensions = ['tsx', 'jsx'],
     debug = false,
     transformTimeoutMs = DEFAULT_TRANSFORM_TIMEOUT_MS,
     transformConcurrency = DEFAULT_TRANSFORM_CONCURRENCY,
     transformExecutor = runSwcTransformInWorker,
+    target: configuredTarget = 'client',
+    onCompilerDiagnostics,
   } = options
+  if (
+    configuredTarget !== 'client' &&
+    configuredTarget !== 'hydrate' &&
+    configuredTarget !== 'server'
+  ) {
+    throw new TypeError(`Unknown Rue JSX compiler target: ${String(configuredTarget)}`)
+  }
+  const transformExtensionPattern = new RegExp(
+    `\\.(${includeExtensions.map(escapeRegExp).join('|')})(?:\\?.*)?$`,
+  )
   // 默认始终使用 worker 转换，确保 dev/build 阶段都能通过超时保护终止卡住的编译。
   let activeTransformExecutor = transformExecutor
   let isProductionTransform = process.env.NODE_ENV === 'production'
@@ -3400,6 +3514,17 @@ export default function VitePluginRue(options = {}) {
       }
     }
     return entries.sort((left, right) => left.id.localeCompare(right.id))
+  }
+
+  const getIslandCompilerTarget = id => {
+    const normalizedId = normalizeModuleId(id)
+    const normalizedStem = normalizedId.replace(/\.(?:tsx|jsx)$/, '')
+    for (const entry of getSortedIslandRegistryEntries()) {
+      if (entry.hydrate === 'only' || entry.hydrate === 'none') continue
+      const importStem = entry.importSource.replace(/\.(?:tsx|jsx)$/, '')
+      if (importStem === normalizedStem) return 'hydrate'
+    }
+    return 'client'
   }
 
   const createIslandRegistryModule = () => {
@@ -3467,7 +3592,14 @@ export const startRueIslands = (options = {}) => startRueIslandLoader({
     return include.some(x => id.includes(x))
   }
 
-  const excludedScanDirectories = new Set(['node_modules', 'dist', 'coverage', 'temp', 'tmp'])
+  const excludedScanDirectories = new Set([
+    'node_modules',
+    'dist',
+    'coverage',
+    'target',
+    'temp',
+    'tmp',
+  ])
 
   const scanIslandSourceFiles = async (directory, files) => {
     const entries = await fs.readdir(directory, { withFileTypes: true })
@@ -3497,20 +3629,6 @@ export const startRueIslands = (options = {}) => startRueIslandLoader({
       updateServerIslandRegistry(filename, serverResult.serverIslands)
       updateIslandManifest(filename, clientResult.islands)
     }
-  }
-
-  /** 判断当前模块是否属于暂时跳过二次转换的 rue-design 组件源码。 */
-  const isRueDesignComponentSource = id => {
-    if (/[\\/]__tests__[\\/]/.test(id)) {
-      return false
-    }
-
-    const normalizedId = id.split('?')[0]
-    const matched = normalizedId.match(
-      /(?:^|[\\/])packages[\\/]rue-design[\\/]src[\\/]components[\\/]([^\\/]+)[\\/]/,
-    )
-
-    return matched ? RUE_DESIGN_PATH_SKIPPED_COMPONENTS.has(matched[1]) : false
   }
 
   /**
@@ -3546,6 +3664,12 @@ export const startRueIslands = (options = {}) => startRueIslandLoader({
 
     try {
       // 第三阶段执行真正的 Rue SWC wasm 转换，并保留超时保护。
+      const target =
+        serverGraph || configuredTarget === 'server'
+          ? 'server'
+          : configuredTarget === 'hydrate'
+            ? 'hydrate'
+            : getIslandCompilerTarget(id)
       const out = await scheduleTransform(() =>
         withTransformTimeout(
           activeTransformExecutor({
@@ -3554,12 +3678,19 @@ export const startRueIslands = (options = {}) => startRueIslandLoader({
             pluginPath,
             timeoutMs: transformTimeoutMs,
             isProduction: isProductionTransform,
-            staticTemplates: isProductionTransform && !serverGraph,
+            target,
           }),
           { id, timeoutMs: transformTimeoutMs },
         ),
       )
-      const normalizedOut = preserveRscDirectivePrologue(code, out)
+      const strictOut = enforceStrictClientDiagnostics(
+        preserveRscDirectivePrologue(code, out),
+        loweredModel,
+        id,
+        target,
+        onCompilerDiagnostics,
+      )
+      const normalizedOut = validateCompilerOnlyOutput(strictOut, id)
       // 输出标记用于幂等判断；响应式 props 解构标记用于测试和诊断。
       const headers = [RUE_TRANSFORM_HEADER]
       if (hasReactivePropsDestructureRewrite(normalizedOut)) {
@@ -3653,28 +3784,26 @@ export const startRueIslands = (options = {}) => startRueIslandLoader({
      * @returns {Promise<{code:string,map:null}|null>} 转换结果或 null 跳过。
      */
     async transform(code, id, transformOptions) {
-      // RSC server graphs need to preserve server-component/client-reference boundaries.
-      // Browser and SSR environments still receive the normal Rue Vapor transform.
-      if (this.environment?.name === 'rsc') return null
-
+      // 匹配处理的 JSX 源文件类型；MDX 等上游插件可显式加入。
+      const isTsx = transformExtensionPattern.test(id)
+      if (!isTsx) return null
+      // include/exclude 规则过滤
+      if (!isIncluded(id)) return null
       // 选择 wasm 插件路径：优先环境变量回退到默认路径
       if (!process.env.RUE_SWC_PLUGIN) {
         process.env.RUE_SWC_PLUGIN = requireFromHere.resolve('@rue-js/swc-plugin-rue')
       }
 
-      // 匹配处理的文件类型：仅 TSX/JSX
-      const isTsx = /(\.(tsx|jsx))(\?.*)?$/.test(id)
-      if (!isTsx) return null
-      // include/exclude 规则过滤
-      if (!isIncluded(id)) return null
-      // 少数 rue-design 组件仍处于去除遗留头标记的迁移中，先按路径跳过二次转换
-      if (isRueDesignComponentSource(id)) return null
       // 已包含 RUE 头标记则直接跳过
       if (code.startsWith(RUE_TRANSFORM_HEADER)) return null
       const base = code
       const environmentName = this.environment?.name
       const serverGraph =
-        transformOptions?.ssr === true || environmentName === 'ssr' || environmentName === 'server'
+        configuredTarget === 'server' ||
+        transformOptions?.ssr === true ||
+        environmentName === 'ssr' ||
+        environmentName === 'server' ||
+        environmentName === 'rsc'
 
       let out = null
       // 若找到 wasm 插件路径，则执行转换

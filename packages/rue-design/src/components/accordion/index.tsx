@@ -678,7 +678,7 @@ type AccordionCompound = FC<AccordionProps> & {
   Content: FC<AccordionPartProps>
 }
 
-const AccordionCompound: AccordionCompound = Object.assign(Accordion, {
+const AccordionCompound: AccordionCompound = /*#__PURE__*/ Object.assign(Accordion, {
   Title,
   Content,
 })

@@ -55,6 +55,8 @@ describe('VOnceAndROnce actual page', () => {
       expect(badgeTexts(container)).toEqual(['首次渲染', 'count: 0'])
       expect(container.textContent).toContain('当前值：首次渲染')
       expect(container.textContent).toContain('当前计数：0')
+      expect(container.textContent).toContain('仅在当前组件挂载期间保持首次渲染值')
+      expect(container.textContent).toContain('离开路由后再次返回会重新取值')
     })
 
     await click(findButton(container, '更新数据'))

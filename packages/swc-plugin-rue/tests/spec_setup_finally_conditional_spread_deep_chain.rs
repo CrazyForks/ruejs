@@ -38,11 +38,12 @@ function Comp(): JSX.Element {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
+import { ref } from '@rue-js/rue';
 
 function Comp(): JSX.Element {
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const a = _$vaporWithHookId("ref:1.2:0", ()=>ref(2));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+        const a = ref(2);
         function buildX() {
             return {
                 u: a.value,
@@ -120,12 +121,15 @@ function Comp(): JSX.Element {
 }
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_finally_conditional_spread_deep_chain.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

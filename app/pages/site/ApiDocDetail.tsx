@@ -1,5 +1,5 @@
-import { Component, type FC, useState, watch, computed, useEffect, useRef } from '@rue-js/rue'
-import { RouterLink, useRoute } from '@rue-js/router'
+import { Component, type FC, useState, computed, useEffect, useRef } from '@rue-js/rue'
+import { RouterLink, useRoute, useRouter } from '@rue-js/router'
 import { readStaticRenderRoute, useStaticRenderContext } from '../../staticRenderContext'
 import SidebarPlayground, { SECTIONS_BY_TYPE } from './SidebarPlaygroundApi'
 import {
@@ -39,6 +39,7 @@ type ApiDocDetailProps = {
 
 const ApiDocDetail: FC<ApiDocDetailProps> = props => {
   const route = useRoute()
+  const router = useRouter()
   const staticRenderContext = useStaticRenderContext()
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
   const context = getContext()
@@ -96,34 +97,34 @@ const ApiDocDetail: FC<ApiDocDetailProps> = props => {
     return idx >= 0 && idx < list.length - 1 ? list[idx + 1] : undefined
   })
   useEffect(() => {
-    const routeWatch = watch(
-      routeSegment,
-      async (seg: string) => {
-        const currentRequest = (requestVersionRef.current ?? 0) + 1
-        requestVersionRef.current = currentRequest
-        if (!seg) {
-          setRenderedDocContent({ type: 'html', html: '' })
+    const loadRouteContent = async (seg: string) => {
+      const currentRequest = (requestVersionRef.current ?? 0) + 1
+      requestVersionRef.current = currentRequest
+      if (!seg) {
+        setRenderedDocContent({ type: 'html', html: '' })
+        return
+      }
+      try {
+        const out = await loadCachedDocContent('api', context.docBase, seg)
+        if (currentRequest !== requestVersionRef.current) {
           return
         }
-        try {
-          const out = await loadCachedDocContent('api', context.docBase, seg)
-          if (currentRequest !== requestVersionRef.current) {
-            return
-          }
-          setRenderedDocContent(out)
-        } catch {
-          if (currentRequest !== requestVersionRef.current) {
-            return
-          }
-
-          setRenderedDocContent({
-            type: 'html',
-            html: `<p class="text-base-content/70">加载文档失败</p>`,
-          })
+        setRenderedDocContent(out)
+      } catch {
+        if (currentRequest !== requestVersionRef.current) {
+          return
         }
-      },
-      { immediate: true },
-    )
+
+        setRenderedDocContent({
+          type: 'html',
+          html: `<p class="text-base-content/70">加载文档失败</p>`,
+        })
+      }
+    }
+    void loadRouteContent(String((route.get() as any)?.params?.path || props.params?.path || ''))
+    const removeAfterEach = router.afterEach(to => {
+      void loadRouteContent(String((to as any)?.params?.path || props.params?.path || ''))
+    })
 
     const onClick = (e: Event) => {
       const target = e.target as HTMLElement
@@ -143,7 +144,7 @@ const ApiDocDetail: FC<ApiDocDetailProps> = props => {
     document.addEventListener('click', onClick)
     return () => {
       document.removeEventListener('click', onClick)
-      routeWatch.dispose()
+      removeAfterEach()
     }
   }, [])
 

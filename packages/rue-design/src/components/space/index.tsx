@@ -466,7 +466,7 @@ type SpaceCompound = FC<SpaceProps> & {
   Compact: FC<SpaceCompactProps>
 }
 
-const Space: SpaceCompound = Object.assign(SpaceRoot, {
+const Space: SpaceCompound = /*#__PURE__*/ Object.assign(SpaceRoot, {
   Compact: SpaceCompact,
 })
 

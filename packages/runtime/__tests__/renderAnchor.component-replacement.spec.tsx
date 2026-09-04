@@ -1,11 +1,20 @@
 // @vitest-environment jsdom
 
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   Component,
   createContext,
-  h,
   onBeforeUnmount,
   onUnmounted,
   renderAnchor,
@@ -14,10 +23,10 @@ import {
   untrack,
   useApp,
   useSetup,
-  vapor,
   watchEffect,
   type FC,
 } from '../src'
+import { vapor } from './legacy-test-render'
 import { appendChild, createComment, createElement } from '../src/dom'
 
 setReactiveScheduling('microtask')
@@ -39,7 +48,7 @@ describe('renderAnchor component replacement', () => {
         const parent = createElement('span') as HTMLElement
         const anchor = createComment('outer:anchor') as Comment
         appendChild(parent, anchor)
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           const currentMode = mode.get()
           untrack(() => {
             renderAnchor(
@@ -100,15 +109,42 @@ describe('renderAnchor component replacement', () => {
     const First: FC = () => {
       onBeforeUnmount(beforeUnmount)
       onUnmounted(unmounted)
-      return <p data-testid="first-route">first-route</p>
+      return _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('p', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'first-route',
+            children: 'first-route',
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     }
-    const Second: FC<{ params: { id: string } }> = ({ params }) => (
-      <p data-testid="second-route">second-route {params.id}</p>
-    )
+    const Second: FC<{ params: { id: string } }> = ({ params }) =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('p', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'second-route',
+            children: ['second-route ', params.id],
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     const RouteDepth = createContext(0)
-    const RouteContent: FC<{ component: FC; params: { id: string } }> = ({ component, params }) => (
-      <RouteDepth.Provider value={1}>{h(component, { params })}</RouteDepth.Provider>
-    )
+    const RouteContent: FC<{ component: FC; params: { id: string } }> = ({ component, params }) =>
+      _$createDynamic(RouteDepth.Provider as any, {
+        value: 1,
+        children: _$createDynamic(component, { params }),
+      })
     const activeRoute = signal<'first' | 'second'>('first')
     const paramsSource = signal({ id: '7' }, {}, true)
     const params = new Proxy({} as { id: string }, {
@@ -119,12 +155,17 @@ describe('renderAnchor component replacement', () => {
         const parent = createElement('span') as HTMLElement
         const anchor = createComment('anchor') as Comment
         appendChild(parent, anchor)
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           const route = activeRoute.get()
           untrack(() => {
             const component = route === 'first' ? First : Second
             renderAnchor(
-              h(Component, { is: RouteContent, key: route, component, params }) as any,
+              _$createDynamic(Component, {
+                is: RouteContent,
+                key: route,
+                component,
+                params,
+              }) as any,
               parent as any,
               anchor as any,
             )

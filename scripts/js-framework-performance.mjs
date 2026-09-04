@@ -264,7 +264,9 @@ export const validateFixtureAssetIsolation = report => {
   }
 
   const forbiddenSignalModules = moduleIds['rue-signal'].filter(moduleId =>
-    /(?:rue|runtime)\.vapor\.|packages\/runtime-vapor\/dist\/(?:index|vapor)\.js$/.test(moduleId),
+    /runtime\.internal\.esm-bundler|runtime-core\/js-reactive|runtime\.(?:server|island)\.esm-bundler|server-renderer|runtime-vapor|\.wasm(?:$|\?)/i.test(
+      moduleId,
+    ),
   )
   if (forbiddenSignalModules.length > 0) {
     throw new Error(
@@ -617,7 +619,6 @@ const runCommand = (command, args) =>
   })
 
 const prepareWorkspaceBuild = async () => {
-  await runCommand('pnpm', ['--filter', '@rue-js/runtime-vapor', 'run', 'build-ts'])
   await runCommand('node', [
     'scripts/build.js',
     '^shared$',
@@ -631,13 +632,11 @@ const prepareWorkspaceBuild = async () => {
 const workspaceArtifactPaths = [
   'packages/shared/dist/shared.esm-bundler.js',
   'packages/runtime/dist/runtime.esm-bundler.js',
-  'packages/runtime/dist/runtime.compiled.esm-bundler.js',
-  'packages/runtime/dist/runtime.vapor.esm-bundler.js',
+  'packages/runtime/dist/runtime.internal.esm-bundler.js',
+  'packages/runtime/dist/runtime.internal-compiler.esm-bundler.js',
   'packages/rue/dist/rue.esm-bundler.js',
-  'packages/rue/dist/rue.compiled.esm-bundler.js',
-  'packages/rue/dist/rue.vapor.esm-bundler.js',
-  'packages/runtime-vapor/dist/compiled.js',
-  'packages/runtime-vapor/dist/reactive-kernel/index.js',
+  'packages/rue/dist/rue.internal.esm-bundler.js',
+  'packages/rue/dist/rue.internal-compiler.esm-bundler.js',
 ].map(relative => path.resolve(workspaceRoot, relative))
 
 const readPackageSource = async () => {
@@ -859,8 +858,26 @@ const measureEntryRound = async ({ browser, baseUrl, entryName, expectedVersion 
         ? new URL('rue-signal.html', baseUrl).href
         : baseUrl
   await page.goto(entryUrl, { waitUntil: 'networkidle' })
-  await page.waitForFunction(() => Boolean(window.__RUE_BENCHMARK__))
-  await page.waitForSelector('#run')
+  try {
+    await page.waitForFunction(() => Boolean(window.__RUE_BENCHMARK__))
+  } catch (error) {
+    throw new Error(
+      `Benchmark API did not initialize for ${entryName}${errors.length > 0 ? `: ${errors.join('; ')}` : ''}`,
+      { cause: error },
+    )
+  }
+  try {
+    await page.waitForSelector('#run')
+  } catch (error) {
+    const rootHtml = await page
+      .locator('#app')
+      .innerHTML()
+      .catch(() => '<missing #app>')
+    throw new Error(
+      `Benchmark controls did not render for ${entryName}${errors.length > 0 ? `: ${errors.join('; ')}` : ''}; #app=${rootHtml}`,
+      { cause: error },
+    )
+  }
 
   const identity = await page.evaluate(() => ({
     variant: window.__RUE_BENCHMARK__.variant,

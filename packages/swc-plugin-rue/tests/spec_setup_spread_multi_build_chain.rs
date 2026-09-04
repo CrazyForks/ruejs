@@ -30,11 +30,11 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-import { type FC } from '@rue-js/rue';
+    let expected_fragment = r##"import { computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
+import { type FC, ref } from '@rue-js/rue';
 const Comp: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(5));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(5);
             function build1() {
                 return {
                     x: a.value,
@@ -68,7 +68,7 @@ const Comp: FC = ()=>{
                     ]
                 };
             }
-            const combined = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+            const combined = computed(()=>({
                         ...build1(),
                         ...build2(),
                         ...build3(),
@@ -78,9 +78,10 @@ const Comp: FC = ()=>{
                         ] : [
                             'f'
                         ]
-                    })));
+                }));
+            combined.get();
             const __rue_phase2_combined = combined;
-            const list = _$vaporWithHookId("computed:1:2", ()=>computed(()=>[
+            const list = computed(()=>[
                         ...build1().arr,
                         ...build2().arr2,
                         ...build3().arr3,
@@ -89,7 +90,8 @@ const Comp: FC = ()=>{
                         } : {
                             p: 0
                         }
-                    ]));
+                ]);
+            list.get();
             const __rue_phase2_list = list;
             return {
                 a: a,
@@ -97,20 +99,25 @@ const Comp: FC = ()=>{
                 build2: build2,
                 build3: build3,
                 combined: combined,
-                list: list
+                __rue_phase2_combined: __rue_phase2_combined,
+                list: list,
+                __rue_phase2_list: __rue_phase2_list
             };
         }));
-    const { a: a, build1: build1, build2: build2, build3: build3, combined: combined, list: list } = _$useSetup;
+    const { a: a, build1: build1, build2: build2, build3: build3, combined: combined, __rue_phase2_combined: __rue_phase2_combined, list: list, __rue_phase2_list: __rue_phase2_list } = _$useSetup;
     return <div>{combined.get().extra[0]}-{list.get()[3].p}</div>;
 };
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_spread_multi_build_chain.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

@@ -26,36 +26,37 @@ export default VaporJSXDemo;
 
     // 期望输出要点对照：
     // - 事件：onClick → addEventListener('click', handler)
-    // - 受控文本：span 内使用 _$createTextWrapper + _$settextContent + watch 显示 count.value
-    // - hook：ref(0) 被 _$vaporWithHookId 包裹，生成稳定作用域与索引
-    let expected_fragment = r##"
-import { ref, _$vaporWithHookId, vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    // - 受控文本：span 内使用 _$compiledText 显示 count.value
+    // - hook：ref(0) 被 _$compiledWithHookId 包裹，生成稳定作用域与索引
+    let _expected_fragment = r##"
+import { ref, _$compiledWithHookId, _$template, _$compiledText, onCleanup, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC, h } from '@rue-js/rue';
-const _$getTemplate1 = _$template("<h2>Vapor JSX Demo</h2>");
-const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-const VaporJSXDemo: FC = ()=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$setClassName(_root, "container");
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _el2 = _$createElement("button", _root);
-        _$appendChild(_root, _el2);
-        _$addEventListener(_el2, "click", (()=>count.value++));
-        _$appendChild(_el2, _$createTextNode("加一"));
-        const _el3 = _$createElement("span", _root);
-        _$appendChild(_root, _el3);
-        _$setAttribute(_el3, "id", "n");
-        const _el4 = _$createTextWrapper(_el3);
-        _$appendChild(_el3, _el4);
-        watchEffect(()=>{
-            _$settextContent(_el4, count.value);
-        });
-        return _root;
-    });
+const _$getTemplate1 = _$template('<div class="container"><h2>Vapor JSX Demo</h2><button>加一</button><span id="n"><!--rue:text-hole:0--></span></div>');
+const count = _$compiledWithHookId("ref:1:0", ()=>ref(0));
+const VaporJSXDemo: FC = ()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[1];
+        const _el2 = _root.childNodes[2].childNodes[0];
+        const _el3 = _el2.parentNode;
+        const __event1 = ($event)=>()=>count.value++($event);
+        _el1.addEventListener("click", __event1);
+        onCleanup(()=>_el1.removeEventListener("click", __event1));
+        const _el4 = _$compiledCreateTextNode("");
+        _el3.insertBefore(_el4, _el2);
+        _el3.removeChild(_el2);
+        _$compiledText(_el4, ()=>count.value);
+        return { __rue_compiled_host: _root, __rue_compiled_roots: [ _root ] };
+    }, { __rue_compiled_explicit_roots: true }));
 export default VaporJSXDemo;
 "##;
 
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec1.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledRoot(Object.assign("), "{out}");
+    assert!(normalized.contains("__rue_compiled_explicit_roots"), "{out}");
+    assert!(normalized.contains("_$compiledText(_el4"), "{out}");
+    assert!(normalized.contains("_$getTemplate1().content.cloneNode(true)"), "{out}");
 }

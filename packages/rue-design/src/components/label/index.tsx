@@ -864,7 +864,7 @@ type LabelCompound = FC<LabelRootProps> & {
   FloatingText: FC<LabelTextProps>
 }
 
-const LabelCompound: LabelCompound = Object.assign(LabelRoot, {
+const LabelCompound: LabelCompound = /*#__PURE__*/ Object.assign(LabelRoot, {
   Text,
   Caption,
   Help,

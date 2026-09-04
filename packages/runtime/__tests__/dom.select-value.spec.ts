@@ -49,4 +49,38 @@ describe('DOM select value sync', () => {
     expect(dark.selected).toBe(true)
     expect(luxury.selected).toBe(true)
   })
+
+  it('toggles controlled multi-select options across ordinary clicks', () => {
+    const select = document.createElement('select')
+    select.multiple = true
+
+    for (const value of ['A', 'B', 'C']) {
+      const option = document.createElement('option')
+      option.value = value
+      option.textContent = value
+      select.appendChild(option)
+    }
+
+    setValue(select as any, ['A'])
+    const emittedEvents: string[] = []
+    select.addEventListener('input', () => emittedEvents.push('input'))
+    select.addEventListener('change', () => emittedEvents.push('change'))
+
+    const ordinaryClick = (value: string) => {
+      const option = Array.from(select.options).find(item => item.value === value)!
+      option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+      option.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }))
+      option.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    }
+
+    ordinaryClick('B')
+    expect(Array.from(select.selectedOptions, option => option.value)).toEqual(['A', 'B'])
+    expect(emittedEvents).toEqual(['input', 'change'])
+
+    ordinaryClick('C')
+    expect(Array.from(select.selectedOptions, option => option.value)).toEqual(['A', 'B', 'C'])
+
+    ordinaryClick('A')
+    expect(Array.from(select.selectedOptions, option => option.value)).toEqual(['B', 'C'])
+  })
 })

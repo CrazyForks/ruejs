@@ -1,5 +1,5 @@
 import { attachRouter, createMemoryHistory, type RouteRecordRaw } from '@rue-js/router'
-import { h, setReactiveScheduling, type FC } from '@rue-js/rue'
+import { setReactiveScheduling, type FC } from '@rue-js/rue'
 import { renderToString } from '@rue-js/server-renderer'
 import { RootApp } from './app'
 import { createAppRouter, routes } from './router'
@@ -73,8 +73,11 @@ export const render = async (url: string) => {
   // A programmatic navigation schedules browser-only page-load work (scroll/focus) that can
   // outlive the per-route JSDOM in a persistent static-render worker.
   const router = createAppRouter(createMemoryHistory(url))
-  const StaticRootApp: FC = () =>
-    h(StaticRenderContext.Provider as any, { value: { url } }, h(RootApp, null))
+  const StaticRootApp: FC = () => (
+    <StaticRenderContext.Provider value={{ url }}>
+      <RootApp />
+    </StaticRenderContext.Provider>
+  )
 
   await router.isReady()
   attachRouter(router)

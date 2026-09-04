@@ -50,18 +50,16 @@ describe('vite-plugin-rue reactive props destructure', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
     expect(code).toContain('(__rue_props)=>')
-    expect(code).toContain("__rue_props.query === void 0 ? ' hello ' : __rue_props.query")
-    expect(code).toContain('__rue_props.count')
-    expect(code).toContain("__rue_props.label === void 0 ? 'fallback' : __rue_props.label")
-    expect(code).toContain(
-      'const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{',
-    )
-    expect(code).toContain('const summary = _$vaporWithHookId("computed:1:0", ()=>computed(')
-    expect(code).toContain('summary: summary')
-    expect(code).toContain('const { summary: summary } = _$useSetup')
+    expect(code).toContain('_$compiledSignal(__rue_props.query)')
+    expect(code).toContain('_$compiledSignal(__rue_props.count)')
+    expect(code).toContain('_$compiledSignal(__rue_props.label)')
+    expect(code).toContain("_$rueCompiledProp2.get() === void 0 ? ' hello '")
+    expect(code).toContain("_$rueCompiledProp1.get() === void 0 ? 'fallback'")
+    expect(code).toContain('const summary = computed(')
+    expect(code).toContain('_$rueCompiledProp2.set(_$rueNextProps.query)')
   })
 
   it('hoists watchEffect with reactive props reads into useSetup', async () => {
@@ -94,18 +92,11 @@ describe('vite-plugin-rue reactive props destructure', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain(
-      'const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{',
-    )
-    expect(code).toContain('const summary = _$vaporWithHookId("computed:1:0", ()=>computed(')
-    expect(code).toContain('const latest = _$vaporWithHookId("ref:1:1", ()=>ref(\'\'));')
+    expect(code).toContain('@rue-js/rue/internal')
+    expect(code).toContain('const summary = computed(')
+    expect(code).toContain("const latest = ref('');")
     expect(code).toContain('const shadow = (query)=>query.toLowerCase();')
-    expect(code).toContain('_$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>{')
-    expect(code).toContain('summary: summary')
-    expect(code).toContain('latest: latest')
-    expect(code).toContain('shadow: shadow')
-    expect(code).toContain(
-      'const { summary: summary, latest: latest, shadow: shadow } = _$useSetup',
-    )
+    expect(code).toContain('watchEffect(()=>{')
+    expect(code).toContain('_$rueCompiledProp2.set(_$rueNextProps.query)')
   })
 })

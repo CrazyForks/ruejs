@@ -102,8 +102,6 @@ type ServerRerferenceMeta = {
 }
 
 const PKG_NAME = '@rue-js/rsc'
-const RUE_JSX_RUNTIME = '@rue-js/jsx-runtime'
-const RUE_JSX_DEV_RUNTIME = '@rue-js/jsx-dev-runtime'
 const RUE_CLIENT_REFERENCE_SYMBOL = 'rue.client.reference'
 const RUE_SERVER_REFERENCE_SYMBOL = 'rue.server.reference'
 const RUE_CLIENT_REFERENCE_REGISTRY_SYMBOL = 'rue.client.reference.registry'
@@ -208,6 +206,13 @@ function $$RueClientReference(proxy, id, name) {
   });
 }
 `
+}
+
+function parseRueClientReferenceAst(code: string, id: string) {
+  // Text preserves JSX in its published client shims. The RSC proxy runs before
+  // the Rue compiler in the server environment, so parse those `.js` modules
+  // with JSX enabled instead of relying on the filename extension.
+  return parseAstAsync(code, { lang: 'jsx' }, cleanUrl(id))
 }
 
 function createRueClientReferenceRegistryInstall(loadersName: string): string {
@@ -687,12 +692,7 @@ export default function vitePluginRsc(rscPluginOptions: RscPluginOptions = {}): 
                 noExternal,
               },
               optimizeDeps: {
-                include: [
-                  '@rue-js/rue',
-                  RUE_JSX_RUNTIME,
-                  RUE_JSX_DEV_RUNTIME,
-                  '@rue-js/server-renderer',
-                ],
+                include: ['@rue-js/rue', '@rue-js/server-renderer'],
                 exclude: [PKG_NAME, ...optimizeDepsExclude],
               },
             },
@@ -712,7 +712,7 @@ export default function vitePluginRsc(rscPluginOptions: RscPluginOptions = {}): 
                 noExternal,
               },
               optimizeDeps: {
-                include: ['@rue-js/rue', RUE_JSX_RUNTIME, RUE_JSX_DEV_RUNTIME],
+                include: ['@rue-js/rue'],
                 exclude: [PKG_NAME, ...optimizeDepsExclude],
               },
             },
@@ -1495,7 +1495,7 @@ function vitePluginUseClient(
             return
           }
 
-          let ast = await parseAstAsync(code)
+          let ast = await parseRueClientReferenceAst(code, id)
           let hasAstUseClientDirective = hasDirective(ast.body, 'use client')
           if (!hasOriginalUseClientDirective && !hasAstUseClientDirective) {
             delete manager.clientReferenceRegistry[id]
@@ -1520,7 +1520,7 @@ function vitePluginUseClient(
           })
           if (expanded) {
             code = expanded.code
-            ast = await parseAstAsync(code)
+            ast = await parseRueClientReferenceAst(code, id)
             hasAstUseClientDirective = hasDirective(ast.body, 'use client')
           }
 

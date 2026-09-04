@@ -86,7 +86,7 @@ fn preserves_children_slots_and_map_lists_inside_fragments() {
     );
 
     assert!(out.contains(&normalize(r#"rue:children:anchor"#)));
-    assert!(out.contains(&normalize(r#"const __slot = (props.children);"#)));
+    assert!(out.contains("_$mountCompiledSlotAt"), "{out}");
     assert!(out.contains(&normalize(r#"_$reconcileKeyed("#)));
     assert!(out.contains(&normalize(r#"rue:list:end"#)));
 }
@@ -96,7 +96,7 @@ fn treats_any_member_children_as_children_slots_inside_fragments() {
     let out = compile_fragment_children("<>{ctx.children}{panel.children}</>");
 
     assert_eq!(out.matches("rue:children:anchor").count(), 2, "{out}");
-    assert!(out.contains(&normalize(r#"const __slot = (ctx.children);"#)));
+    assert_eq!(out.matches("renderAnchor(").count(), 2, "{out}");
     assert!(out.contains("panel.children"));
     assert!(!out.contains("rue:slot:anchor"));
 }
@@ -105,8 +105,8 @@ fn treats_any_member_children_as_children_slots_inside_fragments() {
 fn map_list_children_short_circuit_slot_rendering_inside_fragments() {
     let out = compile_fragment_children("<>{items.map(item => <span>{item.label}</span>)}</>");
 
-    assert!(out.contains(&normalize(r#"_$vaporKeyedList({"#)));
-    assert!(out.contains(&normalize(r#"rue:list:start"#)));
+    assert!(out.contains("_$reconcileKeyed("), "{out}");
+    assert!(out.contains(&normalize(r#"rue:list:end"#)), "{out}");
 }
 
 #[test]
@@ -123,7 +123,7 @@ fn ignores_empty_and_spread_children_while_flattening_nested_fragments() {
 fn falls_back_to_slot_rendering_for_non_map_call_expr_children() {
     let out = compile_fragment_children("<>{renderChild(value)}</>");
 
-    assert!(!out.contains("_$vaporKeyedList"));
+    assert!(!out.contains("_$compiledKeyedList"));
     assert!(out.contains(&normalize(r#"renderChild(value)"#)));
     assert!(out.contains(&normalize(r#"renderAnchor(__slot, parent"#)));
 }

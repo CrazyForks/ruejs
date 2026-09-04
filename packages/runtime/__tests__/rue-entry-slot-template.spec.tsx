@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import * as rueMain from '@rue-js/rue'
-import { Slot, Template, h, render, setReactiveScheduling, type FC } from '@rue-js/rue'
+import { Slot, Template, render, setReactiveScheduling, type FC } from '@rue-js/rue'
+import { createTestRenderable } from './legacy-test-render'
 import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -58,7 +59,7 @@ describe('@rue-js/rue Slot and Template public entry', () => {
         >
           <span data-testid="default">Body</span>
         </Panel>
-        {h(Panel, null)}
+        {createTestRenderable(Panel, null)}
       </div>,
       container,
     )
@@ -81,7 +82,15 @@ describe('@rue-js/rue Slot and Template public entry', () => {
     resetActiveRuntime()
     document.body.appendChild(host)
 
-    render(h(Template, null, h('strong', null, 'A'), h('em', null, 'B')), host)
+    render(
+      createTestRenderable(
+        Template,
+        null,
+        createTestRenderable('strong', null, 'A'),
+        createTestRenderable('em', null, 'B'),
+      ),
+      host,
+    )
 
     await waitForContent(() => {
       expect(host.querySelector('span')).toBeNull()

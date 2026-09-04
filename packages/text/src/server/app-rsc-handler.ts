@@ -687,6 +687,7 @@ export function createAppRscHandler<TRoute extends AppRscHandlerRoute>(
       draftModeSecret: options.draftModeSecret,
     })
     const requestContext = createRequestContext({
+      appRouterRenderPhase: 'rsc',
       headersContext,
       executionContext,
       unstableCacheRevalidation: 'background',

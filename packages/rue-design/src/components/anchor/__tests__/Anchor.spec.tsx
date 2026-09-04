@@ -213,6 +213,8 @@ describe('Anchor', () => {
 
     await waitForContent(() => {
       expect(getLink(container, '#intro')?.getAttribute('data-active')).toBe('true')
+      expect(container.textContent).toContain('简介')
+      expect(container.textContent).not.toContain('[object Object]')
     })
 
     await click(getLink(container, '#details'))

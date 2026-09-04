@@ -1,5 +1,5 @@
-import { Component, type FC, computed, useState, watch, useEffect, useRef } from '@rue-js/rue'
-import { useRoute } from '@rue-js/router'
+import { Component, type FC, computed, useState, useEffect, useRef } from '@rue-js/rue'
+import { useRoute, useRouter } from '@rue-js/router'
 import { readStaticRenderRoute, useStaticRenderContext } from '../../staticRenderContext'
 import SidebarPlayground from './SidebarPlaygroundPage'
 import {
@@ -26,6 +26,7 @@ type PageDocDetailProps = {
 
 const PageDocDetail: FC<PageDocDetailProps> = props => {
   const route = useRoute()
+  const router = useRouter()
   const staticRenderContext = useStaticRenderContext()
   const [_results, _setResults] = useState<{ id: string; title: string; snippet: string }[]>([])
   const context = getContext()
@@ -65,35 +66,35 @@ const PageDocDetail: FC<PageDocDetailProps> = props => {
   }
 
   useEffect(() => {
-    const routeWatch = watch(
-      routeSegment,
-      async (seg: string) => {
-        const currentRequest = (requestVersionRef.current ?? 0) + 1
-        requestVersionRef.current = currentRequest
-        if (!seg) {
-          setRenderedDocContent({ type: 'html', html: '' })
+    const loadRouteContent = async (seg: string) => {
+      const currentRequest = (requestVersionRef.current ?? 0) + 1
+      requestVersionRef.current = currentRequest
+      if (!seg) {
+        setRenderedDocContent({ type: 'html', html: '' })
+        return
+      }
+
+      try {
+        const out = await loadCachedDocContent('page', context.docBase, seg)
+        if (currentRequest !== requestVersionRef.current) {
+          return
+        }
+        setRenderedDocContent(out)
+      } catch {
+        if (currentRequest !== requestVersionRef.current) {
           return
         }
 
-        try {
-          const out = await loadCachedDocContent('page', context.docBase, seg)
-          if (currentRequest !== requestVersionRef.current) {
-            return
-          }
-          setRenderedDocContent(out)
-        } catch {
-          if (currentRequest !== requestVersionRef.current) {
-            return
-          }
-
-          setRenderedDocContent({
-            type: 'html',
-            html: `<p class="text-base-content/70">加载文档失败</p>`,
-          })
-        }
-      },
-      { immediate: true },
-    )
+        setRenderedDocContent({
+          type: 'html',
+          html: `<p class="text-base-content/70">加载文档失败</p>`,
+        })
+      }
+    }
+    void loadRouteContent(String((route.get() as any)?.params?.path || props.params?.path || ''))
+    const removeAfterEach = router.afterEach(to => {
+      void loadRouteContent(String((to as any)?.params?.path || props.params?.path || ''))
+    })
 
     const onClick = (e: Event) => {
       const target = e.target as HTMLElement
@@ -113,7 +114,7 @@ const PageDocDetail: FC<PageDocDetailProps> = props => {
     document.addEventListener('click', onClick)
     return () => {
       document.removeEventListener('click', onClick)
-      routeWatch.dispose()
+      removeAfterEach()
     }
   }, [])
 
@@ -126,7 +127,7 @@ const PageDocDetail: FC<PageDocDetailProps> = props => {
       <div>
         {readMdxComponent() ? (
           <div className="max-w-none prose prose-sm md:prose-base" id="doc-body">
-            <Component is={readMdxComponent()} />
+            <Component is="mdx" registry={{ mdx: readMdxComponent() }} />
           </div>
         ) : (
           <div

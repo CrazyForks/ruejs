@@ -12,7 +12,7 @@ use crate::utils::{is_component, unwrap_expr};
 事件指令预处理：
 - 支持形态：`v-on:click` / `r-on:click` / `@click` 经过前置转义后的安全属性名。
 - 目标：把指令统一改写为标准 JSX 事件属性（如 `onClick`），让后续属性编译只面对一种事件入口。
-- 修饰符：`stop/prevent/once/capture/...` 被整理成字符串数组，运行时由 `_$vaporWithEventModifiers` 包装处理。
+- 修饰符：`stop/prevent/once/capture/...` 被整理成字符串数组，运行时由 `_$compiledWithEventModifiers` 包装处理。
 - 组件 native 事件：组件上的 `.native` 不直接变成普通 prop，而是改名为内部前缀，
   后续组件编译会把它挂到组件根节点的原生事件上。
 */
@@ -313,7 +313,10 @@ fn wrap_with_modifiers(handler: Expr, modifiers: &[String]) -> Expr {
     if modifiers.is_empty() {
         handler
     } else {
-        emit::call_ident("_$vaporWithEventModifiers", vec![handler, modifier_array_expr(modifiers)])
+        emit::call_ident(
+            "_$compiledWithEventModifiers",
+            vec![handler, modifier_array_expr(modifiers)],
+        )
     }
 }
 

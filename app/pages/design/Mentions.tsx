@@ -75,7 +75,7 @@ const memberDirectory: MemberDirectoryItem[] = [
 const topicDirectory = [
   { value: 'release-notes', label: 'Release notes', tone: 'badge-primary' },
   { value: 'design-review', label: 'Design review', tone: 'badge-secondary' },
-  { value: 'runtime-vapor', label: 'Runtime vapor', tone: 'badge-accent' },
+  { value: 'runtime-core', label: 'Runtime core', tone: 'badge-accent' },
   { value: 'docs-refresh', label: 'Docs refresh', tone: 'badge-info' },
 ] as const
 
@@ -290,7 +290,7 @@ const placementCode = `const value = ref('@lin 这条备注把面板放到上方
   }}
 />`
 
-const autoSizeCode = `const value = ref('更新日志：\n@nano 完成候选面板交互，#runtime-vapor 等待确认。')
+const autoSizeCode = `const value = ref('更新日志：\n@nano 完成候选面板交互，#runtime-core 等待确认。')
 const sizeText = ref('宽 0 / 高 0')
 
 <Mentions
@@ -529,7 +529,7 @@ const PlacementMentionsPreview: FC = () => {
 }
 
 export const AutoSizeMentionsPreview: FC = () => {
-  const value = ref('更新日志：\n@nano 完成候选面板交互，#runtime-vapor 等待确认。')
+  const value = ref('更新日志：\n@nano 完成候选面板交互，#runtime-core 等待确认。')
   const resizeLabelRef = useRef<HTMLDivElement>()
   const resizeTextRef = useRef('宽 0 / 高 0')
 
@@ -742,7 +742,7 @@ const MentionsPage: FC = () => {
                 <Mentions
                   status="validating"
                   variant="filled"
-                  defaultValue="#runtime-vapor 正在等待构建结果"
+                  defaultValue="#runtime-core 正在等待构建结果"
                   prefix={['@', '#']}
                   options={[...baseMentionOptions, ...topicOptions]}
                   rows={4}

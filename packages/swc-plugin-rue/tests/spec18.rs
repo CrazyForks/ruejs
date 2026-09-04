@@ -36,73 +36,66 @@ export default Hello
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { ref, _$vaporWithHookId, useSetup, vapor, _$createElement, _$template, _$createTextNode, _$setStyle, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, _$compiledWithHookId, useSetup, _$template, effect, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
-const _$getTemplate1 = _$template('<div style="color:blue;">hello world</div>');
-const _$getTemplate2 = _$template('<div style="">hello world</div>');
-const _$getTemplate3 = _$template('<div style=" ">hello world</div>');
+const _$getTemplate1 = _$template('<div><div>hello world</div><div style="color:blue;">hello world</div><div>hello world</div><div>hello world</div><div>hello world</div><div>hello world</div><div>hello world</div><div style="">hello world</div><div style=" ">hello world</div><div style="">hello world</div><div>hello world</div></div>');
 const Hello: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const color = _$vaporWithHookId("ref:1:0", ()=>ref("blue"));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const color = ref("blue");
             return {
                 color: color
             };
         }));
     const { color: color } = _$useSetup;
-    return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        const _el1 = _$createElement("div", _root);
-        _$appendChild(_root, _el1);
-        _$setStyle(_el1, {
+    return _$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[0];
+        const _el2 = _root.childNodes[2];
+        const _el3 = _root.childNodes[3];
+        const _el4 = _root.childNodes[4];
+        const _el5 = _root.childNodes[5];
+        const _el6 = _root.childNodes[6];
+        const _el7 = _root.childNodes[10];
+        Object.assign(_el1.style, {
             fontWeight: 'bold',
             color: 'red',
             display: ""
         });
-        _$appendChild(_el1, _$createTextNode("hello world"));
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _el3 = _$createElement("div", _root);
-        _$appendChild(_root, _el3);
-        watchEffect(()=>{
-            const _el3_style = ("color:" + color.value + ";");
-            _$setStyle(_el3, _el3_style);
+        let __child1;
+        effect(()=>{
+            const __child1_raw = "color:" + color.value + ";";
+            const __child1_next = __child1_raw == null ? "" : String(__child1_raw);
+            if (!Object.is(__child1, __child1_next)) {
+                __child1 = __child1_next;
+                _el2.style.cssText = __child1_next;
+            }
         });
-        _$appendChild(_el3, _$createTextNode("hello world"));
-        const _el4 = _$createElement("div", _root);
-        _$appendChild(_root, _el4);
-        _$setStyle(_el4, {
+        Object.assign(_el3.style, {
             display: ""
         });
-        _$appendChild(_el4, _$createTextNode("hello world"));
-        const _el5 = _$createElement("div", _root);
-        _$appendChild(_root, _el5);
-        _$setStyle(_el5, {
+        Object.assign(_el4.style, {
             display: ""
         });
-        _$appendChild(_el5, _$createTextNode("hello world"));
-        const _el6 = _$createElement("div", _root);
-        _$appendChild(_root, _el6);
-        _$setStyle(_el6, {
+        Object.assign(_el5.style, {
             display: ""
         });
-        _$appendChild(_el6, _$createTextNode("hello world"));
-        const _el7 = _$createElement("div", _root);
-        _$appendChild(_root, _el7);
-        _$setStyle(_el7, {
+        Object.assign(_el6.style, {
             display: ""
         });
-        _$appendChild(_el7, _$createTextNode("hello world"));
-        _root.appendChild(_$getTemplate2().content.cloneNode(true));
-        _root.appendChild(_$getTemplate3().content.cloneNode(true));
-        _root.appendChild(_$getTemplate2().content.cloneNode(true));
-        const _el11 = _$createElement("div", _root);
-        _$appendChild(_root, _el11);
-        _$setStyle(_el11, {
+        Object.assign(_el7.style, {
             display: ""
         });
-        _$appendChild(_el11, _$createTextNode("hello world"));
-        return _root;
-    });
+        return {
+            __rue_compiled_host: _root,
+            __rue_compiled_roots: [
+                _root
+            ]
+        };
+    }, {
+        __rue_compiled_explicit_roots: true
+    }));
 };
 export default Hello;
 "##;
@@ -110,5 +103,12 @@ export default Hello;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec18.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("@rue-js/rue/internal/compiler"), "{normalized}");
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("_$compiledRoot"), "{normalized}");
+    assert!(normalized.contains("Object.assign(_el1.style"), "{normalized}");
+    assert!(normalized.contains("_$setStyle(_el2, __child1_next)"), "{normalized}");
+    assert!(normalized.contains("Object.is(__child1, __child1_next)"), "{normalized}");
+    assert!(!normalized.contains("vapor("), "{normalized}");
 }

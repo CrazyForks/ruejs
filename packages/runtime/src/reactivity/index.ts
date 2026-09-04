@@ -1,50 +1,85 @@
 import {
-  batch,
-  computed,
-  customRef,
-  createEffect as effect,
+  customRef as compiledCustomRef,
   effectScope,
   getCurrentScope,
   getCurrentInstance,
-  isRef,
-  isProxy,
-  isReactive,
-  isReadonly,
+  isProxy as compiledIsProxy,
+  isReactive as compiledIsReactive,
+  isReadonly as compiledIsReadonly,
+  isRef as compiledIsRef,
   nextTick,
-  onCleanup,
-  onWatcherCleanup,
-  onRenderTracked,
+  onRenderTracked as compiledOnRenderTracked,
   onScopeDispose,
-  propsReactive,
-  reactive,
-  readonly,
-  ref,
-  shallowRef,
-  triggerRef,
+  onWatcherCleanup,
+  propsReactive as compiledPropsReactive,
+  reactive as compiledReactive,
+  readonly as compiledReadonly,
+  ref as compiledRef,
   setCurrentInstance,
-  shallowReactive,
-  shallowReadonly,
-  signal,
-  toRef,
-  toRefs,
-  toRaw,
-  toValue,
-  untrack,
+  shallowReactive as compiledShallowReactive,
+  shallowReadonly as compiledShallowReadonly,
+  shallowRef as compiledShallowRef,
+  toRaw as compiledToRaw,
+  toRef as compiledToRef,
+  toRefs as compiledToRefs,
+  toValue as compiledToValue,
+  triggerRef as compiledTriggerRef,
+  unref,
+  useCallback,
   useEffect as useRueEffect,
+  useMemo,
+  useRef,
+  useSetup,
   useSignal as useRueSignal,
   useState as useRueState,
-  watch,
+  watch as compiledWatch,
   watchDeepSignal,
-  watchEffect,
   watchFn,
   watchPath,
   watchPostEffect,
   watchSignal,
   watchSyncEffect,
   withHookSlot,
-  useSetup,
-} from '@rue-js/runtime-vapor/reactive'
-import type { SignalHandle } from '@rue-js/runtime-vapor/reactive'
+} from '../runtime-core/reactive'
+import type { SignalHandle } from '../runtime-core/reactive'
+import {
+  batch as compiledBatch,
+  computed as compiledComputed,
+  effect as compiledEffect,
+  onCleanup as compiledOnCleanup,
+  setReactiveScheduling,
+  signal as compiledSignal,
+  untrack as compiledUntrack,
+  watchEffect as compiledWatchEffect,
+} from '../internal-reactive'
+
+type VaporReactiveModule = typeof import('../runtime-core/reactive')
+const batch = compiledBatch as VaporReactiveModule['batch']
+const computed = compiledComputed as unknown as VaporReactiveModule['computed']
+const customRef = compiledCustomRef as VaporReactiveModule['customRef']
+const effect = compiledEffect as VaporReactiveModule['createEffect']
+const isProxy = compiledIsProxy as VaporReactiveModule['isProxy']
+const isReactive = compiledIsReactive as VaporReactiveModule['isReactive']
+const isReadonly = compiledIsReadonly as VaporReactiveModule['isReadonly']
+const isRef = compiledIsRef as VaporReactiveModule['isRef']
+const onCleanup = compiledOnCleanup as VaporReactiveModule['onCleanup']
+const onRenderTracked = compiledOnRenderTracked as VaporReactiveModule['onRenderTracked']
+const propsReactive = compiledPropsReactive as VaporReactiveModule['propsReactive']
+const reactive = compiledReactive as VaporReactiveModule['reactive']
+const readonly = compiledReadonly as VaporReactiveModule['readonly']
+const ref = compiledRef as unknown as VaporReactiveModule['ref']
+const shallowReactive = compiledShallowReactive as VaporReactiveModule['shallowReactive']
+const shallowReadonly = compiledShallowReadonly as VaporReactiveModule['shallowReadonly']
+const shallowRef = compiledShallowRef as unknown as VaporReactiveModule['shallowRef']
+const signal = compiledSignal as VaporReactiveModule['signal']
+const toRaw = compiledToRaw as VaporReactiveModule['toRaw']
+const toRef = compiledToRef as unknown as VaporReactiveModule['toRef']
+const toRefs = compiledToRefs as VaporReactiveModule['toRefs']
+const toValue = compiledToValue as VaporReactiveModule['toValue']
+const triggerRef = compiledTriggerRef as VaporReactiveModule['triggerRef']
+const untrack = compiledUntrack as VaporReactiveModule['untrack']
+const watch = compiledWatch as unknown as VaporReactiveModule['watch']
+const watchEffect = compiledWatchEffect as unknown as VaporReactiveModule['watchEffect']
 
 import { getParentNode } from '../dom'
 import { getCurrentContainer } from '../runtime-context'
@@ -56,7 +91,7 @@ import {
 
 /*
 响应式公共出口概述
-- 大部分 API 直接透传 @rue-js/runtime-vapor/reactive，保证 Block / Vapor 两条路径使用同一套信号实现。
+- 大部分 API 直接透传 ../runtime-core/reactive，保证 Block / Vapor 两条路径使用同一套信号实现。
 - createResource 在底层 createResourceRaw 外包一层 Suspense 感知能力，读取 data 时会向最近 Suspense 边界登记 pending。
 - Suspense 边界既可以来自组件渲染栈，也可以从当前容器 DOM 链上的隐藏字段查找。
 */
@@ -300,7 +335,6 @@ export type {
   DebuggerHook,
   EffectScope,
   ObjectRef,
-  SignalHandle,
   ToRefs,
   WatchEffectOptions,
   WatchFlush,
@@ -309,7 +343,8 @@ export type {
   WatchMultiSource,
   WatchOptions,
   WatchSource,
-} from '@rue-js/runtime-vapor/reactive'
+} from '../runtime-core/reactive'
+export type { SignalHandle } from '../runtime-core/reactive'
 
 export {
   effect,
@@ -338,6 +373,10 @@ export {
   useState,
   useSignal,
   useEffect,
+  useMemo,
+  useCallback,
+  useSetup,
+  useRef,
   signal,
   ref,
   customRef,
@@ -356,6 +395,8 @@ export {
   toRefs,
   toRaw,
   propsReactive,
+  unref,
+  setReactiveScheduling,
 }
 
 const createSuspenseResource = <TSrc, TData>(
@@ -367,9 +408,9 @@ const createSuspenseResource = <TSrc, TData>(
     scheduled: new Map(),
     pending: null,
   }
-  const data = signal<TData | undefined>(undefined, undefined, true) as SignalHandle<TData>
-  const error = signal<any>(undefined, undefined, true)
-  const loading = signal(true, undefined, true)
+  const data = signal<TData | undefined>(undefined) as SignalHandle<TData>
+  const error = signal<any>(undefined)
+  const loading = signal(true)
   let currentSource = untrack(() => src.get())
   let version = 0
 

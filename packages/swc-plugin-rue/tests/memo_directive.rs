@@ -28,14 +28,14 @@ export default MemoDemo
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/memo_directive.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
-    assert!(
-        normalized.contains("import { useMemo, _$vaporWithHookId } from \"@rue-js/rue/vapor\";")
-    );
     assert!(normalized.contains(
-        "_$vaporWithHookId(\"useMemo:169:240\", ()=>useMemo(()=><section>{props.valueA}</section>, [ props.valueA, props.valueB ]))"
+        "import { useMemo, _$compiledWithHookId } from \"@rue-js/rue/internal/compiler\";"
     ));
     assert!(normalized.contains(
-        "props.ok ? _$vaporWithHookId(\"useMemo:247:320\", ()=>useMemo(()=><article>{props.valueB}</article>, [ props.valueB ])) : _$vaporWithHookId(\"useMemo:327:381\", ()=>useMemo(()=><article>{props.fallback}</article>, []))"
+        "_$compiledWithHookId(\"useMemo:169:240\", ()=>useMemo(()=><section>{props.valueA}</section>, [ props.valueA, props.valueB ]))"
+    ));
+    assert!(normalized.contains(
+        "props.ok ? _$compiledWithHookId(\"useMemo:247:320\", ()=>useMemo(()=><article>{props.valueB}</article>, [ props.valueB ])) : _$compiledWithHookId(\"useMemo:327:381\", ()=>useMemo(()=><article>{props.fallback}</article>, []))"
     ));
     assert!(!normalized.contains("v-memo"));
     assert!(!normalized.contains("r-memo"));
@@ -61,7 +61,7 @@ export default RootMemo
     std::fs::write("target/vapor_outputs/root_memo_directive.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
     assert!(normalized.contains(
-        "return _$vaporWithHookId(\"useMemo:103:152\", ()=>useMemo(()=><main>{props.value}</main>, [ props.value ]));"
+        "return _$compiledWithHookId(\"useMemo:103:152\", ()=>useMemo(()=><main>{props.value}</main>, [ props.value ]));"
     ));
     assert!(!normalized.contains("v-memo"));
 }
@@ -91,10 +91,10 @@ export default MemoDemo
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/memo_directive_full.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
-    assert!(normalized.contains("useMemo(()=>vapor(()=>"));
+    assert!(normalized.contains("useMemo(()=>_$compiledRoot("));
     assert!(normalized.contains("renderAnchor"));
-    assert!(normalized.contains("watchEffect(()=>{ const __slot = _$vaporWithHookId"));
-    assert!(!normalized.contains("watchEffect(()=>{ const __slot = (props.label);"));
+    assert!(normalized.contains("effect(()=>{ const __slot = _$compiledWithHookId"));
+    assert!(!normalized.contains("effect(()=>{ const __slot = (props.label);"));
     assert!(!normalized.contains("()=><section"));
     assert!(!normalized.contains("v-memo"));
 }
@@ -131,8 +131,8 @@ export default ListMemoDemo
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/memo_directive_list_item.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
-    assert!(normalized.contains("const __slot = _$vaporWithHookId"));
+    assert!(normalized.contains("rows.map((row)=>_$compiledWithHookId"));
     assert!(normalized.contains("useMemo(()=>vapor(()=>"));
-    assert!(normalized.contains("renderBetween(__slot, parent, start, end)"));
+    assert!(normalized.contains("renderAnchor(__slot, _el2, _el1)"));
     assert!(!normalized.contains("const __slot = vapor(()=>{ const _root = _$createDocumentFragment(); return _root; }); renderBetween(__slot, parent, start, end);"));
 }

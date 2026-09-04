@@ -5,7 +5,7 @@ Filter 组件概述
 - 数据驱动模式直接通过 JSX 输出完整 input 属性，适配 Vapor 深编译路径。
 */
 import type { FC } from '@rue-js/rue'
-import { ref, watch } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 
 /** FilterMode 类型。 */
 export type FilterMode = 'form' | 'div'
@@ -125,6 +125,11 @@ export interface FilterProps {
   /** 允许透传原生属性或扩展字段。 */
   [key: string]: any
 }
+
+const FilterDivHost: FC<any> = ({ children, ...rest }) => <div {...rest}>{children}</div>
+const FilterFormHost: FC<any> = ({ children, ...rest }) => <form {...rest}>{children}</form>
+const FILTER_HOSTS = { div: FilterDivHost, form: FilterFormHost }
+const Component = FilterDivHost as any
 
 /** FilterItemProps 组件属性。 */
 export interface FilterItemProps extends FilterItemData {}
@@ -375,7 +380,6 @@ const Filter: FC<FilterProps> = ({
   onReset,
   ...rest
 }) => {
-  const Component = as as any
   const normalizedItems = normalizeItems(items)
   const readNormalizedItems = () => (Array.isArray(normalizedItems) ? normalizedItems : [])
   const resolvedType: FilterInputType = multiple ? 'checkbox' : (type ?? 'radio')
@@ -463,8 +467,22 @@ const Filter: FC<FilterProps> = ({
     const markedEvent = event as Event & { __rueFilterResetHandled?: boolean }
     if (markedEvent.__rueFilterResetHandled) return
     markedEvent.__rueFilterResetHandled = true
+    const resetElement = event.target as HTMLElement | null
+    const groupElement = resetElement?.closest?.('[data-rue-filter-group="true"]')
+    const itemElements = groupElement
+      ? Array.from(groupElement.children).filter(
+          (element): element is HTMLInputElement =>
+            element instanceof HTMLInputElement && element.dataset.rueFilterRole === 'item',
+        )
+      : []
     resetOnChange?.(event)
     clearSelection(event)
+    queueMicrotask(() => {
+      itemElements.forEach(input => {
+        input.checked = false
+        input.classList.toggle('btn-active', false)
+      })
+    })
   }
 
   const handleGroupClick = (event: Event) => {
@@ -579,19 +597,10 @@ const Filter: FC<FilterProps> = ({
       : []),
   ]
 
-  watch(
-    () => value,
-    (nextValue: FilterProps['value']) => {
-      if (nextValue !== undefined) {
-        controlledMode.value = true
-      }
-      controlledValues.value = normalizeValueList(nextValue, resolvedType)
-    },
-    { immediate: true },
-  )
-
   return (
     <Component
+      is={as}
+      registry={FILTER_HOSTS}
       {...rest}
       style={style}
       onReset={(event: Event) => {
@@ -867,7 +876,7 @@ type FilterCompound = FC<FilterProps> & {
   Reset: FC<FilterResetProps>
 }
 
-const FilterCompound: FilterCompound = Object.assign(Filter, {
+const FilterCompound: FilterCompound = /*#__PURE__*/ Object.assign(Filter, {
   Item,
   Reset,
 })

@@ -44,7 +44,7 @@ const packages = [
     directory: 'rue',
     name: '@rue-js/rue',
     entry: 'rue',
-    subpaths: ['.', './vapor', './compiled', './server-renderer', './island'],
+    subpaths: ['.', './internal', './internal/compiler', './server-renderer', './island'],
     subEntryCount: 4,
   },
 ] as const
@@ -72,6 +72,19 @@ const resolveEsm = (specifier: string) =>
       `process.stdout.write(import.meta.resolve(${JSON.stringify(specifier)}))`,
     ],
     { cwd: projectRoot, encoding: 'utf8' },
+  )
+
+const importKeyCount = (specifier: string) =>
+  Number(
+    execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `import(${JSON.stringify(specifier)}).then(module => process.stdout.write(String(Object.keys(module).length)))`,
+      ],
+      { cwd: projectRoot, encoding: 'utf8' },
+    ),
   )
 
 describe('server and Rue facade ESM package contract', () => {
@@ -112,20 +125,30 @@ describe('server and Rue facade ESM package contract', () => {
       expect(resolved, specifier).toBe(
         pathToFileURL(path.resolve(projectRoot, 'packages', pkg.directory, importPath)).href,
       )
-      expect(Object.keys(await import(specifier)).length, specifier).toBeGreaterThan(0)
+      expect(importKeyCount(specifier), specifier).toBeGreaterThan(0)
       expect(existsSync(path.resolve(projectRoot, 'packages', pkg.directory, importPath))).toBe(
         true,
       )
     }
   })
 
-  it('removes Rue JSX compatibility aliases in favor of the standalone JSX packages', () => {
+  it('keeps Rue JSX source aliases and excludes obsolete package files', () => {
     const manifest = readManifest('rue')
 
-    expect(manifest.exports).not.toHaveProperty('./jsx-runtime')
-    expect(manifest.exports).not.toHaveProperty('./jsx-dev-runtime')
+    expect(manifest.exports).toHaveProperty('./jsx-runtime')
+    expect(manifest.exports).toHaveProperty('./jsx-dev-runtime')
     expect(manifest.files).not.toContain('index.mjs')
     expect(manifest.files).not.toContain('jsx-runtime')
     expect(manifest.files).not.toContain('jsx-dev-runtime')
+  })
+
+  it('keeps the legacy public compiled entry unavailable', () => {
+    const manifest = readManifest('rue')
+    expect(manifest.exports).not.toHaveProperty('./compiled')
+    expect(() => resolveEsm('@rue-js/rue/compiled')).toThrow()
+  })
+
+  it('includes the private Rue compiler facade in the npm tarball', () => {
+    expect(packFiles('rue')).toContain('dist/rue.internal-compiler.esm-bundler.js')
   })
 })

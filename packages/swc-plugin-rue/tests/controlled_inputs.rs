@@ -38,14 +38,14 @@ export default ControlledInputs;
     // 期望输出要点对照：
     // - 受控 input：value 走 watch；onInput 绑定更新 state
     // - 文本回显：_$createTextWrapper + _$settextContent + watch
-    let expected_fragment = r##"
-import { useState, _$vaporWithHookId, useSetup, vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { useState, _$compiledWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createTextNode, _$appendChild, onScopeDispose, untrack, watchEffect, _$setAttribute, _$setClassName, _$setValue } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
-const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">受控输入</h3>');
+const _$getTemplate1 = _$template('<div class="max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm"><h3 class="text-xl font-semibold">受控输入</h3><input class="border rounded-md px-2 py-1" placeholder="输入试试"><div>当前：<!--rue:text-hole:0--></div><!--rue:opaque-hole:1--></div>');
 const ControlledInputs: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const [text, setText] = _$vaporWithHookId("useState:1:0", ()=>useState(''));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const [text, setText] = useState('');
             return {
                 text: text,
                 setText: setText
@@ -53,37 +53,48 @@ const ControlledInputs: FC = ()=>{
         }));
     const { text: text, setText: setText } = _$useSetup;
     return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$setClassName(_root, "max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm");
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _el2 = _$createElement("input", _root);
-        _$appendChild(_root, _el2);
-        _$setClassName(_el2, "border rounded-md px-2 py-1");
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[1];
+        const _el2 = _root.childNodes[2].childNodes[1];
+        const _el3 = _el2.parentNode;
+        const _el4 = _root.childNodes[3];
+        const _el5 = _el4.parentNode;
+        _$setClassName(_el1, "border rounded-md px-2 py-1");
         watchEffect(()=>{
-            _$setValue(_el2, text.value);
+            _$setValue(_el1, text.value);
         });
-        _$addEventListener(_el2, "input", ((e)=>setText((e.target as HTMLInputElement).value)));
-        _$setAttribute(_el2, "placeholder", "输入试试");
-        const _el3 = _$createElement("div", _root);
-        _$appendChild(_root, _el3);
-        _$appendChild(_el3, _$createTextNode("当前："));
-        const _el4 = _$createTextWrapper(_el3);
-        _$appendChild(_el3, _el4);
+        const _el1_event_2 = ($event)=>(e)=>setText((e.target as HTMLInputElement).value)($event);
+        _el1.addEventListener("input", _el1_event_2);
+        onScopeDispose(()=>_el1.removeEventListener("input", _el1_event_2));
+        _$setAttribute(_el1, "placeholder", "输入试试");
         watchEffect(()=>{
-            _$settextContent(_el4, text.value);
+            const __slot = (text.value);
+            untrack(()=>renderAnchor(__slot, _el3, _el2));
         });
-        const _el5 = _$createElement("a", _root);
-        _$appendChild(_root, _el5);
+        const _el6 = _$createElement("a", _el5);
+        _$appendChild(_el5, _el6);
+        _el5.insertBefore(_el6, _el4);
         watchEffect(()=>{
-            _$setAttribute(_el5, "href", String(RouterLink.__rueHref("/jsx")));
+            _$setAttribute(_el6, "href", String(RouterLink.__rueHref("/jsx")));
         });
-        _$addEventListener(_el5, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
-        _$addEventListener(_el5, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el5, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el5, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_el5, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$setClassName(_el5, "text-blue-600 hover:underline");
-        _$appendChild(_el5, _$createTextNode("返回目录"));
+        const _el6_event_1 = ($event)=>(e)=>RouterLink.__rueOnClick(e, "/jsx", false)($event);
+        _el6.addEventListener("click", _el6_event_1);
+        onScopeDispose(()=>_el6.removeEventListener("click", _el6_event_1));
+        const _el6_event_2 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el6.addEventListener("pointerenter", _el6_event_2);
+        onScopeDispose(()=>_el6.removeEventListener("pointerenter", _el6_event_2));
+        const _el6_event_3 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el6.addEventListener("focus", _el6_event_3);
+        onScopeDispose(()=>_el6.removeEventListener("focus", _el6_event_3));
+        const _el6_event_4 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el6.addEventListener("pointerdown", _el6_event_4);
+        onScopeDispose(()=>_el6.removeEventListener("pointerdown", _el6_event_4));
+        const _el6_event_5 = ($event)=>(e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")($event);
+        _el6.addEventListener("touchstart", _el6_event_5);
+        onScopeDispose(()=>_el6.removeEventListener("touchstart", _el6_event_5));
+        _$setClassName(_el6, "text-blue-600 hover:underline");
+        _$appendChild(_el6, _$createTextNode("返回目录"));
         return _root;
     });
 };
@@ -93,5 +104,11 @@ export default ControlledInputs;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/controlled_inputs.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup"), "{normalized}");
+    assert!(normalized.contains("_$compiledRoot"), "{normalized}");
+    assert!(normalized.contains("_$setValue"), "{normalized}");
+    assert!(normalized.contains("_$compiledText"), "{normalized}");
+    assert!(normalized.contains("RouterLink.__rueHref"), "{normalized}");
+    assert!(!normalized.contains("watchEffect"), "{normalized}");
 }

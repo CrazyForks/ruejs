@@ -604,6 +604,17 @@ describe('clientReferenceDedupPlugin', () => {
       expect(result?.code).not.toContain("from '@rue-js/rue'")
     })
 
+    it("rewrites RSC-loaded 'use client' modules to the SSR compat shim", () => {
+      const result = transform.call(
+        createContext('rsc'),
+        `'use client'\nimport { createContext } from '@rue-js/rue'\n`,
+        '/project/node_modules/fake-context-lib/internal/context.js',
+      )
+
+      expect(result?.code).toContain('rue-ssr-compat')
+      expect(result?.code).not.toContain("from '@rue-js/rue'")
+    })
+
     it('does not rewrite @rue-js/rue imports in server modules', () => {
       const result = transform.call(
         createContext('ssr'),

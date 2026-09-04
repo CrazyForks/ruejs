@@ -662,7 +662,14 @@ type UncontrolledFileListCacheEntry = {
 
 const MAX_UNCONTROLLED_FILE_LIST_CACHE_SIZE = 100
 const UNCONTROLLED_FILE_LIST_CACHE_TTL = 30_000
-const uncontrolledFileListCache = new Map<string, UncontrolledFileListCacheEntry>()
+const uncontrolledFileListCache = /*#__PURE__*/ new Map<string, UncontrolledFileListCacheEntry>()
+const controlledFileListVersions = /*#__PURE__*/ new Map<string, number>()
+const controlledFileExtraCache = /*#__PURE__*/ new Map<string, Map<string, unknown>>()
+let controlledFileListVersionSeed = 0
+const controlledFileListSignature = (files: FileInputFile[]) =>
+  files
+    .map(file => `${file.uid ?? ''}:${file.name}:${file.status ?? ''}:${file.description ?? ''}`)
+    .join('|')
 
 /** stringify Cache Part 的内部工具函数。 */
 const stringifyCachePart = (value: any) => {
@@ -951,6 +958,15 @@ const FileInputRoot: FC<FileInputProps> = ({
   ...rest
 }) => {
   const controlled = fileList !== undefined
+  const controlledListSignature = controlled ? controlledFileListSignature(fileList) : ''
+  const controlledListVersion = controlled
+    ? (controlledFileListVersions.get(controlledListSignature) ??
+      (() => {
+        const version = ++controlledFileListVersionSeed
+        controlledFileListVersions.set(controlledListSignature, version)
+        return version
+      })())
+    : undefined
   const uncontrolledFileListCacheKey = controlled
     ? ''
     : resolveUncontrolledFileListCacheKey({
@@ -1447,10 +1463,20 @@ const FileInputRoot: FC<FileInputProps> = ({
   }
 
   const renderListItem = (file: FileInputFile) => {
-    const extraContent =
-      typeof uploadListConfig?.extra === 'function'
-        ? uploadListConfig.extra(file)
-        : uploadListConfig?.extra
+    const extraContent = (() => {
+      if (typeof uploadListConfig?.extra !== 'function') return uploadListConfig?.extra
+      if (!controlled || !fileList) return uploadListConfig.extra(file)
+      let cache = controlledFileExtraCache.get(controlledListSignature)
+      if (!cache) {
+        cache = /*#__PURE__*/ new Map()
+        controlledFileExtraCache.set(controlledListSignature, cache)
+      }
+      const key = String(file.uid ?? file.name)
+      if (cache.has(key)) return cache.get(key)
+      const value = uploadListConfig.extra(file)
+      cache.set(key, value)
+      return value
+    })()
     const defaultNode = renderDefaultListItem(file, extraContent)
 
     if (uploadListConfig?.itemRender) {
@@ -1675,32 +1701,41 @@ const FileInputRoot: FC<FileInputProps> = ({
   instance.renderDynamicRegion = renderDynamicRegion
   syncFromProps()
 
-  if (!instance.effectsRegistered) {
-    instance.effectsRegistered = true
-    onMounted(() => {
+  let dynamicRegionSyncPending = false
+  const scheduleDynamicRegionSync = () => {
+    if (dynamicRegionSyncPending) return
+    dynamicRegionSyncPending = true
+    const run = () => {
+      dynamicRegionSyncPending = false
       instance.syncFromProps()
       instance.renderDynamicRegion()
-    })
-
-    onUpdated(() => {
-      instance.syncFromProps()
-      instance.renderDynamicRegion()
-    })
-
-    watch(
-      () => [listVersion.value, dragging.value],
-      () => {
-        instance.renderDynamicRegion()
-      },
-    )
+    }
+    if (typeof queueMicrotask === 'function') queueMicrotask(run)
+    else Promise.resolve().then(run)
   }
+
+  instance.effectsRegistered = true
+  onMounted(() => {
+    scheduleDynamicRegionSync()
+  })
+
+  onUpdated(() => {
+    scheduleDynamicRegionSync()
+  })
+
+  watch(
+    () => [listVersion.value, dragging.value],
+    () => {
+      scheduleDynamicRegionSync()
+    },
+  )
 
   return (
     <div
       className={mergeClassNames('space-y-4', rootClassName)}
       data-rue-file-input-root="true"
       data-rue-file-input-count={String(currentFileList.value.length)}
-      data-rue-file-input-version={String(listVersion.value)}
+      data-rue-file-input-version={String(controlledListVersion ?? listVersion.value)}
     >
       <input
         {...rest}
@@ -1726,7 +1761,7 @@ const Dragger: FC<FileInputProps> = props => {
   return <FileInputRoot {...props} drag />
 }
 
-const FileInput: FileInputCompound = Object.assign(FileInputRoot, {
+const FileInput: FileInputCompound = /*#__PURE__*/ Object.assign(FileInputRoot, {
   Dragger,
   LIST_IGNORE: FILE_INPUT_LIST_IGNORE as typeof FILE_INPUT_LIST_IGNORE,
 })

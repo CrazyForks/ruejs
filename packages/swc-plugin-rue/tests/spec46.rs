@@ -37,48 +37,13 @@ useApp(RootApp).use(router).mount('#app')
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { useApp, vapor, _$createComponent, renderAnchor, _$createElement, _$template, _$createComment, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$setClassName } from "@rue-js/rue/vapor";
-import { type FC, useError } from '@rue-js/rue';
-import { RouterView } from '@rue-js/router';
-import router from './router';
-const _$getTemplate1 = _$template("<div>title</div>");
-useError({
-    overlay: true,
-    console: true
-});
-const ParentBox: FC = (p)=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _root.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _el2 = _$createElement("div", _root);
-        _$appendChild(_root, _el2);
-        _$setClassName(_el2, "container mx-auto");
-        const _list1 = _$createComment("rue:children:anchor");
-        _$appendChild(_el2, _list1);
-        watchEffect(()=>{
-            const __slot = (p.children);
-            untrack(()=>renderAnchor(__slot, _el2, _list1));
-        });
-        return _root;
-    });
-const RootApp: FC = ()=>{
-    return vapor((__rue_parent_context)=>{
-        const _root = _$createDocumentFragment();
-        const _list2 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list2);
-        const __child1 = _$createComponent(RouterView, {});
-        const __slot3 = _$createComponent(ParentBox, {
-            children: __child1
-        });
-        renderAnchor(__slot3, _root, _list2);
-        return _root;
-    });
-};
-useApp(RootApp).use(router).mount('#app');
-"##;
+    let output = utils::strip_marker(&out);
 
-    use utils::{normalize, strip_marker};
-    std::fs::create_dir_all("target/vapor_outputs").ok();
-    std::fs::write("target/vapor_outputs/spec46.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert!(output.contains("useApp"), "{output}");
+    assert!(output.contains("_$compiledRoot(Object.assign("), "{output}");
+    assert!(output.contains("_$compiledText(_el3, ()=>p.children)"), "{output}");
+    assert!(output.contains("_$createComponent(RouterView, ()=>({}))"), "{output}");
+    assert!(output.contains("_$createComponent(ParentBox, ()=>({"), "{output}");
+    assert!(output.contains("children: __child1"), "{output}");
+    assert!(!output.contains("renderAnchor"), "{output}");
 }

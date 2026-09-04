@@ -12,9 +12,9 @@ pub(crate) fn is_custom_element_tag(tag: &str) -> bool {
 }
 
 pub(crate) fn emit_context_parent_property(target: &Ident, stmts: &mut Vec<Stmt>) {
-    let current_instance = Expr::Call(CallExpr {
+    let current_owner = Expr::Call(CallExpr {
         span: DUMMY_SP,
-        callee: Callee::Expr(Box::new(Expr::Ident(ident("getCurrentInstance")))),
+        callee: Callee::Expr(Box::new(Expr::Ident(ident("getCurrentOwner")))),
         args: vec![],
         type_args: None,
         ctxt: SyntaxContext::empty(),
@@ -27,7 +27,7 @@ pub(crate) fn emit_context_parent_property(target: &Ident, stmts: &mut Vec<Stmt>
             vec![
                 Expr::Ident(target.clone()),
                 string_expr(RUE_CONTEXT_PARENT_INSTANCE_PROP),
-                current_instance,
+                current_owner,
             ],
         )),
     }));

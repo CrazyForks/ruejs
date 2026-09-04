@@ -1,4 +1,4 @@
-import { h, render, type ComponentProps, type FC } from '@rue-js/rue'
+import { render, type ComponentProps, type FC } from '@rue-js/rue'
 import type { RueIslandMountContext } from '@rue-js/rue/island'
 
 export interface InteractionButtonProps {
@@ -25,10 +25,7 @@ const InteractionButton: FC<InteractionButtonProps & { replayed?: boolean }> = p
 export const hydrate = (island: Element, props: ComponentProps, context: RueIslandMountContext) => {
   const typedProps = props as InteractionButtonProps
   render(
-    h(InteractionButton, {
-      ...typedProps,
-      replayed: context.replayEvent?.type === 'click',
-    }),
+    <InteractionButton {...typedProps} replayed={context.replayEvent?.type === 'click'} />,
     island as HTMLElement,
   )
 }

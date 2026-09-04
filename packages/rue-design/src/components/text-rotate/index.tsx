@@ -191,7 +191,7 @@ type TextRotateCompound = FC<TextRotateProps> & {
   Paragraph: typeof Typography.Paragraph
 }
 
-const TextRotate: TextRotateCompound = Object.assign(TextRotateRoot, {
+const TextRotate: TextRotateCompound = /*#__PURE__*/ Object.assign(TextRotateRoot, {
   Text: Typography.Text,
   Link: Typography.Link,
   Title: Typography.Title,

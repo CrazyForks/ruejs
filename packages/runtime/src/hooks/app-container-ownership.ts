@@ -14,11 +14,13 @@ interface AppContainerOwnership {
 }
 
 const containerOwnership = new WeakMap<DomElementLike, AppContainerOwnership>()
+const failedContainers = new WeakMap<DomElementLike, unknown>()
 
 export function reserveAppContainer(
   container: DomElementLike,
   owner: AppContainerOwner,
 ): AppContainerReservation | null {
+  if (failedContainers.has(container)) throw failedContainers.get(container)
   const current = containerOwnership.get(container)
   if (current?.owner === owner) return null
   if (current) throw new Error('Rue container is already mounted by another app.')
@@ -30,6 +32,10 @@ export function reserveAppContainer(
     reservation,
   })
   return reservation
+}
+
+export function failAppContainer(container: DomElementLike, error: unknown): void {
+  failedContainers.set(container, error)
 }
 
 export function confirmAppContainer(reservation: AppContainerReservation): void {

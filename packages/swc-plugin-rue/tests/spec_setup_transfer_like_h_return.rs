@@ -82,7 +82,7 @@ const TransferLike: FC<Props> = ({ targetKeys, defaultTargetKeys, showSearch }) 
         .expect("locate TransferLike component");
     let transfer_like_slice = &normalized[transfer_like_start..];
     let top_level_setup_idx = transfer_like_slice
-        .find(&utils::normalize(r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0"#))
+        .find(&utils::normalize(r#"const _$useSetup = _$compiledWithHookId("useSetup:0:0"#))
         .expect("expected top-level useSetup inside TransferLike");
     let search_config_idx = transfer_like_slice
         .find(&utils::normalize(
@@ -97,10 +97,10 @@ const TransferLike: FC<Props> = ({ targetKeys, defaultTargetKeys, showSearch }) 
 
     assert!(normalized.contains(&utils::normalize(
         r#"const searchConfig = normalizeSearchConfig(__rue_props.showSearch);
-      const uncontrolledTargetKeysRef = _$vaporWithHookId("ref:1:0", ()=>ref(__rue_props.defaultTargetKeys ?? __rue_props.targetKeys ?? []));
-      const searchValueRef = _$vaporWithHookId("ref:1:1", ()=>ref(searchConfig.defaultValue));
-      const pageRef = _$vaporWithHookId("ref:1:2", ()=>ref(1));
-      const hostRef = _$vaporWithHookId("useRef:1:3", ()=>useRef<HTMLElement>());
+      const uncontrolledTargetKeysRef = ref(__rue_props.defaultTargetKeys ?? __rue_props.targetKeys ?? []);
+      const searchValueRef = ref(searchConfig.defaultValue);
+      const pageRef = ref(1);
+      const hostRef = useRef<HTMLElement>();
       const renderManagedRegions = ()=>{"#,
     )));
 
@@ -108,12 +108,12 @@ const TransferLike: FC<Props> = ({ targetKeys, defaultTargetKeys, showSearch }) 
         r#"onMounted(()=>{
             renderManagedRegions();
         });
-      _$vaporWithHookId("watch:1:4", ()=>watch(()=>[
+      watch(()=>[
                 pageRef.value,
                 uncontrolledTargetKeysRef.value.length
             ], ()=>{
             renderManagedRegions();
-        }));
+        });
       const renderPanel = ()=>{"#,
     )));
 
@@ -123,12 +123,12 @@ const TransferLike: FC<Props> = ({ targetKeys, defaultTargetKeys, showSearch }) 
 
     assert!(normalized.contains(&utils::normalize(
         r#"const renderPanel = ()=>{
-        const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-      const localRef = _$vaporWithHookId("ref:1:5", ()=>ref(2));
-        return {
-            localRef: localRef
-        };
-    }));
+        const _$useSetup = _$compiledSetup("useSetup:0:0", ()=>{
+            const localRef = ref(2);
+            return {
+                localRef: localRef
+            };
+        });
         const { localRef: localRef } = _$useSetup;
         return <div>{localRef.value}{searchValueRef.value}</div>;
     };"#,
@@ -172,11 +172,11 @@ const TransferLike = ({ targetKeys, defaultTargetKeys, showSearch }) => {
 
     assert!(normalized.contains(&utils::normalize(
         r#"const TransferLike = (__rue_props)=>{
-      const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+      const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
       const searchConfig = normalizeSearchConfig(__rue_props.showSearch);
-      const uncontrolledTargetKeysRef = _$vaporWithHookId("ref:1:0", ()=>ref(__rue_props.defaultTargetKeys ?? __rue_props.targetKeys ?? []));
-      const searchValueRef = _$vaporWithHookId("ref:1:1", ()=>ref(searchConfig.defaultValue));
-      const hostRef = _$vaporWithHookId("useRef:1:2", ()=>useRef());"#,
+      const uncontrolledTargetKeysRef = ref(__rue_props.defaultTargetKeys ?? __rue_props.targetKeys ?? []);
+      const searchValueRef = ref(searchConfig.defaultValue);
+      const hostRef = useRef();"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(

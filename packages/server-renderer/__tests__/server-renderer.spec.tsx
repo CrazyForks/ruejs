@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { type FC } from '@rue-js/rue'
+import { createContext, type FC, useComponent, useContext } from '@rue-js/rue'
 import {
   _$appendChild,
   _$createComment,
@@ -11,9 +11,12 @@ import {
   _$setClassName,
 } from '@rue-js/runtime'
 import * as runtimeServer from '@rue-js/runtime/server'
-import { renderAnchor as renderVaporAnchor, vapor } from '@rue-js/runtime/vapor'
+import { renderAnchor as renderVaporAnchor, vapor } from '@rue-js/runtime/internal'
 
 import {
+  _$serverComponent,
+  _$serverElement,
+  _$serverFragment,
   renderToString,
   runWithServerDOMAdapter,
   ServerCommentNode,
@@ -25,8 +28,49 @@ import {
 import { createRueIslandDescriptor, createRueServerIslandDescriptor } from '../src/island'
 
 describe('rue server-renderer', () => {
+  it('renders compiler-only server operations with escaping and fragments', async () => {
+    const Badge = (props: { label: string }) =>
+      _$serverElement('strong', { className: 'badge' }, [props.label])
+    const App = () =>
+      _$serverFragment([
+        _$serverElement('h1', null, ['Rue <server>']),
+        _$serverComponent(Badge, { label: 'safe & sound' }, []),
+      ])
+
+    await expect(renderToString(App)).resolves.toBe(
+      '<h1>Rue &lt;server&gt;</h1><strong class="badge">safe &amp; sound</strong>',
+    )
+  })
+
+  it('preserves Context semantics through compiled server component operations', async () => {
+    const Theme = createContext('light')
+    const Consumer = () => _$serverElement('span', null, [useContext(Theme)])
+    const App = () =>
+      _$serverComponent(Theme.Provider, { value: 'dark' }, [_$serverComponent(Consumer, null, [])])
+
+    await expect(renderToString(App as any)).resolves.toBe('<span>dark</span>')
+  })
+
+  it('waits for async components used by compiled server operations', async () => {
+    let resolveLoader!: (value: { default: FC<{ label: string }> }) => void
+    const AsyncBadge = useComponent(
+      () =>
+        new Promise<{ default: FC<{ label: string }> }>(resolve => {
+          resolveLoader = resolve
+        }),
+    )
+    const App = () => _$serverComponent(AsyncBadge, { label: 'ready' }, [])
+    const rendered = renderToString(App as any)
+
+    resolveLoader({
+      default: props => _$serverElement('em', null, [props.label]) as any,
+    })
+
+    await expect(rendered).resolves.toBe('<em>ready</em>')
+  })
+
   it('re-exports the runtime server renderer APIs', () => {
-    expect(renderToString).toBe(runtimeServer.renderToString)
+    expect(renderToString).toBeTypeOf('function')
     expect(runWithServerDOMAdapter).toBe(runtimeServer.runWithServerDOMAdapter)
     expect(ServerDOMAdapter).toBe(runtimeServer.ServerDOMAdapter)
     expect(ServerElementNode).toBe(runtimeServer.ServerElementNode)

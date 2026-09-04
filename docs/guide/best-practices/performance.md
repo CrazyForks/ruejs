@@ -48,7 +48,7 @@ pnpm run size-runtime -- --check
 pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-baseline.json --budget scripts/js-framework-performance-budget.json --output temp/performance/final.json
 ```
 
-浏览器命令会先重建 workspace 的 Rue 与 runtime-vapor TypeScript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 `results.rue`、`results.rue-signal` 和 `results.vue` 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；`budget.entries` 给出尺寸、CPU、select/swap、heap 与 first-paint 比率。`validSamples` 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。
+浏览器命令会先重建 workspace 的 Rue 与 runtime TypeScript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 `results.rue`、`results.rue-signal` 和 `results.vue` 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；`budget.entries` 给出尺寸、CPU、select/swap、heap 与 first-paint 比率。`validSamples` 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。
 
 `pnpm run size-runtime -- --check` 单独审计发布入口的模块图和 JavaScript 压缩体积。静态 preset 不得出现 Rue 值模块；compiled preset 只允许最小响应式、owner、selector、DOM 和键控列表核心，不得包含 facade、`js-runtime`、默认 runtime、SSR renderer 或通用 Vapor helper。`scripts/runtime-size-baseline.json` 是可审查的当前产物记录，真正判定超限的是独立的 `scripts/runtime-size-budget.json`，因此更新 baseline 不会自动放宽预算。
 

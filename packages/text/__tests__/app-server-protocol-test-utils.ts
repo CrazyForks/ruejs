@@ -37,6 +37,10 @@ export type TestServerNode = AppServerRenderable
 
 export const Fragment = AppServerFragment
 
+const RUE_SERVER_OPERATION = Symbol.for('rue.server.operation')
+const RUE_COMPILED_COMPONENT_FACTORY_KEY = '__rue_compiled_component_factory__'
+const RUE_COMPILED_COMPONENT_READ_PROPS_KEY = '__rue_compiled_component_read_props__'
+
 type TestContext<T> = {
   defaultValue: T
   stack: T[]
@@ -173,6 +177,23 @@ export function renderAppServerElementToStream(
   element: AppServerRenderable | AppElements,
 ): ReadableStream<Uint8Array> {
   return createStreamFromMarkup(renderAppServerElementToHtml(element))
+}
+
+export function renderAppServerElementToStreamAsync(
+  element: AppServerRenderable | AppElements,
+): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        controller.enqueue(
+          new TextEncoder().encode(await renderAppServerElementToHtmlAsync(element)),
+        )
+        controller.close()
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+  })
 }
 
 export function renderAppServerElementToHtml(element: AppServerRenderable | AppElements): string {
@@ -355,6 +376,41 @@ function renderAppServerNodeToHtml(node: unknown): string {
   }
   if (isThenable(node)) {
     throw new Error('[text:test] Async server protocol elements are not supported by this helper')
+  }
+  if (
+    typeof node === 'object' &&
+    node !== null &&
+    RUE_SERVER_OPERATION in (node as Record<PropertyKey, unknown>)
+  ) {
+    const operation = node as Record<PropertyKey, unknown>
+    const children = Array.isArray(operation.children) ? operation.children : []
+    if (operation[RUE_SERVER_OPERATION] === 'fragment') {
+      return renderAppServerNodeToHtml(children)
+    }
+    return renderAppServerNodeToHtml(
+      createAppServerElement(
+        operation.type as never,
+        operation.props && typeof operation.props === 'object'
+          ? (operation.props as Record<string, unknown>)
+          : null,
+        ...(children as never[]),
+      ),
+    )
+  }
+  if (
+    typeof node === 'object' &&
+    node !== null &&
+    typeof (node as Record<string, unknown>)[RUE_COMPILED_COMPONENT_FACTORY_KEY] === 'function'
+  ) {
+    const handle = node as Record<string, unknown>
+    const readProps = handle[RUE_COMPILED_COMPONENT_READ_PROPS_KEY]
+    const props = typeof readProps === 'function' ? readProps() : null
+    return renderAppServerNodeToHtml(
+      createAppServerElement(
+        handle[RUE_COMPILED_COMPONENT_FACTORY_KEY] as never,
+        props && typeof props === 'object' ? (props as Record<string, unknown>) : null,
+      ),
+    )
   }
   if (isTestContextProviderElement(node)) {
     return renderWithTestContextProvider(node)

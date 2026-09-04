@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h, ref } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import Modal from '..'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
@@ -19,7 +20,7 @@ describe('Modal', () => {
   it('renders when open is true', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Modal, { open: true }, 'content'), c)
+    render(<Modal open={true}>{'content'}</Modal>, c)
 
     await waitForContent(() => {
       const root = c.querySelector('.modal.modal-open') as HTMLElement
@@ -33,7 +34,7 @@ describe('Modal', () => {
   it('does not render when open is false', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Modal, { open: false }, 'content'), c)
+    render(<Modal open={false}>{'content'}</Modal>, c)
 
     await waitForContent(() => {
       expect(c.querySelector('.modal')).toBeNull()
@@ -44,15 +45,17 @@ describe('Modal', () => {
     const c = mountContainer()
     resetActiveRuntime()
     render(
-      h(
-        Modal,
-        {
-          open: true,
-          title: 'Hello',
-          actions: h('button', { className: 'btn', id: 'act' }, 'Action'),
-        },
-        h('div', { id: 'child' }, 'Body'),
-      ),
+      <Modal
+        open={true}
+        title={'Hello'}
+        actions={
+          <button className={'btn'} id={'act'}>
+            {'Action'}
+          </button>
+        }
+      >
+        <div id={'child'}>{'Body'}</div>
+      </Modal>,
       c,
     )
 
@@ -74,19 +77,17 @@ describe('Modal', () => {
     const onOk = vi.fn()
     const onCancel = vi.fn()
     render(
-      h(
-        Modal,
-        {
-          open: true,
-          title: 'Publish release',
-          okText: '发布',
-          cancelText: '返回',
-          confirmLoading: true,
-          onOk,
-          onCancel,
-        },
-        'x',
-      ),
+      <Modal
+        open={true}
+        title={'Publish release'}
+        okText={'发布'}
+        cancelText={'返回'}
+        confirmLoading={true}
+        onOk={onOk}
+        onCancel={onCancel}
+      >
+        {'x'}
+      </Modal>,
       c,
     )
 
@@ -108,7 +109,12 @@ describe('Modal', () => {
     const c = mountContainer()
     resetActiveRuntime()
     const spy = vi.fn()
-    render(h(Modal, { open: true, onClose: spy }, 'x'), c)
+    render(
+      <Modal open={true} onClose={spy}>
+        {'x'}
+      </Modal>,
+      c,
+    )
 
     await waitForContent(() => {
       const close = c.querySelector('.modal-action .btn') as HTMLButtonElement
@@ -122,7 +128,12 @@ describe('Modal', () => {
     const c = mountContainer()
     resetActiveRuntime()
     const spy = vi.fn()
-    render(h(Modal, { open: true, onClose: spy, maskClosable: false, keyboard: false }, 'x'), c)
+    render(
+      <Modal open={true} onClose={spy} maskClosable={false} keyboard={false}>
+        {'x'}
+      </Modal>,
+      c,
+    )
 
     await waitForContent(() => {
       const root = c.querySelector('.modal') as HTMLElement
@@ -159,7 +170,12 @@ describe('Modal', () => {
   it('appends custom className to modal-box', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Modal, { open: true, className: 'w-full' }, 'x'), c)
+    render(
+      <Modal open={true} className={'w-full'}>
+        {'x'}
+      </Modal>,
+      c,
+    )
 
     await waitForContent(() => {
       const box = c.querySelector('.modal-box') as HTMLElement
@@ -171,42 +187,40 @@ describe('Modal', () => {
     const c = mountContainer()
     resetActiveRuntime()
     render(
-      h(
-        Modal,
-        {
-          open: true,
-          title: 'Styled modal',
-          onClose: vi.fn(),
-          rootClassName: 'root-prop',
-          rootStyle: { paddingTop: '1px' },
-          wrapClassName: 'wrap-prop',
-          wrapProps: { className: 'wrap-extra', 'data-layout': 'shell' },
-          maskClassName: 'mask-prop',
-          classNames: {
-            root: 'root-slot',
-            mask: 'mask-slot',
-            wrapper: 'wrapper-slot',
-            container: 'container-slot',
-            box: 'box-slot',
-            header: 'header-slot',
-            title: 'title-slot',
-            body: 'body-slot',
-            footer: 'footer-slot',
-            close: 'close-slot',
-          },
-          styles: {
-            mask: { opacity: 0.25 },
-            wrapper: { alignItems: 'flex-start' },
-            container: { maxWidth: '640px' },
-            header: { color: 'rgb(255, 0, 0)' },
-            title: { letterSpacing: '1px' },
-            body: { minHeight: '80px' },
-            footer: { justifyContent: 'center' },
-            close: { color: 'rgb(0, 0, 255)' },
-          },
-        },
-        'content',
-      ),
+      <Modal
+        open={true}
+        title={'Styled modal'}
+        onClose={vi.fn()}
+        rootClassName={'root-prop'}
+        rootStyle={{ paddingTop: '1px' }}
+        wrapClassName={'wrap-prop'}
+        wrapProps={{ className: 'wrap-extra', 'data-layout': 'shell' }}
+        maskClassName={'mask-prop'}
+        classNames={{
+          root: 'root-slot',
+          mask: 'mask-slot',
+          wrapper: 'wrapper-slot',
+          container: 'container-slot',
+          box: 'box-slot',
+          header: 'header-slot',
+          title: 'title-slot',
+          body: 'body-slot',
+          footer: 'footer-slot',
+          close: 'close-slot',
+        }}
+        styles={{
+          mask: { opacity: 0.25 },
+          wrapper: { alignItems: 'flex-start' },
+          container: { maxWidth: '640px' },
+          header: { color: 'rgb(255, 0, 0)' },
+          title: { letterSpacing: '1px' },
+          body: { minHeight: '80px' },
+          footer: { justifyContent: 'center' },
+          close: { color: 'rgb(0, 0, 255)' },
+        }}
+      >
+        {'content'}
+      </Modal>,
       c,
     )
 
@@ -248,23 +262,20 @@ describe('Modal', () => {
     const onOk = vi.fn()
     const onClose = vi.fn()
     render(
-      h(
-        Modal,
-        {
-          open: true,
-          mask: false,
-          onOk,
-          onClose,
-          footer: (_originNode: any, { OkBtn, CancelBtn }: any) =>
-            h(
-              'div',
-              { id: 'custom-footer' },
-              h(CancelBtn, { id: 'cancel-helper' }, '返回上一步'),
-              h(OkBtn, { id: 'ok-helper' }, '立即发布'),
-            ),
-        },
-        'content',
-      ),
+      <Modal
+        open={true}
+        mask={false}
+        onOk={onOk}
+        onClose={onClose}
+        footer={(_originNode: any, { OkBtn, CancelBtn }: any) => (
+          <div id={'custom-footer'}>
+            <CancelBtn id={'cancel-helper'}>{'返回上一步'}</CancelBtn>
+            <OkBtn id={'ok-helper'}>{'立即发布'}</OkBtn>
+          </div>
+        )}
+      >
+        {'content'}
+      </Modal>,
       c,
     )
 
@@ -292,7 +303,9 @@ describe('Modal', () => {
     const c = mountContainer()
     resetActiveRuntime()
     render(
-      h(Modal, { open: true, title: 'Loading modal', loading: true, onClose: vi.fn() }, 'content'),
+      <Modal open={true} title={'Loading modal'} loading={true} onClose={vi.fn()}>
+        {'content'}
+      </Modal>,
       c,
     )
 
@@ -312,7 +325,12 @@ describe('Modal', () => {
     target.id = 'modal-target'
     document.body.appendChild(target)
     resetActiveRuntime()
-    render(h(Modal, { open: true, title: 'Portal modal', getContainer: target }, 'content'), c)
+    render(
+      <Modal open={true} title={'Portal modal'} getContainer={target}>
+        {'content'}
+      </Modal>,
+      c,
+    )
 
     await waitForContent(() => {
       expect(c.querySelector('.modal')).toBeNull()

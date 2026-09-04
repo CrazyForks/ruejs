@@ -268,13 +268,7 @@ function buildViteConfig(overrides: Record<string, unknown> = {}, logger?: impor
     // Deduplicate Rue runtime packages when text is symlinked (bun link /
     // npm link) so project code and text share one renderer/reactivity graph.
     resolve: {
-      dedupe: [
-        '@rue-js/rue',
-        '@rue-js/runtime',
-        '@rue-js/server-renderer',
-        '@rue-js/jsx-runtime',
-        '@rue-js/jsx-dev-runtime',
-      ],
+      dedupe: ['@rue-js/rue', '@rue-js/runtime', '@rue-js/server-renderer'],
     },
     ...(logger ? { customLogger: logger } : {}),
     ...overrides,
@@ -550,13 +544,7 @@ async function buildApp() {
         configFile: false,
         plugins: [...userTransformPlugins, text({ disableAppRouter: true })],
         resolve: {
-          dedupe: [
-            '@rue-js/rue',
-            '@rue-js/runtime',
-            '@rue-js/server-renderer',
-            '@rue-js/jsx-runtime',
-            '@rue-js/jsx-dev-runtime',
-          ],
+          dedupe: ['@rue-js/rue', '@rue-js/runtime', '@rue-js/server-renderer'],
         },
         ...(logger ? { customLogger: logger } : {}),
         build: {

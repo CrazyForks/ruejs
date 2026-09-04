@@ -26,6 +26,26 @@ pub fn build_element(
     parent: &Ident,
     stmts: &mut Vec<Stmt>,
 ) {
+    build_element_with_anchor(vt, jsx_el, parent, None, stmts);
+}
+
+pub(crate) fn build_element_at(
+    vt: &mut VaporTransform,
+    jsx_el: &JSXElement,
+    parent: &Ident,
+    anchor: &Ident,
+    stmts: &mut Vec<Stmt>,
+) {
+    build_element_with_anchor(vt, jsx_el, parent, Some(anchor), stmts);
+}
+
+fn build_element_with_anchor(
+    vt: &mut VaporTransform,
+    jsx_el: &JSXElement,
+    parent: &Ident,
+    anchor: Option<&Ident>,
+    stmts: &mut Vec<Stmt>,
+) {
     log::debug("elements: build_element");
     if crate::vapor::template::emit_marked_template_child(vt, jsx_el, parent, stmts) {
         log::debug("elements: static html template branch");
@@ -33,12 +53,28 @@ pub fn build_element(
     }
     if let Some(router_link_el) = crate::router_link::rewrite_router_link_fast_path(jsx_el) {
         log::debug("elements: RouterLink fast path -> native anchor");
-        build_element(vt, &router_link_el, parent, stmts);
+        build_element_with_anchor(vt, &router_link_el, parent, anchor, stmts);
         return;
     }
     if is_component(&jsx_el.opening.name) {
         log::debug("elements: component branch");
-        crate::element_component::build_component_element(vt, jsx_el, parent, stmts);
+        let built_compiled = if let Some(anchor) = anchor {
+            crate::element_component::try_build_compiled_component_element_at(
+                vt, jsx_el, parent, anchor, stmts,
+            )
+        } else {
+            crate::element_component::try_build_compiled_component_element(
+                vt, jsx_el, parent, stmts,
+            )
+        };
+        if built_compiled {
+            return;
+        }
+        if let Some(anchor) = anchor {
+            crate::element_component::build_component_element_at(vt, jsx_el, parent, anchor, stmts);
+        } else {
+            crate::element_component::build_component_element(vt, jsx_el, parent, stmts);
+        }
         return;
     }
 
@@ -50,6 +86,16 @@ pub fn build_element(
     //   2) `_$appendChild(parent, _elX)`（来源 emit::append_child 封装）
     //   3) 记录 `_elX → tag` 映射，便于后续如文本包装/样式适配等根据标签处理
     let el_ident = crate::element_node::emit_create_element(vt, parent, &tag, stmts);
+    if let Some(anchor) = anchor {
+        stmts.push(Stmt::Expr(ExprStmt {
+            span: swc_core::common::DUMMY_SP,
+            expr: Box::new(crate::emit::call_member(
+                parent.clone(),
+                "insertBefore",
+                vec![Expr::Ident(el_ident.clone()), Expr::Ident(anchor.clone())],
+            )),
+        }));
+    }
 
     emit_attrs_for(stmts, &el_ident, &jsx_el.opening);
 

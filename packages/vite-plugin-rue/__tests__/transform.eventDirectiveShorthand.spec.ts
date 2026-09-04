@@ -60,10 +60,12 @@ describe('vite-plugin-rue event directive transform', () => {
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
-    expect(code).toContain('_$addEventListener')
-    expect(code).toContain('_$vaporWithEventModifiers')
-    expect(code).toContain('_$vaporWithNativeEvents')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
+    expect(code).toContain('.addEventListener("click"')
+    expect(code).toContain('.removeEventListener("click"')
+    expect(code).toContain('onScopeDispose')
+    expect(code).toContain('_$compiledWithEventModifiers')
+    expect(code).toContain('_$compiledWithNativeEvents')
     expect(code).toContain('"click"')
     expect(code).toContain('"keyup"')
     expect(code).toContain('"mousedown"')

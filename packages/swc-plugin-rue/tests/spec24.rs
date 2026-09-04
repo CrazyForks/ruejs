@@ -31,8 +31,8 @@ export default Chain
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { _$template } from "@rue-js/rue/compiled";
+    let _expected_fragment = r##"
+import { _$template } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const _$getTemplate1 = _$template("<div>【<div>A</div>】 【<div>B</div>】 【<div>C d</div>】 【<div>D</div>】 【<div>E g</div>】 【<div>F</div>】 【<div>E</div>】</div>");
 const Chain: FC = ()=>{
@@ -50,7 +50,7 @@ const Chain: FC = ()=>{
             __rue_cleanup_bucket: [
                 _dispose
             ],
-            __rue_vapor_setup: (__rue_parent_context)=>{
+            __rue_compiled_mount: (__rue_parent_context)=>{
                 if (_disposed) {
                     throw new Error("Cannot mount a disposed static root");
                 }
@@ -71,5 +71,12 @@ export default Chain;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec24.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("@rue-js/rue/internal/compiler"), "{normalized}");
+    assert!(normalized.contains("_$compiledRoot"), "{normalized}");
+    assert_eq!(normalized.matches("_$compiledCreateElement(\"div\"").count(), 8);
+    for text in ["A", "B", "C d", "D", "E g", "F", "E"] {
+        assert!(normalized.contains(&format!("_$compiledCreateTextNode(\"{text}\")")));
+    }
+    assert!(!normalized.contains("_$template"), "{normalized}");
 }

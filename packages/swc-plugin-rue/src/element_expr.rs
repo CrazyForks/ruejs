@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 // SWC ECMAScript AST 节点类型集合（JSXExprContainer/CondExpr/BinExpr/ArrowExpr 等）
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::{Visit, VisitWith};
+use swc_core::ecma::visit::{Visit, VisitMutWith, VisitWith};
 
 use crate::emit::*;
 use crate::log;
@@ -15,29 +15,6 @@ pub(crate) fn is_global_scalar_constructor_name(name: &str) -> bool {
     matches!(name, "String" | "Number" | "Boolean")
 }
 
-pub(crate) fn is_unshadowed_global_scalar_call(
-    call: &CallExpr,
-    shadowed_names: &HashSet<String>,
-) -> bool {
-    let Callee::Expr(callee) = &call.callee else {
-        return false;
-    };
-    let Expr::Ident(callee) = crate::utils::unwrap_expr(callee.as_ref()) else {
-        return false;
-    };
-    is_global_scalar_constructor_name(callee.sym.as_ref())
-        && !shadowed_names.contains(callee.sym.as_ref())
-}
-
-/*
-元素表达式改写：
-- 目标：将元素子节点中的任意表达式统一转化为可复用的插槽渲染路径；
-- 规则：
-  - JSXElement / JSXFragment → 编译为 vapor(()=>{ ... }) 返回 DocumentFragment；
-  - 条件（三元）/逻辑（&&/||）→ 递归在分支中规范 JSX，为空值回退 ""；
-  - 其它表达式保持原样；
-- contains_jsx_in_expr：用于快速判断表达式是否包含 JSX，以决定走“插槽渲染”或“文本渲染”路径。
-*/
 fn make_vapor_expr_from_child_body(child_body: Vec<Stmt>, compiled_anchor: bool) -> Expr {
     let arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
@@ -113,14 +90,49 @@ pub(crate) fn extract_reactive_jsx_key_expr(jsx_el: &JSXElement) -> Option<Expr>
 }
 
 fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Expr {
+    if crate::utils::is_component(&jsx_el.opening.name) {
+        if let Some(dynamic) =
+            crate::element_component::build_compiled_dynamic_component_expr(vt, jsx_el)
+        {
+            return dynamic;
+        }
+        if crate::element_component::is_compiled_component_element(vt, jsx_el)
+            && let JSXElementName::Ident(component) = &jsx_el.opening.name
+            && let Some(read_props) =
+                crate::element_component::build_compiled_component_read_props(vt, jsx_el)
+        {
+            return call_ident(
+                "_$compiledComponent",
+                vec![Expr::Ident(component.clone()), read_props],
+            );
+        }
+        let mut component = jsx_el.clone();
+        let rewrite =
+            crate::element_component::rewrite_component_children_to_props(vt, &mut component);
+        let mount_expr = rewrite
+            .direct_render_expr
+            .unwrap_or_else(|| crate::element_component::build_component_mount_expr(&component));
+        return crate::element_component::component_expr_with_prelude(rewrite.stmts, mount_expr);
+    }
     if !vt.current_function_is_async()
         && crate::element_children::is_compiled_safe_element(vt, jsx_el)
     {
         let block = crate::element_children::compiled_scalar_element_to_block(vt, jsx_el);
         let compiled_expr = crate::element_children::compiled_block_to_root_expr(block);
         return match extract_reactive_jsx_key_expr(jsx_el) {
-            Some(key_expr) => call_ident("_$vaporWithKey", vec![compiled_expr, key_expr]),
+            Some(key_expr) => call_ident("_$compiledWithKey", vec![compiled_expr, key_expr]),
             None => compiled_expr,
+        };
+    }
+    if vt.static_templates
+        && !vt.current_function_is_async()
+        && let Some((handle, reserved_elements)) =
+            crate::vapor::template::static_root_handle_expr(jsx_el)
+    {
+        vt.next_el += reserved_elements;
+        return match extract_reactive_jsx_key_expr(jsx_el) {
+            Some(key_expr) => call_ident("_$compiledWithKey", vec![handle, key_expr]),
+            None => handle,
         };
     }
     let child_root = ident("_root");
@@ -139,7 +151,7 @@ fn jsx_element_to_slot_expr(vt: &mut VaporTransform, jsx_el: &JSXElement) -> Exp
         !crate::utils::is_component(&jsx_el.opening.name),
     );
     match extract_reactive_jsx_key_expr(jsx_el) {
-        Some(key_expr) => call_ident("_$vaporWithKey", vec![vapor_expr, key_expr]),
+        Some(key_expr) => call_ident("_$compiledWithKey", vec![vapor_expr, key_expr]),
         None => vapor_expr,
     }
 }
@@ -173,6 +185,527 @@ fn jsx_expr_to_slot_expr(vt: &mut VaporTransform, inner: &Expr) -> Option<Expr> 
         Expr::JSXFragment(frag) => Some(jsx_fragment_to_slot_expr(vt, frag)),
         _ => None,
     }
+}
+
+pub(crate) fn is_compiled_slot_source_expr(expr: &Expr) -> bool {
+    let inner = crate::utils::unwrap_expr(expr);
+    matches!(
+        inner,
+        Expr::Member(MemberExpr { obj, prop: MemberProp::Ident(_), .. })
+            if matches!(
+                    crate::utils::unwrap_expr(obj.as_ref()),
+                    Expr::Ident(id)
+                        if matches!(id.sym.as_ref(), "props" | "__rue_props")
+                )
+    ) || matches!(
+        inner,
+        Expr::Call(CallExpr { callee: Callee::Expr(callee), args, .. })
+            if args.is_empty()
+                && matches!(
+                    crate::utils::unwrap_expr(callee.as_ref()),
+                    Expr::Member(MemberExpr { obj, prop: MemberProp::Ident(prop), .. })
+                        if prop.sym.as_ref() == "get"
+                            && matches!(crate::utils::unwrap_expr(obj.as_ref()), Expr::Ident(id) if id.sym.as_ref().starts_with("_$rueCompiledSlot"))
+                )
+    )
+}
+
+/// Build the closed compiled slot ABI: `(target, slotProps, owner) -> CompiledBlock`.
+/// The mount helper receives a compiler-generated block factory, never a Renderable value.
+pub(crate) fn compiled_slot_factory_expr(vt: &mut VaporTransform, inner: &Expr) -> Option<Expr> {
+    let compiled = compiled_branch_result(vt, inner)?;
+    let create = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(compiled))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    let body = call_ident(
+        "_$mountCompiledSlotFactory",
+        vec![Expr::Ident(ident("target")), Expr::Ident(ident("owner")), create],
+    );
+    Some(Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![
+            Pat::Ident(BindingIdent { id: ident("target"), type_ann: None }),
+            Pat::Ident(BindingIdent { id: ident("slotProps"), type_ann: None }),
+            Pat::Ident(BindingIdent { id: ident("owner"), type_ann: None }),
+        ],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(body))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    }))
+}
+
+fn compiled_root_from_stmts(stmts: Vec<Stmt>) -> Expr {
+    crate::element_children::compiled_block_to_root_expr(BlockStmt {
+        span: DUMMY_SP,
+        ctxt: SyntaxContext::empty(),
+        stmts,
+    })
+}
+
+fn empty_compiled_root_expr() -> Expr {
+    let root = ident("_root");
+    compiled_root_from_stmts(vec![
+        const_decl(root.clone(), call_ident("_$createDocumentFragment", vec![])),
+        return_root(root),
+    ])
+}
+
+fn typeof_is(value: Expr, expected: &str) -> Expr {
+    Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::EqEqEq,
+        left: Box::new(Expr::Unary(UnaryExpr {
+            span: DUMMY_SP,
+            op: UnaryOp::TypeOf,
+            arg: Box::new(value),
+        })),
+        right: Box::new(string_expr(expected)),
+    })
+}
+
+fn scalar_text_value(value: Expr) -> Expr {
+    let is_string_or_number = Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalOr,
+        left: Box::new(typeof_is(value.clone(), "string")),
+        right: Box::new(typeof_is(value.clone(), "number")),
+    });
+    let is_text = Expr::Bin(BinExpr {
+        span: DUMMY_SP,
+        op: BinaryOp::LogicalOr,
+        left: Box::new(is_string_or_number),
+        right: Box::new(typeof_is(value.clone(), "bigint")),
+    });
+    Expr::Cond(CondExpr {
+        span: DUMMY_SP,
+        test: Box::new(is_text),
+        cons: Box::new(value),
+        alt: Box::new(string_expr("")),
+    })
+}
+
+fn scalar_compiled_root_expr(value: Expr) -> Expr {
+    let root = ident("_root");
+    compiled_root_from_stmts(vec![
+        const_decl(
+            root.clone(),
+            call_ident("_$compiledCreateTextNode", vec![scalar_text_value(value)]),
+        ),
+        return_root(root),
+    ])
+}
+
+fn return_expr(expr: Expr) -> Stmt {
+    Stmt::Return(ReturnStmt { span: DUMMY_SP, arg: Some(Box::new(expr)) })
+}
+
+fn compiled_branch_factory(stmts: Vec<Stmt>) -> Expr {
+    call_ident(
+        "_$compiledBranch",
+        vec![Expr::Arrow(ArrowExpr {
+            span: DUMMY_SP,
+            params: vec![],
+            body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                span: DUMMY_SP,
+                ctxt: SyntaxContext::empty(),
+                stmts,
+            })),
+            is_async: false,
+            is_generator: false,
+            type_params: None,
+            return_type: None,
+            ctxt: SyntaxContext::empty(),
+        })],
+    )
+}
+
+fn compiled_branch_case_with_refresh(key: Expr, result: Expr, refresh: bool) -> Expr {
+    let mut props = vec![
+        PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(ident_name("__rue_compiled_branch_key")),
+            value: Box::new(key),
+        }))),
+        PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(ident_name("create")),
+            value: Box::new(Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![],
+                body: Box::new(BlockStmtOrExpr::Expr(Box::new(result))),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+                ctxt: SyntaxContext::empty(),
+            })),
+        }))),
+    ];
+    if refresh {
+        props.insert(
+            1,
+            PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(ident_name("__rue_compiled_branch_refresh")),
+                value: Box::new(Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true }))),
+            }))),
+        );
+    }
+    Expr::Object(ObjectLit { span: DUMMY_SP, props })
+}
+
+pub(crate) fn compiled_branch_case(key: Expr, result: Expr) -> Expr {
+    compiled_branch_case_with_refresh(key, result, false)
+}
+
+pub(crate) fn refreshing_compiled_branch_case(key: Expr, result: Expr) -> Expr {
+    compiled_branch_case_with_refresh(key, result, true)
+}
+
+pub(crate) fn compiled_branch_result(vt: &mut VaporTransform, expr: &Expr) -> Option<Expr> {
+    let inner = crate::utils::unwrap_expr(expr);
+    match inner {
+        Expr::JSXElement(element)
+            if crate::element_component::build_compiled_dynamic_component_expr(vt, element)
+                .is_some() =>
+        {
+            crate::element_component::build_compiled_dynamic_component_expr(vt, element)
+        }
+        Expr::JSXElement(element)
+            if ((!crate::utils::is_component(&element.opening.name)
+                && crate::element_children::is_compiled_safe_element(vt, element))
+                || crate::element_component::is_compiled_component_element(vt, element)) =>
+        {
+            Some(jsx_element_to_slot_expr(vt, element))
+        }
+        Expr::JSXFragment(fragment)
+            if crate::element_children::is_compiled_safe_fragment(vt, fragment) =>
+        {
+            Some(jsx_fragment_to_slot_expr(vt, fragment))
+        }
+        Expr::Call(call) if crate::element_children::compiled_list_call_is_safe(vt, call) => {
+            let root = ident("_root");
+            let mut stmts =
+                vec![const_decl(root.clone(), call_ident("_$createDocumentFragment", vec![]))];
+            if !crate::element_list::try_build_list_from_map(vt, &root, call, &mut stmts) {
+                return None;
+            }
+            stmts.push(return_root(root));
+            Some(compiled_root_from_stmts(stmts))
+        }
+        _ if is_compiled_slot_source_expr(inner) => Some(call_ident(
+            "_$compiledSlotValue",
+            vec![Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![],
+                body: Box::new(BlockStmtOrExpr::Expr(Box::new(inner.clone()))),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+                ctxt: SyntaxContext::empty(),
+            })],
+        )),
+        _ if is_static_empty_like(inner) => Some(empty_compiled_root_expr()),
+        _ if crate::vapor::is_compiled_reactive_scalar_expr(
+            vt,
+            inner,
+            &vt.current_scalar_constructor_shadows(),
+        ) =>
+        {
+            Some(scalar_compiled_root_expr(inner.clone()))
+        }
+        Expr::Cond(_) | Expr::Bin(_) => try_make_compiled_branch_expr(vt, inner),
+        _ => None,
+    }
+}
+
+fn literal_sibling_branch_parts<'a>(expr: &'a Expr) -> Option<(&'a Expr, Expr, &'a Expr)> {
+    let Expr::Bin(logical) = crate::utils::unwrap_expr(expr) else {
+        return None;
+    };
+    if logical.op != BinaryOp::LogicalAnd {
+        return None;
+    }
+    let Expr::Bin(equality) = crate::utils::unwrap_expr(logical.left.as_ref()) else {
+        return None;
+    };
+    if equality.op != BinaryOp::EqEqEq {
+        return None;
+    }
+    let Expr::Lit(literal) = crate::utils::unwrap_expr(equality.right.as_ref()) else {
+        return None;
+    };
+    Some((
+        crate::utils::unwrap_expr(equality.left.as_ref()),
+        Expr::Lit(literal.clone()),
+        logical.right.as_ref(),
+    ))
+}
+
+fn same_literal_sibling_source(left: &Expr, right: &Expr) -> bool {
+    match (crate::utils::unwrap_expr(left), crate::utils::unwrap_expr(right)) {
+        (Expr::Ident(left), Expr::Ident(right)) => left.sym == right.sym,
+        (Expr::Member(left), Expr::Member(right)) => {
+            same_literal_sibling_source(left.obj.as_ref(), right.obj.as_ref())
+                && match (&left.prop, &right.prop) {
+                    (MemberProp::Ident(left), MemberProp::Ident(right)) => left.sym == right.sym,
+                    (MemberProp::PrivateName(left), MemberProp::PrivateName(right)) => {
+                        left.name == right.name
+                    }
+                    (MemberProp::Computed(left), MemberProp::Computed(right)) => {
+                        same_literal_sibling_source(left.expr.as_ref(), right.expr.as_ref())
+                    }
+                    _ => false,
+                }
+        }
+        (Expr::Call(left), Expr::Call(right)) if left.args.is_empty() && right.args.is_empty() => {
+            match (&left.callee, &right.callee) {
+                (Callee::Expr(left), Callee::Expr(right)) => {
+                    same_literal_sibling_source(left.as_ref(), right.as_ref())
+                }
+                _ => false,
+            }
+        }
+        (Expr::Lit(left), Expr::Lit(right)) => left == right,
+        _ => false,
+    }
+}
+
+pub(crate) fn try_make_compiled_literal_sibling_branch_expr(
+    vt: &mut VaporTransform,
+    exprs: &[&Expr],
+) -> Option<Expr> {
+    if exprs.len() < 2 || vt.current_function_is_async() {
+        return None;
+    }
+
+    let mut probe = vt.clone();
+    let (source, _, _) = literal_sibling_branch_parts(exprs[0])?;
+    if !crate::vapor::is_compiled_reactive_scalar_expr(
+        &probe,
+        source,
+        &probe.current_scalar_constructor_shadows(),
+    ) {
+        return None;
+    }
+
+    let value = ident("__rue_branch_value");
+    let mut stmts = vec![const_decl(value.clone(), source.clone())];
+    for expr in exprs {
+        let (candidate_source, literal, result) = literal_sibling_branch_parts(expr)?;
+        if !same_literal_sibling_source(source, candidate_source) {
+            return None;
+        }
+        let case =
+            compiled_branch_case(literal.clone(), compiled_branch_result(&mut probe, result)?);
+        stmts.push(Stmt::If(IfStmt {
+            span: DUMMY_SP,
+            test: Box::new(Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::EqEqEq,
+                left: Box::new(Expr::Ident(value.clone())),
+                right: Box::new(literal),
+            })),
+            cons: Box::new(return_expr(case)),
+            alt: None,
+        }));
+    }
+    stmts.push(return_expr(compiled_branch_case(Expr::Ident(value), empty_compiled_root_expr())));
+    *vt = probe;
+    Some(compiled_branch_factory(stmts))
+}
+
+pub(crate) fn try_make_compiled_branch_expr(vt: &mut VaporTransform, expr: &Expr) -> Option<Expr> {
+    if vt.current_function_is_async() {
+        return None;
+    }
+    let shadows = vt.current_scalar_constructor_shadows();
+    if crate::vapor::is_compiled_reactive_scalar_expr(vt, expr, &shadows) {
+        return None;
+    }
+    match crate::utils::unwrap_expr(expr) {
+        Expr::Cond(cond) => {
+            let consequent = compiled_branch_case(
+                Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+                compiled_branch_result(vt, cond.cons.as_ref())?,
+            );
+            let alternate = compiled_branch_case(
+                Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false })),
+                compiled_branch_result(vt, cond.alt.as_ref())?,
+            );
+            Some(compiled_branch_factory(vec![
+                Stmt::If(IfStmt {
+                    span: DUMMY_SP,
+                    test: cond.test.clone(),
+                    cons: Box::new(return_expr(consequent)),
+                    alt: None,
+                }),
+                return_expr(alternate),
+            ]))
+        }
+        Expr::Bin(binary)
+            if matches!(
+                binary.op,
+                BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing
+            ) =>
+        {
+            let value = ident("__rue_branch_value");
+            let value_expr = Expr::Ident(value.clone());
+            let right = compiled_branch_result(vt, binary.right.as_ref())?;
+            let mut stmts = vec![const_decl(value, *binary.left.clone())];
+            match binary.op {
+                BinaryOp::LogicalAnd => {
+                    let right = compiled_branch_case(
+                        Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+                        right,
+                    );
+                    stmts.push(Stmt::If(IfStmt {
+                        span: DUMMY_SP,
+                        test: Box::new(value_expr.clone()),
+                        cons: Box::new(return_expr(right)),
+                        alt: None,
+                    }));
+                    let is_number = Expr::Bin(BinExpr {
+                        span: DUMMY_SP,
+                        op: BinaryOp::LogicalOr,
+                        left: Box::new(typeof_is(value_expr.clone(), "number")),
+                        right: Box::new(typeof_is(value_expr.clone(), "bigint")),
+                    });
+                    stmts.push(Stmt::If(IfStmt {
+                        span: DUMMY_SP,
+                        test: Box::new(is_number),
+                        cons: Box::new(return_expr(compiled_branch_case(
+                            value_expr.clone(),
+                            scalar_compiled_root_expr(value_expr),
+                        ))),
+                        alt: None,
+                    }));
+                    stmts.push(return_expr(compiled_branch_case(
+                        Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false })),
+                        empty_compiled_root_expr(),
+                    )));
+                }
+                BinaryOp::LogicalOr => {
+                    stmts.push(Stmt::If(IfStmt {
+                        span: DUMMY_SP,
+                        test: Box::new(value_expr.clone()),
+                        cons: Box::new(return_expr(compiled_branch_case(
+                            value_expr.clone(),
+                            scalar_compiled_root_expr(value_expr),
+                        ))),
+                        alt: None,
+                    }));
+                    stmts.push(return_expr(compiled_branch_case(
+                        Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: false })),
+                        right,
+                    )));
+                }
+                BinaryOp::NullishCoalescing => {
+                    stmts.push(Stmt::If(IfStmt {
+                        span: DUMMY_SP,
+                        test: Box::new(Expr::Bin(BinExpr {
+                            span: DUMMY_SP,
+                            op: BinaryOp::NotEq,
+                            left: Box::new(value_expr.clone()),
+                            right: Box::new(Expr::Lit(Lit::Null(Null { span: DUMMY_SP }))),
+                        })),
+                        cons: Box::new(return_expr(compiled_branch_case(
+                            value_expr.clone(),
+                            scalar_compiled_root_expr(value_expr),
+                        ))),
+                        alt: None,
+                    }));
+                    stmts.push(return_expr(compiled_branch_case(
+                        Expr::Lit(Lit::Null(Null { span: DUMMY_SP })),
+                        right,
+                    )));
+                }
+                _ => unreachable!(),
+            }
+            Some(compiled_branch_factory(stmts))
+        }
+        _ => None,
+    }
+}
+
+pub(crate) fn compiled_branch_reader_from_handle(expr: &Expr) -> Option<Expr> {
+    let Expr::Call(call) = crate::utils::unwrap_expr(expr) else {
+        return None;
+    };
+    if call_callee_ident_name(call) != Some("_$compiledBranch") || call.args.len() != 1 {
+        return None;
+    }
+    let arg = call.args.first()?;
+    arg.spread.is_none().then(|| *arg.expr.clone())
+}
+
+pub(crate) fn try_make_compiled_branch_reader(
+    vt: &mut VaporTransform,
+    expr: &Expr,
+) -> Option<Expr> {
+    let handle = try_make_compiled_branch_expr(vt, expr)?;
+    compiled_branch_reader_from_handle(&handle)
+}
+
+pub(crate) fn is_compiled_branch_expr(vt: &VaporTransform, expr: &Expr) -> bool {
+    fn result_is_safe(vt: &VaporTransform, expr: &Expr) -> bool {
+        let inner = crate::utils::unwrap_expr(expr);
+        match inner {
+            Expr::JSXElement(element) => {
+                (crate::utils::is_component(&element.opening.name)
+                    && crate::element_component::is_compiled_component_element(vt, element))
+                    || (!crate::utils::is_component(&element.opening.name)
+                        && extract_reactive_jsx_key_expr(element).is_none()
+                        && crate::element_children::is_compiled_safe_element(vt, element))
+            }
+            Expr::JSXFragment(fragment) => {
+                crate::element_children::is_compiled_safe_fragment(vt, fragment)
+            }
+            Expr::Call(call) => crate::element_children::compiled_list_call_is_safe(vt, call),
+            _ if is_compiled_slot_source_expr(inner) => true,
+            _ if is_static_empty_like(inner) => true,
+            _ if crate::vapor::is_compiled_reactive_scalar_expr(
+                vt,
+                inner,
+                &vt.current_scalar_constructor_shadows(),
+            ) =>
+            {
+                true
+            }
+            Expr::Cond(_) | Expr::Bin(_) => branch_is_safe(vt, inner),
+            _ => false,
+        }
+    }
+
+    fn branch_is_safe(vt: &VaporTransform, expr: &Expr) -> bool {
+        if vt.current_function_is_async() {
+            return false;
+        }
+        match crate::utils::unwrap_expr(expr) {
+            Expr::Cond(cond) => {
+                result_is_safe(vt, cond.cons.as_ref()) && result_is_safe(vt, cond.alt.as_ref())
+            }
+            Expr::Bin(binary)
+                if matches!(
+                    binary.op,
+                    BinaryOp::LogicalAnd | BinaryOp::LogicalOr | BinaryOp::NullishCoalescing
+                ) =>
+            {
+                result_is_safe(vt, binary.right.as_ref())
+            }
+            _ => false,
+        }
+    }
+
+    branch_is_safe(vt, expr)
 }
 
 fn call_callee_ident_name(call: &CallExpr) -> Option<&str> {
@@ -298,7 +831,7 @@ fn use_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
 }
 
 fn hook_wrapped_call_returns_jsx_renderable(call: &CallExpr) -> bool {
-    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+    if call_callee_ident_name(call) != Some("_$compiledWithHookId") {
         return false;
     }
 
@@ -309,6 +842,10 @@ fn call_returns_jsx_renderable(call: &CallExpr) -> bool {
     use_memo_call_returns_jsx_renderable(call)
         || hook_wrapped_call_returns_jsx_renderable(call)
         || map_call_returns_jsx_renderable(call)
+        || match &call.callee {
+            Callee::Expr(callee) => arrow_returns_jsx_renderable(callee.as_ref()),
+            _ => false,
+        }
 }
 
 fn use_memo_call_has_empty_deps(call: &CallExpr) -> bool {
@@ -319,7 +856,7 @@ fn use_memo_call_has_empty_deps(call: &CallExpr) -> bool {
 }
 
 fn hook_wrapped_call_has_empty_memo_deps(call: &CallExpr) -> bool {
-    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+    if call_callee_ident_name(call) != Some("_$compiledWithHookId") {
         return false;
     }
 
@@ -391,7 +928,7 @@ fn rewrite_use_memo_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> O
 }
 
 fn rewrite_hook_wrapped_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
-    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+    if call_callee_ident_name(call) != Some("_$compiledWithHookId") {
         return None;
     }
 
@@ -407,25 +944,40 @@ fn rewrite_map_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option
         return None;
     }
 
-    let next = call.clone();
-
-    let fragment = JSXFragment {
-        span: DUMMY_SP,
-        opening: JSXOpeningFragment { span: DUMMY_SP },
-        children: vec![JSXElementChild::JSXExprContainer(JSXExprContainer {
-            span: DUMMY_SP,
-            expr: JSXExpr::Expr(Box::new(Expr::Call(next))),
-        })],
-        closing: JSXClosingFragment { span: DUMMY_SP },
+    let mut next = call.clone();
+    let callback = next.args.first_mut()?;
+    let Expr::Arrow(arrow) = crate::utils::unwrap_expr(callback.expr.as_ref()) else {
+        return None;
     };
-
-    Some(jsx_fragment_to_slot_expr(vt, &fragment))
+    let mut rewritten = arrow.clone();
+    match rewritten.body.as_mut() {
+        BlockStmtOrExpr::Expr(expr) => {
+            **expr = make_expr_for_slot(vt, crate::utils::unwrap_expr(expr.as_ref()));
+        }
+        BlockStmtOrExpr::BlockStmt(block) => block.visit_mut_with(vt),
+    }
+    callback.expr = Box::new(Expr::Arrow(rewritten));
+    Some(Expr::Call(next))
 }
 
 fn rewrite_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
     rewrite_use_memo_call_for_slot(vt, call)
         .or_else(|| rewrite_hook_wrapped_call_for_slot(vt, call))
         .or_else(|| rewrite_map_call_for_slot(vt, call))
+        .or_else(|| {
+            let Callee::Expr(callee) = &call.callee else {
+                return None;
+            };
+            if !arrow_returns_jsx_renderable(callee.as_ref()) {
+                return None;
+            }
+            let mut next = call.clone();
+            let Callee::Expr(next_callee) = &mut next.callee else {
+                return None;
+            };
+            *next_callee = Box::new(rewrite_arrow_expr_body_for_slot(vt, next_callee.as_ref())?);
+            Some(Expr::Call(next))
+        })
 }
 
 fn is_svg_tag(tag: &str) -> bool {
@@ -522,6 +1074,38 @@ fn is_opaque_renderable_call_expr(call: &CallExpr) -> bool {
     !is_text_coercion_call_name(callee_name)
 }
 
+fn arrow_returns_known_renderable(vt: &VaporTransform, expr: &Expr) -> bool {
+    let Expr::Arrow(arrow) = crate::utils::unwrap_expr(expr) else {
+        return false;
+    };
+    let BlockStmtOrExpr::Expr(body) = arrow.body.as_ref() else {
+        return false;
+    };
+    let Expr::Call(call) = crate::utils::unwrap_expr(body.as_ref()) else {
+        return false;
+    };
+    call_callee_ident_name(call)
+        .map(|name| vt.current_renderable_local_names().contains(name))
+        .unwrap_or(false)
+}
+
+fn map_call_returns_known_renderable(vt: &VaporTransform, call: &CallExpr) -> bool {
+    let Callee::Expr(callee) = &call.callee else {
+        return false;
+    };
+    let Expr::Member(MemberExpr { prop: MemberProp::Ident(prop), .. }) =
+        crate::utils::unwrap_expr(callee.as_ref())
+    else {
+        return false;
+    };
+    prop.sym.as_ref() == "map"
+        && call
+            .args
+            .first()
+            .map(|arg| arrow_returns_known_renderable(vt, arg.expr.as_ref()))
+            .unwrap_or(false)
+}
+
 fn expr_is_renderable_local_alias_source(
     inner: &Expr,
     known_renderable_locals: &HashSet<String>,
@@ -606,7 +1190,9 @@ fn contains_nested_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> 
         Expr::Member(_) => {
             !is_plain_local_member_expr(vt, unwrapped) && is_non_ref_member_expr(unwrapped)
         }
-        Expr::Call(call) => is_opaque_renderable_call_expr(call),
+        Expr::Call(call) => {
+            is_opaque_renderable_call_expr(call) || map_call_returns_known_renderable(vt, call)
+        }
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             contains_nested_opaque_renderable_expr(vt, cons.as_ref())
                 || contains_nested_opaque_renderable_expr(vt, alt.as_ref())
@@ -645,7 +1231,9 @@ fn contains_opaque_renderable_expr(vt: &VaporTransform, inner: &Expr) -> bool {
         Expr::Member(_) => {
             !is_plain_local_member_expr(vt, unwrapped) && is_non_ref_member_expr(unwrapped)
         }
-        Expr::Call(call) => is_opaque_renderable_call_expr(call),
+        Expr::Call(call) => {
+            is_opaque_renderable_call_expr(call) || map_call_returns_known_renderable(vt, call)
+        }
         Expr::Cond(CondExpr { cons, alt, .. }) => {
             contains_nested_opaque_renderable_expr(vt, cons.as_ref())
                 || contains_nested_opaque_renderable_expr(vt, alt.as_ref())
@@ -851,7 +1439,7 @@ pub fn emit_element_expr_container_child(
 ) {
     log::debug("element_expr: emit container child");
     // 处理元素子节点中的表达式容器：
-    // - 若为 `obj.map(cb)` 且回调返回 JSX，走列表渲染改写（`_$vaporKeyedList`）
+    // - 若为 `obj.map(cb)` 且回调返回 JSX，生成 compiled keyed row factory
     // - 若为 `props.children` 或普通插槽，生成起止注释并以 `renderBetween` 渲染
     // - 若表达式包含 JSX（条件/逻辑），统一改写为可挂载槽值再作为插槽渲染
     // - 若不含 JSX：
@@ -862,8 +1450,10 @@ pub fn emit_element_expr_container_child(
         JSXExpr::JSXEmptyExpr(_) => {}
         JSXExpr::Expr(expr) => {
             let inner = crate::utils::unwrap_expr(expr.as_ref());
+            let list_stmt_start = stmts.len();
             if let Expr::Call(call) = inner.clone()
                 && crate::element_list::try_build_list_from_map(vt, el_ident, &call, stmts)
+                && stmts.len() > list_stmt_start
             {
                 log::debug("element_expr: list map path");
                 // map(JSX) 已经被列表模块完整接管，后续不再当普通表达式处理。
@@ -895,6 +1485,15 @@ pub fn emit_element_expr_container_child(
                     // 含 JSX 或“可能返回可挂载内容”的不透明表达式走 slot path；
                     // style/svg 文本环境例外，那里表达式更可能是纯文本内容。
                     log::debug("element_expr: renderable-like expr -> slot");
+                    if let Some(compiled_branch) = try_make_compiled_branch_expr(vt, &inner_top) {
+                        crate::element_slot::render_compiled_branch_for_slot(
+                            vt,
+                            el_ident,
+                            &compiled_branch,
+                            stmts,
+                        );
+                        return;
+                    }
                     let expr_for_slot = crate::element_expr::make_expr_for_slot(vt, &inner_top);
                     let render_once = is_empty_deps_memoized_jsx_expr(&inner_top)
                         || is_empty_deps_memoized_jsx_expr(&expr_for_slot);
@@ -1013,7 +1612,7 @@ pub fn emit_element_expr_container_child(
                                 return_type: None,
                                 ctxt: SyntaxContext::empty(),
                             });
-                            let watch = call_ident("watchEffect", vec![arrow]);
+                            let watch = call_ident("effect", vec![arrow]);
                             stmts.push(Stmt::Expr(ExprStmt {
                                 span: DUMMY_SP,
                                 expr: Box::new(watch),
@@ -1030,6 +1629,46 @@ pub fn emit_element_expr_container_child(
                 }
             }
         }
+    }
+}
+
+pub(crate) fn emit_element_expr_container_child_at(
+    vt: &mut VaporTransform,
+    parent: &Ident,
+    anchor: &Ident,
+    ec: &JSXExprContainer,
+    stmts: &mut Vec<Stmt>,
+) {
+    let JSXExpr::Expr(expr) = &ec.expr else {
+        return;
+    };
+    let inner = crate::utils::unwrap_expr(expr.as_ref());
+    let list_stmt_start = stmts.len();
+    if let Expr::Call(call) = inner
+        && crate::element_list::try_build_list_from_map_at(vt, parent, anchor, call, stmts)
+        && stmts.len() > list_stmt_start
+    {
+        return;
+    }
+
+    let is_children = crate::utils::is_children_member_expr(inner);
+    if !is_children && let Some(compiled_branch) = try_make_compiled_branch_expr(vt, inner) {
+        crate::element_slot::render_compiled_branch_for_slot_at(
+            vt,
+            parent,
+            anchor,
+            &compiled_branch,
+            stmts,
+        );
+        return;
+    }
+    let expr_for_slot = if is_children { inner.clone() } else { make_expr_for_slot(vt, inner) };
+    let render_once =
+        is_empty_deps_memoized_jsx_expr(inner) || is_empty_deps_memoized_jsx_expr(&expr_for_slot);
+    if render_once {
+        crate::element_slot::render_once_for_slot_at(vt, parent, anchor, &expr_for_slot, stmts);
+    } else {
+        crate::element_slot::render_between_for_slot_at(vt, parent, anchor, &expr_for_slot, stmts);
     }
 }
 

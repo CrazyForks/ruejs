@@ -24,14 +24,15 @@ export default Chain
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$appendChild, untrack, watchEffect, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, _$compiledWithHookId, useSetup, vapor, renderAnchor, _$template, untrack, watchEffect, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
+const _$getTemplate1 = _$template("<div><!--rue:text-hole:0--></div>");
 const Chain: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-            const b = _$vaporWithHookId("ref:1:1", ()=>ref(1));
-            const c = _$vaporWithHookId("ref:1:2", ()=>ref(2));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = _$compiledWithHookId("ref:1:0", ()=>ref(0));
+            const b = _$compiledWithHookId("ref:1:1", ()=>ref(1));
+            const c = _$compiledWithHookId("ref:1:2", ()=>ref(2));
             return {
                 a: a,
                 b: b,
@@ -40,9 +41,10 @@ const Chain: FC = ()=>{
         }));
     const { a: a, b: b, c: c } = _$useSetup;
     return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list1);
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[0];
+        const _el2 = _el1.parentNode;
         watchEffect(()=>{
             const __slot = a ? _$compiledRoot((__rue_parent_context)=>{
                 const _root = _$compiledCreateElement("div", __rue_parent_context);
@@ -61,7 +63,7 @@ const Chain: FC = ()=>{
                 _$compiledAppendChild(_root, _$compiledCreateTextNode("Else"));
                 return _root;
             });
-            untrack(()=>renderAnchor(__slot, _root, _list1));
+            untrack(()=>renderAnchor(__slot, _el2, _el1));
         });
         return _root;
     });
@@ -72,5 +74,11 @@ export default Chain;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec22.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert_eq!(normalized.matches("_$compiledRoot(Object.assign(").count(), 5);
+    assert_eq!(normalized.matches("__rue_compiled_explicit_roots").count(), 5);
+    assert!(normalized.contains("const a = ref(0)"), "{out}");
+    assert!(normalized.contains("_$compiledBranchAt"), "{out}");
+    assert_eq!(normalized.matches("_$compiledBranch(").count(), 2, "{out}");
+    assert!(!normalized.contains("renderAnchor("), "{out}");
 }

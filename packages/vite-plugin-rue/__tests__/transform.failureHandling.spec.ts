@@ -79,7 +79,7 @@ describe('vite-plugin-rue transform failure handling', () => {
           if (startedTransforms === 3) resolveThird()
           releases.push(() => {
             activeTransforms -= 1
-            resolve(payload.code)
+            resolve('export const compiled = true')
           })
         }),
     } as RueVitePluginOptions)
@@ -129,6 +129,16 @@ describe('vite-plugin-rue transform failure handling', () => {
     )
   })
 
+  it('reports residual JSX as a compiler error instead of handing it to Vite', async () => {
+    const source = ['const ready = true', 'export const View = ready ? <main /> : null'].join('\n')
+
+    await expect(
+      invokeTransform(source, fixtureId('ResidualJsx'), {
+        transformExecutor: () => source,
+      }),
+    ).rejects.toThrow(/ResidualJsx\.tsx:2:\d+/)
+  })
+
   it('times out stuck transforms instead of hanging the Vite session', async () => {
     const source = `
       import { type FC } from '@rue-js/rue'
@@ -158,7 +168,7 @@ describe('vite-plugin-rue transform failure handling', () => {
     const plugin = createPlugin({
       transformExecutor: payload => {
         payloads.push(payload)
-        return source
+        return 'export const compiled = true'
       },
     })
 

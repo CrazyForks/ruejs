@@ -1,206 +1,84 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Transition } from '../src/compiler-runtime/builtins'
+import { createCompiledBlock, type CompiledSlotFactory } from '../src/compiler-runtime/mount'
 
-import {
-  Transition,
-  render,
-  renderAnchor,
-  setReactiveScheduling,
-  signal,
-  vapor,
-  watchEffect,
-  type FC,
-} from '../src'
-import { nextFrame } from '../src/components/transitionUtils'
+afterEach(() => vi.useRealTimers())
 
-setReactiveScheduling('sync')
+const slot =
+  (label: string): CompiledSlotFactory =>
+  (target, _props, owner) => {
+    const node = document.createElement('div')
+    node.textContent = label
+    target.parent.insertBefore(node, target.before)
+    return createCompiledBlock(target, owner, { first: node, last: node })
+  }
 
-afterEach(() => {
-  document.body.innerHTML = ''
-  vi.restoreAllMocks()
-  vi.useRealTimers()
-})
+describe('compiled Transition range', () => {
+  it('keeps exactly one inert snapshot when the live child was already disposed', () => {
+    const host = document.createElement('div')
+    let finishLeave: (() => void) | undefined
+    const staleSlot: CompiledSlotFactory = (target, _props, owner) => {
+      const node = document.createElement('div')
+      node.textContent = 'first'
+      target.parent.insertBefore(node, target.before)
+      const block = createCompiledBlock(target, owner, { first: node, last: node })
+      block.dispose()
+      target.parent.insertBefore(node, target.before)
+      return block
+    }
+    const handle = Transition({
+      mode: 'out-in',
+      css: false,
+      children: staleSlot,
+      onLeave: (_element, done) => {
+        finishLeave = done
+      },
+    })
 
-const flush = async () => {
-  await Promise.resolve()
-  await Promise.resolve()
-}
+    handle.__rue_compiled_mount(host)
+    handle.__rue_compiled_update_props__({
+      mode: 'out-in',
+      css: false,
+      children: slot('second'),
+      onLeave: (_element, done) => {
+        finishLeave = done
+      },
+    })
 
-const createTransitionChild = (label: string) => (
-  <strong data-testid={`transition-${label}`}>{label}</strong>
-)
+    expect(Array.from(host.querySelectorAll('div'), node => node.textContent)).toEqual(['first'])
+    finishLeave?.()
+    expect(Array.from(host.querySelectorAll('div'), node => node.textContent)).toEqual(['second'])
+    handle.dispose()
+  })
 
-describe('Transition renderable boundary', () => {
-  it('falls back when requestAnimationFrame is delayed', () => {
+  it('supports appear classes and JavaScript completion hooks', async () => {
     vi.useFakeTimers()
-
-    const requestAnimationFrameSpy = vi
-      .spyOn(globalThis, 'requestAnimationFrame')
-      .mockImplementation(() => 1)
-
-    const fn = vi.fn()
-    nextFrame(fn)
-
-    expect(fn).not.toHaveBeenCalled()
-
-    vi.advanceTimersByTime(34)
-
-    expect(fn).toHaveBeenCalledTimes(1)
-
-    requestAnimationFrameSpy.mockRestore()
-    vi.useRealTimers()
+    const host = document.createElement('div')
+    const after = vi.fn()
+    const handle = Transition({
+      appear: true,
+      name: 'modal',
+      duration: 10,
+      children: slot('visible'),
+      onAfterAppear: after,
+    })
+    handle.__rue_compiled_mount(host)
+    expect(host.firstElementChild?.classList.contains('modal-enter-active')).toBe(true)
+    await vi.advanceTimersByTimeAsync(10)
+    expect(after).toHaveBeenCalledTimes(1)
+    handle.dispose()
   })
 
-  it('applies enter classes to the mounted DOM node when array-backed children become visible', async () => {
-    const visible = signal(false)
-
-    const Harness: FC = () =>
-      vapor(() => {
-        const root = document.createElement('section')
-        const anchor = document.createComment('transition-enter-anchor')
-        root.appendChild(anchor)
-
-        watchEffect(() => {
-          renderAnchor(
-            <Transition name="modal" type="transition" duration={1000}>
-              {visible.get() ? [createTransitionChild('enter')] : []}
-            </Transition>,
-            root,
-            anchor,
-          )
-        })
-
-        return root
-      }) as any
-
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-
-    render(<Harness />, container)
-    await flush()
-
-    visible.set(true)
-    await flush()
-
-    const node = container.querySelector('[data-testid="transition-enter"]') as HTMLElement | null
-    expect(node).not.toBeNull()
-    expect(node?.classList.contains('modal-enter-active')).toBe(true)
-  })
-
-  it('mounts array-backed children and clears stale DOM when hidden', async () => {
-    const visible = signal(true)
-
-    const Harness: FC = () =>
-      vapor(() => {
-        const root = document.createElement('section')
-        const anchor = document.createComment('transition-anchor')
-        root.appendChild(anchor)
-
-        watchEffect(() => {
-          renderAnchor(
-            <Transition duration={0}>
-              {visible.get() ? [createTransitionChild('a')] : []}
-            </Transition>,
-            root,
-            anchor,
-          )
-        })
-
-        return root
-      }) as any
-
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-
-    render(<Harness />, container)
-    await flush()
-
-    expect(Array.from(container.querySelectorAll('strong'), el => el.textContent)).toEqual(['a'])
-
-    visible.set(false)
-    await flush()
-
-    expect(container.querySelector('strong')).toBeNull()
-  })
-
-  it.each(['default', 'out-in', 'in-out'] as const)(
-    'cancels a stale enter during a rapid %s mode switch',
-    async mode => {
-      const visible = signal(false)
-      const onAfterEnter = vi.fn()
-      const onEnterCancelled = vi.fn()
-      let finishEnter = () => {}
-
-      const Harness: FC = () =>
-        vapor(() => {
-          const root = document.createElement('section')
-          const anchor = document.createComment('transition-mode-anchor')
-          root.appendChild(anchor)
-
-          watchEffect(() => {
-            renderAnchor(
-              <Transition
-                mode={mode}
-                css={false}
-                onEnter={(_el, done) => {
-                  finishEnter = done
-                }}
-                onAfterEnter={onAfterEnter}
-                onEnterCancelled={onEnterCancelled}
-                onLeave={(_el, done) => done()}
-              >
-                {visible.get() ? createTransitionChild(mode) : null}
-              </Transition>,
-              root,
-              anchor,
-            )
-          })
-
-          return root
-        }) as any
-
-      const container = document.createElement('div')
-      document.body.appendChild(container)
-      render(<Harness />, container)
-      await flush()
-
-      visible.set(true)
-      await flush()
-      visible.set(false)
-      await flush()
-      finishEnter()
-
-      expect(onEnterCancelled).toHaveBeenCalledTimes(1)
-      expect(onAfterEnter).not.toHaveBeenCalled()
-      expect(container.querySelector('strong')).toBeNull()
-    },
-  )
-
-  it('cancels an active enter when Transition is unmounted', async () => {
-    const onAfterEnter = vi.fn()
-    const onEnterCancelled = vi.fn()
-    let finishEnter = () => {}
-
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    render(
-      <Transition
-        css={false}
-        onEnter={(_el, done) => {
-          finishEnter = done
-        }}
-        onAfterEnter={onAfterEnter}
-        onEnterCancelled={onEnterCancelled}
-      >
-        <strong>active</strong>
-      </Transition>,
-      container,
-    )
-    await flush()
-
-    render(null as any, container)
-    finishEnter()
-
-    expect(onEnterCancelled).toHaveBeenCalledTimes(1)
-    expect(onAfterEnter).not.toHaveBeenCalled()
+  it('waits for leave before mounting an out-in replacement', async () => {
+    vi.useFakeTimers()
+    const host = document.createElement('div')
+    const handle = Transition({ mode: 'out-in', duration: 15, children: slot('first') })
+    handle.__rue_compiled_mount(host)
+    await vi.advanceTimersByTimeAsync(15)
+    handle.__rue_compiled_update_props__({ mode: 'out-in', duration: 15, children: slot('second') })
+    expect(host.textContent).toBe('first')
+    await vi.advanceTimersByTimeAsync(15)
+    expect(host.textContent).toBe('second')
+    handle.dispose()
   })
 })

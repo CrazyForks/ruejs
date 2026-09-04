@@ -258,21 +258,18 @@ const Image: FC<ImageProps> = ({ className, children, src, alt, bodyClassName, i
     className,
   )
 
-  if (hasRenderableNode(children)) {
-    return <div className={imageClassName}>{children}</div>
-  }
-
-  if (src == null) {
-    return null
-  }
-
-  return (
-    <div className={imageClassName}>
-      <div className={bodyClassName ?? 'w-10 rounded-full'}>
-        <img alt={alt ?? 'chat image'} className={imgClassName} src={src} />
+  if (src != null) {
+    return (
+      <div className={imageClassName}>
+        <div className={bodyClassName ?? 'w-10 rounded-full'}>
+          <img alt={alt ?? 'chat image'} className={imgClassName} src={src} />
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  if (hasRenderableNode(children)) return <div className={imageClassName}>{children}</div>
+  return null
 }
 
 /** 语义消息组件：避免 helper 返回 JSX 时被深编译到组件边界之外。 */
@@ -501,7 +498,7 @@ type ChatCompound = FC<ChatProps> & {
   Image: FC<ImageProps>
 }
 
-const ChatCompound: ChatCompound = Object.assign(Chat, {
+const ChatCompound: ChatCompound = /*#__PURE__*/ Object.assign(Chat, {
   Bubble,
   Header,
   Footer,

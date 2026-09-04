@@ -3,13 +3,13 @@ import { createAppFallbackRenderer } from '../src/server/app-fallback-renderer.j
 import type { AppElements } from '../src/server/app-elements.js'
 import {
   createElement,
-  renderAppServerElementToStream,
+  renderAppServerElementToStreamAsync,
   type TestServerComponent,
   type TestServerNode,
 } from './app-server-protocol-test-utils.js'
 
 function renderElementToStream(element: TestServerNode | AppElements): ReadableStream<Uint8Array> {
-  return renderAppServerElementToStream(element)
+  return renderAppServerElementToStreamAsync(element)
 }
 
 function createRenderer(overrides?: {

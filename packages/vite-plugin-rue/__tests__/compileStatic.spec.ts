@@ -18,9 +18,12 @@ describe('compileRueStatic', () => {
       { id: '/virtual/static-entry.tsx', production: false },
     )
 
-    expect(code).toContain('/* RUE_VAPOR_TRANSFORMED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createElement("main"')
+    expect(code).toContain('/* RUE_TRANSFORMED */')
+    expect(code).toContain('@rue-js/rue/internal')
+    expect(code).toContain('_$compiledCreateElement("main"')
+    expect(code).not.toContain('@rue-js/runtime-vapor')
+    expect(code).not.toContain('@rue-js/rue/vapor')
+    expect(code).not.toContain('@rue-js/jsx-runtime')
     expect(code).not.toContain('<main')
   })
 

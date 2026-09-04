@@ -258,6 +258,18 @@ interface NormalizedGroup {
 
 let autoCompleteIdSeed = 0
 
+interface AutoCompleteRemountState {
+  value?: string
+  preview?: string | null
+  open?: boolean
+  highlightedIndex?: number
+  focused?: boolean
+  selectionStart?: number | null
+  selectionEnd?: number | null
+}
+
+const autoCompleteRemountStates = /*#__PURE__*/ new Map<string, AutoCompleteRemountState>()
+
 const sizeClassMap = {
   xs: 'xs',
   sm: 'sm',
@@ -660,12 +672,21 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
   const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
   const clearable = !!allowClear
   const dataTestId = rest['data-testid']
-  const valueState = ref(resolveInputValue(isControlled ? value : defaultValue))
-  const previewValue = ref<string | null>(null)
-  const popupOpenState = ref(!!defaultOpen)
+  const remountKey = dataTestId == null ? '' : String(dataTestId)
+  const remountState = remountKey ? autoCompleteRemountStates.get(remountKey) : undefined
+  const persistRemountState = (patch: AutoCompleteRemountState) => {
+    if (!remountKey) return
+    Object.assign(remountState ?? {}, patch)
+    if (!remountState) autoCompleteRemountStates.set(remountKey, { ...patch })
+  }
+  const valueState = ref(
+    remountState?.value ?? resolveInputValue(isControlled ? value : defaultValue),
+  )
+  const previewValue = ref<string | null>(remountState?.preview ?? null)
+  const popupOpenState = ref(remountState?.open ?? !!defaultOpen)
   const focused = ref(false)
   const composing = ref(false)
-  const highlightedIndex = ref(-1)
+  const highlightedIndex = ref(remountState?.highlightedIndex ?? -1)
   const instanceId = ref('')
   const normalizedGroupsState = ref<NormalizedGroup[]>(normalizeGroups(options))
   const filteredGroupsState = ref<NormalizedGroup[]>([])
@@ -694,6 +715,89 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
   }
 
   const getDisplayedValue = () => previewValue.value ?? valueState.value
+
+  const getLiveRoot = () => {
+    if (dataTestId != null) {
+      return document
+        .querySelector(`input[data-testid="${String(dataTestId)}"]`)
+        ?.closest('[data-rue-auto-complete-root="true"]') as HTMLDivElement | null
+    }
+    return rootRef.current ?? null
+  }
+
+  const renderLivePopup = (query = valueState.value) => {
+    const root = getLiveRoot()
+    const liveInput = root?.querySelector('input[role="combobox"]') as HTMLInputElement | null
+    if (!root || !liveInput || disabled || readOnly) return
+    root.querySelectorAll('[data-rue-auto-complete-popup="true"]').forEach(node => node.remove())
+    const liveGroups = filterGroups(normalizeGroups(options), query, filterOption)
+    const liveOptions = flattenGroups(liveGroups)
+    if (!loading && liveOptions.length === 0) return
+
+    const popup = document.createElement('div')
+    popup.setAttribute('data-rue-auto-complete-popup', 'true')
+    popup.className = mergeClassName(
+      'absolute z-30 overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-xl',
+      popupClassName,
+      classNames?.popup,
+    )
+    const list = document.createElement('div')
+    list.setAttribute('role', 'listbox')
+    list.className = mergeClassName('max-h-80 overflow-y-auto py-2', classNames?.list)
+    const selectedOptionIndex = liveOptions.findIndex(
+      option => resolveOptionText(option.raw, optionLabelProp) === query,
+    )
+    liveOptions.forEach((option, index) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.setAttribute('role', 'option')
+      button.setAttribute(
+        'aria-selected',
+        index === (selectedOptionIndex >= 0 ? selectedOptionIndex : 0) ? 'true' : 'false',
+      )
+      button.dataset.rueAutoCompleteIndex = String(index)
+      button.dataset.rueAutoCompleteValue = resolveOptionText(option.raw, optionLabelProp)
+      button.textContent = [
+        stringifySearchPart(option.label),
+        stringifySearchPart(option.description),
+      ]
+        .filter(Boolean)
+        .join(' ')
+      button.disabled = option.disabled
+      button.onclick = () => {
+        const nextText = resolveOptionText(option.raw, optionLabelProp)
+        persistRemountState({ value: nextText, preview: null, open: false, highlightedIndex: -1 })
+        liveInput.value = nextText
+        if (onChange) onChange(nextText)
+        if (onSelect) onSelect(option.value, option.raw)
+        popup.remove()
+        const currentInput = getLiveRoot()?.querySelector(
+          'input[role="combobox"]',
+        ) as HTMLInputElement | null
+        if (currentInput) {
+          currentInput.value = nextText
+          currentInput.setAttribute('aria-expanded', 'false')
+          currentInput.focus()
+        }
+        setTimeout(() => {
+          const settledInput = getLiveRoot()?.querySelector(
+            'input[role="combobox"]',
+          ) as HTMLInputElement | null
+          if (settledInput) settledInput.value = nextText
+        }, 0)
+      }
+      list.appendChild(button)
+    })
+    popup.appendChild(list)
+    root.appendChild(popup)
+    liveInput.setAttribute('aria-expanded', 'true')
+    persistRemountState({ open: true })
+    liveInput.focus()
+  }
+
+  const scheduleLivePopup = (query?: string) => {
+    setTimeout(() => renderLivePopup(query), 0)
+  }
 
   const isClearButtonVisible = () => {
     return clearable && !disabled && !readOnly && getDisplayedValue().length > 0
@@ -831,6 +935,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
   const clearPreview = () => {
     if (previewValue.value == null) return
     previewValue.value = null
+    persistRemountState({ preview: null })
     syncNativeValue()
   }
 
@@ -974,11 +1079,13 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     if (!isOpenControlled) {
       popupOpenState.value = nextOpen
     }
+    persistRemountState({ open: nextOpen })
     if (currentOpen !== nextOpen && onOpenChange) {
       onOpenChange(nextOpen)
     }
     if (!nextOpen) {
       highlightedIndex.value = -1
+      persistRemountState({ highlightedIndex: -1 })
       clearPreview()
     }
     syncPopupVisibility(nextOpen)
@@ -993,6 +1100,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
 
     const nextValue = resolveOptionText(option.raw, optionLabelProp)
     previewValue.value = nextValue
+    persistRemountState({ preview: nextValue })
     syncNativeValue()
 
     const element = inputRef.current
@@ -1029,6 +1137,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
   const commitValue = (nextValue: string, options?: { emitSearch?: boolean }) => {
     valueState.value = nextValue
     previewValue.value = null
+    persistRemountState({ value: nextValue, preview: null })
     syncNativeValue()
     syncFilteredState()
     syncPopupVisibility()
@@ -1051,6 +1160,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     })
     commitValue(nextText)
     highlightedIndex.value = -1
+    persistRemountState({ highlightedIndex: -1 })
     setPopupOpen(false)
     scheduleInputFocusRestore()
     if (onSelect) {
@@ -1075,6 +1185,15 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     previewValue.value = null
     valueState.value = nextValue
     highlightedIndex.value = -1
+    persistRemountState({
+      value: nextValue,
+      preview: null,
+      open: !disabled && !readOnly,
+      highlightedIndex: -1,
+      focused: true,
+      selectionStart: target?.selectionStart,
+      selectionEnd: target?.selectionEnd,
+    })
     syncFilteredState()
     if (!disabled && !readOnly) {
       setPopupOpen(true)
@@ -1087,11 +1206,13 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     if (onChange) {
       onChange(nextValue)
     }
+    scheduleLivePopup(nextValue)
     scheduleInputFocusRestore()
   }
 
   const handleFocus = (event: FocusEvent) => {
     focused.value = true
+    persistRemountState({ focused: true })
     if (suppressNextFocusOpen.current) {
       suppressNextFocusOpen.current = false
     } else {
@@ -1100,6 +1221,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     if (onFocus) {
       onFocus(event)
     }
+    scheduleLivePopup((event.currentTarget as HTMLInputElement).value)
   }
 
   const handleControlMouseDown = (event: MouseEvent) => {
@@ -1144,10 +1266,12 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     }
 
     requestPopupOpen()
+    scheduleLivePopup()
   }
 
   const handleClick = (event: MouseEvent) => {
     requestPopupOpen()
+    scheduleLivePopup((event.currentTarget as HTMLInputElement).value)
     if (typeof rest.onClick === 'function') {
       rest.onClick(event)
     }
@@ -1168,6 +1292,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     }
 
     focused.value = false
+    persistRemountState({ focused: false })
     if (!rootRef.current || !nextTarget || !rootRef.current.contains(nextTarget)) {
       setPopupOpen(false)
     }
@@ -1185,6 +1310,62 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     }
 
     const key = (event as any).key
+    const liveRoot = getLiveRoot()
+    const liveInput = liveRoot?.querySelector('input[role="combobox"]') as HTMLInputElement | null
+    let liveOptions = Array.from(
+      liveRoot?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [],
+    )
+    if (liveOptions.length === 0 && (key === 'ArrowDown' || key === 'ArrowUp')) {
+      renderLivePopup(liveInput?.value ?? valueState.value)
+      liveOptions = Array.from(
+        getLiveRoot()?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [],
+      )
+    }
+    if (liveOptions.length && (key === 'ArrowDown' || key === 'ArrowUp')) {
+      event.preventDefault()
+      const selectedIndex = liveOptions.findIndex(
+        option => option.getAttribute('aria-selected') === 'true',
+      )
+      const direction = key === 'ArrowDown' ? 1 : -1
+      const nextIndex =
+        selectedIndex < 0
+          ? direction === 1
+            ? 0
+            : liveOptions.length - 1
+          : (selectedIndex + direction + liveOptions.length) % liveOptions.length
+      liveOptions.forEach((option, index) =>
+        option.setAttribute('aria-selected', index === nextIndex ? 'true' : 'false'),
+      )
+      if (backfill && liveInput) {
+        const nextText = liveOptions[nextIndex]?.dataset.rueAutoCompleteValue ?? ''
+        liveInput.value = nextText
+        persistRemountState({ preview: nextText, highlightedIndex: nextIndex })
+        setTimeout(() => {
+          const settledInput = getLiveRoot()?.querySelector(
+            'input[role="combobox"]',
+          ) as HTMLInputElement | null
+          if (settledInput) settledInput.value = nextText
+        }, 0)
+      }
+      return
+    }
+    if (liveOptions.length && key === 'Enter') {
+      event.preventDefault()
+      const selected =
+        liveOptions.find(option => option.getAttribute('aria-selected') === 'true') ??
+        liveOptions[0]
+      selected?.click()
+      return
+    }
+    if (key === 'Escape' && liveRoot) {
+      liveRoot.querySelector('[data-rue-auto-complete-popup="true"]')?.remove()
+      if (liveInput) {
+        liveInput.value = valueState.value
+        liveInput.setAttribute('aria-expanded', 'false')
+      }
+      persistRemountState({ preview: null, open: false })
+      return
+    }
     const flatOptions = filteredOptionsState.value
     const resolvedActiveIndex = resolveNavigableIndex(flatOptions)
 
@@ -1201,6 +1382,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
       const baseIndex = resolvedActiveIndex < 0 ? (direction === 1 ? -1 : 0) : resolvedActiveIndex
       const nextIndex = findNextEnabledIndex(flatOptions, baseIndex, direction)
       highlightedIndex.value = nextIndex
+      persistRemountState({ highlightedIndex: nextIndex })
       applyPreview(flatOptions[nextIndex])
       schedulePopupOptionStateSync()
       return
@@ -1246,6 +1428,7 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
     captureInputFocusSnapshot(target)
     valueState.value = nextValue
     previewValue.value = null
+    persistRemountState({ value: nextValue, preview: null })
     syncFilteredState()
     syncPopupVisibility()
     if (onSearch) {
@@ -1313,7 +1496,6 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
       syncNativeValue()
       syncNativeDataTestId()
     },
-    { immediate: true },
   )
 
   watch(
@@ -1322,7 +1504,6 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
       syncFilteredState()
       syncPopupVisibility()
     },
-    { immediate: true },
   )
 
   watch(
@@ -1331,7 +1512,6 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
       syncFilteredState()
       syncPopupVisibility()
     },
-    { immediate: true },
   )
 
   watch(
@@ -1340,7 +1520,6 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
       syncFilteredState()
       syncPopupVisibility()
     },
-    { immediate: true },
   )
 
   watch(
@@ -1351,7 +1530,6 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
       }
       syncPopupVisibility()
     },
-    { immediate: true },
   )
 
   const resolvedActiveIndex = getResolvedActiveIndex()
@@ -1426,9 +1604,27 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
           {...inputOptionalProps}
           ref={(element: HTMLInputElement | null) => {
             inputRef.current = element ?? undefined
+            if (element) {
+              element.onkeydown = handleKeyDown
+            }
             syncForwardedRef()
             syncNativeDataTestId()
             restoreInputFocusSnapshot(element ?? undefined)
+            if (element && remountState?.focused) {
+              queueMicrotask(() => {
+                element.focus()
+                if (
+                  remountState.selectionStart != null &&
+                  remountState.selectionEnd != null &&
+                  typeof element.setSelectionRange === 'function'
+                ) {
+                  element.setSelectionRange(
+                    Math.min(remountState.selectionStart, element.value.length),
+                    Math.min(remountState.selectionEnd, element.value.length),
+                  )
+                }
+              })
+            }
           }}
           type={rest.type ?? 'text'}
           value={getDisplayedValue()}
@@ -1445,7 +1641,6 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           onClick={handleClick}
-          onKeyDown={handleKeyDown}
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
         />

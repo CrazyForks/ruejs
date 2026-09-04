@@ -459,6 +459,14 @@ const renderSection = (content: any, className: string) => {
   return <li className={className}>{content}</li>
 }
 
+const ListDivHost: FC<any> = ({ children, ...rest }) => <div {...rest}>{children}</div>
+const ListParagraphHost: FC<any> = ({ children, ...rest }) => <p {...rest}>{children}</p>
+const ListSpanHost: FC<any> = ({ children, ...rest }) => <span {...rest}>{children}</span>
+const ListItemHost: FC<any> = ({ children, ...rest }) => <li {...rest}>{children}</li>
+const LIST_BLOCK_HOSTS = { div: ListDivHost, p: ListParagraphHost, span: ListSpanHost }
+const LIST_PAGER_HOSTS = { div: ListDivHost, li: ListItemHost }
+const Component = ListDivHost as any
+
 /** 渲染 Pager 的内部工具函数。 */
 const renderPager = (
   config: NormalizedPaginationConfig | null,
@@ -466,7 +474,6 @@ const renderPager = (
   as: 'li' | 'div' = 'li',
 ) => {
   if (!config) return null
-  const Component = as as any
   const pageCount = Math.max(1, Math.ceil(config.total / config.pageSize))
   if (config.hideOnSinglePage && pageCount <= 1) return null
   const pages = Array.from({ length: pageCount }, (_, index) => index + 1)
@@ -480,7 +487,11 @@ const renderPager = (
         : 'justify-end'
 
   return (
-    <Component className={mergeClassNames('flex flex-wrap items-center gap-3 p-3', alignClass)}>
+    <Component
+      is={as}
+      registry={LIST_PAGER_HOSTS}
+      className={mergeClassNames('flex flex-wrap items-center gap-3 p-3', alignClass)}
+    >
       {config.showTotal ? (
         <span className="mr-auto text-xs opacity-60">
           {config.showTotal(config.total, [start, end])}
@@ -684,9 +695,13 @@ const Row: FC<ListRowProps> = ({ normal, className, children, ...rest }) => {
 
 /** 列：可伸展区域。 */
 const ColGrow: FC<ListColProps> = ({ as = 'div', className, children, ...rest }) => {
-  const Component = as as any
   return (
-    <Component {...rest} className={mergeClassNames('list-col-grow', className)}>
+    <Component
+      is={as}
+      registry={LIST_BLOCK_HOSTS}
+      {...rest}
+      className={mergeClassNames('list-col-grow', className)}
+    >
       {children}
     </Component>
   )
@@ -694,9 +709,13 @@ const ColGrow: FC<ListColProps> = ({ as = 'div', className, children, ...rest })
 
 /** 列：包裹区域。 */
 const ColWrap: FC<ListColProps> = ({ as = 'div', className, children, ...rest }) => {
-  const Component = as as any
   return (
-    <Component {...rest} className={mergeClassNames('list-col-wrap', className)}>
+    <Component
+      is={as}
+      registry={LIST_BLOCK_HOSTS}
+      {...rest}
+      className={mergeClassNames('list-col-wrap', className)}
+    >
       {children}
     </Component>
   )
@@ -822,11 +841,11 @@ type ListCompound = FC<ListProps> & {
   }
 }
 
-const ItemCompound = Object.assign(Item, {
+const ItemCompound = /*#__PURE__*/ Object.assign(Item, {
   Meta,
 })
 
-const ListCompound: ListCompound = Object.assign(List, {
+const ListCompound: ListCompound = /*#__PURE__*/ Object.assign(List, {
   Row,
   ColGrow,
   ColWrap,

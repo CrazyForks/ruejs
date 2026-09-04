@@ -134,7 +134,7 @@ const MESSAGE_ITEM_CLASS =
 /** MESSAGE_BODY_CLASS 内部常量。 */
 const MESSAGE_BODY_CLASS = 'text-sm leading-5'
 /** MESSAGE_CONFIG_KEYS 内部常量。 */
-const MESSAGE_CONFIG_KEYS = new Set([
+const MESSAGE_CONFIG_KEYS = /*#__PURE__*/ new Set([
   'key',
   'content',
   'children',
@@ -492,7 +492,7 @@ type MessageCompound = FC<MessageProps> & {
   config: (options: MessageConfigOptions) => void
 }
 
-const MessageCompound: MessageCompound = Object.assign(Message, {
+const MessageCompound: MessageCompound = /*#__PURE__*/ Object.assign(Message, {
   Item: MessageItem,
   useMessage,
   open: openGlobalMessage,

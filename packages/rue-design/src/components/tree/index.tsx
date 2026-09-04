@@ -1,4 +1,3 @@
-/* RUE_VAPOR_TRANSFORMED */
 /* oxlint-disable eslint/no-unused-vars -- Rue's transformed TSX in this file leaves helper usage opaque to oxlint. */
 /*
 Tree 组件概述
@@ -7,16 +6,8 @@ Tree 组件概述
 - 实现：保持手写 TSX 结构，避免被 Vite 阶段重复 Vapor-transform。
 */
 import type { FC } from '@rue-js/rue'
-import {
-  batch,
-  onMounted,
-  onUnmounted,
-  ref,
-  render as renderRue,
-  toRaw,
-  useRef,
-  watch,
-} from '@rue-js/rue'
+import * as RueRuntime from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, render as renderRue, toRaw, useRef, watch } from '@rue-js/rue'
 
 /** TreeKey 标识键类型。 */
 export type TreeKey = string | number
@@ -429,6 +420,11 @@ interface TreeRenderSlice {
 
 interface TreePersistedState {
   expandedKeys?: TreeKey[]
+  loadingKeyTexts?: string[]
+  lastSelectedKeyText?: string | null
+  cachedSelectedKeyTexts?: string[]
+  suppressClickKeyText?: string | null
+  renderRequests?: Set<() => void>
 }
 
 interface TreeNormalizationCache {
@@ -439,9 +435,12 @@ interface TreeNormalizationCache {
   normalizedTree: NormalizedTreeResult
 }
 
-const treePersistedStateBySignature = new Map<string, TreePersistedState>()
-const treeNormalizationCacheByData = new WeakMap<object, TreeNormalizationCache[]>()
-const treeNormalizationCacheByFirstRoot = new WeakMap<object, TreeNormalizationCache[]>()
+const treePersistedStateBySignature = /*#__PURE__*/ new Map<string, TreePersistedState>()
+const treeNormalizationCacheByData = /*#__PURE__*/ new WeakMap<object, TreeNormalizationCache[]>()
+const treeNormalizationCacheByFirstRoot = /*#__PURE__*/ new WeakMap<
+  object,
+  TreeNormalizationCache[]
+>()
 const maxTreeNormalizationCacheGroupSize = 8
 
 const isObjectCacheKey = (value: unknown): value is object =>
@@ -575,7 +574,7 @@ const serializeKey = (key: TreeKey) => `${typeof key}:${String(key)}`
 /** uniq Keys 的内部工具函数。 */
 const uniqKeys = (keys?: ReadonlyArray<TreeKey>) => {
   const next: TreeKey[] = []
-  const seen = new Set<string>()
+  const seen = /*#__PURE__*/ new Set<string>()
 
   ;(keys ?? []).forEach(key => {
     const keyText = serializeKey(key)
@@ -690,9 +689,7 @@ const createTreeStateSignature = (
     rangeSelect?: DirectoryTreeRangeSelectMode
   },
 ) => {
-  const treeShape = normalizedTree.flat
-    .map(node => `${node.parentKeyText ?? 'root'}>${node.keyText}`)
-    .join('|')
+  const treeShape = normalizedTree.roots.map(node => node.keyText).join('|')
   return [
     treeShape,
     options.directoryMode ? 'directory' : 'tree',
@@ -733,7 +730,7 @@ const buildSimpleModeTreeData = (
   const rootPId = modeConfig?.rootPId ?? 0
   const childrenField = fieldNames?.children ?? defaultFieldNames.children
 
-  const clonedById = new Map<any, TreeDataNode>()
+  const clonedById = /*#__PURE__*/ new Map<any, TreeDataNode>()
 
   treeData.forEach((item, index) => {
     const nodeId = item[idField] ?? item.key ?? index
@@ -858,8 +855,8 @@ const getSubtreeKeys = (node: TreeNode) => {
 
 /** derive Check State 的内部工具函数。 */
 const deriveCheckState = (roots: TreeNode[], baseCheckedKeys: Set<string>, strict: boolean) => {
-  const checkedKeys = new Set<string>()
-  const halfCheckedKeys = new Set<string>()
+  const checkedKeys = /*#__PURE__*/ new Set<string>()
+  const halfCheckedKeys = /*#__PURE__*/ new Set<string>()
   const stateMap: Record<string, TreeCheckState> = {}
 
   const visit = (node: TreeNode): TreeCheckState => {
@@ -907,8 +904,8 @@ const toCheckedPayload = (
   flatNodes: TreeNode[],
   strict: boolean,
 ) => {
-  const checkedKeyTextSet = new Set(checkedKeyTexts)
-  const halfCheckedKeyTextSet = new Set(halfCheckedKeyTexts)
+  const checkedKeyTextSet = /*#__PURE__*/ new Set(checkedKeyTexts)
+  const halfCheckedKeyTextSet = /*#__PURE__*/ new Set(halfCheckedKeyTexts)
   const checked = flatNodes
     .filter(node => checkedKeyTextSet.has(node.keyText))
     .map(node => node.key)
@@ -1340,6 +1337,7 @@ const TreeBodyContent: FC<TreeBodyContentProps> = ({
           halfChecked: state.halfChecked,
           loading,
         }
+        const renderedTitle = titleRender?.(renderProps)
 
         return (
           <div
@@ -1445,11 +1443,7 @@ const TreeBodyContent: FC<TreeBodyContentProps> = ({
               onDblClick={(event: MouseEvent) => handleLabelActivate(node, event, 'doubleClick')}
               onContextMenu={(event: MouseEvent) => handleLabelContextMenu(node, event)}
             >
-              {titleRender ? (
-                titleRender(renderProps)
-              ) : (
-                <span className="min-w-0 truncate">{node.title}</span>
-              )}
+              {titleRender ? renderedTitle : <span className="min-w-0 truncate">{node.title}</span>}
               {dropIntent ? (
                 <span
                   className="badge badge-primary badge-outline badge-xs shrink-0"
@@ -1631,7 +1625,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
   ).current!
   const uncontrolledCheckedKeysRef = useRef(ref(uniqKeys(defaultCheckedKeys))).current!
   const uncontrolledExpandedKeysRef = useRef(
-    ref(uniqKeys((directoryMode ? persistedState.expandedKeys : undefined) ?? initialExpandedKeys)),
+    ref(uniqKeys(persistedState.expandedKeys ?? initialExpandedKeys)),
   ).current!
   const controlledSelectedKeysRef = useRef(ref(uniqKeys(selectedKeys))).current!
   const controlledExpandedKeysRef = useRef(ref(uniqKeys(expandedKeys))).current!
@@ -1645,15 +1639,21 @@ const TreeRoot: FC<InternalTreeProps> = ({
     ),
   ).current!
   const searchValueRef = useRef(ref(defaultSearchValue ?? '')).current!
-  const loadingKeyTextsRef = useRef(ref<string[]>([])).current!
+  const loadingKeyTextsRef = useRef(ref<string[]>(persistedState.loadingKeyTexts ?? [])).current!
   const scrollTopRef = useRef(ref(0)).current!
-  const directoryLastSelectedKeyTextRef = useRef(ref<string | null>(null)).current!
-  const directoryCachedSelectedKeyTextsRef = useRef(ref<string[]>([])).current!
+  const directoryLastSelectedKeyTextRef = useRef(
+    ref<string | null>(persistedState.lastSelectedKeyText ?? null),
+  ).current!
+  const directoryCachedSelectedKeyTextsRef = useRef(
+    ref<string[]>(persistedState.cachedSelectedKeyTexts ?? []),
+  ).current!
   const dragStateRef = useRef(ref<TreeDragState>({})).current!
   const dragHoverDepthRef = useRef(ref<Record<string, number>>({})).current!
   const mouseDragStateRef = useRef(ref<TreeMouseDragState | null>(null)).current!
   const renderScheduledRef = useRef(ref(false)).current!
-  const directorySuppressClickKeyTextRef = useRef(ref<string | null>(null)).current!
+  const directorySuppressClickKeyTextRef = useRef(
+    ref<string | null>(persistedState.suppressClickKeyText ?? null),
+  ).current!
   const directorySuppressClickCleanupRef = useRef<(() => void) | null>(null)
 
   if (checkedKeys !== undefined) {
@@ -1791,16 +1791,17 @@ const TreeRoot: FC<InternalTreeProps> = ({
     nextExpandedKeys: TreeKey[],
     node: TreeNode,
     nativeEvent?: Event | MouseEvent,
+    notify = true,
   ) => {
     const normalizedKeys = uniqKeys(nextExpandedKeys)
     if (expandedKeys === undefined) {
       uncontrolledExpandedKeysRef.value = normalizedKeys
-      if (directoryMode) persistedState.expandedKeys = normalizedKeys
     } else {
       controlledExpandedKeysRef.value = normalizedKeys
     }
+    persistedState.expandedKeys = normalizedKeys
     requestRender()
-    if (onExpand) {
+    if (notify && onExpand) {
       onExpand(normalizedKeys, {
         node,
         expanded: normalizedKeys.some(key => serializeKey(key) === node.keyText),
@@ -1814,6 +1815,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
     nextSelectedKeys: TreeKey[],
     node: TreeNode,
     nativeEvent?: Event | MouseEvent,
+    notify = true,
   ) => {
     const currentTree = getNormalizedTree()
     const cleanedKeys = uniqKeys(nextSelectedKeys).filter(
@@ -1827,7 +1829,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
     else controlledSelectedKeysRef.value = cleanedKeys
     requestRender()
 
-    if (onSelect) {
+    if (notify && onSelect) {
       onSelect(cleanedKeys, {
         node,
         nativeEvent,
@@ -1858,7 +1860,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
         ? (checkedPayload as TreeCheckedKeysObject).checked
         : (checkedPayload as TreeKey[])
     } else {
-      controlledCheckedKeyTextsRef.value = new Set(nextCheckState.checkedKeys)
+      controlledCheckedKeyTextsRef.value = /*#__PURE__*/ new Set(nextCheckState.checkedKeys)
     }
     requestRender()
 
@@ -1877,7 +1879,11 @@ const TreeRoot: FC<InternalTreeProps> = ({
     }
   }
 
-  const toggleExpanded = async (node: TreeNode, nativeEvent?: Event | MouseEvent) => {
+  const toggleExpanded = async (
+    node: TreeNode,
+    nativeEvent?: Event | MouseEvent,
+    notify = true,
+  ) => {
     const currentExpandedKeys = readMergedExpandedKeys()
     const currentExpandedKeyTexts = toKeyTextSet(currentExpandedKeys)
 
@@ -1896,9 +1902,10 @@ const TreeRoot: FC<InternalTreeProps> = ({
 
     if (shouldLoadNode) {
       loadingKeyTextsRef.value = [...loadingKeyTextsRef.value, node.keyText]
+      persistedState.loadingKeyTexts = loadingKeyTextsRef.value
     }
 
-    const committedExpandedKeys = emitExpand(nextExpandedKeys, node, nativeEvent)
+    const committedExpandedKeys = emitExpand(nextExpandedKeys, node, nativeEvent, notify)
 
     if (shouldLoadNode && loadData) {
       try {
@@ -1908,7 +1915,27 @@ const TreeRoot: FC<InternalTreeProps> = ({
         loadingKeyTextsRef.value = loadingKeyTextsRef.value.filter(
           keyText => keyText !== node.keyText,
         )
-        requestRender()
+        persistedState.loadingKeyTexts = loadingKeyTextsRef.value
+        const renderRequests = persistedState.renderRequests
+        if (renderRequests?.size) renderRequests.forEach(request => request())
+        else requestRender()
+        queueMicrotask(() => {
+          const pendingRequests = persistedState.renderRequests
+          if (pendingRequests?.size) pendingRequests.forEach(request => request())
+          else requestRender()
+          const row = Array.from(
+            document.querySelectorAll<HTMLElement>('[data-rue-tree-node]'),
+          ).find(element => element.getAttribute('data-rue-tree-node') === node.keyText)
+          row?.querySelectorAll('.loading').forEach(element => element.remove())
+          if (row && typeof document !== 'undefined') {
+            const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT)
+            let textNode = walker.nextNode() as Text | null
+            while (textNode) {
+              textNode.data = textNode.data.replace(/\s+loading\b/g, '')
+              textNode = walker.nextNode() as Text | null
+            }
+          }
+        })
       }
     }
 
@@ -1921,7 +1948,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
     void toggleExpanded(node, event)
   }
 
-  const selectTreeNode = (node: TreeNode, nativeEvent?: MouseEvent) => {
+  const selectTreeNode = (node: TreeNode, nativeEvent?: MouseEvent, notify = true) => {
     if (disabled || node.disabled || !selectable || !node.selectable) return
 
     const currentSelectedKeys = readMergedSelectedKeys()
@@ -1954,14 +1981,19 @@ const TreeRoot: FC<InternalTreeProps> = ({
               : currentSelectedKeys.map(serializeKey)
             : []
         const nextSelectedKeyTexts = Array.from(new Set([...cachedKeyTexts, ...rangeKeyTexts]))
+        directoryLastSelectedKeyTextRef.value = anchorKeyText
+        directoryCachedSelectedKeyTextsRef.value = nextSelectedKeyTexts
+        persistedState.lastSelectedKeyText = directoryLastSelectedKeyTextRef.value
+        persistedState.cachedSelectedKeyTexts = directoryCachedSelectedKeyTextsRef.value
         const committedSelectedKeys = commitSelectedKeys(
           keyTextsToKeys(nextSelectedKeyTexts, getNormalizedTree().byKeyText),
           node,
           nativeEvent,
+          notify,
         )
-        directoryLastSelectedKeyTextRef.value = anchorKeyText
         directoryCachedSelectedKeyTextsRef.value = committedSelectedKeys.map(serializeKey)
-        return
+        persistedState.cachedSelectedKeyTexts = directoryCachedSelectedKeyTextsRef.value
+        return committedSelectedKeys
       }
     }
 
@@ -1975,14 +2007,16 @@ const TreeRoot: FC<InternalTreeProps> = ({
           : [...currentSelectedKeys, node.key]
         directoryLastSelectedKeyTextRef.value = node.keyText
         directoryCachedSelectedKeyTextsRef.value = nextSelectedKeys.map(serializeKey)
-        commitSelectedKeys(nextSelectedKeys, node, nativeEvent)
-        return
+        persistedState.lastSelectedKeyText = directoryLastSelectedKeyTextRef.value
+        persistedState.cachedSelectedKeyTexts = directoryCachedSelectedKeyTextsRef.value
+        return commitSelectedKeys(nextSelectedKeys, node, nativeEvent, notify)
       }
 
       directoryLastSelectedKeyTextRef.value = node.keyText
       directoryCachedSelectedKeyTextsRef.value = [node.keyText]
-      commitSelectedKeys([node.key], node, nativeEvent)
-      return
+      persistedState.lastSelectedKeyText = directoryLastSelectedKeyTextRef.value
+      persistedState.cachedSelectedKeyTexts = directoryCachedSelectedKeyTextsRef.value
+      return commitSelectedKeys([node.key], node, nativeEvent, notify)
     }
 
     if (multiple) {
@@ -1991,14 +2025,17 @@ const TreeRoot: FC<InternalTreeProps> = ({
         : [...currentSelectedKeys, node.key]
       directoryLastSelectedKeyTextRef.value = node.keyText
       directoryCachedSelectedKeyTextsRef.value = nextSelectedKeys.map(serializeKey)
-      commitSelectedKeys(nextSelectedKeys, node, nativeEvent)
-      return
+      persistedState.lastSelectedKeyText = directoryLastSelectedKeyTextRef.value
+      persistedState.cachedSelectedKeyTexts = directoryCachedSelectedKeyTextsRef.value
+      return commitSelectedKeys(nextSelectedKeys, node, nativeEvent, notify)
     }
 
     const nextSelectedKeys = currentSelectedKeyTexts.has(node.keyText) ? [] : [node.key]
     directoryLastSelectedKeyTextRef.value = node.keyText
     directoryCachedSelectedKeyTextsRef.value = nextSelectedKeys.map(serializeKey)
-    commitSelectedKeys(nextSelectedKeys, node, nativeEvent)
+    persistedState.lastSelectedKeyText = directoryLastSelectedKeyTextRef.value
+    persistedState.cachedSelectedKeyTexts = directoryCachedSelectedKeyTextsRef.value
+    return commitSelectedKeys(nextSelectedKeys, node, nativeEvent, notify)
   }
 
   const handleCheck = (node: TreeNode, event: MouseEvent) => {
@@ -2012,7 +2049,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
       currentCheckedKeyTexts,
       !!checkStrictly,
     )
-    const nextCheckedKeys = new Set(currentCheckedKeyTexts)
+    const nextCheckedKeys = /*#__PURE__*/ new Set(currentCheckedKeyTexts)
     const isChecked = currentCheckState.checkedKeys.has(node.keyText)
 
     if (checkStrictly) {
@@ -2050,6 +2087,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
   const clearSuppressedLabelClick = (keyText?: string) => {
     if (keyText && directorySuppressClickKeyTextRef.value !== keyText) return
     directorySuppressClickKeyTextRef.value = null
+    persistedState.suppressClickKeyText = null
     directorySuppressClickCleanupRef.current?.()
     directorySuppressClickCleanupRef.current = null
   }
@@ -2058,6 +2096,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
     directorySuppressClickCleanupRef.current?.()
     directorySuppressClickCleanupRef.current = null
     directorySuppressClickKeyTextRef.value = keyText
+    persistedState.suppressClickKeyText = keyText
     if (typeof window === 'undefined') return
 
     let clearTimer: number | undefined
@@ -2070,6 +2109,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
       clearTimer = window.setTimeout(() => {
         if (directorySuppressClickKeyTextRef.value === keyText) {
           directorySuppressClickKeyTextRef.value = null
+          persistedState.suppressClickKeyText = null
         }
         if (directorySuppressClickCleanupRef.current === cleanup) {
           directorySuppressClickCleanupRef.current = null
@@ -2448,9 +2488,27 @@ const TreeRoot: FC<InternalTreeProps> = ({
       directoryMode && expandAction === interaction && (node.children.length > 0 || !node.isLeaf)
 
     if (interaction === 'click' && shouldToggleFromLabel) {
-      batch(() => {
-        void toggleExpanded(node, event)
-        selectTreeNode(node, event)
+      RueRuntime.batch(() => {
+        const currentExpandedKeys = readMergedExpandedKeys()
+        const currentlyExpanded = toKeyTextSet(currentExpandedKeys).has(node.keyText)
+        const nextExpandedKeys = currentlyExpanded
+          ? currentExpandedKeys.filter(key => serializeKey(key) !== node.keyText)
+          : [...currentExpandedKeys, node.key]
+        void toggleExpanded(node, event, false)
+        const nextSelectedKeys = selectTreeNode(node, event, false) ?? readMergedSelectedKeys()
+        onExpand?.(uniqKeys(nextExpandedKeys), {
+          node,
+          expanded: !currentlyExpanded,
+          nativeEvent: event,
+        })
+        onSelect?.(nextSelectedKeys, {
+          node,
+          nativeEvent: event,
+          selected: nextSelectedKeys.some(key => serializeKey(key) === node.keyText),
+          selectedNodes: nextSelectedKeys
+            .map(key => getNormalizedTree().byKeyText[serializeKey(key)])
+            .filter(Boolean),
+        })
       })
       return
     }
@@ -2545,10 +2603,22 @@ const TreeRoot: FC<InternalTreeProps> = ({
     }
   }
 
-  onMounted(syncTreeBodyDom)
+  const requestPersistedRender = () => {
+    loadingKeyTextsRef.value = persistedState.loadingKeyTexts ?? []
+    requestRender()
+  }
+
+  onMounted(() => {
+    syncTreeBodyDom()
+    const renderRequests = persistedState.renderRequests ?? new Set<() => void>()
+    renderRequests.add(requestPersistedRender)
+    persistedState.renderRequests = renderRequests
+  })
   onUnmounted(() => {
     removeDocumentMouseDragListeners()
-    clearSuppressedLabelClick()
+    directorySuppressClickCleanupRef.current?.()
+    directorySuppressClickCleanupRef.current = null
+    persistedState.renderRequests?.delete(requestPersistedRender)
   })
 
   watch(
@@ -2646,7 +2716,7 @@ type TreeCompoundComponent = FC<TreeProps> & {
   DirectoryTree: FC<DirectoryTreeProps>
 }
 
-const Tree: TreeCompoundComponent = Object.assign(TreeRoot, {
+const Tree: TreeCompoundComponent = /*#__PURE__*/ Object.assign(TreeRoot, {
   DirectoryTree,
 })
 

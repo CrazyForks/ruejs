@@ -34,11 +34,11 @@ const Page: FC = () => {
     let out = utils::emit(program, cm);
     let stripped = utils::strip_marker(&out);
     let normalized = utils::normalize(&stripped);
-
-    assert_eq!(stripped.matches("\"useSetup:0:0\"").count(), 1);
-    assert!(normalized.contains(&utils::normalize(
-        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#,
-    )));
-    assert!(stripped.contains("\"useSetup:0:0:dup1\""));
-    assert!(stripped.contains("\"useSetup:0:0:dup2\""));
+    assert_eq!(stripped.matches("\"useSetup:0:0\"").count(), 3);
+    assert!(
+        normalized.contains("_$compiledSetup(\"useSetup:0:0\"")
+            || normalized.contains("_$compiledWithHookId(\"useSetup:0:0\"")
+    );
+    assert!(!stripped.contains("\"useSetup:0:0:dup1\""));
+    assert!(!stripped.contains("\"useSetup:0:0:dup2\""));
 }

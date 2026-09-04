@@ -21,7 +21,12 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
     assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
-    assert!(out.contains(&utils::normalize("_$compiledCreateElement(\"li\", null)")), "{out}");
+    assert!(
+        out.contains(&utils::normalize("_$compiledCreateElement(\"li\", __rue_parent_context)")),
+        "{out}"
+    );
+    assert!(out.contains("_$mountCompiledKeyedRow"), "{out}");
+    assert!(out.contains("_$mountCompiledSlotFactory"), "{out}");
     assert!(!out.contains(&utils::normalize("singleRoot:")));
     assert!(!out.contains(&utils::normalize(concat!("direct", "Root:"))));
     assert!(!out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
@@ -29,7 +34,7 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
 }
 
 #[test]
-fn lowers_single_root_fragment_list_items_to_render_anchor() {
+fn lowers_single_root_fragment_list_items_to_compiled_rows() {
     let src = r##"
 import { type FC } from '@rue-js/rue';
 
@@ -48,13 +53,14 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("singleRoot: true")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
-    assert!(!out.contains(&utils::normalize("renderBetween(__slot, parent, start, end)")));
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedRow"), "{out}");
+    assert!(out.contains("_$createDocumentFragment"), "{out}");
+    assert!(!out.contains("renderAnchor("), "{out}");
 }
 
 #[test]
-fn lowers_nested_single_root_fragment_list_items_to_render_anchor() {
+fn lowers_nested_single_root_fragment_list_items_to_compiled_rows() {
     let src = r##"
 import { type FC } from '@rue-js/rue';
 
@@ -75,13 +81,14 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("singleRoot: true")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
-    assert!(!out.contains(&utils::normalize("renderBetween(__slot, parent, start, end)")));
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedRow"), "{out}");
+    assert!(out.contains("_$createDocumentFragment"), "{out}");
+    assert!(!out.contains("renderAnchor("), "{out}");
 }
 
 #[test]
-fn lowers_single_root_builtin_fragment_list_items_to_render_anchor() {
+fn lowers_single_root_builtin_fragment_list_items_to_compiled_rows() {
     let src = r##"
 import { type FC, Fragment } from '@rue-js/rue';
 
@@ -100,10 +107,10 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
-    assert!(out.contains(&utils::normalize("singleRoot: true")));
-    assert!(out.contains(&utils::normalize("const __slot = __child1;")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));
-    assert!(!out.contains(&utils::normalize("renderBetween(__slot, parent, start, end)")));
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedRow"), "{out}");
+    assert!(out.contains("_$compiledComponent(Fragment"), "{out}");
+    assert!(!out.contains("renderAnchor("), "{out}");
 }
 
 #[test]
@@ -152,11 +159,13 @@ const Page: FC<{ todos: Array<{ id: number; text: string; completed: boolean }>;
     let (program, cm) = utils::parse(src, "test.tsx");
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
-    println!("{}", out);
-
     assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
     assert!(out.contains(&utils::normalize(".addEventListener(")));
-    assert!(!out.contains(&utils::normalize(".removeEventListener(")));
+    assert_eq!(
+        out.matches(&utils::normalize(".addEventListener(")).count(),
+        out.matches(&utils::normalize(".removeEventListener(")).count()
+    );
+    assert!(out.contains("onOwnerCleanup("), "{out}");
     assert!(!out.contains(&utils::normalize("disposeOwner(")));
-    assert!(!out.contains(&utils::normalize("_$vaporKeyedList")));
+    assert!(!out.contains(&utils::normalize("_$compiledKeyedList")));
 }

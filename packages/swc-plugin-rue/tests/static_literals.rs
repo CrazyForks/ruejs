@@ -64,7 +64,7 @@ export default StaticLiterals;
     assert!(s.contains("\"\")"), "Empty-like literals should render as empty string");
 
     // 数字字面量 -> 1 与 0
-    assert!(s.contains("_$settextContent(") && s.contains("\"1\"") && s.contains("\"0\""));
+    assert!(s.contains("_$settextContent(") && s.contains(">1</span>") && s.contains(">0</span>"));
 }
 
 #[test]
@@ -99,22 +99,16 @@ export default StaticLiteralAttrs;
         "Should NOT create watchEffect for static literal attrs"
     );
 
-    assert!(
-        s.contains("_$setClassName(_root, 'wrap')")
-            || s.contains("_$setClassName(_root, \"wrap\")")
-    );
-    assert!(s.contains("_$setAttribute(_el1, \"width\", \"200\")"));
-    assert!(s.contains("_$setAttribute(_el1, \"height\", \"200\")"));
-    assert!(s.contains("_$setAttribute(_el2, \"cx\", \"100\")"));
-    assert!(s.contains("_$setAttribute(_el2, \"cy\", \"100\")"));
-    assert!(s.contains("_$setAttribute(_el2, \"r\", \"80\")"));
-    assert!(s.contains("_$setAttribute(_el2, \"strokeWidth\", \"1.5\")"));
-    assert!(s.contains(
-        "const _$getTemplate1 = _$template('<input min=\"0\" max=\"100\" value=\"0\" disabled=\"\">')"
-    ));
-    assert!(s.contains("const _$getTemplate2 = _$template('<select multiple=\"\"></select>')"));
-    assert!(s.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
-    assert!(s.contains("_root.appendChild(_$getTemplate2().content.cloneNode(true))"));
+    assert!(s.contains("_$template('<div class=\"wrap\">"));
+    assert!(s.contains("_$setAttribute(_el3, \"width\", \"200\")"));
+    assert!(s.contains("_$setAttribute(_el3, \"height\", \"200\")"));
+    assert!(s.contains("_$setAttribute(_el4, \"cx\", \"100\")"));
+    assert!(s.contains("_$setAttribute(_el4, \"cy\", \"100\")"));
+    assert!(s.contains("_$setAttribute(_el4, \"r\", \"80\")"));
+    assert!(s.contains("_$setAttribute(_el4, \"strokeWidth\", \"1.5\")"));
+    assert!(s.contains("<input min=\"0\" max=\"100\" value=\"0\" disabled=\"\">"));
+    assert!(s.contains("<select multiple=\"\"></select>"));
+    assert!(s.contains("_$getTemplate1().content.cloneNode(true)"));
 }
 
 #[test]
@@ -148,15 +142,13 @@ export default StaticStyleExprs;
     );
 
     assert!(
-        s.contains("_$setStyle(_el1, {")
+        s.contains("Object.assign(_el1.style, {")
             && s.contains("color: 'tomato'")
             && s.contains("fontWeight: 'bold'")
     );
-    assert!(s.contains(
-        "const _$getTemplate1 = _$template('<div style=\"display:flex;gap:8px;\">B</div>')"
-    ));
-    assert!(s.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
-    assert!(s.contains("_$setStyle(_el3, null)"));
+    assert!(s.contains("<div style=\"display:flex;gap:8px;\">B</div>"));
+    assert!(s.contains("_$getTemplate1().content.cloneNode(true)"));
+    assert!(s.contains("_el2.style.cssText = null == null ? \"\" : String(null)"));
 }
 
 #[test]
@@ -185,16 +177,16 @@ export default StaticShowStyles;
         .ok();
 
     let s = utils::strip_marker(&out);
-    assert!(!s.contains("_$vaporShowStyle"), "Should fold static show styles without helper");
+    assert!(!s.contains("_$compiledShowStyle"), "Should fold static show styles without helper");
     assert!(
         !s.contains("watchEffect(()=>") && !s.contains("watchEffect(() =>"),
         "Static show styles should not create watchEffect"
     );
     assert!(
-        s.contains("_$setStyle(_el1, {")
+        s.contains("Object.assign(_el1.style, {")
             && s.contains("color: 'tomato'")
             && s.contains("display: \"\"")
     );
     assert!(s.contains("display: \"none\""));
-    assert!(s.contains("_$setStyle(_el3, {") && s.contains("_$setStyle(_el4, {"));
+    assert!(s.contains("Object.assign(_el3.style, {") && s.contains("Object.assign(_el4.style, {"));
 }

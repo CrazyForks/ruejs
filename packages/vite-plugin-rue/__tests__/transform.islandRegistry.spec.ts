@@ -62,7 +62,6 @@ const createPlugin = (root: string) =>
   VitePluginRue({
     include: [path.join(root, 'src')],
     transformTimeoutMs: 0,
-    transformExecutor: ({ code }) => code,
   }) as any
 
 const loadVirtual = async (plugin: any, id: string) => {
@@ -72,10 +71,29 @@ const loadVirtual = async (plugin: any, id: string) => {
 }
 
 describe('vite-plugin-rue island registry', () => {
+  it('skips generated Cargo target trees during pre-indexing', async () => {
+    const { root, src } = createFixture()
+    const target = path.join(src, 'target')
+    fs.mkdirSync(target)
+    const generated = path.join(target, 'Generated.tsx')
+    fs.writeFileSync(
+      generated,
+      `import Generated from './Generated'; export const Page = () => <Generated client:load />`,
+    )
+    const plugin = createPlugin(root)
+    plugin.configResolved?.({ command: 'serve', root })
+    const watched: string[] = []
+
+    await callHook(plugin.buildStart, { addWatchFile: (file: string) => watched.push(file) })
+
+    expect(watched).not.toContain(generated)
+    expect(await loadVirtual(plugin, RUE_ISLAND_REGISTRY_ID)).not.toContain('Generated')
+  })
+
   it('keeps pre-indexed descriptor ids stable when the same source is transformed again', async () => {
     const { root, src } = createFixture()
     const plugin = createPlugin(root)
-    plugin.configResolved?.({ command: 'build', root })
+    plugin.configResolved?.({ command: 'serve', root })
     await callHook(plugin.buildStart, { addWatchFile() {} })
 
     const manifestBeforeTransform = await loadVirtual(plugin, RUE_ISLAND_MANIFEST_ID)
@@ -92,7 +110,7 @@ describe('vite-plugin-rue island registry', () => {
   it('pre-indexes direct imports before virtual modules load and emits deterministic importers', async () => {
     const { root, src } = createFixture()
     const plugin = createPlugin(root)
-    plugin.configResolved?.({ command: 'build', root })
+    plugin.configResolved?.({ command: 'serve', root })
     const watched: string[] = []
 
     await callHook(plugin.buildStart, { addWatchFile: (file: string) => watched.push(file) })
@@ -120,7 +138,7 @@ describe('vite-plugin-rue island registry', () => {
   it('exports an explicit client starter without starting during module evaluation', async () => {
     const { root } = createFixture()
     const plugin = createPlugin(root)
-    plugin.configResolved?.({ command: 'build', root })
+    plugin.configResolved?.({ command: 'serve', root })
     await callHook(plugin.buildStart, { addWatchFile() {} })
 
     const client = await loadVirtual(plugin, RUE_ISLAND_CLIENT_ID)
@@ -135,7 +153,7 @@ describe('vite-plugin-rue island registry', () => {
   it('removes stale registry and manifest entries after transform or file deletion', async () => {
     const { root, src } = createFixture()
     const plugin = createPlugin(root)
-    plugin.configResolved?.({ command: 'build', root })
+    plugin.configResolved?.({ command: 'serve', root })
     await callHook(plugin.buildStart, { addWatchFile() {} })
     const page = path.join(src, 'Page.tsx')
 

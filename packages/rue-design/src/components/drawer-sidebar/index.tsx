@@ -1187,7 +1187,7 @@ export type DrawerSidebarCompound = FC<DrawerSidebarProps> & {
   Overlay: FC<DrawerSidebarPartProps>
 }
 
-const DrawerSidebar: DrawerSidebarCompound = Object.assign(Root, {
+const DrawerSidebar: DrawerSidebarCompound = /*#__PURE__*/ Object.assign(Root, {
   Toggle,
   Content,
   Side,

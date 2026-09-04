@@ -217,20 +217,17 @@
     }
   },
   "scripts": {
-    "build": "vp pack && node ../../scripts/copy-text-runtime-vapor-artifacts.js && node ../../scripts/ensure-text-bin-executable.js",
+    "build": "vp pack && node ../../scripts/ensure-text-bin-executable.js",
     "check": "vp pack --no-write --no-clean",
     "prepack": "vp run build",
     "dev": "vp pack --watch",
-    "test": "node ../../scripts/ensure-text-test-dependencies.js && pnpm run build && vp test run --environment jsdom --teardownTimeout 60000 --exclude \"__tests__/e2e/**\"",
+    "test": "node ../../scripts/ensure-text-test-dependencies.js && pnpm run build && vp test run --environment jsdom --teardownTimeout 60000 --maxWorkers 4 --exclude \"__tests__/e2e/**\"",
     "test-unit": "node ../../scripts/ensure-text-test-dependencies.js && pnpm run build && node ../../scripts/run-text-unit-tests.mjs"
   },
   "dependencies": {
-    "@rue-js/jsx-dev-runtime": "workspace:*",
-    "@rue-js/jsx-runtime": "workspace:*",
     "@rue-js/rsc": "workspace:*",
     "@rue-js/rue": "workspace:*",
     "@rue-js/runtime": "workspace:*",
-    "@rue-js/runtime-vapor": "workspace:*",
     "@rue-js/server-renderer": "workspace:*",
     "@rue-js/shared": "workspace:*",
     "@rue-js/vite-plugin-rue": "workspace:*",
@@ -272,9 +269,6 @@
       "esm-bundler"
     ],
     "preserveModules": true,
-    "copyRuntimeArtifacts": [
-      "runtime-vapor"
-    ],
     "external": [
       "@rue-js/rsc",
       "@rue-js/server-renderer",

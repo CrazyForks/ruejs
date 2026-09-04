@@ -18,14 +18,6 @@ const TEXT_PACKAGE_SELF_LINKS = [
 ] as const
 const SERVER_RENDERER_PACKAGE_ROOT = path.resolve(TEXT_PACKAGE_ROOT, '../server-renderer')
 const SERVER_RENDERER_REQUIRED_FILES = ['dist/server-renderer.esm-bundler.js'] as const
-const RUNTIME_VAPOR_PACKAGE_ENTRIES = ['package.json', 'dist'] as const
-const RUNTIME_VAPOR_REQUIRED_FILES = [
-  'package.json',
-  'dist/index.node.js',
-  'dist/reactive.node.js',
-  'dist/vapor.node.js',
-  'dist/reactive-kernel/index.js',
-] as const
 
 export type FixtureDevServer = {
   process: ChildProcess
@@ -45,7 +37,6 @@ type FixtureDevServerOptions = {
   readinessPollIntervalMs?: number
   readyRequestTimeoutMs?: number
   serverSettleDelayMs?: number
-  prepareRuntimeVaporArtifacts?: boolean
   onSpawn?: (proc: ChildProcess) => void
 }
 
@@ -61,10 +52,9 @@ export async function startFixtureDevServer({
   readinessPollIntervalMs = READY_POLL_INTERVAL_MS,
   readyRequestTimeoutMs = READY_REQUEST_TIMEOUT_MS,
   serverSettleDelayMs = SERVER_SETTLE_DELAY_MS,
-  prepareRuntimeVaporArtifacts = true,
   onSpawn,
 }: FixtureDevServerOptions): Promise<FixtureDevServer> {
-  await ensureTextPackageSelfLink({ prepareRuntimeVaporArtifacts })
+  await ensureTextPackageSelfLink()
 
   const baseUrl = `http://localhost:${port}`
   const proc = spawn(command.bin, command.args, {
@@ -112,16 +102,8 @@ export async function startFixtureDevServer({
   return { process: proc, baseUrl, fetchPage }
 }
 
-async function ensureTextPackageSelfLink({
-  prepareRuntimeVaporArtifacts,
-}: {
-  prepareRuntimeVaporArtifacts: boolean
-}): Promise<void> {
+async function ensureTextPackageSelfLink(): Promise<void> {
   await ensureServerRendererArtifacts()
-
-  if (prepareRuntimeVaporArtifacts) {
-    await ensureTextRuntimeVaporArtifacts()
-  }
 
   await Promise.all(TEXT_PACKAGE_SELF_LINKS.map(link => ensureTextPackageSelfLinkAt(link)))
 }
@@ -206,71 +188,6 @@ async function runSetupCommand(bin: string, args: string[]): Promise<void> {
       )
     })
   })
-}
-
-async function ensureTextRuntimeVaporArtifacts(): Promise<void> {
-  const runtimeVaporRoot = path.resolve(TEXT_PACKAGE_ROOT, '../runtime-vapor')
-  const outputRoot = path.join(TEXT_PACKAGE_ROOT, 'dist/runtime-vapor')
-  const completeMarker = path.join(outputRoot, '.copy-complete')
-  const releaseLock = await acquireSetupLock('runtime-vapor-copy')
-  const tempRoot = path.join(
-    TEXT_PACKAGE_ROOT,
-    'dist',
-    `.runtime-vapor-${process.pid}-${Date.now()}.tmp`,
-  )
-
-  try {
-    if (await hasRuntimeVaporArtifacts(outputRoot, completeMarker)) {
-      return
-    }
-
-    await fsp.rm(tempRoot, { force: true, recursive: true })
-    await fsp.mkdir(tempRoot, { recursive: true })
-
-    for (const entry of RUNTIME_VAPOR_PACKAGE_ENTRIES) {
-      const source = path.join(runtimeVaporRoot, entry)
-      try {
-        await fsp.access(source)
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          throw new Error(
-            `Missing runtime-vapor artifact "${source}". Build runtime-vapor before starting fixture dev servers that need Vapor artifacts.`,
-          )
-        }
-        throw error
-      }
-
-      await fsp.cp(source, path.join(tempRoot, entry), {
-        force: true,
-        recursive: true,
-      })
-    }
-
-    await fsp.writeFile(path.join(tempRoot, '.copy-complete'), `${Date.now()}\n`)
-    await fsp.rm(outputRoot, { force: true, recursive: true })
-    await fsp.rename(tempRoot, outputRoot)
-  } finally {
-    await fsp.rm(tempRoot, { force: true, recursive: true })
-    await releaseLock()
-  }
-}
-
-async function hasRuntimeVaporArtifacts(
-  outputRoot: string,
-  completeMarker: string,
-): Promise<boolean> {
-  try {
-    await fsp.access(completeMarker)
-    await Promise.all(
-      RUNTIME_VAPOR_REQUIRED_FILES.map(file => fsp.access(path.join(outputRoot, file))),
-    )
-    return true
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return false
-    }
-    throw error
-  }
 }
 
 async function acquireSetupLock(name: string): Promise<() => Promise<void>> {

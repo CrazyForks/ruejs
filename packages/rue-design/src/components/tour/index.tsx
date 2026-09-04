@@ -311,7 +311,7 @@ const mergeSemanticClassNames = (
   override?: TourClassNames,
 ): TourClassNames => {
   const merged: TourClassNames = {}
-  const keys = new Set([...Object.keys(base ?? {}), ...Object.keys(override ?? {})])
+  const keys = /*#__PURE__*/ new Set([...Object.keys(base ?? {}), ...Object.keys(override ?? {})])
 
   keys.forEach(key => {
     const nextClassName = mergeClassName((base as any)?.[key], (override as any)?.[key])
@@ -326,7 +326,7 @@ const mergeSemanticClassNames = (
 /** merge Semantic Styles 的内部工具函数。 */
 const mergeSemanticStyles = (base?: TourStyles, override?: TourStyles): TourStyles => {
   const merged: TourStyles = {}
-  const keys = new Set([...Object.keys(base ?? {}), ...Object.keys(override ?? {})])
+  const keys = /*#__PURE__*/ new Set([...Object.keys(base ?? {}), ...Object.keys(override ?? {})])
 
   keys.forEach(key => {
     const nextStyle = mergeStyle((base as any)?.[key], (override as any)?.[key])
@@ -706,7 +706,7 @@ const Tour: FC<TourProps> = props => {
     ...locale,
   }
 
-  const getTotal = () => steps.length
+  const getTotal = () => (props.steps ? props.steps.length : 0)
   const normalizeCurrentValue = (nextCurrent: number) => {
     const total = getTotal()
     if (total <= 0) return 0
@@ -718,7 +718,7 @@ const Tour: FC<TourProps> = props => {
       isControlledCurrent ? (props.current as number) : currentIndexRef.value,
     )
   }
-  const getCurrentStep = () => steps[getMergedCurrent()]
+  const getCurrentStep = () => (props.steps ? props.steps[getMergedCurrent()] : undefined)
   const requestRender = () => {
     renderVersion.value += 1
   }
@@ -911,7 +911,7 @@ const Tour: FC<TourProps> = props => {
   )
 
   watch(
-    () => steps.length,
+    () => (props.steps ? props.steps.length : 0),
     () => {
       currentIndexRef.value = normalizeCurrentValue(currentIndexRef.value)
     },
@@ -922,7 +922,7 @@ const Tour: FC<TourProps> = props => {
     () => [
       getMergedOpen(),
       getMergedCurrent(),
-      steps.length,
+      props.steps ? props.steps.length : 0,
       placement,
       gap?.radius ?? -1,
       Array.isArray(gap?.offset)
@@ -960,18 +960,12 @@ const Tour: FC<TourProps> = props => {
     },
   )
 
-  const total = steps.length
-  const currentIndex = (() => {
-    void renderVersion.value
-    return normalizeCurrentValue(
-      isControlledCurrent ? (props.current as number) : currentIndexRef.value,
-    )
-  })()
-  const step = total > 0 ? steps[currentIndex] : undefined
-  const mergedOpen = (() => {
-    void renderVersion.value
-    return isControlledOpen ? !!props.open : currentOpenRef.value
-  })()
+  const total = props.steps ? props.steps.length : 0
+  const currentIndex = normalizeCurrentValue(
+    isControlledCurrent ? (props.current as number) : currentIndexRef.value,
+  )
+  const step = props.steps && total > 0 ? props.steps[currentIndex] : undefined
+  const mergedOpen = isControlledOpen ? !!props.open : currentOpenRef.value
 
   if (!mergedOpen || !step || total === 0) return null
 

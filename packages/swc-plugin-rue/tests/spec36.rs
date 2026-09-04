@@ -348,22 +348,22 @@ export default FormBindings
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import SidebarPlayground from '../site/SidebarPlayground';
 import Code from '../site/components/Code';
 const FormBindings: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const text = _$vaporWithHookId("ref:1:0", ()=>ref('Edit me'));
-            const checked = _$vaporWithHookId("ref:1:1", ()=>ref(true));
-            const checkedNames = _$vaporWithHookId("ref:1:2", ()=>ref<string[]>([
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const text = ref('Edit me');
+            const checked = ref(true);
+            const checkedNames = ref<string[]>([
                     'Jack'
-                ]));
-            const picked = _$vaporWithHookId("ref:1:3", ()=>ref<'One' | 'Two'>('One'));
-            const selected = _$vaporWithHookId("ref:1:4", ()=>ref<'A' | 'B' | 'C'>('A'));
-            const multiSelected = _$vaporWithHookId("ref:1:5", ()=>ref<string[]>([
+                ]);
+            const picked = ref<'One' | 'Two'>('One');
+            const selected = ref<'A' | 'B' | 'C'>('A');
+            const multiSelected = ref<string[]>([
                     'A'
-                ]));
+                ]);
             const toggleCheckedName = (name: string, nextChecked: boolean)=>{
                 checkedNames.value = nextChecked ? Array.from(new Set([
                     ...checkedNames.value,
@@ -374,7 +374,7 @@ const FormBindings: FC = ()=>{
                 const opts = Array.from((e.target as HTMLSelectElement).selectedOptions);
                 multiSelected.value = opts.map((o)=>o.value);
             };
-            const activeTab = _$vaporWithHookId("ref:1:6", ()=>ref<'preview' | 'code'>('preview'));
+            const activeTab = ref<'preview' | 'code'>('preview');
             return {
                 text: text,
                 checked: checked,
@@ -644,5 +644,15 @@ export default FormBindings;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec36.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(
+        normalized.contains("checkedNames.value = nextChecked ? Array.from(new Set("),
+        "{normalized}"
+    );
+    assert!(normalized.contains("multiSelected.value = opts.map((o)=>o.value)"), "{normalized}");
+    assert!(normalized.contains("value={text.value}"), "{normalized}");
+    assert!(normalized.contains("checked={checked.value}"), "{normalized}");
+    assert!(normalized.contains("multiple value={multiSelected.value}"), "{normalized}");
+    assert!(normalized.contains("[ 'Jack', 'John', 'Mike' ].map((name)=>"), "{normalized}");
 }

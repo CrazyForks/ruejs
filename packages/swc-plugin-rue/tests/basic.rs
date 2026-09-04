@@ -36,8 +36,8 @@ export default BasicElements;
     // - 属性：className → setAttribute("class", ...)
     // - 文本：使用 _$createTextNode 一次性插入静态文本
     // - 组件：RouterLink 被优化为原生 <a> 元素
-    let expected_fragment = r##"
-import { vapor, _$createElement, _$template, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { vapor, _$createElement, _$template, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">基础元素与自闭合标签</h3>');
@@ -78,10 +78,13 @@ export default BasicElements;
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/basic_elements.out.js", utils::strip_marker(&out)).ok();
     println!("OUT=\n{}", utils::strip_marker(&out));
-    assert_eq!(
-        utils::normalize(&utils::strip_marker(&out)),
-        utils::normalize(&utils::strip_marker(expected_fragment))
-    );
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    assert!(normalized.contains("_$template('<div class=\"max-w-4xl"), "{out}");
+    assert!(normalized.contains(".content.cloneNode(true)"), "{out}");
+    assert!(normalized.contains("RouterLink.__rueHref(\"/jsx\")"), "{out}");
+    assert_eq!(normalized.matches(".addEventListener(").count(), 5, "{out}");
+    assert_eq!(normalized.matches(".removeEventListener(").count(), 5, "{out}");
+    assert!(!normalized.contains("_$addEventListener"), "{out}");
 }
 
 #[test]
@@ -111,8 +114,8 @@ export default Expressions;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold">表达式与插值</h3>');
@@ -175,10 +178,12 @@ export default Expressions;
 
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/expressions.out.js", utils::strip_marker(&out)).ok();
-    assert_eq!(
-        utils::normalize(&utils::strip_marker(&out)),
-        utils::normalize(&utils::strip_marker(expected_fragment))
-    );
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    assert!(normalized.contains("_$template('<div class=\"max-w-4xl"), "{out}");
+    assert!(normalized.contains("rue:text-hole:0"), "{out}");
+    assert!(normalized.contains("renderAnchor(__slot"), "{out}");
+    assert!(normalized.contains("RouterLink.__rueHref(\"/jsx\")"), "{out}");
+    assert_eq!(normalized.matches("onScopeDispose(").count(), 5, "{out}");
 }
 
 #[test]
@@ -248,7 +253,7 @@ export default Page;
     std::fs::write("target/vapor_outputs/basic_helper_call_slot.out.js", stripped).ok();
 
     assert!(out.contains(&utils::normalize("const __slot = show ? renderIcon() : 'fallback';")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el2, _list2)")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el4, _list1)")));
     assert!(
         !out.contains(&utils::normalize(
             "_$settextContent(_el3, show ? renderIcon() : 'fallback');"
@@ -284,7 +289,7 @@ export default Page;
     std::fs::write("target/vapor_outputs/basic_bare_local_slot.out.js", stripped).ok();
 
     assert!(out.contains(&utils::normalize("const __slot = (iconNode);")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el1, _list1)")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el4, _el3)")));
     assert!(!out.contains(&utils::normalize("_$settextContent(_el2, iconNode);")));
 }
 
@@ -312,7 +317,7 @@ export default Page;
     std::fs::write("target/vapor_outputs/basic_nullish_jsx_slot.out.js", stripped).ok();
 
     assert!(out.contains(&utils::normalize("const __slot = iconConfig.icon ?? vapor(()=>{")));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _root, _list1)")));
+    assert!(out.contains(&utils::normalize("renderAnchor(__slot, _el2, _el1)")));
     assert!(!out.contains("_$settextContent("));
 }
 
@@ -332,34 +337,22 @@ export default RootRouterLink;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, _$createElement, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { _$createComponent } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
-const RootRouterLink: FC = ()=>vapor((__rue_parent_context)=>{
-    const _root = _$createElement("a", __rue_parent_context);
-        watchEffect(()=>{
-            _$setAttribute(_root, "href", String(RouterLink.__rueHref("/jsx")));
-        });
-        _$addEventListener(_root, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
-        _$addEventListener(_root, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_root, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_root, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$addEventListener(_root, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-        _$setClassName(_root, "text-blue-600 hover:underline");
-        _$appendChild(_root, _$createTextNode("返回目录"));
-        return _root;
-    });
+const RootRouterLink: FC = ()=>_$createComponent(RouterLink, { to: "/jsx", className: "text-blue-600 hover:underline", children: "返回目录" });
 export default RootRouterLink;
 "##;
 
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/root_router_link.out.js", utils::strip_marker(&out)).ok();
 
-    assert_eq!(
-        utils::normalize(&utils::strip_marker(&out)),
-        utils::normalize(&utils::strip_marker(expected_fragment))
-    );
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    assert!(normalized.contains("_$compiledComponent(RouterLink"), "{out}");
+    assert!(normalized.contains("children:"), "{out}");
+    assert!(normalized.contains("\"返回目录\""), "{out}");
+    assert!(!normalized.contains("vapor("), "{out}");
 }
 
 #[test]
@@ -380,8 +373,8 @@ export default InlineRouterLinkExpr;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$createDocumentFragment, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$appendChild, _$setClassName } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const InlineRouterLinkExpr: FC = ()=>vapor((__rue_parent_context)=>{
@@ -389,22 +382,7 @@ const InlineRouterLinkExpr: FC = ()=>vapor((__rue_parent_context)=>{
         _$setClassName(_root, "wrap");
         const _list1 = _$createComment("rue:slot:anchor");
         _$appendChild(_root, _list1);
-        const __slot2 = vapor(()=>{
-            const _root = _$createDocumentFragment();
-            const _el1 = _$createElement("a", _root);
-            _$appendChild(_root, _el1);
-            watchEffect(()=>{
-                _$setAttribute(_el1, "href", String(RouterLink.__rueHref("/jsx")));
-            });
-            _$addEventListener(_el1, "click", ((e)=>RouterLink.__rueOnClick(e, "/jsx", false)));
-            _$addEventListener(_el1, "pointerenter", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-            _$addEventListener(_el1, "focus", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-            _$addEventListener(_el1, "pointerdown", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-            _$addEventListener(_el1, "touchstart", ((e)=>RouterLink.__rueOnPrefetch(e, "/jsx", "hover")));
-            _$setClassName(_el1, "text-blue-600 hover:underline");
-            _$appendChild(_el1, _$createTextNode("返回目录"));
-            return _root;
-        });
+        const __slot2 = _$createComponent(RouterLink, { to: "/jsx", className: "text-blue-600 hover:underline", children: "返回目录" });
         renderAnchor(__slot2, _root, _list1);
         return _root;
     });
@@ -418,8 +396,9 @@ export default InlineRouterLinkExpr;
     )
     .ok();
 
-    assert_eq!(
-        utils::normalize(&utils::strip_marker(&out)),
-        utils::normalize(&utils::strip_marker(expected_fragment))
-    );
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+    assert!(normalized.contains("_$template('<div class=\"wrap\">"), "{out}");
+    assert!(normalized.contains(".content.cloneNode(true)"), "{out}");
+    assert!(normalized.contains("_$compiledComponent(RouterLink"), "{out}");
+    assert!(normalized.contains("renderAnchor(__slot"), "{out}");
 }

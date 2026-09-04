@@ -1,7 +1,7 @@
 {
   "name": "@rue-js/rue",
   "version": "0.8.21",
-  "description": "后悔药 Rue.js - The Wasm Framework For Native DOM.",
+  "description": "后悔药 Rue.js - The Compiler Framework For Native DOM.",
   "keywords": [
     "rue"
   ],
@@ -22,6 +22,7 @@
     "jsx.d.ts"
   ],
   "type": "module",
+  "sideEffects": false,
   "main": "index.js",
   "module": "dist/rue.runtime.esm-bundler.js",
   "types": "dist/rue.d.ts",
@@ -34,17 +35,17 @@
       "module": "./dist/rue.runtime.esm-bundler.js",
       "import": "./dist/rue.runtime.esm-bundler.js"
     },
-    "./vapor": {
-      "types": "./src/vapor.ts",
-      "development": "./src/vapor.ts",
-      "module": "./dist/rue.vapor.esm-bundler.js",
-      "import": "./dist/rue.vapor.esm-bundler.js"
+    "./internal": {
+      "types": "./src/internal.ts",
+      "development": "./src/internal.ts",
+      "module": "./dist/rue.internal.esm-bundler.js",
+      "import": "./dist/rue.internal.esm-bundler.js"
     },
-    "./compiled": {
-      "types": "./src/compiled.ts",
-      "development": "./src/compiled.ts",
-      "module": "./dist/rue.compiled.esm-bundler.js",
-      "import": "./dist/rue.compiled.esm-bundler.js"
+    "./internal/compiler": {
+      "types": "./src/compiler-internal.ts",
+      "development": "./src/compiler-internal.ts",
+      "module": "./dist/rue.internal-compiler.esm-bundler.js",
+      "import": "./dist/rue.internal-compiler.esm-bundler.js"
     },
     "./server-renderer": {
       "types": "./src/server-renderer.ts",
@@ -59,6 +60,16 @@
       "import": "./dist/rue.island.esm-bundler.js"
     },
     "./jsx": "./jsx.d.ts",
+    "./jsx-runtime": {
+      "types": "./src/jsx-runtime.ts",
+      "development": "./src/jsx-runtime.ts",
+      "import": "./src/jsx-runtime.ts"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./src/jsx-dev-runtime.ts",
+      "development": "./src/jsx-dev-runtime.ts",
+      "import": "./src/jsx-dev-runtime.ts"
+    },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
@@ -97,15 +108,15 @@
         ]
       },
       {
-        "entry": "src/vapor.ts",
-        "filename": "rue.vapor",
+        "entry": "src/internal.ts",
+        "filename": "rue.internal",
         "formats": [
           "esm-bundler"
         ]
       },
       {
-        "entry": "src/compiled.ts",
-        "filename": "rue.compiled",
+        "entry": "src/compiler-internal.ts",
+        "filename": "rue.internal-compiler",
         "formats": [
           "esm-bundler"
         ]

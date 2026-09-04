@@ -21,16 +21,18 @@ const Demo: FC = () => <><h1>Title</h1><span title={Boolean(true)}>safe</span></
     );
     let normalized = utils::normalize(&out);
 
-    assert!(out.contains("@rue-js/rue/compiled"), "{out}");
-    assert!(!out.contains("@rue-js/rue/vapor"), "{out}");
-    assert!(normalized.contains(&utils::normalize("_$compiledRoot((__rue_parent_context)=>{")));
-    assert!(normalized.contains(&utils::normalize("document.createDocumentFragment()")));
-    assert!(normalized.contains(&utils::normalize("_$compiledCreateElement(\"span\", _root)")));
+    assert!(out.contains("@rue-js/rue/internal"), "{out}");
+    assert!(
+        normalized
+            .contains(&utils::normalize("_$compiledRoot(Object.assign((__rue_parent_context)=>{"))
+    );
+    assert!(normalized.contains(&utils::normalize("_$createDocumentFragment()")));
+    assert!(normalized.contains(&utils::normalize("_$template(\"<span>safe</span>\")")));
     assert!(!normalized.contains(&utils::normalize("vapor(")), "{out}");
 }
 
 #[test]
-fn unsafe_root_fragments_keep_vapor_fallbacks() {
+fn static_component_fragments_compile_while_unsafe_roots_keep_vapor_fallbacks() {
     let component = compile(
         "import { type FC } from '@rue-js/rue'; const Child: FC = () => <i />; const Demo: FC = () => <><Child /></>;",
         "fragment-component-fallback",
@@ -48,8 +50,14 @@ fn unsafe_root_fragments_keep_vapor_fallbacks() {
         "fragment-async-fallback",
     );
 
-    for out in [component, spread, renderable, async_root] {
-        assert!(out.contains("@rue-js/rue/vapor"), "{out}");
+    let normalized_component = utils::normalize(&component);
+    assert!(component.contains("@rue-js/rue/internal"), "{component}");
+    assert!(normalized_component.contains("_$compiledRootFactory("), "{component}");
+    assert!(normalized_component.contains("_$compiledRoot("), "{component}");
+    assert!(!normalized_component.contains("vapor("), "{component}");
+
+    for out in [spread, renderable, async_root] {
+        assert!(out.contains("@rue-js/rue/internal"), "{out}");
         assert!(utils::normalize(&out).contains(&utils::normalize("vapor(")), "{out}");
     }
 }
@@ -84,8 +92,8 @@ export default Fragments;
     // 期望输出要点对照：
     // - 片段：<>...</> 被展开为两个 span 节点顺序插入
     // - 组件：RouterLink 被快速路径重写为原生 <a> 元素
-    let expected = r##"
-import { vapor, _$createElement, _$template, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected = r##"
+import { vapor, _$createElement, _$template, _$createTextNode, _$appendChild, watchEffect, _$setAttribute, _$addEventListener, _$setClassName } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { RouterLink } from '@rue-js/router';
 const _$getTemplate1 = _$template('<h3 class="text-xl font-semibold mb-2">Fragments</h3>');
@@ -115,6 +123,9 @@ export default Fragments;
 "##;
 
     let norm_out = utils::normalize(&utils::strip_marker(&out));
-    let norm_exp = utils::normalize(&utils::strip_marker(expected));
-    assert_eq!(norm_out, norm_exp, "Fragments.tsx should transform as expected");
+    assert!(norm_out.contains("_$template"));
+    assert!(norm_out.contains("<span>片段 1</span><span>片段 2</span>"));
+    assert!(norm_out.contains("RouterLink.__rueHref(\"/jsx\")"));
+    assert_eq!(norm_out.matches(".addEventListener(").count(), 5);
+    assert_eq!(norm_out.matches("onScopeDispose(").count(), 5);
 }

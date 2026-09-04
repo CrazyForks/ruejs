@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import HoverGallery from '../index'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
@@ -19,10 +19,9 @@ describe('HoverGallery', () => {
     const c = mountContainer()
     resetActiveRuntime()
     render(
-      h(HoverGallery, null, [
-        h('img', { src: 'a.webp', alt: 'x' }),
-        h('img', { src: 'b.webp', alt: 'y' }),
-      ]),
+      <HoverGallery>
+        {[<img src={'a.webp'} alt={'x'} />, <img src={'b.webp'} alt={'y'} />]}
+      </HoverGallery>,
       c,
     )
 
@@ -38,7 +37,12 @@ describe('HoverGallery', () => {
   it('supports div tag via as prop', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(HoverGallery, { as: 'div' }, h('img', { src: 'a.webp' })), c)
+    render(
+      <HoverGallery as={'div'}>
+        <img src={'a.webp'} />
+      </HoverGallery>,
+      c,
+    )
 
     await waitForContent(() => {
       const el = c.querySelector('div.hover-gallery') as HTMLElement
@@ -49,7 +53,12 @@ describe('HoverGallery', () => {
   it('appends custom className', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(HoverGallery, { className: 'max-w-60' }, h('img', { src: 'a.webp' })), c)
+    render(
+      <HoverGallery className={'max-w-60'}>
+        <img src={'a.webp'} />
+      </HoverGallery>,
+      c,
+    )
 
     await waitForContent(() => {
       const fig = c.querySelector('.hover-gallery') as HTMLElement
@@ -60,7 +69,7 @@ describe('HoverGallery', () => {
   it('renders images from items array of strings', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(HoverGallery, { items: ['a.webp', 'b.webp', 'c.webp'] }), c)
+    render(<HoverGallery items={['a.webp', 'b.webp', 'c.webp']} />, c)
 
     await waitForContent(() => {
       const fig = c.querySelector('figure.hover-gallery') as HTMLElement
@@ -74,11 +83,11 @@ describe('HoverGallery', () => {
   it('renders items from objects and nodes', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    const node = h('img', { src: 'n.webp', alt: 'n' })
+    const node = <img src={'n.webp'} alt={'n'} />
     render(
-      h(HoverGallery, {
-        items: [{ src: 'a.webp', alt: 'a' }, { src: 'b.webp', className: 'rounded' }, { node }],
-      }),
+      <HoverGallery
+        items={[{ src: 'a.webp', alt: 'a' }, { src: 'b.webp', className: 'rounded' }, { node }]}
+      />,
       c,
     )
 
@@ -95,11 +104,11 @@ describe('HoverGallery', () => {
     resetActiveRuntime()
 
     render(
-      h(HoverGallery, {
-        fit: 'contain',
-        imageClassName: 'rounded-box',
-        items: ['a.webp', { src: 'b.webp', className: 'ring-1' }],
-      }),
+      <HoverGallery
+        fit={'contain'}
+        imageClassName={'rounded-box'}
+        items={['a.webp', { src: 'b.webp', className: 'ring-1' }]}
+      />,
       c,
     )
 
@@ -117,12 +126,12 @@ describe('HoverGallery', () => {
     resetActiveRuntime()
 
     render(
-      h(HoverGallery, {
-        showGuide: true,
-        wrapperClassName: 'rounded-box overflow-hidden',
-        guideLabels: ['侧面', '背面'],
-        items: ['a.webp', { src: 'b.webp', label: '不应覆盖' }, 'c.webp'],
-      }),
+      <HoverGallery
+        showGuide={true}
+        wrapperClassName={'rounded-box overflow-hidden'}
+        guideLabels={['侧面', '背面']}
+        items={['a.webp', { src: 'b.webp', label: '不应覆盖' }, 'c.webp']}
+      />,
       c,
     )
 

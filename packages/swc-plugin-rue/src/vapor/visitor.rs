@@ -115,11 +115,65 @@ fn vapor_parent_param() -> Pat {
     Pat::Ident(BindingIdent { id: ident("__rue_parent_context"), type_ann: None })
 }
 
+fn component_function_spans(module: &Module) -> Vec<swc_core::common::Span> {
+    fn collect_decl(decl: &Decl, spans: &mut Vec<swc_core::common::Span>) {
+        match decl {
+            Decl::Var(var) => {
+                for declarator in &var.decls {
+                    if !(crate::pre::is_fc_pat(&declarator.name)
+                        || crate::pre::is_untyped_arrow_component_decl(declarator))
+                    {
+                        continue;
+                    }
+                    if let Some(Expr::Arrow(arrow)) = declarator.init.as_deref() {
+                        spans.push(arrow.span);
+                    }
+                }
+            }
+            Decl::Fn(function)
+                if function
+                    .function
+                    .body
+                    .as_ref()
+                    .is_some_and(|body| crate::pre::has_component_render_return_in_block(body)) =>
+            {
+                spans.push(function.function.span);
+            }
+            _ => {}
+        }
+    }
+
+    let mut spans = Vec::new();
+    for item in &module.body {
+        match item {
+            ModuleItem::Stmt(Stmt::Decl(decl))
+            | ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl { decl, .. })) => {
+                collect_decl(decl, &mut spans)
+            }
+            _ => {}
+        }
+    }
+    spans
+}
+
 /// 访问器核心：
 /// - 将表达式体或 `return` 返回的 JSX/Fragment 包裹进 `vapor(() => { ... })`
 /// - 通过 `jsx_to_block/fragment_to_block` 生成块体，避免运行时解析 JSX
 /// - 在发生转换后设置 `did_transform=true`，Module 访问阶段按需注入运行时 import
 impl VisitMut for VaporTransform {
+    /// JSX may appear in any expression container, not only as an arrow body or return value.
+    /// Lower those values through the same slot protocol so SWC never needs a JSX fallback pass.
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        match expr {
+            Expr::JSXElement(_) | Expr::JSXFragment(_) => {
+                let lowered = crate::element_expr::make_expr_for_slot(self, expr);
+                *expr = lowered;
+                self.did_transform = true;
+            }
+            _ => expr.visit_mut_children_with(self),
+        }
+    }
+
     fn visit_mut_block_stmt(&mut self, block: &mut BlockStmt) {
         let visible_renderable_locals = self.current_renderable_local_names();
         let scope = crate::element_expr::collect_renderable_local_alias_names(
@@ -127,6 +181,12 @@ impl VisitMut for VaporTransform {
             &visible_renderable_locals,
         );
         let scalar_scope = collect_scalar_names_from_stmts(block.stmts.iter());
+        let reactive_scope = crate::reactive_provenance::collect_stmt_scope(
+            block.stmts.iter(),
+            &self.plain_local_scopes,
+        );
+        let mut scalar_scope = scalar_scope;
+        scalar_scope.extend(reactive_scope);
         self.push_renderable_local_scope(scope);
         self.push_plain_local_scope(scalar_scope);
         block.visit_mut_children_with(self);
@@ -146,6 +206,11 @@ impl VisitMut for VaporTransform {
         for param in &arrow.params {
             collect_scalar_names_from_pat(param, &mut scalar_scope);
         }
+        scalar_scope.extend(if self.is_component_function(arrow.span) {
+            crate::reactive_provenance::collect_component_parameter_scope(arrow.params.iter())
+        } else {
+            crate::reactive_provenance::collect_parameter_scope(arrow.params.iter())
+        });
         self.push_plain_local_scope(scalar_scope);
         match &mut *arrow.body {
             BlockStmtOrExpr::Expr(expr) => {
@@ -153,24 +218,23 @@ impl VisitMut for VaporTransform {
                 match inner {
                     Expr::JSXElement(el) => {
                         log::debug("rue-swc: arrow JSXElement");
-                        if self.static_templates
-                            && !self.current_function_is_async()
-                            && let Some((handle, reserved_elements)) =
-                                super::template::static_root_handle_expr(el.as_ref())
-                        {
-                            self.next_el += reserved_elements;
-                            **expr = handle;
+                        if crate::utils::is_component(&el.opening.name) {
+                            **expr = crate::element_expr::make_expr_for_slot(self, inner);
                         } else if !self.current_function_is_async()
-                            && crate::element_children::is_compiled_scalar_element(
-                                self,
-                                el.as_ref(),
-                            )
+                            && crate::element_children::is_compiled_safe_element(self, el.as_ref())
                         {
                             let block = crate::element_children::compiled_scalar_element_to_block(
                                 self,
                                 el.as_ref(),
                             );
                             **expr = crate::element_children::compiled_block_to_root_expr(block);
+                        } else if self.static_templates
+                            && !self.current_function_is_async()
+                            && let Some((handle, reserved_elements)) =
+                                super::template::static_root_handle_expr(el.as_ref())
+                        {
+                            self.next_el += reserved_elements;
+                            **expr = handle;
                         } else {
                             // 将 JSXElement 编译为块体，并用 vapor(() => {block}) 包裹
                             let block = self.jsx_to_block(el.as_ref());
@@ -237,6 +301,15 @@ impl VisitMut for VaporTransform {
         for param in &function.params {
             collect_scalar_names_from_pat(&param.pat, &mut scalar_scope);
         }
+        scalar_scope.extend(if self.is_component_function(function.span) {
+            crate::reactive_provenance::collect_component_parameter_scope(
+                function.params.iter().map(|param| &param.pat),
+            )
+        } else {
+            crate::reactive_provenance::collect_parameter_scope(
+                function.params.iter().map(|param| &param.pat),
+            )
+        });
         self.push_plain_local_scope(scalar_scope);
         function.visit_mut_children_with(self);
         self.pop_plain_local_scope();
@@ -250,21 +323,23 @@ impl VisitMut for VaporTransform {
             match inner {
                 Expr::JSXElement(el) => {
                     log::debug("rue-swc: nested return JSXElement");
-                    if self.static_templates
-                        && !self.current_function_is_async()
-                        && let Some((handle, reserved_elements)) =
-                            super::template::static_root_handle_expr(el.as_ref())
-                    {
-                        self.next_el += reserved_elements;
-                        **expr = handle;
+                    if crate::utils::is_component(&el.opening.name) {
+                        **expr = crate::element_expr::make_expr_for_slot(self, inner);
                     } else if !self.current_function_is_async()
-                        && crate::element_children::is_compiled_scalar_element(self, el.as_ref())
+                        && crate::element_children::is_compiled_safe_element(self, el.as_ref())
                     {
                         let block = crate::element_children::compiled_scalar_element_to_block(
                             self,
                             el.as_ref(),
                         );
                         **expr = crate::element_children::compiled_block_to_root_expr(block);
+                    } else if self.static_templates
+                        && !self.current_function_is_async()
+                        && let Some((handle, reserved_elements)) =
+                            super::template::static_root_handle_expr(el.as_ref())
+                    {
+                        self.next_el += reserved_elements;
+                        **expr = handle;
                     } else {
                         // 将返回的 JSX 编译为块体，并用 vapor 包裹替换原返回值
                         let body_block = self.jsx_to_block(el.as_ref());
@@ -306,7 +381,7 @@ impl VisitMut for VaporTransform {
                     }
                     self.did_transform = true;
                 }
-                _ => {}
+                _ => expr.visit_mut_children_with(self),
             }
         }
     }
@@ -327,7 +402,27 @@ impl VisitMut for VaporTransform {
             }),
             &visible_renderable_locals,
         );
-        let scalar_scope = collect_module_scalar_names(m);
+        let mut scalar_scope = collect_module_scalar_names(m);
+        scalar_scope
+            .extend(crate::reactive_provenance::collect_module_scope(m, &self.plain_local_scopes));
+        VaporTransform::register_component_functions(
+            &mut scalar_scope,
+            component_function_spans(m),
+        );
+        VaporTransform::register_compiled_components(
+            &mut scalar_scope,
+            crate::compiled_component::transformed_candidate_names(m),
+        );
+        VaporTransform::register_compiled_components(
+            &mut scalar_scope,
+            crate::compiled_component::imported_component_names(m),
+        );
+        VaporTransform::register_compiled_components(
+            &mut scalar_scope,
+            ["Teleport", "Suspense", "KeepAlive", "Transition", "TransitionGroup", "Template"]
+                .into_iter()
+                .map(str::to_string),
+        );
         self.push_renderable_local_scope(scope);
         self.push_plain_local_scope(scalar_scope);
         // propagate into children first

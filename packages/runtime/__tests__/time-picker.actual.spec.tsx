@@ -100,6 +100,26 @@ const popupIsOpen = (popup: HTMLDivElement) => {
 }
 
 describe('TimePicker actual page', () => {
+  it('cancels deferred scroll restoration when unmounted', async () => {
+    vi.useFakeTimers()
+    const container = mountTestContainer()
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 42)
+    const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame')
+
+    render(<MinimalControlledPreview />, container)
+    await vi.advanceTimersByTimeAsync(0)
+
+    const input = container.querySelector('input') as HTMLInputElement
+    await openPicker(input)
+    await vi.advanceTimersByTimeAsync(0)
+    await clickPanelOption(container, 'minute', '45')
+
+    render(null as any, container)
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(42)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
   it(
     'updates the basic live value after selecting a panel option',
     async () => {

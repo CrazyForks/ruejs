@@ -17,6 +17,28 @@ use super::VaporTransform;
 /// - 使用 `watchEffect` + `renderBetween` 在占位注释之间渲染组件本身
 ///   参考测试：`tests/components.rs`、`tests/spec11.rs`
 pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> BlockStmt {
+    if crate::element_component::is_compiled_component_element(transform, el)
+        && let JSXElementName::Ident(component) = &el.opening.name
+        && let Some(read_props) =
+            crate::element_component::build_compiled_component_read_props(transform, el)
+    {
+        let root = ident("_root");
+        return BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: vec![
+                const_decl(root.clone(), call_ident("_$createDocumentFragment", vec![])),
+                Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(call_ident(
+                        "_$mountCompiledComponent",
+                        vec![Expr::Ident(root.clone()), Expr::Ident(component.clone()), read_props],
+                    )),
+                }),
+                Stmt::Return(ReturnStmt { span: DUMMY_SP, arg: Some(Box::new(Expr::Ident(root))) }),
+            ],
+        };
+    }
     let root = ident("_root");
     let mut stmts: Vec<Stmt> = Vec::new();
 
@@ -31,9 +53,11 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
         .direct_render_expr
         .clone()
         .unwrap_or_else(|| crate::element_component::build_component_mount_expr(&comp_el));
+    let child_stmts = rewrite.stmts;
 
     // 静态判断：无动态 props/children 的组件直接一次性渲染（renderAnchor），否则走 watch 包裹
-    let is_static = !crate::utils::is_transition_group_component(&comp_el)
+    let is_static = child_stmts.is_empty()
+        && !crate::utils::is_transition_group_component(&comp_el)
         && (crate::utils::is_static_component_without_props(&comp_el)
             || crate::utils::component_has_no_dynamic_props_excluding_children(&comp_el)
             || crate::utils::is_static_component_children_ident(&comp_el));
@@ -42,12 +66,6 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
     let make_anchor = call_ident("_$createComment", vec![string_expr("rue:component:anchor")]);
     stmts.push(const_decl(anchor.clone(), make_anchor));
     stmts.push(append_child(root.clone(), Expr::Ident(anchor.clone())));
-
-    if !rewrite.stmts.is_empty() {
-        for s in rewrite.stmts {
-            stmts.push(s);
-        }
-    }
 
     let slot_ident = transform.next_slot_ident();
     let render_call = Expr::Call(CallExpr {
@@ -63,6 +81,7 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
     });
 
     if is_static {
+        stmts.extend(child_stmts);
         stmts.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
@@ -97,16 +116,18 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
             type_args: None,
             ctxt: SyntaxContext::empty(),
         });
+        let mut render_stmts = child_stmts;
+        render_stmts.extend([
+            decl_slot,
+            Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(untrack_render) }),
+        ]);
         let render_arrow = Expr::Arrow(ArrowExpr {
             span: DUMMY_SP,
             params: vec![],
             body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
                 span: DUMMY_SP,
                 ctxt: SyntaxContext::empty(),
-                stmts: vec![
-                    decl_slot,
-                    Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(untrack_render) }),
-                ],
+                stmts: render_stmts,
             })),
             is_async: false,
             is_generator: false,
@@ -114,7 +135,7 @@ pub fn emit_component_root(transform: &mut VaporTransform, el: &JSXElement) -> B
             return_type: None,
             ctxt: SyntaxContext::empty(),
         });
-        let watch = call_ident("watchEffect", vec![render_arrow]);
+        let watch = call_ident("effect", vec![render_arrow]);
         stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
     }
 

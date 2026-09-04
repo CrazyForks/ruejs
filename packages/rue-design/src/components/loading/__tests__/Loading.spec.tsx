@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+
 import Loading from '../index'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
@@ -127,7 +128,7 @@ describe('Loading', () => {
     const container = mountContainer()
     resetActiveRuntime()
 
-    Loading.setDefaultIndicator(h('span', { 'data-testid': 'global-indicator' }, 'G'))
+    Loading.setDefaultIndicator(<span data-testid={'global-indicator'}>{'G'}</span>)
     render(<Loading description="Global" />, container)
 
     await waitForContent(() => {

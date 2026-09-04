@@ -1,13 +1,15 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { h, ref, render, setReactiveScheduling, useComponent, type FC } from '../src'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { onError, ref, render, setReactiveScheduling, useComponent, type FC } from '../src'
 import {
   _$createComponent,
-  _$vaporWithHookId,
+  _$createDynamic,
+  _$createFragment,
+  _$compiledWithHookId,
   renderAnchor,
   useSetup,
   vapor,
   watchEffect,
-} from '../src/vapor'
+} from './legacy-test-render'
 
 type AsyncLabelModule = { default: FC<{ label: string }> }
 
@@ -25,6 +27,37 @@ afterEach(() => {
 
 // 验证 useComponent：同一 loader 下的不同实例应共享加载状态，但各自拥有独立的容器与副作用
 describe('useComponent', () => {
+  it('retries a failed loader when the async component is mounted again', async () => {
+    const loadError = new Error('temporary import failure')
+    const reported = vi.fn()
+    const stop = onError(reported)
+    let attempts = 0
+    const loader = vi.fn(async () => {
+      attempts += 1
+      if (attempts === 1) throw loadError
+      return {
+        default: () => _$createDynamic('section', { id: 'recovered', children: 'recovered' }),
+      }
+    })
+    const Async = useComponent(loader)
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    render(_$createDynamic(Async, null), container)
+    await flushAsyncComponent()
+    expect(reported).toHaveBeenCalledWith(loadError, null)
+    expect(container.textContent).toContain('temporary import failure')
+
+    render(null as any, container)
+    render(_$createDynamic(Async, null), container)
+    await flushAsyncComponent()
+
+    expect(loader).toHaveBeenCalledTimes(2)
+    expect(container.querySelector('#recovered')?.textContent).toBe('recovered')
+    expect(container.textContent).not.toContain('temporary import failure')
+    stop?.()
+  })
+
   it('renders same-loader instances with independent props and mount ranges', async () => {
     const deferred: { resolve?: (value: AsyncLabelModule) => void } = {}
     const Async = useComponent<{ label: string }>(
@@ -37,11 +70,18 @@ describe('useComponent', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h('fragment', null, h(Async, { label: 'A' }), h(Async, { label: 'B' })), container)
+    render(
+      _$createFragment([
+        _$createDynamic(Async, { label: 'A' }),
+        _$createDynamic(Async, { label: 'B' }),
+      ]),
+      container,
+    )
     await flushAsyncComponent()
 
     deferred.resolve?.({
-      default: (props: any) => h('section', { 'data-label': props.label }, props.label),
+      default: (props: any) =>
+        _$createDynamic('section', { 'data-label': props.label, children: props.label }),
     })
     await flushAsyncComponent()
 
@@ -74,19 +114,19 @@ describe('useComponent', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(AsyncA, { label: 'A' }), container)
+    render(_$createDynamic(AsyncA, { label: 'A' }), container)
     await flushAsyncComponent()
     deferredA.resolve?.({
-      default: (props: any) => h('section', { id: 'page-a' }, props.label),
+      default: (props: any) => _$createDynamic('section', { id: 'page-a', children: props.label }),
     })
     await flushAsyncComponent()
 
     expect(container.querySelector('#page-a')?.textContent).toBe('A')
 
-    render(h(AsyncB, { label: 'B' }), container)
+    render(_$createDynamic(AsyncB, { label: 'B' }), container)
     await flushAsyncComponent()
     deferredB.resolve?.({
-      default: (props: any) => h('section', { id: 'page-b' }, props.label),
+      default: (props: any) => _$createDynamic('section', { id: 'page-b', children: props.label }),
     })
     await flushAsyncComponent()
 
@@ -99,10 +139,13 @@ describe('useComponent', () => {
     const deferred: { resolve?: (value: { default: FC }) => void } = {}
 
     const Shell: FC<{ children?: unknown }> = props =>
-      h('section', { 'data-testid': 'async-shell' }, props.children as any)
+      _$createDynamic('section', {
+        'data-testid': 'async-shell',
+        children: props.children as any,
+      })
 
     const CompiledLikeRoute: FC = () => {
-      const ctx = _$vaporWithHookId('useSetup:async-compiled:0', () =>
+      const ctx = _$compiledWithHookId('useSetup:async-compiled:0', () =>
         useSetup(() => {
           const message = ref('hello')
           const activeTab = ref<'preview' | 'code'>('preview')
@@ -145,7 +188,7 @@ describe('useComponent', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(Async, null), container)
+    render(_$createDynamic(Async, null), container)
     await flushAsyncComponent()
 
     deferred.resolve?.({ default: CompiledLikeRoute })
@@ -163,7 +206,7 @@ describe('useComponent', () => {
     const deferred: { resolve?: (value: { default: FC }) => void } = {}
 
     const Shell: FC<{ children?: unknown }> = p => {
-      const shellState = _$vaporWithHookId('useSetup:async-shell:0', () =>
+      const shellState = _$compiledWithHookId('useSetup:async-shell:0', () =>
         useSetup(() => ({
           ready: ref(true),
         })),
@@ -190,7 +233,7 @@ describe('useComponent', () => {
     }
 
     const CompiledLikeRoute: FC = () => {
-      const ctx = _$vaporWithHookId('useSetup:async-hookful-route:0', () =>
+      const ctx = _$compiledWithHookId('useSetup:async-hookful-route:0', () =>
         useSetup(() => {
           const message = ref('hello')
           const activeTab = ref<'preview' | 'code'>('preview')
@@ -233,7 +276,7 @@ describe('useComponent', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(Async, null), container)
+    render(_$createDynamic(Async, null), container)
     await flushAsyncComponent()
 
     deferred.resolve?.({ default: CompiledLikeRoute })
@@ -251,7 +294,7 @@ describe('useComponent', () => {
     const deferred: { resolve?: (value: { default: FC }) => void } = {}
 
     const Counter: FC = () => {
-      const ctx = _$vaporWithHookId('useSetup:async-counter:0', () =>
+      const ctx = _$compiledWithHookId('useSetup:async-counter:0', () =>
         useSetup(() => ({
           count: ref(0),
         })),
@@ -284,7 +327,7 @@ describe('useComponent', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(Async, null), container)
+    render(_$createDynamic(Async, null), container)
     await flushAsyncComponent()
 
     deferred.resolve?.({ default: Counter })

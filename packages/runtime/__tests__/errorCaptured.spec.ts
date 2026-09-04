@@ -5,7 +5,14 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { h, onError, onErrorCaptured, render, setReactiveScheduling, type FC } from '../src'
+import { onError, onErrorCaptured, render, setReactiveScheduling, type FC } from '../src'
+import { _$createDynamic } from './legacy-test-render'
+
+const createTestRenderable = (
+  type: string | FC,
+  props: Record<string, unknown> | null,
+  ...children: unknown[]
+) => _$createDynamic(type, children.length > 0 ? { ...props, children } : props)
 setReactiveScheduling('sync')
 
 afterEach(() => {
@@ -29,10 +36,10 @@ describe('onErrorCaptured', () => {
         captured.push(error.message)
         return false
       })
-      return h('section', null, h(Child, null))
+      return createTestRenderable('section', null, createTestRenderable(Child, null))
     }
 
-    render(h(Parent, null), container)
+    render(createTestRenderable(Parent, null), container)
 
     expect(captured).toEqual(['planned child failure'])
     expect(globalError).not.toHaveBeenCalled()
@@ -54,10 +61,12 @@ describe('onErrorCaptured', () => {
       onErrorCaptured(error => {
         captured.push(error.message)
       })
-      return h(Child, null)
+      return createTestRenderable(Child, null)
     }
 
-    expect(() => render(h(Parent, null), container)).toThrow('bubble child failure')
+    expect(() => render(createTestRenderable(Parent, null), container)).toThrow(
+      'bubble child failure',
+    )
 
     expect(captured).toEqual(['bubble child failure'])
     expect(globalError).toHaveBeenCalledTimes(1)

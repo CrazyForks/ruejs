@@ -9,7 +9,7 @@ fn transform(src: &str) -> String {
 }
 
 #[test]
-fn optimizes_static_root_component_to_render_anchor() {
+fn optimizes_static_root_component_to_direct_handle() {
     let src = r##"
 import { type FC } from '@rue-js/rue';
 
@@ -21,8 +21,9 @@ export default Page;
 
     let out = utils::normalize(&transform(src));
 
-    assert!(out.contains("rue:component:anchor"));
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
+    assert!(out.contains(&utils::normalize("_$createComponent(Hello, ()=>({}))")), "{out}");
+    assert!(!out.contains("rue:component:anchor"));
+    assert!(!out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(!out.contains("rue:component:start"));
     assert!(!out.contains("renderBetween("));
     assert!(!out.contains("watchEffect("));
@@ -45,7 +46,7 @@ export default Page;
 
     let out = utils::normalize(&transform(src));
 
-    assert!(out.contains("rue:component:anchor"));
+    assert!(out.contains("rue:opaque-hole:0"));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(!out.contains("rue:component:start"));
     assert!(!out.contains("renderBetween("));
@@ -65,8 +66,8 @@ export default Page;
 
     let out = utils::normalize(&transform(src));
 
-    assert!(out.contains("rue:slot:anchor"));
+    assert!(out.contains("rue:text-hole:0"));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
-    assert!(!out.contains("watchEffect(()"));
+    assert!(out.contains("effect(()=>"), "{out}");
     assert!(!out.contains("renderBetween("));
 }

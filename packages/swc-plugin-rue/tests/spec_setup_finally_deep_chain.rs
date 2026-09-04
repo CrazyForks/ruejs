@@ -34,19 +34,20 @@ function Comp(): JSX.Element {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 function Comp(): JSX.Element {
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1.2:0", ()=>ref(2));
-            const info = _$vaporWithHookId("computed:1.2:1", ()=>computed(()=>({
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(2);
+            const info = computed(()=>({
                         x: a.value,
                         arr: [
                             a.value,
                             `t=${a.value > 1 ? 'A' : 'B'}`
                         ]
-                    })));
+                }));
+            info.get();
             const __rue_phase2_info = info;
-            _$vaporWithHookId("watchEffect:1.2:2", ()=>watchEffect(()=>console.log('pre', __rue_phase2_info.get().x)));
+            watchEffect(()=>console.log('pre', __rue_phase2_info.get().x));
             try {
                 const x = a.value + 1;
             } finally{
@@ -56,26 +57,30 @@ function Comp(): JSX.Element {
                     try {
                         const z = a.value + 3;
                     } finally{
-                        onBeforeUnmount(()=>_$vaporWithHookId("watchEffect:1.2:3", ()=>watchEffect(()=>console.log('end', __rue_phase2_info.get().arr[1], a.value))));
+                        onBeforeUnmount(()=>_$compiledWithHookId("watchEffect:1.2:3", ()=>watchEffect(()=>console.log('end', __rue_phase2_info.get().arr[1], a.value))));
                     }
                 }
             }
             return {
                 a: a,
-                info: info
+                info: info,
+                __rue_phase2_info: __rue_phase2_info
             };
         }));
-    const { a: a, info: info } = _$useSetup;
+    const { a: a, info: info, __rue_phase2_info: __rue_phase2_info } = _$useSetup;
     return <div>{info.get().arr[1]}</div>;
 }
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_finally_deep_chain.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

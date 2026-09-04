@@ -42,6 +42,21 @@ fn parse_jsx_element(src: &str) -> JSXElement {
     }
 }
 
+fn reactive_scope(src: &str) -> HashSet<String> {
+    let cm = Arc::new(SourceMap::default());
+    let fm = cm.new_source_file(
+        FileName::Custom("element-children-scope-test.tsx".into()).into(),
+        src.to_string(),
+    );
+    let mut parser = Parser::new(
+        Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+        StringInput::from(&*fm),
+        None,
+    );
+    let module = parser.parse_module().expect("parse reactive scope module");
+    crate::reactive_provenance::collect_module_scope(&module, &[])
+}
+
 fn jsx_text(value: &str) -> JSXElementChild {
     JSXElementChild::JSXText(JSXText { span: DUMMY_SP, value: value.into(), raw: value.into() })
 }
@@ -62,6 +77,10 @@ fn emit_stmts(stmts: Vec<Stmt>) -> String {
     };
     emitter.emit_program(&Program::Module(module)).expect("emit stmts");
     String::from_utf8(buf).expect("utf8")
+}
+
+fn emit_expr(expr: Expr) -> String {
+    emit_stmts(vec![Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(expr) })])
 }
 
 fn compact(src: &str) -> String {
@@ -122,13 +141,9 @@ fn dispatches_fragment_expr_nested_element_and_ignores_spread_children() {
     let out = compact(&emit_stmts(stmts));
 
     assert!(out.contains("_$createComment(\"rue:children:anchor\")"));
-    assert!(out.contains(
-        "watchEffect(()=>{const__slot=(props.children);untrack(()=>renderAnchor(__slot,root,_list1));});",
-    ));
+    assert!(out.contains("_$mountCompiledSlotAt({parent:root,before:_list1}"), "{out}");
     assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
-    assert!(out.contains(
-        "watchEffect(()=>{const__slot=(slotView);untrack(()=>renderAnchor(__slot,root,_list2));});",
-    ));
+    assert!(out.contains("renderAnchor(__slot,root,_list2)"), "{out}");
     assert!(out.contains("_$appendChild(root,_$createTextNode(\"frag\"));"));
     assert!(out.contains("_$createElement(\"span\",root)"));
     assert!(out.contains("_$appendChild(_el1,_$createTextNode(\"child\"));"));
@@ -223,4 +238,83 @@ fn classifies_only_synchronous_scalar_children_for_direct_binding() {
     assert!(crate::vapor::is_compiled_scalar_expr(&conditional));
     assert!(!crate::vapor::is_compiled_scalar_expr(&renderable));
     assert!(!crate::vapor::is_compiled_scalar_expr(&object));
+}
+
+#[test]
+fn reports_explicit_roots_for_compiler_proven_element_and_fragment_blocks() {
+    let mut element_vt = new_vt();
+    let element = parse_jsx_element("<section><span>child</span></section>");
+    let element_out = compact(&emit_expr(compiled_block_to_root_expr(
+        compiled_scalar_element_to_block(&mut element_vt, &element),
+    )));
+
+    assert!(element_out.contains("__rue_compiled_host:_root"), "{element_out}");
+    assert!(element_out.contains("__rue_compiled_roots:[_root]"), "{element_out}");
+    assert!(element_out.contains("__rue_compiled_explicit_roots:true"), "{element_out}");
+
+    let mut fragment_vt = new_vt();
+    let Expr::JSXFragment(fragment) = parse_expr("<><span>one</span><strong>two</strong></>", true)
+    else {
+        panic!("expected JSX fragment");
+    };
+    let fragment_out = compact(&emit_expr(compiled_block_to_root_expr(
+        compiled_fragment_to_block(&mut fragment_vt, &fragment),
+    )));
+
+    assert!(fragment_out.contains("__rue_compiled_host:_root"), "{fragment_out}");
+    assert!(fragment_out.contains("__rue_compiled_roots:[_root]"), "{fragment_out}");
+    assert!(fragment_out.contains("__rue_compiled_explicit_roots:true"), "{fragment_out}");
+}
+
+#[test]
+fn groups_same_source_literal_sibling_branches_with_empty_fallback() {
+    let mut vt = new_vt();
+    vt.push_plain_local_scope(reactive_scope(
+        "import { ref } from '@rue-js/rue'; const tab = ref('preview');",
+    ));
+    let el = parse_jsx_element(
+        r#"<div>
+          {tab.value === 'code' && <span>code</span>}
+          {tab.value === 'preview' && <span>preview</span>}
+        </div>"#,
+    );
+    let mut stmts = Vec::new();
+
+    emit_element_children(&mut vt, &crate::emit::ident("root"), &el.children, &mut stmts);
+
+    let out = compact(&emit_stmts(stmts));
+    assert_eq!(out.matches("_$compiledBranch(").count(), 1, "{out}");
+    assert_eq!(out.matches("const__rue_branch_value=tab.value").count(), 1, "{out}");
+    assert!(out.contains("==='code'"), "{out}");
+    assert!(out.contains("==='preview'"), "{out}");
+    assert!(out.contains("_$createDocumentFragment()"), "{out}");
+}
+
+#[test]
+fn keeps_different_sources_and_effectful_tests_as_independent_branches() {
+    let mut vt = new_vt();
+    let different = parse_jsx_element(
+        "<div>{left.get() === 'a' && <span>a</span>}{right.get() === 'b' && <span>b</span>}</div>",
+    );
+    let mut different_stmts = Vec::new();
+    emit_element_children(
+        &mut vt,
+        &crate::emit::ident("root"),
+        &different.children,
+        &mut different_stmts,
+    );
+    assert_ne!(compact(&emit_stmts(different_stmts)).matches("_$compiledBranch(").count(), 1);
+
+    let mut effectful_vt = new_vt();
+    let effectful = parse_jsx_element(
+        "<div>{readTab() === 'a' && <span>a</span>}{readTab() === 'b' && <span>b</span>}</div>",
+    );
+    let mut effectful_stmts = Vec::new();
+    emit_element_children(
+        &mut effectful_vt,
+        &crate::emit::ident("root"),
+        &effectful.children,
+        &mut effectful_stmts,
+    );
+    assert_ne!(compact(&emit_stmts(effectful_stmts)).matches("_$compiledBranch(").count(), 1);
 }

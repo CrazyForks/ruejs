@@ -139,7 +139,7 @@ fn wraps_dynamic_text_updates_in_watch_effect() {
 
     assert!(out.contains("_$createTextWrapper(root)"));
     assert!(out.contains("_$appendChild(root,_el1);"));
-    assert!(out.contains("watchEffect(()=>{_$settextContent(_el1,sha.slice(0,7));});"));
+    assert!(out.contains("effect(()=>{_$settextContent(_el1,sha.slice(0,7));});"));
 }
 
 #[test]

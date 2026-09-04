@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createRue, useApp as useDefaultApp, type FC } from '../src'
 import { resolveRuntimeComponent } from '../src/component-registry'
-import { onMounted, onUnmounted, useApp, vapor } from '../src/vapor'
+import { onMounted, onUnmounted, useApp, vapor } from './legacy-test-render'
 
 const flushRender = async () => {
   await Promise.resolve()

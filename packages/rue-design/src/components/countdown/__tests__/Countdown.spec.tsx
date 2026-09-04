@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render } from '@rue-js/rue'
 import Countdown from '../index'
 
@@ -21,7 +21,7 @@ afterEach(() => {
 describe('Countdown', () => {
   it('renders wrapper with base class', async () => {
     const c = document.createElement('div')
-    render(h(Countdown, null, 'x'), c)
+    render(<Countdown>{'x'}</Countdown>, c)
     await waitCountdownRender()
     const el = c.querySelector('.countdown') as HTMLElement
     expect(el).toBeTruthy()
@@ -29,7 +29,7 @@ describe('Countdown', () => {
 
   it('applies custom className on wrapper', async () => {
     const c = document.createElement('div')
-    render(h(Countdown, { className: 'font-mono text-2xl' }, 'x'), c)
+    render(<Countdown className={'font-mono text-2xl'}>{'x'}</Countdown>, c)
     await waitCountdownRender()
     const el = c.querySelector('.countdown') as HTMLElement
     expect(el.classList.contains('font-mono')).toBe(true)
@@ -38,7 +38,7 @@ describe('Countdown', () => {
 
   it('renders Value with --value style and text', async () => {
     const c = document.createElement('div')
-    render(h(Countdown, null, [h(Countdown.Value, { value: 59 })]), c)
+    render(<Countdown>{[<Countdown.Value value={59} />]}</Countdown>, c)
     await waitCountdownRender()
     const inner = c.querySelector('.countdown > span') as HTMLElement
     expect(inner).toBeTruthy()
@@ -50,7 +50,7 @@ describe('Countdown', () => {
 
   it('supports digits via --digits style', async () => {
     const c = document.createElement('div')
-    render(h(Countdown, null, [h(Countdown.Value, { value: 9, digits: 2 })]), c)
+    render(<Countdown>{[<Countdown.Value value={9} digits={2} />]}</Countdown>, c)
     await waitCountdownRender()
     const inner = c.querySelector('.countdown > span') as HTMLElement
     expect(inner.style.getPropertyValue('--value')).toBe('9')
@@ -68,7 +68,7 @@ describe('Countdown', () => {
       { value: 59, digits: 2 },
       { content: 's' },
     ]
-    render(h(Countdown, { className: 'font-mono text-2xl', items }), c)
+    render(<Countdown className={'font-mono text-2xl'} items={items} />, c)
     await waitCountdownRender()
     const wrapper = c.querySelector('.countdown') as HTMLElement
     expect(wrapper.classList.contains('font-mono')).toBe(true)
@@ -85,7 +85,7 @@ describe('Countdown', () => {
 
     const c = document.createElement('div')
     const target = Date.now() + (10 * 60 * 60 + 24 * 60 + 59) * 1000
-    render(h(Countdown, { value: target, format: 'HH:mm:ss' }), c)
+    render(<Countdown value={target} format={'HH:mm:ss'} />, c)
     await waitCountdownRender()
 
     const wrapper = c.querySelector('.countdown') as HTMLElement
@@ -103,7 +103,7 @@ describe('Countdown', () => {
 
     const c = document.createElement('div')
     const firstTarget = Date.now() + 5_000
-    render(h(Countdown, { key: firstTarget, value: firstTarget, format: 's', interval: 1000 }), c)
+    render(<Countdown key={firstTarget} value={firstTarget} format={'s'} interval={1000} />, c)
     await waitCountdownRender()
 
     const readSeconds = () => {
@@ -114,7 +114,7 @@ describe('Countdown', () => {
     expect(readSeconds()).toBe('5')
 
     const nextTarget = Date.now() + 9_000
-    render(h(Countdown, { key: nextTarget, value: nextTarget, format: 's', interval: 1000 }), c)
+    render(<Countdown key={nextTarget} value={nextTarget} format={'s'} interval={1000} />, c)
     await waitCountdownRender()
 
     expect(readSeconds()).toBe('9')
@@ -126,7 +126,10 @@ describe('Countdown', () => {
 
     const c = document.createElement('div')
     const onChange = vi.fn()
-    render(h(Countdown, { value: Date.now() + 3_000, format: 's', interval: 1000, onChange }), c)
+    render(
+      <Countdown value={Date.now() + 3_000} format={'s'} interval={1000} onChange={onChange} />,
+      c,
+    )
     await waitCountdownRender()
 
     const firstSlot = c.querySelector('.countdown > span') as HTMLElement
@@ -147,7 +150,7 @@ describe('Countdown', () => {
 
     const c = document.createElement('div')
     const target = Date.now() + (2 * 24 * 60 * 60 + 3 * 60 * 60 + 4 * 60 + 5) * 1000
-    render(h(Countdown, { value: target, format: 'D [days] H [hours] m [minutes] s [seconds]' }), c)
+    render(<Countdown value={target} format={'D [days] H [hours] m [minutes] s [seconds]'} />, c)
     await waitCountdownRender()
 
     const wrapper = c.querySelector('.countdown') as HTMLElement
@@ -170,12 +173,12 @@ describe('Countdown', () => {
     const onFinish = vi.fn()
     const c = document.createElement('div')
     render(
-      h(Countdown, {
-        value: Date.now() + 1200,
-        format: 's.SSS',
-        onChange,
-        onFinish,
-      }),
+      <Countdown
+        value={Date.now() + 1200}
+        format={'s.SSS'}
+        onChange={onChange}
+        onFinish={onFinish}
+      />,
       c,
     )
     await waitCountdownRender()

@@ -32,7 +32,7 @@ export default Hello
     let out = utils::emit(program, cm);
 
     let expected_fragment = r##"
-import { vapor, _$createElement, _$template, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect } from "@rue-js/rue/vapor";
+import { vapor, _$createElement, _$template, _$settextContent, _$createDocumentFragment, _$appendChild, effect } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const _$getTemplate1 = _$template('<div class="rue-parent"><h3 class="text-xl font-semibold mb-3">hello</h3><span>world</span></div>');
 const Hello: FC = ()=>{
@@ -40,7 +40,7 @@ const Hello: FC = ()=>{
         const _root = _$createDocumentFragment();
         const _el1 = _$createElement("style", _root);
         _$appendChild(_root, _el1);
-        watchEffect(()=>{
+        effect(()=>{
             _$settextContent(_el1, `
 .rue-parent h3{ background: #42b983; padding: 10px; color: white; }
 `);

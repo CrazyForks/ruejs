@@ -77,5 +77,41 @@ describe('AttributeBindings actual page', () => {
 
     expect(findTab(container, '代码')?.className).toContain('tab-active')
     expect(findParagraph(container, 'This should be red, but click me to toggle it.')).toBeNull()
+    expect(redLine!.isConnected).toBe(false)
+    expect(colorLine!.isConnected).toBe(false)
+
+    await click(findTab(container, '效果'))
+
+    await waitForContent(() => {
+      expect(findTab(container, '效果')?.className).toContain('tab-active')
+      const nextRedLine = findParagraph(container, 'This should be red, but click me to toggle it.')
+      const nextColorLine = findParagraph(
+        container,
+        'This should be green, and should toggle between green and blue on click.',
+      ) as HTMLElement | null
+      expect(nextRedLine).not.toBe(redLine)
+      expect(nextRedLine?.className).not.toContain('text-red-600')
+      expect(nextColorLine).not.toBe(colorLine)
+      expect(nextColorLine?.getAttribute('style')).toContain('blue')
+    })
+
+    const mountedRedLine = findParagraph(
+      container,
+      'This should be red, but click me to toggle it.',
+    )
+    const mountedColorLine = findParagraph(
+      container,
+      'This should be green, and should toggle between green and blue on click.',
+    ) as HTMLElement | null
+
+    render(null, container)
+    expect(container.childNodes).toHaveLength(0)
+
+    await click(mountedRedLine)
+    await click(mountedColorLine)
+
+    expect(container.childNodes).toHaveLength(0)
+    expect(mountedRedLine?.className).not.toContain('text-red-600')
+    expect(mountedColorLine?.getAttribute('style')).toContain('blue')
   })
 })

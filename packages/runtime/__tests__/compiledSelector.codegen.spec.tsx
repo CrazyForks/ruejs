@@ -12,9 +12,10 @@ import {
   disposeOwner as disposeCompiledOwner,
   effect as compiledEffect,
   onCleanup as compiledOnCleanup,
+  onOwnerCleanup as compiledOnOwnerCleanup,
   runWithOwner as runWithCompiledOwner,
   signal,
-} from '../../runtime-vapor/dist/compiled.js'
+} from '../src/internal-reactive'
 import { _$compiledRoot } from '../src/compiled-root'
 import { _$reconcileKeyed } from '../src/compiled-keyed-list'
 import {
@@ -22,7 +23,8 @@ import {
   _$compiledCreateComment,
   _$compiledCreateElement,
   _$compiledCreateTextNode,
-} from '../src/compiled'
+} from '../src/internal'
+import * as internalRuntime from '../src/internal'
 
 type Row = { readonly key: number; readonly id: number; label: string }
 
@@ -89,20 +91,19 @@ describe('compiled selector codegen', () => {
   it('updates only the previous and next selected rows and disposes deleted row effects', async () => {
     const output = compile(source)
     const compiledImport = output.match(
-      /import\s*\{([^}]*)\}\s*from\s*["']@rue-js\/rue\/compiled["']/,
+      /import\s*\{([^}]*)\}\s*from\s*["']@rue-js\/rue\/internal\/compiler["']/,
     )
-    for (const helper of ['createSelector', 'effect', '_$reconcileKeyed']) {
+    for (const helper of ['_$compiledSignal', 'effect', '_$reconcileKeyed']) {
       expect(compiledImport?.[1]).toContain(helper)
     }
-    for (const helper of ['createOwner', 'disposeOwner', 'onCleanup', 'runWithOwner']) {
+    for (const helper of ['createOwner', 'disposeOwner', 'runWithOwner']) {
       expect(compiledImport?.[1]).not.toContain(helper)
     }
     expect(output).not.toContain('watchEffect')
-    expect(output).not.toContain('_$vaporKeyedList')
-    expect(output.indexOf('createSelector')).toBeLessThan(output.lastIndexOf('effect'))
+    expect(output).not.toContain('_$compiledKeyedList')
     expect(output.match(/\bcreateOwner\(\)/g)).toBeNull()
     expect(output.match(/\bdisposeOwner\(/g)).toBeNull()
-    expect(output).toContain('.dispose()')
+    expect(output).toContain('onOwnerCleanup(')
 
     let selectorBindingRuns = 0
     const clickEvents: number[] = []
@@ -121,13 +122,15 @@ describe('compiled selector codegen', () => {
     const activeEffects = new Set<number>()
     const trackedEffect: typeof compiledEffect = (callback, options) => {
       const handle = compiledEffect(callback, options)
-      activeEffects.add(handle.id)
+      const id = handle.id!
+      activeEffects.add(id)
+      compiledOnOwnerCleanup(() => activeEffects.delete(id))
       const dispose = () => {
         handle.dispose()
-        activeEffects.delete(handle.id)
+        activeEffects.delete(id)
       }
       return {
-        id: handle.id,
+        id,
         dispose,
         free: dispose,
         [Symbol.dispose]: dispose,
@@ -135,53 +138,23 @@ describe('compiled selector codegen', () => {
     }
 
     const executable = `${stripModuleSyntax(output)}\nreturn View;`
-    const factory = new Function(
-      'rows',
-      'selected',
-      'onRowClick',
-      'onRowMouseOver',
-      'createOwner',
-      'createSelector',
-      'disposeOwner',
-      'effect',
-      'onCleanup',
-      'runWithOwner',
-      '_$reconcileKeyed',
-      '_$compiledRoot',
-      '_$compiledCreateElement',
-      '_$compiledCreateTextNode',
-      '_$compiledCreateComment',
-      '_$compiledAppendChild',
-      'vapor',
-      '_$createElement',
-      'String',
-      executable,
-    )
-    const View = factory(
+    const bindings = {
+      ...internalRuntime,
       rows,
       selected,
-      (id: number) => clickEvents.push(id),
-      (id: number) => mouseOverEvents.push(id),
-      createCompiledOwner,
-      createCompiledSelector,
-      disposeCompiledOwner,
-      trackedEffect,
-      compiledOnCleanup,
-      runWithCompiledOwner,
-      reconcile,
-      _$compiledRoot,
-      _$compiledCreateElement,
-      _$compiledCreateTextNode,
-      _$compiledCreateComment,
-      _$compiledAppendChild,
-      (setup: (parent: ParentNode) => Node) => setup,
-      (tag: string) => document.createElement(tag),
-      (value: unknown) => {
+      onRowClick: (id: number) => clickEvents.push(id),
+      onRowMouseOver: (id: number) => mouseOverEvents.push(id),
+      effect: trackedEffect,
+      _$reconcileKeyed: reconcile,
+      String: (value: unknown) => {
         selectorBindingRuns += 1
         return String(value)
       },
-    ) as () => {
-      __rue_vapor_setup(parent: ParentNode): HTMLTableSectionElement
+    }
+    const names = Object.keys(bindings)
+    const factory = new Function(...names, executable)
+    const View = factory(...names.map(name => bindings[name as keyof typeof bindings])) as () => {
+      __rue_compiled_mount(parent: ParentNode): HTMLTableSectionElement
     }
 
     const rootOwner = createCompiledOwner()
@@ -189,7 +162,7 @@ describe('compiled selector codegen', () => {
     let tbody: HTMLTableSectionElement | undefined
     runWithCompiledOwner(rootOwner, () => {
       const handle = View()
-      tbody = handle.__rue_vapor_setup(host)
+      tbody = handle.__rue_compiled_mount(host)
       host.appendChild(tbody)
     })
     if (!tbody) throw new Error('Expected compiled tbody')
@@ -255,8 +228,8 @@ describe('compiled selector codegen', () => {
     removedSelectedRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     removedSelectedRow.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
     expect({ clickEvents, mouseOverEvents }).toEqual({
-      clickEvents: [1, 875],
-      mouseOverEvents: [1, 875],
+      clickEvents: [1],
+      mouseOverEvents: [1],
     })
     selectorBindingRuns = 0
     selected.set(1)
@@ -275,8 +248,8 @@ describe('compiled selector codegen', () => {
     await flushCompiledEffects()
     expect(selectorBindingRuns).toBe(0)
     expect({ clickEvents, mouseOverEvents }).toEqual({
-      clickEvents: [1, 875, 1],
-      mouseOverEvents: [1, 875, 1],
+      clickEvents: [1],
+      mouseOverEvents: [1],
     })
 
     console.info('[compiled selector codegen]', {

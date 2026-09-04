@@ -43,15 +43,15 @@ const Comp: FC<{ query?: string; count: number; label?: string }> = ({
     assert!(normalized.contains(&utils::normalize(r#"}> = (__rue_props)=>{"#,)));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const upper = _$vaporWithHookId("computed:1:0", ()=>computed(()=>(__rue_props.query === void 0 ? ' hello ' : __rue_props.query).trim().toUpperCase()));"#,
+        r#"const upper = computed(()=>(__rue_props.query === void 0 ? ' hello ' : __rue_props.query).trim().toUpperCase());"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const payload = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+        r#"const payload = computed(()=>({
         total: __rue_props.count,
         text: (__rue_props.label === void 0 ? 'fallback' : __rue_props.label),
         query: (__rue_props.query === void 0 ? ' hello ' : __rue_props.query)
-    })));"#,
+    }));"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(r#"const __rue_phase2_payload = payload;"#,)));
@@ -62,9 +62,7 @@ const Comp: FC<{ query?: string; count: number; label?: string }> = ({
         ))
     );
 
-    assert!(normalized.contains(&utils::normalize(
-        r#"_$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>{"#,
-    )));
+    assert!(normalized.contains(&utils::normalize(r#"watchEffect(()=>{"#,)));
 
     assert!(normalized.contains(&utils::normalize(
         r#"console.log((__rue_props.query === void 0 ? ' hello ' : __rue_props.query), __rue_props.count, (__rue_props.label === void 0 ? 'fallback' : __rue_props.label), __rue_phase2_payload.get().total, format((__rue_props.query === void 0 ? ' hello ' : __rue_props.query)));"#,
@@ -259,10 +257,39 @@ const Comp: FC<Props> = ({ query = ' hello ', label = 'fallback', ...rest }) => 
     )));
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const summary = _$vaporWithHookId("computed:1:0", ()=>computed(()=>`${(__rue_props.query === void 0 ? ' hello ' : __rue_props.query).trim().toUpperCase()}-${(__rue_props.label === void 0 ? 'fallback' : __rue_props.label)}`));"#,
+        r#"const summary = computed(()=>`${(__rue_props.query === void 0 ? ' hello ' : __rue_props.query).trim().toUpperCase()}-${(__rue_props.label === void 0 ? 'fallback' : __rue_props.label)}`);"#,
     )));
 
     assert!(normalized.contains(&utils::normalize(
         r#"return <button data-id={rest.id}>{summary.get()}</button>;"#,
     )));
+}
+
+#[test]
+fn keeps_props_derived_early_render_control_reactive() {
+    let src = r##"
+import { type FC } from '@rue-js/rue'
+
+const Comp: FC<{ open?: boolean; items: string[] }> = ({ open = false, items }) => {
+  const getTotal = () => items.length
+  const getOpen = () => open
+  const total = getTotal()
+  const visible = getOpen() && total > 0
+  if (!visible) return null
+  return <p>{total}</p>
+}
+"##;
+
+    let (program, cm) = utils::parse(src, "test.tsx");
+    let program = apply_pre(program);
+    let out = utils::emit(program, cm);
+    let normalized = utils::normalize(&utils::strip_marker(&out));
+
+    assert!(normalized.contains(&utils::normalize("computed(()=>getTotal())")), "{out}");
+    assert!(
+        normalized
+            .contains(&utils::normalize("__rue_props.open === void 0 ? false : __rue_props.open",)),
+        "{out}",
+    );
+    assert!(normalized.contains(&utils::normalize("if (!visible.get())")), "{out}");
 }

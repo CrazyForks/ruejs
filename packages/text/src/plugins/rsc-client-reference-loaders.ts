@@ -85,13 +85,16 @@ function generateClientReferenceLoadersFromManager(
 
 export function createRscClientReferenceLoadersPlugin(): Plugin {
   let rscApi: RscPluginApi | undefined
-  let includeUnchunkedReferences = false
+  let includeUnchunkedReferences = true
 
   return {
     name: 'text:rsc-client-reference-loaders',
     enforce: 'post',
     configResolved(config) {
-      includeUnchunkedReferences = config.command === 'serve'
+      // The virtual module is loaded before Rollup assigns server chunks during
+      // production builds. Keep scanned references at that point so the SSR
+      // runtime never falls back to importing an opaque reference hash.
+      includeUnchunkedReferences = config.command === 'serve' || config.command === 'build'
       rscApi = config.plugins.map(readRscPluginApi).find(Boolean)
     },
     resolveId(id) {

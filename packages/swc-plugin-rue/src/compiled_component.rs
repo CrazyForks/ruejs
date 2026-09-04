@@ -1,0 +1,1528 @@
+use std::collections::{BTreeSet, HashMap, HashSet};
+
+use swc_core::common::{DUMMY_SP, SyntaxContext};
+use swc_core::ecma::ast::*;
+use swc_core::ecma::visit::{Visit, VisitMut, VisitMutWith, VisitWith};
+
+#[cfg(test)]
+#[path = "compiled_component_tests.rs"]
+mod tests;
+
+#[derive(Clone, Debug)]
+pub(crate) struct CompiledComponentCandidate {
+    name: String,
+    pub(crate) props_name: String,
+    pub(crate) prop_keys: Vec<String>,
+    destructured_props: HashMap<String, (String, Option<Expr>)>,
+    rest_prop: Option<String>,
+    branching: bool,
+    hook_aware: bool,
+}
+
+fn is_regional_setup_helper(name: &str) -> bool {
+    matches!(
+        name,
+        "useMemo"
+            | "useEffect"
+            | "useCallback"
+            | "useRef"
+            | "reactive"
+            | "ref"
+            | "shallowRef"
+            | "useState"
+            | "watchEffect"
+            | "watch"
+            | "watchSignal"
+            | "watchFn"
+            | "watchPath"
+            | "watchDeepSignal"
+            | "computed"
+            | "signal"
+            | "readonly"
+            | "shallowReactive"
+            | "useSignal"
+            | "useSetup"
+            | "shallowReadonly"
+            | "onMounted"
+            | "onUnmounted"
+            | "onBeforeMount"
+            | "onBeforeUnmount"
+            | "onServerPrefetch"
+            | "onUpdated"
+            | "onBeforeUpdate"
+            | "onActivated"
+            | "onDeactivated"
+    )
+}
+
+pub(crate) type CompiledComponentCandidates = HashMap<String, CompiledComponentCandidate>;
+
+pub(crate) fn imported_component_names(module: &Module) -> HashSet<String> {
+    module
+        .body
+        .iter()
+        .filter_map(|item| match item {
+            ModuleItem::ModuleDecl(ModuleDecl::Import(import)) if !import.type_only => Some(import),
+            _ => None,
+        })
+        .flat_map(|import| import.specifiers.iter())
+        .filter_map(|specifier| match specifier {
+            ImportSpecifier::Default(default) => Some(default.local.sym.to_string()),
+            ImportSpecifier::Named(named) if !named.is_type_only => {
+                Some(named.local.sym.to_string())
+            }
+            _ => None,
+        })
+        .filter(|name| name.chars().next().is_some_and(|character| character.is_ascii_uppercase()))
+        .collect()
+}
+
+pub(crate) fn is_static_prop_get_call(call: &CallExpr) -> bool {
+    call.args.is_empty()
+        && matches!(
+            &call.callee,
+            Callee::Expr(callee)
+                if matches!(
+                    crate::utils::unwrap_expr(callee.as_ref()),
+                    Expr::Member(MemberExpr {
+                        obj,
+                        prop: MemberProp::Ident(property),
+                        ..
+                    }) if property.sym.as_ref() == "get"
+                        && matches!(
+                            crate::utils::unwrap_expr(obj.as_ref()),
+                            Expr::Ident(ident)
+                                if ident.sym.as_ref().starts_with("_$rueCompiledProp")
+                        )
+                )
+        )
+}
+
+#[derive(Default)]
+struct DestructuredProps {
+    bindings: HashMap<String, (String, Option<Expr>)>,
+    rest: Option<String>,
+}
+
+fn prop_name_string(name: &PropName) -> Option<String> {
+    match name {
+        PropName::Ident(key) => Some(key.sym.to_string()),
+        PropName::Str(key) => Some(key.value.to_string_lossy().into_owned()),
+        _ => None,
+    }
+}
+
+fn object_param_bindings(object: &ObjectPat) -> Option<DestructuredProps> {
+    let mut result = DestructuredProps::default();
+    for property in &object.props {
+        match property {
+            ObjectPatProp::Assign(assign) => {
+                result.bindings.insert(
+                    assign.key.sym.to_string(),
+                    (assign.key.sym.to_string(), assign.value.as_deref().cloned()),
+                );
+            }
+            ObjectPatProp::KeyValue(property) => {
+                let key = prop_name_string(&property.key)?;
+                let (binding, value) = match property.value.as_ref() {
+                    Pat::Ident(binding) => (binding.id.sym.to_string(), None),
+                    Pat::Assign(assign) => match assign.left.as_ref() {
+                        Pat::Ident(binding) => {
+                            (binding.id.sym.to_string(), Some(assign.right.as_ref().clone()))
+                        }
+                        _ => return None,
+                    },
+                    _ => return None,
+                };
+                result.bindings.insert(binding, (key, value));
+            }
+            ObjectPatProp::Rest(rest) => {
+                let Pat::Ident(binding) = rest.arg.as_ref() else { return None };
+                if result.rest.replace(binding.id.sym.to_string()).is_some() {
+                    return None;
+                }
+            }
+        }
+    }
+    Some(result)
+}
+
+fn component_param(params: &[Pat]) -> Option<(String, Option<DestructuredProps>)> {
+    match params {
+        [] => Some(("__rue_props".to_string(), Some(DestructuredProps::default()))),
+        [Pat::Ident(binding)] => Some((binding.id.sym.to_string(), None)),
+        [Pat::Object(object)] => {
+            Some(("__rue_props".to_string(), Some(object_param_bindings(object)?)))
+        }
+        _ => None,
+    }
+}
+
+fn function_param(function: &Function) -> Option<(String, Option<DestructuredProps>)> {
+    let params: Vec<Pat> = function.params.iter().map(|param| param.pat.clone()).collect();
+    component_param(&params)
+}
+
+fn block_render_expr(block: &BlockStmt) -> Option<&Expr> {
+    let mut render = None;
+    for stmt in &block.stmts {
+        match stmt {
+            Stmt::Return(ReturnStmt { arg: Some(expr), .. }) => {
+                if render.is_some() {
+                    return None;
+                }
+                render = Some(crate::utils::unwrap_expr(expr));
+            }
+            Stmt::If(_)
+            | Stmt::Switch(_)
+            | Stmt::For(_)
+            | Stmt::ForIn(_)
+            | Stmt::ForOf(_)
+            | Stmt::While(_)
+            | Stmt::DoWhile(_)
+            | Stmt::Try(_)
+            | Stmt::With(_)
+            | Stmt::Labeled(_) => return None,
+            _ => {}
+        }
+    }
+    render
+}
+
+fn render_expr_is_safe(expr: &Expr) -> bool {
+    if crate::utils::is_static_empty_like(expr) {
+        return true;
+    }
+    match crate::utils::unwrap_expr(expr) {
+        Expr::JSXElement(element) => jsx_element_is_safe(element),
+        Expr::JSXFragment(fragment) => jsx_fragment_is_safe(fragment),
+        Expr::Cond(conditional) => {
+            render_expr_is_safe(conditional.cons.as_ref())
+                && render_expr_is_safe(conditional.alt.as_ref())
+        }
+        Expr::Bin(binary) if binary.op == BinaryOp::LogicalAnd => {
+            render_expr_is_safe(binary.right.as_ref())
+        }
+        Expr::Call(call) => compiled_map_render_is_safe(call),
+        _ => false,
+    }
+}
+
+fn compiled_map_render_is_safe(call: &CallExpr) -> bool {
+    let Callee::Expr(callee) = &call.callee else {
+        return false;
+    };
+    let Expr::Member(MemberExpr { prop: MemberProp::Ident(property), .. }) =
+        crate::utils::unwrap_expr(callee.as_ref())
+    else {
+        return false;
+    };
+    if property.sym.as_ref() != "map" || call.args.len() != 1 || call.args[0].spread.is_some() {
+        return false;
+    }
+    let Expr::Arrow(callback) = crate::utils::unwrap_expr(call.args[0].expr.as_ref()) else {
+        return false;
+    };
+    if callback.is_async || callback.is_generator {
+        return false;
+    }
+    match callback.body.as_ref() {
+        BlockStmtOrExpr::Expr(render) => render_expr_is_safe(render.as_ref()),
+        BlockStmtOrExpr::BlockStmt(block) => {
+            block_render_expr(block).is_some_and(render_expr_is_safe)
+        }
+    }
+}
+
+fn switch_render_expr(switch: &SwitchStmt) -> Option<Expr> {
+    let mut representative = None;
+    let mut has_default = false;
+    for case in &switch.cases {
+        has_default |= case.test.is_none();
+        let block =
+            BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts: case.cons.clone() };
+        let render = branch_block_render_expr(&block)?;
+        representative.get_or_insert(render);
+    }
+    has_default.then_some(representative?)
+}
+
+fn branch_block_render_expr(block: &BlockStmt) -> Option<Expr> {
+    let mut fallthrough = None;
+    for (index, stmt) in block.stmts.iter().enumerate() {
+        match stmt {
+            Stmt::Return(ReturnStmt { arg: Some(expr), .. }) if render_expr_is_safe(expr) => {
+                if block.stmts[index + 1..].iter().any(|stmt| !matches!(stmt, Stmt::Empty(_))) {
+                    return None;
+                }
+                return Some(crate::utils::unwrap_expr(expr).clone());
+            }
+            Stmt::If(if_stmt) => {
+                let cons = terminal_render_expr(if_stmt.cons.as_ref())?;
+                if let Some(alt) = &if_stmt.alt {
+                    let alt = terminal_render_expr(alt.as_ref())?;
+                    return Some(Expr::Cond(CondExpr {
+                        span: DUMMY_SP,
+                        test: if_stmt.test.clone(),
+                        cons: Box::new(cons),
+                        alt: Box::new(alt),
+                    }));
+                }
+                fallthrough = Some((if_stmt.test.as_ref().clone(), cons));
+            }
+            Stmt::Switch(switch) => return switch_render_expr(switch),
+            Stmt::Decl(Decl::Var(_) | Decl::Fn(_)) | Stmt::Expr(_) | Stmt::Empty(_) => {}
+            _ => return None,
+        }
+    }
+    let _ = fallthrough;
+    None
+}
+
+fn terminal_render_expr(stmt: &Stmt) -> Option<Expr> {
+    match stmt {
+        Stmt::Return(ReturnStmt { arg: Some(expr), .. }) if render_expr_is_safe(expr.as_ref()) => {
+            Some(crate::utils::unwrap_expr(expr.as_ref()).clone())
+        }
+        Stmt::Block(block) => branch_block_render_expr(block),
+        Stmt::If(if_stmt) => {
+            let alt = if_stmt.alt.as_ref()?;
+            let cons = terminal_render_expr(if_stmt.cons.as_ref())?;
+            let alt = terminal_render_expr(alt.as_ref())?;
+            Some(Expr::Cond(CondExpr {
+                span: DUMMY_SP,
+                test: if_stmt.test.clone(),
+                cons: Box::new(cons),
+                alt: Box::new(alt),
+            }))
+        }
+        Stmt::Switch(switch) => switch_render_expr(switch),
+        _ => None,
+    }
+}
+
+fn fallthrough_branch_render_expr(block: &BlockStmt) -> Option<Expr> {
+    if let Some(render) = branch_block_render_expr(block) {
+        return Some(render);
+    }
+    let mut branches = Vec::new();
+    let mut final_render = None;
+
+    for (index, stmt) in block.stmts.iter().enumerate() {
+        if final_render.is_some() {
+            if !matches!(stmt, Stmt::Empty(_)) {
+                return None;
+            }
+            continue;
+        }
+        match stmt {
+            Stmt::If(if_stmt) if if_stmt.alt.is_none() => {
+                branches
+                    .push((if_stmt.test.as_ref().clone(), terminal_render_expr(&if_stmt.cons)?));
+            }
+            Stmt::Return(_) => {
+                if block.stmts[index + 1..].iter().any(|stmt| !matches!(stmt, Stmt::Empty(_))) {
+                    return None;
+                }
+                final_render = terminal_render_expr(stmt);
+            }
+            Stmt::Decl(Decl::Var(_) | Decl::Fn(_)) | Stmt::Expr(_) | Stmt::Empty(_) => {}
+            _ => return None,
+        }
+    }
+
+    if branches.is_empty() {
+        return None;
+    }
+    let mut render = final_render?;
+    for (test, cons) in branches.into_iter().rev() {
+        render = Expr::Cond(CondExpr {
+            span: DUMMY_SP,
+            test: Box::new(test),
+            cons: Box::new(cons),
+            alt: Box::new(render),
+        });
+    }
+    Some(render)
+}
+
+struct KeyCompiledBranchReturns {
+    next_key: usize,
+}
+
+impl VisitMut for KeyCompiledBranchReturns {
+    fn visit_mut_function(&mut self, _: &mut Function) {}
+
+    fn visit_mut_arrow_expr(&mut self, _: &mut ArrowExpr) {}
+
+    fn visit_mut_return_stmt(&mut self, return_stmt: &mut ReturnStmt) {
+        let Some(result) = return_stmt.arg.take() else {
+            return;
+        };
+        let key =
+            Expr::Lit(Lit::Num(Number { span: DUMMY_SP, value: self.next_key as f64, raw: None }));
+        self.next_key += 1;
+        return_stmt.arg =
+            Some(Box::new(crate::element_expr::refreshing_compiled_branch_case(key, *result)));
+    }
+}
+
+fn arrow_render_expr(arrow: &ArrowExpr) -> Option<&Expr> {
+    if arrow.is_async || arrow.is_generator {
+        return None;
+    }
+    match arrow.body.as_ref() {
+        BlockStmtOrExpr::Expr(expr) => Some(crate::utils::unwrap_expr(expr)),
+        BlockStmtOrExpr::BlockStmt(block) => block_render_expr(block),
+    }
+}
+
+fn function_render_expr(function: &Function) -> Option<&Expr> {
+    if function.is_async || function.is_generator {
+        return None;
+    }
+    block_render_expr(function.body.as_ref()?)
+}
+
+fn jsx_element_is_safe(element: &JSXElement) -> bool {
+    element.children.iter().all(|child| match child {
+        JSXElementChild::JSXElement(child) => jsx_element_is_safe(child),
+        JSXElementChild::JSXFragment(fragment) => jsx_fragment_is_safe(fragment),
+        JSXElementChild::JSXExprContainer(container) => match &container.expr {
+            JSXExpr::JSXEmptyExpr(_) => true,
+            JSXExpr::Expr(expr) => !contains_jsx(expr) || render_expr_is_safe(expr),
+        },
+        JSXElementChild::JSXSpreadChild(_) => false,
+        JSXElementChild::JSXText(_) => true,
+    })
+}
+
+fn jsx_fragment_is_safe(fragment: &JSXFragment) -> bool {
+    fragment.children.iter().all(|child| match child {
+        JSXElementChild::JSXElement(child) => jsx_element_is_safe(child),
+        JSXElementChild::JSXFragment(fragment) => jsx_fragment_is_safe(fragment),
+        JSXElementChild::JSXExprContainer(container) => match &container.expr {
+            JSXExpr::JSXEmptyExpr(_) => true,
+            JSXExpr::Expr(expr) => !contains_jsx(expr) || render_expr_is_safe(expr),
+        },
+        JSXElementChild::JSXSpreadChild(_) => false,
+        JSXElementChild::JSXText(_) => true,
+    })
+}
+
+#[derive(Default)]
+struct JsxDetector {
+    found: bool,
+}
+
+impl Visit for JsxDetector {
+    fn visit_jsx_element(&mut self, _: &JSXElement) {
+        self.found = true;
+    }
+
+    fn visit_jsx_fragment(&mut self, _: &JSXFragment) {
+        self.found = true;
+    }
+}
+
+fn contains_jsx(expr: &Expr) -> bool {
+    let mut detector = JsxDetector::default();
+    expr.visit_with(&mut detector);
+    detector.found
+}
+
+#[derive(Default)]
+struct PropsUsageAnalyzer {
+    props_name: String,
+    keys: BTreeSet<String>,
+    invalid: bool,
+    consuming_props_object: bool,
+    shadowed: bool,
+    uses_vapor: bool,
+    control_depth: usize,
+    nested_function_depth: usize,
+    uses_compiled_hooks: bool,
+}
+
+impl PropsUsageAnalyzer {
+    fn new(props_name: String) -> Self {
+        Self { props_name, ..Self::default() }
+    }
+}
+
+impl Visit for PropsUsageAnalyzer {
+    fn visit_binding_ident(&mut self, binding: &BindingIdent) {
+        if binding.id.sym.as_ref() == self.props_name {
+            self.shadowed = true;
+        }
+    }
+
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        if let Callee::Expr(callee) = &call.callee
+            && let Expr::Ident(ident) = crate::utils::unwrap_expr(callee.as_ref())
+        {
+            let name = ident.sym.as_ref();
+            if is_regional_setup_helper(name)
+                && (self.control_depth > 0 || self.nested_function_depth > 0)
+            {
+                self.uses_vapor = true;
+            } else if is_regional_setup_helper(name) {
+                self.uses_compiled_hooks = true;
+            } else if crate::compiled_capabilities::runtime_tier_for_helper(name)
+                == Some(crate::compiled_capabilities::RuntimeTier::Vapor)
+                && !is_regional_setup_helper(name)
+            {
+                self.uses_vapor = true;
+            }
+        }
+        call.visit_children_with(self);
+    }
+
+    fn visit_if_stmt(&mut self, stmt: &IfStmt) {
+        self.control_depth += 1;
+        stmt.visit_children_with(self);
+        self.control_depth -= 1;
+    }
+
+    fn visit_switch_stmt(&mut self, stmt: &SwitchStmt) {
+        self.control_depth += 1;
+        stmt.visit_children_with(self);
+        self.control_depth -= 1;
+    }
+
+    fn visit_cond_expr(&mut self, expr: &CondExpr) {
+        self.control_depth += 1;
+        expr.visit_children_with(self);
+        self.control_depth -= 1;
+    }
+
+    fn visit_function(&mut self, function: &Function) {
+        self.nested_function_depth += 1;
+        function.visit_children_with(self);
+        self.nested_function_depth -= 1;
+    }
+
+    fn visit_arrow_expr(&mut self, arrow: &ArrowExpr) {
+        self.nested_function_depth += 1;
+        arrow.visit_children_with(self);
+        self.nested_function_depth -= 1;
+    }
+
+    fn visit_member_expr(&mut self, member: &MemberExpr) {
+        if let Expr::Ident(object) = crate::utils::unwrap_expr(member.obj.as_ref())
+            && object.sym.as_ref() == self.props_name
+        {
+            match &member.prop {
+                MemberProp::Ident(prop) => {
+                    self.keys.insert(prop.sym.to_string());
+                    let previous = self.consuming_props_object;
+                    self.consuming_props_object = true;
+                    member.obj.visit_with(self);
+                    self.consuming_props_object = previous;
+                    return;
+                }
+                _ => {
+                    self.invalid = true;
+                    return;
+                }
+            }
+        }
+        member.visit_children_with(self);
+    }
+
+    fn visit_ident(&mut self, ident: &Ident) {
+        if ident.sym.as_ref() == self.props_name && !self.consuming_props_object {
+            self.invalid = true;
+        }
+    }
+
+    fn visit_assign_expr(&mut self, assign: &AssignExpr) {
+        if let AssignTarget::Simple(SimpleAssignTarget::Member(member)) = &assign.left
+            && let Expr::Ident(object) = crate::utils::unwrap_expr(member.obj.as_ref())
+            && object.sym.as_ref() == self.props_name
+        {
+            self.invalid = true;
+            return;
+        }
+        assign.visit_children_with(self);
+    }
+
+    fn visit_update_expr(&mut self, update: &UpdateExpr) {
+        if let Expr::Member(member) = crate::utils::unwrap_expr(update.arg.as_ref())
+            && let Expr::Ident(object) = crate::utils::unwrap_expr(member.obj.as_ref())
+            && object.sym.as_ref() == self.props_name
+        {
+            self.invalid = true;
+            return;
+        }
+        update.visit_children_with(self);
+    }
+}
+
+fn analyze_candidate(
+    name: String,
+    props_name: String,
+    destructured_props: Option<DestructuredProps>,
+    body: &impl VisitWith<PropsUsageAnalyzer>,
+    render: &Expr,
+    branching: bool,
+) -> Option<CompiledComponentCandidate> {
+    if !render_expr_is_safe(render) {
+        return None;
+    }
+
+    let mut usage = PropsUsageAnalyzer::new(props_name.clone());
+    body.visit_with(&mut usage);
+    if let Some(bindings) = &destructured_props {
+        usage.keys.extend(bindings.bindings.values().map(|(key, _)| key.clone()));
+    }
+    if usage.invalid || usage.shadowed || usage.uses_vapor {
+        return None;
+    }
+
+    Some(CompiledComponentCandidate {
+        name,
+        props_name,
+        prop_keys: usage.keys.into_iter().collect(),
+        rest_prop: destructured_props.as_ref().and_then(|props| props.rest.clone()),
+        destructured_props: destructured_props.map(|props| props.bindings).unwrap_or_default(),
+        branching,
+        hook_aware: usage.uses_compiled_hooks,
+    })
+}
+
+pub(crate) fn analyze_module(module: &Module) -> CompiledComponentCandidates {
+    let mut candidates = HashMap::new();
+    let mut imported = HashSet::new();
+    for item in &module.body {
+        if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item {
+            for specifier in &import.specifiers {
+                let local = match specifier {
+                    ImportSpecifier::Named(named) => &named.local,
+                    ImportSpecifier::Default(default) => &default.local,
+                    ImportSpecifier::Namespace(namespace) => &namespace.local,
+                };
+                imported.insert(local.sym.to_string());
+            }
+        }
+    }
+
+    for item in &module.body {
+        match item {
+            ModuleItem::Stmt(Stmt::Decl(Decl::Fn(decl)))
+            | ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                decl: Decl::Fn(decl),
+                ..
+            })) => {
+                let name = decl.ident.sym.to_string();
+                if imported.contains(&name) || decl.function.is_async || decl.function.is_generator
+                {
+                    continue;
+                }
+                let Some((props_name, destructured_props)) = function_param(&decl.function) else {
+                    continue;
+                };
+                let Some(body) = decl.function.body.as_ref() else {
+                    continue;
+                };
+                let render = function_render_expr(&decl.function)
+                    .map(|render| (render.clone(), false))
+                    .or_else(|| fallthrough_branch_render_expr(body).map(|render| (render, true)));
+                let Some((render, branching)) = render else {
+                    continue;
+                };
+                if let Some(candidate) = analyze_candidate(
+                    name.clone(),
+                    props_name,
+                    destructured_props,
+                    body,
+                    &render,
+                    branching,
+                ) {
+                    candidates.insert(name, candidate);
+                }
+            }
+            ModuleItem::Stmt(Stmt::Decl(Decl::Var(var)))
+            | ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                decl: Decl::Var(var),
+                ..
+            })) if var.decls.len() == 1 => {
+                let declarator = &var.decls[0];
+                let Pat::Ident(binding) = &declarator.name else {
+                    continue;
+                };
+                let Some(Expr::Arrow(arrow)) = declarator.init.as_deref() else {
+                    continue;
+                };
+                if arrow.is_async || arrow.is_generator {
+                    continue;
+                }
+                let Some((props_name, destructured_props)) = component_param(&arrow.params) else {
+                    continue;
+                };
+                let render = arrow_render_expr(arrow)
+                    .map(|render| (render.clone(), false))
+                    .or_else(|| match arrow.body.as_ref() {
+                        BlockStmtOrExpr::BlockStmt(block) => {
+                            fallthrough_branch_render_expr(block).map(|render| (render, true))
+                        }
+                        BlockStmtOrExpr::Expr(_) => None,
+                    });
+                let Some((render, branching)) = render else {
+                    continue;
+                };
+                let name = binding.id.sym.to_string();
+                if let Some(candidate) = analyze_candidate(
+                    name.clone(),
+                    props_name,
+                    destructured_props,
+                    arrow.body.as_ref(),
+                    &render,
+                    branching,
+                ) {
+                    candidates.insert(name, candidate);
+                }
+            }
+            _ => {}
+        }
+    }
+    candidates
+}
+
+#[derive(Default)]
+struct UsedIdentCollector {
+    names: HashSet<String>,
+}
+
+impl Visit for UsedIdentCollector {
+    fn visit_ident(&mut self, ident: &Ident) {
+        self.names.insert(ident.sym.to_string());
+    }
+}
+
+struct PropsSlotRewriter<'a> {
+    props_name: &'a str,
+    slots: &'a HashMap<String, Ident>,
+    destructured_props: &'a HashMap<String, (String, Option<Expr>)>,
+    rest_prop: Option<&'a str>,
+    rest_slot: Option<&'a Ident>,
+    shadowed: HashSet<String>,
+}
+
+fn collect_pattern_names(pat: &Pat, names: &mut HashSet<String>) {
+    match pat {
+        Pat::Ident(binding) => {
+            names.insert(binding.id.sym.to_string());
+        }
+        Pat::Array(array) => {
+            for element in array.elems.iter().flatten() {
+                collect_pattern_names(element, names);
+            }
+        }
+        Pat::Object(object) => {
+            for property in &object.props {
+                match property {
+                    ObjectPatProp::Assign(assign) => {
+                        names.insert(assign.key.sym.to_string());
+                    }
+                    ObjectPatProp::KeyValue(property) => {
+                        collect_pattern_names(property.value.as_ref(), names)
+                    }
+                    ObjectPatProp::Rest(rest) => collect_pattern_names(rest.arg.as_ref(), names),
+                }
+            }
+        }
+        Pat::Assign(assign) => collect_pattern_names(assign.left.as_ref(), names),
+        Pat::Rest(rest) => collect_pattern_names(rest.arg.as_ref(), names),
+        _ => {}
+    }
+}
+
+impl VisitMut for PropsSlotRewriter<'_> {
+    fn visit_mut_function(&mut self, function: &mut Function) {
+        let previous = self.shadowed.clone();
+        for parameter in &function.params {
+            collect_pattern_names(&parameter.pat, &mut self.shadowed);
+        }
+        function.visit_mut_children_with(self);
+        self.shadowed = previous;
+    }
+
+    fn visit_mut_arrow_expr(&mut self, arrow: &mut ArrowExpr) {
+        let previous = self.shadowed.clone();
+        for parameter in &arrow.params {
+            collect_pattern_names(parameter, &mut self.shadowed);
+        }
+        arrow.visit_mut_children_with(self);
+        self.shadowed = previous;
+    }
+
+    fn visit_mut_prop(&mut self, prop: &mut Prop) {
+        if let Prop::Shorthand(ident) = prop
+            && !self.shadowed.contains(ident.sym.as_ref())
+            && self.rest_prop.is_some_and(|rest| ident.sym.as_ref() == rest)
+            && let Some(slot) = self.rest_slot
+        {
+            *prop = Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(IdentName { span: ident.span, sym: ident.sym.clone() }),
+                value: Box::new(crate::emit::call_member(slot.clone(), "get", vec![])),
+            });
+            return;
+        }
+        if let Prop::Shorthand(ident) = prop
+            && !self.shadowed.contains(ident.sym.as_ref())
+            && let Some((key, default)) = self.destructured_props.get(ident.sym.as_ref())
+            && let Some(slot) = self.slots.get(key)
+        {
+            let read = crate::emit::call_member(slot.clone(), "get", vec![]);
+            let value = if let Some(default) = default {
+                Expr::Cond(CondExpr {
+                    span: DUMMY_SP,
+                    test: Box::new(Expr::Bin(BinExpr {
+                        span: DUMMY_SP,
+                        op: BinaryOp::EqEqEq,
+                        left: Box::new(read.clone()),
+                        right: Box::new(Expr::Unary(UnaryExpr {
+                            span: DUMMY_SP,
+                            op: UnaryOp::Void,
+                            arg: Box::new(Expr::Lit(Lit::Num(Number {
+                                span: DUMMY_SP,
+                                value: 0.0,
+                                raw: None,
+                            }))),
+                        })),
+                    })),
+                    cons: Box::new(default.clone()),
+                    alt: Box::new(read),
+                })
+            } else {
+                read
+            };
+            *prop = Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(IdentName { span: ident.span, sym: ident.sym.clone() }),
+                value: Box::new(value),
+            });
+            return;
+        }
+        prop.visit_mut_children_with(self);
+    }
+
+    fn visit_mut_jsx_attr(&mut self, attr: &mut JSXAttr) {
+        let is_event = matches!(
+            &attr.name,
+            JSXAttrName::Ident(name)
+                if name.sym.as_ref().strip_prefix("on").is_some_and(|suffix| {
+                    suffix.chars().next().is_some_and(char::is_uppercase)
+                })
+        );
+        if is_event
+            && let Some(JSXAttrValue::JSXExprContainer(container)) = &mut attr.value
+            && let JSXExpr::Expr(expr) = &mut container.expr
+            && let Expr::Member(member) = crate::utils::unwrap_expr(expr.as_ref())
+            && let Expr::Ident(object) = crate::utils::unwrap_expr(member.obj.as_ref())
+            && object.sym.as_ref() == self.props_name
+            && !self.shadowed.contains(object.sym.as_ref())
+            && let MemberProp::Ident(prop) = &member.prop
+            && let Some(slot) = self.slots.get(prop.sym.as_ref())
+        {
+            let event = crate::emit::ident("$event");
+            let handler = crate::emit::call_member(slot.clone(), "get", vec![]);
+            let invoke = Expr::Call(CallExpr {
+                span: DUMMY_SP,
+                callee: Callee::Expr(Box::new(handler)),
+                args: vec![ExprOrSpread {
+                    spread: None,
+                    expr: Box::new(Expr::Ident(event.clone())),
+                }],
+                type_args: None,
+                ctxt: SyntaxContext::empty(),
+            });
+            **expr = Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                params: vec![Pat::Ident(BindingIdent { id: event, type_ann: None })],
+                body: Box::new(BlockStmtOrExpr::Expr(Box::new(invoke))),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+                ctxt: SyntaxContext::empty(),
+            });
+            return;
+        }
+        attr.visit_mut_children_with(self);
+    }
+
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        if let Expr::Ident(ident) = expr
+            && !self.shadowed.contains(ident.sym.as_ref())
+            && self.rest_prop.is_some_and(|rest| ident.sym.as_ref() == rest)
+            && let Some(slot) = self.rest_slot
+        {
+            *expr = crate::emit::call_member(slot.clone(), "get", vec![]);
+            return;
+        }
+        if let Expr::Member(member) = crate::utils::unwrap_expr(expr)
+            && let Expr::Ident(object) = crate::utils::unwrap_expr(member.obj.as_ref())
+            && object.sym.as_ref() == self.props_name
+            && !self.shadowed.contains(object.sym.as_ref())
+            && let MemberProp::Ident(prop) = &member.prop
+            && let Some(slot) = self.slots.get(prop.sym.as_ref())
+        {
+            *expr = crate::emit::call_member(slot.clone(), "get", vec![]);
+            return;
+        }
+        if let Expr::Ident(ident) = expr
+            && !self.shadowed.contains(ident.sym.as_ref())
+            && let Some((key, default)) = self.destructured_props.get(ident.sym.as_ref())
+            && let Some(slot) = self.slots.get(key)
+        {
+            let read = crate::emit::call_member(slot.clone(), "get", vec![]);
+            *expr = if let Some(default) = default {
+                Expr::Cond(CondExpr {
+                    span: DUMMY_SP,
+                    test: Box::new(Expr::Bin(BinExpr {
+                        span: DUMMY_SP,
+                        op: BinaryOp::EqEqEq,
+                        left: Box::new(read.clone()),
+                        right: Box::new(Expr::Unary(UnaryExpr {
+                            span: DUMMY_SP,
+                            op: UnaryOp::Void,
+                            arg: Box::new(Expr::Lit(Lit::Num(Number {
+                                span: DUMMY_SP,
+                                value: 0.0,
+                                raw: None,
+                            }))),
+                        })),
+                    })),
+                    cons: Box::new(default.clone()),
+                    alt: Box::new(read),
+                })
+            } else {
+                read
+            };
+            return;
+        }
+        expr.visit_mut_children_with(self);
+    }
+}
+
+fn unique_ident(base: &str, used: &mut HashSet<String>) -> Ident {
+    if used.insert(base.to_string()) {
+        return crate::emit::ident(base);
+    }
+    let mut suffix = 1;
+    loop {
+        let name = format!("{base}{suffix}");
+        if used.insert(name.clone()) {
+            return crate::emit::ident(&name);
+        }
+        suffix += 1;
+    }
+}
+
+fn prop_member(object: Ident, key: &str) -> Expr {
+    Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(Expr::Ident(object)),
+        prop: MemberProp::Ident(IdentName { span: DUMMY_SP, sym: key.into() }),
+    })
+}
+
+fn omitted_props_expr(props: Ident, prop_keys: &[String]) -> Expr {
+    let keys = Expr::Array(ArrayLit {
+        span: DUMMY_SP,
+        elems: prop_keys
+            .iter()
+            .map(|key| {
+                Some(ExprOrSpread { spread: None, expr: Box::new(crate::emit::string_expr(key)) })
+            })
+            .collect(),
+    });
+    crate::emit::call_ident("_$compiledOmitProps", vec![Expr::Ident(props), keys])
+}
+
+fn updater_expr(
+    next_props: Ident,
+    prop_keys: &[String],
+    slots: &HashMap<String, Ident>,
+    rest_slot: Option<&Ident>,
+) -> Expr {
+    let mut setters = prop_keys
+        .iter()
+        .map(|key| {
+            let set = crate::emit::call_member(
+                slots[key].clone(),
+                "set",
+                vec![prop_member(next_props.clone(), key)],
+            );
+            Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(set) })
+        })
+        .collect::<Vec<_>>();
+    if let Some(rest_slot) = rest_slot {
+        let set = crate::emit::call_member(
+            rest_slot.clone(),
+            "set",
+            vec![omitted_props_expr(next_props.clone(), prop_keys)],
+        );
+        setters.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(set) }));
+    }
+    let batch_body = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: setters,
+        })),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    let batch = crate::emit::call_ident("_$compiledBatch", vec![batch_body]);
+    Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![Pat::Ident(BindingIdent { id: next_props, type_ann: None })],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(batch))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
+fn wrap_render_expr(render: Expr, updater: Expr, props_name: Option<&str>) -> Expr {
+    let Some(props_name) = props_name else {
+        return crate::emit::call_ident("_$withCompiledPropsUpdater", vec![render, updater]);
+    };
+    let read_props = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Ident(crate::emit::ident(
+            props_name,
+        ))))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    crate::emit::call_ident("_$withCompiledPropsUpdater", vec![render, updater, read_props])
+}
+
+fn declared_names(stmt: &Stmt) -> Vec<String> {
+    fn collect_pat(pat: &Pat, names: &mut Vec<String>) {
+        match pat {
+            Pat::Ident(binding) => names.push(binding.id.sym.to_string()),
+            Pat::Array(array) => {
+                for element in array.elems.iter().flatten() {
+                    collect_pat(element, names);
+                }
+            }
+            Pat::Object(object) => {
+                for property in &object.props {
+                    match property {
+                        ObjectPatProp::KeyValue(property) => {
+                            collect_pat(property.value.as_ref(), names)
+                        }
+                        ObjectPatProp::Assign(property) => names.push(property.key.sym.to_string()),
+                        ObjectPatProp::Rest(property) => collect_pat(property.arg.as_ref(), names),
+                    }
+                }
+            }
+            Pat::Assign(assign) => collect_pat(assign.left.as_ref(), names),
+            Pat::Rest(rest) => collect_pat(rest.arg.as_ref(), names),
+            _ => {}
+        }
+    }
+
+    let mut names = Vec::new();
+    match stmt {
+        Stmt::Decl(Decl::Var(var)) => {
+            for declarator in &var.decls {
+                collect_pat(&declarator.name, &mut names);
+            }
+        }
+        Stmt::Decl(Decl::Fn(function)) => names.push(function.ident.sym.to_string()),
+        _ => {}
+    }
+    names
+}
+
+fn remove_collected(region: Vec<Stmt>, collected: &[Stmt]) -> Vec<Stmt> {
+    let mut pending = collected.to_vec();
+    region
+        .into_iter()
+        .filter(|stmt| {
+            let Some(index) = pending.iter().position(|candidate| candidate == stmt) else {
+                return true;
+            };
+            pending.remove(index);
+            false
+        })
+        .collect()
+}
+
+struct UnavailableReferenceDetector<'a> {
+    unavailable: &'a HashSet<String>,
+    found: bool,
+}
+
+impl Visit for UnavailableReferenceDetector<'_> {
+    fn visit_ident(&mut self, ident: &Ident) {
+        if self.unavailable.contains(ident.sym.as_ref()) {
+            self.found = true;
+        }
+    }
+}
+
+fn references_unavailable(stmt: &Stmt, unavailable: &HashSet<String>) -> bool {
+    let mut detector = UnavailableReferenceDetector { unavailable, found: false };
+    stmt.visit_with(&mut detector);
+    detector.found
+}
+
+fn binding_kinds(stmts: &[Stmt]) -> (Vec<String>, Vec<String>) {
+    let mut names_const = Vec::new();
+    let mut names_let = Vec::new();
+    for stmt in stmts {
+        match stmt {
+            Stmt::Decl(Decl::Var(var)) => {
+                let names = declared_names(stmt);
+                if var.kind == VarDeclKind::Const {
+                    names_const.extend(names);
+                } else {
+                    names_let.extend(names);
+                }
+            }
+            Stmt::Decl(Decl::Fn(_)) => names_const.extend(declared_names(stmt)),
+            _ => {}
+        }
+    }
+    (names_const, names_let)
+}
+
+struct StableSetupValueInliner<'a> {
+    values: &'a HashMap<String, Expr>,
+}
+
+impl VisitMut for StableSetupValueInliner<'_> {
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        if let Expr::Ident(ident) = expr
+            && let Some(value) = self.values.get(ident.sym.as_ref())
+        {
+            *expr = value.clone();
+            return;
+        }
+        expr.visit_mut_children_with(self);
+    }
+}
+
+fn record_stable_setup_values(stmts: &[Stmt], values: &mut HashMap<String, Expr>) {
+    let shadows = HashSet::new();
+    for stmt in stmts {
+        let Stmt::Decl(Decl::Var(var)) = stmt else {
+            continue;
+        };
+        if var.kind != VarDeclKind::Const {
+            continue;
+        }
+        for declarator in &var.decls {
+            let (Pat::Ident(binding), Some(init)) = (&declarator.name, declarator.init.as_deref())
+            else {
+                continue;
+            };
+            if crate::vapor::is_compiled_scalar_expr_with_shadows(init, &shadows) {
+                values.insert(binding.id.sym.to_string(), init.clone());
+            }
+        }
+    }
+}
+
+fn lower_setup_region(
+    region: Vec<Stmt>,
+    component_name: &str,
+    region_index: usize,
+    used_names: &mut HashSet<String>,
+    available: &mut HashSet<String>,
+    unavailable: &mut HashSet<String>,
+    stable_values: &mut HashMap<String, Expr>,
+    has_setup_regions: &mut bool,
+) -> Vec<Stmt> {
+    let region_block =
+        BlockStmt { span: DUMMY_SP, ctxt: SyntaxContext::empty(), stmts: region.clone() };
+    let (mut collected, _, _, _) =
+        crate::pre::collect_setup_region(&region_block, available, unavailable);
+
+    // The shared collector intentionally permits helper closures. For compiled regions, reject
+    // any candidate that closes over a live prop-derived local, including transitive closures,
+    // so cached setup values never retain the first branch-effect snapshot.
+    loop {
+        let remaining = remove_collected(region.clone(), &collected);
+        let mut live_names = unavailable.clone();
+        for stmt in &remaining {
+            live_names.extend(declared_names(stmt));
+        }
+        let before = collected.len();
+        collected.retain(|stmt| !references_unavailable(stmt, &live_names));
+        if collected.len() == before {
+            break;
+        }
+    }
+
+    let remaining = remove_collected(region, &collected);
+    for stmt in &collected {
+        available.extend(declared_names(stmt));
+    }
+    for stmt in &remaining {
+        unavailable.extend(declared_names(stmt));
+    }
+    if collected.is_empty() {
+        return remaining;
+    }
+
+    *has_setup_regions = true;
+    record_stable_setup_values(&collected, stable_values);
+    let setup_ident = unique_ident(&format!("_$rueCompiledSetup{region_index}"), used_names);
+    let (names_const, names_let) = binding_kinds(&collected);
+    let mut lowered = crate::pre::build_compiled_setup_with_binds(
+        &format!("{component_name}:setup-region:{region_index}"),
+        setup_ident,
+        names_const,
+        names_let,
+        collected,
+    );
+    lowered.extend(remaining);
+    lowered
+}
+
+struct CompiledHookLowerer<'a> {
+    component_name: &'a str,
+    next_slot: usize,
+}
+
+impl VisitMut for CompiledHookLowerer<'_> {
+    fn visit_mut_function(&mut self, _: &mut Function) {}
+
+    fn visit_mut_arrow_expr(&mut self, _: &mut ArrowExpr) {}
+
+    fn visit_mut_call_expr(&mut self, call: &mut CallExpr) {
+        call.visit_mut_children_with(self);
+        let Callee::Expr(callee) = &call.callee else {
+            return;
+        };
+        let Expr::Ident(ident) = crate::utils::unwrap_expr(callee.as_ref()) else {
+            return;
+        };
+        let helper = match ident.sym.as_ref() {
+            "useSetup" => "_$compiledUseSetup",
+            "useRef" => "_$compiledUseRef",
+            "useMemo" => "_$compiledUseMemo",
+            "useCallback" => "_$compiledUseCallback",
+            "useSignal" => "_$compiledUseSignal",
+            "useState" => "_$compiledUseState",
+            "useEffect" => "_$compiledUseEffect",
+            _ => return,
+        };
+        let slot = format!("{}:hook:{}", self.component_name, self.next_slot);
+        self.next_slot += 1;
+        call.callee = Callee::Expr(Box::new(Expr::Ident(crate::emit::ident(helper))));
+        call.args.insert(
+            0,
+            ExprOrSpread { spread: None, expr: Box::new(crate::emit::string_expr(&slot)) },
+        );
+    }
+}
+
+fn lower_branch_render(
+    block: &mut BlockStmt,
+    candidate: &CompiledComponentCandidate,
+    used_names: &mut HashSet<String>,
+    prop_slots: &HashMap<String, Ident>,
+) -> Option<bool> {
+    if fallthrough_branch_render_expr(block).is_none() {
+        return None;
+    }
+
+    let source = std::mem::take(&mut block.stmts);
+    let mut branch_stmts = Vec::with_capacity(source.len());
+    let mut region = Vec::new();
+    let mut region_index = 0;
+    let mut available = HashSet::new();
+    let mut stable_values = HashMap::new();
+    let mut has_setup_regions = false;
+    let mut unavailable =
+        prop_slots.values().map(|ident| ident.sym.to_string()).collect::<HashSet<_>>();
+
+    for mut stmt in source {
+        let is_boundary = matches!(stmt, Stmt::If(_) | Stmt::Switch(_) | Stmt::Return(_));
+        if !is_boundary {
+            region.push(stmt);
+            continue;
+        }
+        for region_stmt in &mut region {
+            region_stmt.visit_mut_with(&mut StableSetupValueInliner { values: &stable_values });
+        }
+        branch_stmts.extend(lower_setup_region(
+            std::mem::take(&mut region),
+            &candidate.name,
+            region_index,
+            used_names,
+            &mut available,
+            &mut unavailable,
+            &mut stable_values,
+            &mut has_setup_regions,
+        ));
+        region_index += 1;
+        stmt.visit_mut_with(&mut StableSetupValueInliner { values: &stable_values });
+        branch_stmts.push(stmt);
+    }
+
+    branch_stmts.visit_mut_with(&mut KeyCompiledBranchReturns { next_key: 0 });
+
+    let factory = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: branch_stmts,
+        })),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    let branch = crate::emit::call_ident("_$compiledBranch", vec![factory]);
+    block.stmts.push(Stmt::Return(ReturnStmt { span: DUMMY_SP, arg: Some(Box::new(branch)) }));
+    Some(has_setup_regions)
+}
+
+fn rewrite_block(block: &mut BlockStmt, candidate: &CompiledComponentCandidate) {
+    let mut used = UsedIdentCollector::default();
+    block.visit_with(&mut used);
+    let mut slots = HashMap::new();
+    for (index, key) in candidate.prop_keys.iter().enumerate() {
+        let base = if key == "children" {
+            "_$rueCompiledSlot".to_string()
+        } else {
+            format!("_$rueCompiledProp{index}")
+        };
+        slots.insert(key.clone(), unique_ident(&base, &mut used.names));
+    }
+    let next_props = unique_ident("_$rueNextProps", &mut used.names);
+    let rest_slot =
+        candidate.rest_prop.as_ref().map(|_| unique_ident("_$rueCompiledRest", &mut used.names));
+
+    block.visit_mut_with(&mut PropsSlotRewriter {
+        props_name: &candidate.props_name,
+        slots: &slots,
+        destructured_props: &candidate.destructured_props,
+        rest_prop: candidate.rest_prop.as_deref(),
+        rest_slot: rest_slot.as_ref(),
+        shadowed: HashSet::new(),
+    });
+
+    block
+        .visit_mut_with(&mut CompiledHookLowerer { component_name: &candidate.name, next_slot: 0 });
+
+    if candidate.branching {
+        let Some(has_setup_regions) =
+            lower_branch_render(block, candidate, &mut used.names, &slots)
+        else {
+            return;
+        };
+        let _ = has_setup_regions;
+    }
+
+    let updater = updater_expr(next_props, &candidate.prop_keys, &slots, rest_slot.as_ref());
+    for stmt in &mut block.stmts {
+        if let Stmt::Return(ReturnStmt { arg: Some(render), .. }) = stmt {
+            let wrapped = wrap_render_expr(
+                render.as_ref().clone(),
+                updater.clone(),
+                (!candidate.prop_keys.is_empty() || candidate.rest_prop.is_some())
+                    .then_some(candidate.props_name.as_str()),
+            );
+            **render = if candidate.hook_aware {
+                let factory = Expr::Arrow(ArrowExpr {
+                    span: DUMMY_SP,
+                    params: vec![],
+                    body: Box::new(BlockStmtOrExpr::Expr(Box::new(wrapped))),
+                    is_async: false,
+                    is_generator: false,
+                    type_params: None,
+                    return_type: None,
+                    ctxt: SyntaxContext::empty(),
+                });
+                crate::emit::call_ident("_$withCompiledHookScope", vec![factory])
+            } else {
+                wrapped
+            };
+            break;
+        }
+    }
+
+    let props = crate::emit::ident(&candidate.props_name);
+    let mut slot_declarations = candidate
+        .prop_keys
+        .iter()
+        .map(|key| {
+            crate::emit::const_decl(
+                slots[key].clone(),
+                crate::emit::call_ident("_$compiledSignal", vec![prop_member(props.clone(), key)]),
+            )
+        })
+        .collect::<Vec<_>>();
+    if let Some(rest_slot) = rest_slot {
+        slot_declarations.push(crate::emit::const_decl(
+            rest_slot,
+            crate::emit::call_ident(
+                "_$compiledSignal",
+                vec![omitted_props_expr(props.clone(), &candidate.prop_keys)],
+            ),
+        ));
+    }
+    slot_declarations.append(&mut block.stmts);
+    block.stmts = slot_declarations;
+}
+
+fn rewrite_arrow(arrow: &mut ArrowExpr, candidate: &CompiledComponentCandidate) {
+    if !candidate.destructured_props.is_empty() {
+        arrow.params = vec![Pat::Ident(BindingIdent {
+            id: crate::emit::ident(&candidate.props_name),
+            type_ann: None,
+        })];
+    }
+    if let BlockStmtOrExpr::Expr(render) = arrow.body.as_ref() {
+        arrow.body = Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+            span: DUMMY_SP,
+            ctxt: SyntaxContext::empty(),
+            stmts: vec![Stmt::Return(ReturnStmt { span: DUMMY_SP, arg: Some(render.clone()) })],
+        }));
+    }
+    if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_mut() {
+        rewrite_block(block, candidate);
+    }
+}
+
+fn rewrite_function(function: &mut Function, candidate: &CompiledComponentCandidate) {
+    if !candidate.destructured_props.is_empty() {
+        function.params = vec![Param {
+            span: DUMMY_SP,
+            decorators: vec![],
+            pat: Pat::Ident(BindingIdent {
+                id: crate::emit::ident(&candidate.props_name),
+                type_ann: None,
+            }),
+        }];
+    }
+    if let Some(block) = &mut function.body {
+        rewrite_block(block, candidate);
+    }
+}
+
+pub(crate) fn transform_module(module: &mut Module, candidates: &CompiledComponentCandidates) {
+    if candidates.is_empty() {
+        return;
+    }
+    for item in &mut module.body {
+        match item {
+            ModuleItem::Stmt(Stmt::Decl(Decl::Fn(decl)))
+            | ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                decl: Decl::Fn(decl),
+                ..
+            })) => {
+                if let Some(candidate) = candidates.get(decl.ident.sym.as_ref()) {
+                    rewrite_function(&mut decl.function, candidate);
+                }
+            }
+            ModuleItem::Stmt(Stmt::Decl(Decl::Var(var)))
+            | ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                decl: Decl::Var(var),
+                ..
+            })) => {
+                for declarator in &mut var.decls {
+                    let Pat::Ident(binding) = &declarator.name else {
+                        continue;
+                    };
+                    let Some(candidate) = candidates.get(binding.id.sym.as_ref()) else {
+                        continue;
+                    };
+                    if let Some(Expr::Arrow(arrow)) = declarator.init.as_deref_mut() {
+                        rewrite_arrow(arrow, candidate);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+#[derive(Default)]
+struct CompiledUpdaterDetector {
+    found: bool,
+}
+
+impl Visit for CompiledUpdaterDetector {
+    fn visit_call_expr(&mut self, call: &CallExpr) {
+        if let Callee::Expr(callee) = &call.callee
+            && let Expr::Ident(ident) = crate::utils::unwrap_expr(callee.as_ref())
+            && matches!(
+                ident.sym.as_ref(),
+                "_$withCompiledPropsUpdater"
+                    | "_$compiledRoot"
+                    | "_$compiledBranch"
+                    | "_$compiledComponent"
+            )
+        {
+            self.found = true;
+            return;
+        }
+        call.visit_children_with(self);
+    }
+}
+
+fn contains_compiled_updater(node: &impl VisitWith<CompiledUpdaterDetector>) -> bool {
+    let mut detector = CompiledUpdaterDetector::default();
+    node.visit_with(&mut detector);
+    detector.found
+}
+
+pub(crate) fn transformed_candidate_names(module: &Module) -> HashSet<String> {
+    let mut names = HashSet::new();
+    for item in &module.body {
+        match item {
+            ModuleItem::Stmt(Stmt::Decl(Decl::Fn(decl)))
+            | ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                decl: Decl::Fn(decl),
+                ..
+            })) => {
+                if contains_compiled_updater(&decl.function) {
+                    names.insert(decl.ident.sym.to_string());
+                }
+            }
+            ModuleItem::Stmt(Stmt::Decl(Decl::Var(var)))
+            | ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                decl: Decl::Var(var),
+                ..
+            })) if var.decls.len() == 1 => {
+                let declarator = &var.decls[0];
+                let Pat::Ident(binding) = &declarator.name else {
+                    continue;
+                };
+                let Some(Expr::Arrow(arrow)) = declarator.init.as_deref() else {
+                    continue;
+                };
+                if contains_compiled_updater(arrow) {
+                    names.insert(binding.id.sym.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    names
+}

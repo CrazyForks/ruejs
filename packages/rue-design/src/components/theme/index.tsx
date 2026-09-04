@@ -4,7 +4,7 @@ Theme 组件概述
 - 额外挂载 Provider、主题算法、token 计算工具。
 - Provider 通过 data-theme 与 CSS 变量做“作用域主题岛”，不依赖运行时 context，也能支持嵌套继承。
 */
-import { createContext, createElement, useContext, type FC } from '@rue-js/rue'
+import { computed, createContext, useContext, type FC } from '@rue-js/rue'
 
 type ThemeInputType = 'checkbox' | 'radio'
 type ThemeAppearance = 'light' | 'dark'
@@ -1199,74 +1199,89 @@ const ThemeProvider: FC<ThemeProviderProps> = ({
   ref: forwardedRef,
   ...rest
 }) => {
-  const runtime = useToken({
-    theme,
-    token,
-    algorithm,
-    components,
-    inherit,
-    cssVar,
-    hashed,
-    zeroRuntime,
-    baseToken,
-  })
-  const content = render ? render(runtime) : children
-  const scopedContent = runtime.componentStyleText ? (
-    <>
-      <style data-rue-theme-components={runtime.scopeId}>{runtime.componentStyleText}</style>
-      {content}
-    </>
-  ) : (
-    content
+  const inheritedRuntime = useContext(ThemeRuntimeContext)
+  const runtime = computed(() =>
+    createThemeRuntime(
+      {
+        theme,
+        token,
+        algorithm,
+        components,
+        inherit,
+        cssVar,
+        hashed,
+        zeroRuntime,
+        baseToken,
+      },
+      inheritedRuntime,
+    ),
   )
-  const mergedStyle = mergeStyleInput(
-    {
-      colorScheme: runtime.token.colorScheme,
-      color: runtime.token.colors.baseContent,
-      ...runtime.cssVariables,
-    },
-    style,
-  )
+  const content = () => (render ? render(runtime.get()) : children)
+  const scopedContent = () => {
+    const currentRuntime = runtime.get()
+    return currentRuntime.componentStyleText ? (
+      <>
+        <style data-rue-theme-components={currentRuntime.scopeId}>
+          {currentRuntime.componentStyleText}
+        </style>
+        {content()}
+      </>
+    ) : (
+      content()
+    )
+  }
+  const mergedStyle = () => {
+    const currentRuntime = runtime.get()
+    return mergeStyleInput(
+      {
+        colorScheme: currentRuntime.token.colorScheme,
+        color: currentRuntime.token.colors.baseContent,
+        ...currentRuntime.cssVariables,
+      },
+      style,
+    )
+  }
   const applyRef = (element: HTMLElement | null) => {
     assignForwardedRef(forwardedRef, element)
   }
 
-  const commonProps = {
-    ...rest,
-    ref: applyRef,
-    className: mergeClassName(
-      runtime.hashId ? `rue-theme-scope ${runtime.hashId}` : 'rue-theme-scope',
-      className,
-    ),
-    style: mergedStyle,
-    'data-theme': runtime.resolvedTheme,
-    'data-rue-theme': runtime.theme,
-    'data-rue-appearance': runtime.token.appearance,
-    'data-rue-density': runtime.token.density,
-    'data-rue-theme-scope': runtime.scopeId,
-    'data-rue-theme-hashed': runtime.hashed ? 'true' : 'false',
-    'data-rue-theme-css-var': runtime.cssVar.enabled ? 'true' : 'false',
-    'data-rue-theme-css-var-key': runtime.cssVar.key,
-    'data-rue-theme-zero-runtime': runtime.zeroRuntime ? 'true' : 'false',
+  const commonProps = () => {
+    const currentRuntime = runtime.get()
+    return {
+      ...rest,
+      ref: applyRef,
+      className: mergeClassName(
+        currentRuntime.hashId ? `rue-theme-scope ${currentRuntime.hashId}` : 'rue-theme-scope',
+        className,
+      ),
+      style: mergedStyle(),
+      'data-theme': currentRuntime.resolvedTheme,
+      'data-rue-theme': currentRuntime.theme,
+      'data-rue-appearance': currentRuntime.token.appearance,
+      'data-rue-density': currentRuntime.token.density,
+      'data-rue-theme-scope': currentRuntime.scopeId,
+      'data-rue-theme-hashed': currentRuntime.hashed ? 'true' : 'false',
+      'data-rue-theme-css-var': currentRuntime.cssVar.enabled ? 'true' : 'false',
+      'data-rue-theme-css-var-key': currentRuntime.cssVar.key,
+      'data-rue-theme-zero-runtime': currentRuntime.zeroRuntime ? 'true' : 'false',
+    }
   }
 
-  const contextContent = createElement(
-    ThemeRuntimeProvider as FC<{ value: ThemeTokenRuntime; children?: any }>,
-    { value: runtime },
-    scopedContent,
+  const contextContent = () => (
+    <ThemeRuntimeProvider value={runtime.get()}>{scopedContent()}</ThemeRuntimeProvider>
   )
 
   if (as === 'section') {
-    return <section {...commonProps}>{contextContent}</section>
+    return <section {...commonProps()}>{contextContent()}</section>
   }
   if (as === 'article') {
-    return <article {...commonProps}>{contextContent}</article>
+    return <article {...commonProps()}>{contextContent()}</article>
   }
   if (as === 'span') {
-    return <span {...commonProps}>{contextContent}</span>
+    return <span {...commonProps()}>{contextContent()}</span>
   }
 
-  return <div {...commonProps}>{contextContent}</div>
+  return <div {...commonProps()}>{contextContent()}</div>
 }
 
 type ThemeControllerCompound = FC<ThemeControllerProps> & {
@@ -1299,7 +1314,7 @@ const theme: ThemeNamespace = {
   useToken: useThemeToken,
 }
 
-const ThemeController: ThemeControllerCompound = Object.assign(ThemeInput, {
+const ThemeController: ThemeControllerCompound = /*#__PURE__*/ Object.assign(ThemeInput, {
   ConfigProvider,
   Provider: ThemeProvider,
   compactAlgorithm,

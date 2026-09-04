@@ -1,58 +1,33 @@
 import { describe, expect, it } from 'vitest'
 
-import { normalizeRenderable, type BlockFactory, type BlockInstance } from '../src'
+import { _$compiledValue, _$compiledRoot } from '../src/internal'
 
-describe('normalizeRenderable', () => {
-  it('normalizes text, DOM nodes, arrays, and blocks into renderable values', () => {
+describe('compiled value normalization', () => {
+  it('mounts text, DOM nodes, arrays, and compiler roots', () => {
     const element = document.createElement('div')
     const fragment = document.createDocumentFragment()
-    const block: BlockInstance = {
-      kind: 'block',
-      mount() {},
-    }
-    const factory: BlockFactory = Object.assign(() => block, {
-      kind: 'block-factory' as const,
+    fragment.appendChild(document.createElement('i'))
+    const child = _$compiledRoot(parent => {
+      const node = document.createElement('strong')
+      node.textContent = 'compiled'
+      parent?.appendChild(node)
+      return node
     })
+    const handle = _$compiledValue([null, 'hello', 42, element, fragment, false, child, ['nested']])
+    const container = document.createElement('section')
 
-    const result = normalizeRenderable([
-      null,
-      'hello',
-      42,
-      element,
-      fragment,
-      false,
-      block,
-      factory,
-      ['nested'],
-    ])
-
-    expect(result.kind).toBe('renderable')
-    if (result.kind !== 'renderable') {
-      return
-    }
-
-    expect(Array.isArray(result.value)).toBe(true)
-
-    const values = result.value as any[]
-    expect(values).toHaveLength(7)
-    expect(values[0]?.nodeType).toBe(Node.TEXT_NODE)
-    expect(values[0]?.textContent).toBe('hello')
-    expect(values[1]?.nodeType).toBe(Node.TEXT_NODE)
-    expect(values[1]?.textContent).toBe('42')
-    expect(values[2]).toBe(element)
-    expect(values[3]).toBe(fragment)
-    expect(values[4]).toBe(block)
-    expect(values[5]).toBe(factory)
-    expect(values[6]?.nodeType).toBe(Node.TEXT_NODE)
-    expect(values[6]?.textContent).toBe('nested')
+    handle.__rue_compiled_mount(container)
+    expect(container.textContent).toBe('hello42compilednested')
+    expect(container.querySelector('div')).toBe(element)
+    expect(container.querySelector('i')).not.toBeNull()
+    handle.dispose()
+    expect(container.childNodes).toHaveLength(0)
   })
 
-  it('flags plain object inputs as unsupported default objects', () => {
-    const unsupportedObject = { type: 'div', props: null, children: [] }
-    const single = normalizeRenderable(unsupportedObject)
-    const nested = normalizeRenderable(['ok', unsupportedObject])
+  it('rejects unsupported plain object inputs', () => {
+    const handle = _$compiledValue({ type: 'div', props: null, children: [] })
+    const container = document.createElement('section')
 
-    expect(single).toEqual({ kind: 'unsupported-object', value: unsupportedObject })
-    expect(nested).toEqual({ kind: 'unsupported-object', value: unsupportedObject })
+    expect(() => handle.__rue_compiled_mount(container)).toThrow()
   })
 })

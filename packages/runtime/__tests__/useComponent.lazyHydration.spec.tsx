@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  h,
   hydrateOnIdle,
   hydrateOnInteraction,
   hydrateOnMediaQuery,
@@ -41,7 +40,7 @@ describe('useComponent lazy hydration strategies', () => {
   it('defers the loader until the idle strategy fires', async () => {
     vi.useFakeTimers()
     const loader = vi.fn(async () => ({
-      default: () => h('p', { id: 'idle-ready' }, 'idle ready'),
+      default: () => <p id="idle-ready">idle ready</p>,
     }))
     const Async = useComponent({
       loader,
@@ -49,7 +48,7 @@ describe('useComponent lazy hydration strategies', () => {
     })
     const container = mountContainer()
 
-    render(h(Async, null), container)
+    render(<Async />, container)
     await flushAsyncComponent()
 
     expect(loader).not.toHaveBeenCalled()
@@ -84,7 +83,7 @@ describe('useComponent lazy hydration strategies', () => {
     ;(window as any).IntersectionObserver = MockIntersectionObserver
 
     const loader = vi.fn(async () => ({
-      default: () => h('p', { id: 'visible-ready' }, 'visible ready'),
+      default: () => <p id="visible-ready">visible ready</p>,
     }))
     const Async = useComponent({
       loader,
@@ -92,7 +91,7 @@ describe('useComponent lazy hydration strategies', () => {
     })
     const container = mountContainer()
 
-    render(h(Async, null), container)
+    render(<Async />, container)
     await flushAsyncComponent()
 
     expect(loader).not.toHaveBeenCalled()
@@ -170,7 +169,7 @@ describe('useComponent lazy hydration strategies', () => {
     ;(window as any).matchMedia = matchMedia
 
     const loader = vi.fn(async () => ({
-      default: () => h('p', { id: 'media-ready' }, 'media ready'),
+      default: () => <p id="media-ready">media ready</p>,
     }))
     const Async = useComponent({
       loader,
@@ -178,7 +177,7 @@ describe('useComponent lazy hydration strategies', () => {
     })
     const container = mountContainer()
 
-    render(h(Async, null), container)
+    render(<Async />, container)
     await flushAsyncComponent()
 
     expect(loader).not.toHaveBeenCalled()
@@ -207,7 +206,7 @@ describe('useComponent lazy hydration strategies', () => {
     })
     const container = mountContainer()
 
-    render(h(Async, null), container)
+    render(<Async />, container)
     await flushAsyncComponent()
 
     const wrapper = container.firstElementChild as HTMLElement
@@ -219,7 +218,7 @@ describe('useComponent lazy hydration strategies', () => {
     expect(loader).toHaveBeenCalledTimes(1)
 
     deferred.resolve?.({
-      default: () => h('button', { id: 'interaction-ready' }, 'interaction ready'),
+      default: () => <button id="interaction-ready">interaction ready</button>,
     })
     await flushAsyncComponent()
 
@@ -240,7 +239,7 @@ describe('useComponent lazy hydration strategies', () => {
       return cleanup
     }
     const loader = vi.fn(async () => ({
-      default: () => h('p', { id: 'custom-ready' }, 'custom ready'),
+      default: () => <p id="custom-ready">custom ready</p>,
     }))
     const Async = useComponent({
       loader,
@@ -248,7 +247,7 @@ describe('useComponent lazy hydration strategies', () => {
     })
     const container = mountContainer()
 
-    render(h(Async, null), container)
+    render(<Async />, container)
     await flushAsyncComponent()
 
     expect(loader).not.toHaveBeenCalled()
@@ -266,7 +265,7 @@ describe('useComponent lazy hydration strategies', () => {
     const cleanup = vi.fn()
     const strategy: HydrationStrategy = () => cleanup
     const loader = vi.fn(async () => ({
-      default: () => h('p', null, 'should not load'),
+      default: () => <p>should not load</p>,
     }))
     const Async = useComponent({
       loader,
@@ -274,7 +273,7 @@ describe('useComponent lazy hydration strategies', () => {
     })
     const container = mountContainer()
 
-    render(h(Async, null), container)
+    render(<Async />, container)
     await flushAsyncComponent()
     render(null as any, container)
     await flushAsyncComponent()

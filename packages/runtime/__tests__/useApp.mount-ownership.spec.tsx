@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { onMounted, onUnmounted, useApp, type FC } from '../src'
+import { getCurrentContainer, onMounted, onUnmounted, useApp, type FC } from '../src'
 
 const flushRender = async () => {
   await Promise.resolve()
@@ -24,6 +24,26 @@ const createTrackedRoot =
   }
 
 describe('useApp mount ownership', () => {
+  it('installs plugins in the target container before rendering a compiled root', () => {
+    const host = document.createElement('div')
+    const calls: string[] = []
+    const plugin = {
+      install() {
+        calls.push(getCurrentContainer() === host ? 'plugin:host' : 'plugin:missing')
+      },
+    }
+    const Root: FC = () => {
+      calls.push(getCurrentContainer() === host ? 'render:host' : 'render:missing')
+      return <main>ready</main>
+    }
+    document.body.appendChild(host)
+
+    useApp(Root).use(plugin).mount(host)
+
+    expect(calls).toEqual(['plugin:host', 'render:host'])
+    expect(host.textContent).toBe('ready')
+  })
+
   it('treats mounting the same app on the same container as an idempotent no-op', async () => {
     const host = document.createElement('div')
     const lifecycle: string[] = []

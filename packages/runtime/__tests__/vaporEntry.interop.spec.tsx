@@ -1,13 +1,17 @@
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
-  RUE_COMPONENT_UPDATE_MODE_KEY,
-  RUE_REPEATABLE_MOUNT_FACTORY_KEY,
-} from '@rue-js/runtime-vapor/protocol'
-
-import {
   getCurrentContainer as getDefaultCurrentContainer,
-  h,
   ref,
   render,
   setReactiveScheduling,
@@ -17,7 +21,7 @@ import {
 } from '../src'
 import {
   _$createComponent,
-  _$vaporKeyedList,
+  _$compiledKeyedList,
   computed,
   getCurrentContainer as getVaporCurrentContainer,
   reactive,
@@ -25,7 +29,7 @@ import {
   useApp as useVaporApp,
   vapor,
   watchEffect,
-} from '../src/vapor'
+} from './legacy-test-render'
 
 setReactiveScheduling('sync')
 
@@ -45,7 +49,7 @@ const VaporEntryChild = (props: { label: string }) => {
     text.dataset.testid = 'vapor-entry-value'
     root.appendChild(text)
 
-    watchEffect(() => {
+    _$compiledWatchEffect(() => {
       text.textContent = props.label
     })
 
@@ -68,7 +72,7 @@ const VaporEntryApp = () => {
 
     root.append(button, anchor)
 
-    watchEffect(() => {
+    _$compiledWatchEffect(() => {
       button.textContent = label.value
       renderAnchor(_$createComponent(VaporEntryChild, { label: label.value }), root, anchor)
     })
@@ -78,21 +82,21 @@ const VaporEntryApp = () => {
 }
 
 describe('vapor entry interop', () => {
-  it('marks compiled helper components as fine-grained and h components as rerender across replay', () => {
+  it('keeps static and dynamic compiled component handles cloneable on the compiled ABI', () => {
     const Component = () => null
-    const compiled = _$createComponent(Component, null) as Record<string, unknown>
-    const handwritten = h(Component, null) as Record<string, unknown>
+    const compiled = _$createComponent(Component, null) as unknown as Record<string, unknown>
+    const dynamic = _$createDynamic(Component, null) as unknown as Record<string, unknown>
 
-    const replay = (handle: Record<string, unknown>) => {
-      const factory = handle[RUE_REPEATABLE_MOUNT_FACTORY_KEY]
+    const clone = (handle: Record<string, unknown>) => {
+      const factory = handle.__rue_compiled_clone
       expect(factory).toBeTypeOf('function')
-      return Reflect.apply(factory as () => unknown, undefined, []) as Record<string, unknown>
+      return Reflect.apply(factory as () => unknown, handle, []) as Record<string, unknown>
     }
 
-    expect(compiled[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('fine-grained')
-    expect(replay(compiled)[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('fine-grained')
-    expect(handwritten[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('rerender')
-    expect(replay(handwritten)[RUE_COMPONENT_UPDATE_MODE_KEY]).toBe('rerender')
+    expect(compiled.__rue_compiled_component_factory__).toBe(Component)
+    expect(clone(compiled).__rue_compiled_component_factory__).toBe(Component)
+    expect(dynamic.__rue_compiled_component_factory__).toBe(Component)
+    expect(clone(dynamic).__rue_compiled_component_factory__).toBe(Component)
   })
 
   it('shares the default client runtime identity across default and vapor app entries', () => {
@@ -102,7 +106,20 @@ describe('vapor entry interop', () => {
     let vaporRuntime: unknown
     const defaultApp = useDefaultApp(() => {
       defaultRuntime = (globalThis as any).__rue_active
-      return <main>default</main>
+      return _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('main', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = { children: 'default' } as Record<
+            string,
+            any
+          >
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     })
     const vaporApp = useVaporApp(() => {
       vaporRuntime = (globalThis as any).__rue_active
@@ -133,7 +150,20 @@ describe('vapor entry interop', () => {
       observations.push(['outer', getDefaultCurrentContainer(), getVaporCurrentContainer()])
       innerApp.mount(innerContainer)
       observations.push(['restored', getDefaultCurrentContainer(), getVaporCurrentContainer()])
-      return <main>outer</main>
+      return _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('main', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = { children: 'outer' } as Record<
+            string,
+            any
+          >
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     })
     document.body.append(outerContainer, innerContainer)
 
@@ -153,7 +183,7 @@ describe('vapor entry interop', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(VaporEntryApp, null) as any, container as any)
+    render(_$createDynamic(VaporEntryApp, null) as any, container as any)
     await flush()
 
     expect(container.querySelector('[data-testid="vapor-entry-value"]')?.textContent).toBe('alpha')
@@ -168,10 +198,36 @@ describe('vapor entry interop', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    const Child = () => <span data-testid="anchor-child">child</span>
-    const Shell = (props: { children?: unknown }) => (
-      <section data-testid="anchor-shell">{props.children}</section>
-    )
+    const Child = () =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('span', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'anchor-child',
+            children: 'child',
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
+    const Shell = (props: { children?: unknown }) =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('section', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'anchor-shell',
+            children: props.children,
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     const App = () =>
       vapor(() => {
@@ -191,7 +247,7 @@ describe('vapor entry interop', () => {
         return root
       })
 
-    render(h(App, null) as any, container as any)
+    render(_$createDynamic(App, null) as any, container as any)
     await flush()
 
     expect(container.querySelector('[data-testid="anchor-shell"]')?.textContent).toBe('child')
@@ -205,10 +261,24 @@ describe('vapor entry interop', () => {
     document.body.appendChild(container)
     container.append(anchor)
 
-    const Label = (props: { value: string }) => <strong>{props.value}</strong>
+    const Label = (props: { value: string }) =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('strong', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = { children: props.value } as Record<
+            string,
+            any
+          >
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
     renderAnchor(
-      [h(Label, { value: 'A' }), h(Label, { value: 'B' })] as any,
+      [_$createDynamic(Label, { value: 'A' }), _$createDynamic(Label, { value: 'B' })] as any,
       container as any,
       anchor as any,
     )
@@ -236,7 +306,7 @@ describe('vapor entry interop', () => {
 
         root.appendChild(button)
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           button.textContent = String(count.value)
         })
 
@@ -244,11 +314,26 @@ describe('vapor entry interop', () => {
       })
     }
 
-    const Box = (props: { children?: unknown }) => (
-      <div data-testid="forwarded-child-shell">{props.children}</div>
-    )
+    const Box = (props: { children?: unknown }) =>
+      _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('div', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            'data-testid': 'forwarded-child-shell',
+            children: props.children,
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
 
-    render(h(Box, null, h(CounterChild, null)) as any, container as any)
+    render(
+      _$createDynamic(Box, { children: _$createDynamic(CounterChild, null) }) as any,
+      container as any,
+    )
     await flush()
 
     const button = container.querySelector(
@@ -286,8 +371,8 @@ describe('vapor entry interop', () => {
 
     const counts = new Map<number, number>()
     let elements = new Map<any, any>()
-    watchEffect(() => {
-      elements = _$vaporKeyedList({
+    _$compiledWatchEffect(() => {
+      elements = _$compiledKeyedList({
         items: todoViews.get() || [],
         getKey: (item: any) => item.id,
         elements,
@@ -311,10 +396,10 @@ describe('vapor entry interop', () => {
               row.appendChild(span)
               button.textContent = '删除'
               row.appendChild(button)
-              watchEffect(() => {
+              _$compiledWatchEffect(() => {
                 row.dataset.completed = item.completed ? 'yes' : 'no'
               })
-              watchEffect(() => {
+              _$compiledWatchEffect(() => {
                 renderAnchor(item.text, span, textAnchor)
               })
               return root as any
@@ -385,13 +470,26 @@ describe('vapor entry interop', () => {
         )
       }
 
-      return <button onClick={removeMiddle}>删除中间项</button>
+      return _$compiledVapor(_$parentContext => {
+        const _$root = _$compiledCreateElement('button', _$parentContext)
+        const _$anchor = _$compiledCreateComment('rue:children:anchor')
+        _$compiledAppendChild(_$root, _$anchor)
+        _$compiledWatchEffect(() => {
+          const { children: _$children, ..._$attributes } = {
+            onClick: removeMiddle,
+            children: '删除中间项',
+          } as Record<string, any>
+          _$compiledSpreadAttributes(_$root, _$attributes)
+          _$compiledRenderAnchor(_$children, _$root, _$anchor)
+        })
+        return _$root
+      })
     }
 
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(App, null), container)
+    render(_$createDynamic(App, null), container)
     await flush()
 
     ;(container.querySelector('button') as HTMLButtonElement).dispatchEvent(
@@ -425,22 +523,45 @@ describe('vapor entry interop', () => {
         todoSnapshots.push(state.todos.map(item => item.id))
       }
 
-      return (
-        <div>
-          {state.todos.map(todo => (
-            <div key={todo.id} className="row" data-todo-id={String(todo.id)}>
-              <span>{todo.text}</span>
-              <button onClick={() => deleteTodo(todo.id)}>删除</button>
-            </div>
-          ))}
-        </div>
-      )
+      return vapor(() => {
+        const root = document.createElement('div')
+        const end = document.createComment('rue:list:end')
+        let elements = new Map()
+
+        root.appendChild(end)
+        watchEffect(() => {
+          elements = _$compiledKeyedList({
+            items: state.todos,
+            getKey: todo => todo.id,
+            elements,
+            parent: root,
+            before: end,
+            singleRoot: true,
+            trackIndex: false,
+            renderItem: (todo, parent, anchor) => {
+              const row = document.createElement('div')
+              const label = document.createElement('span')
+              const button = document.createElement('button')
+
+              row.className = 'row'
+              row.dataset.todoId = String(todo.id)
+              label.textContent = todo.text
+              button.textContent = '删除'
+              button.addEventListener('click', () => deleteTodo(todo.id))
+              row.append(label, button)
+              parent.insertBefore(row, anchor)
+            },
+          })
+        })
+
+        return root
+      })
     }
 
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoListApp, null), container)
+    render(_$createDynamic(TodoListApp, null), container)
     await flush()
 
     const firstRow = Array.from(container.querySelectorAll('.row')).find(

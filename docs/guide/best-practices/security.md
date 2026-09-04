@@ -77,18 +77,10 @@ Rue 组件最终会运行 JavaScript 并操作 DOM。由于潜在全局执行环
 
 正如您之前了解到的，Rue 自动转义 HTML 内容，防止您意外地将可执行 HTML 注入应用。但是，**在您知道 HTML 是安全的情况下**，您可以显式渲染 HTML 内容：
 
-- 使用 JSX：
+- 使用经过 Rue 编译器处理的 JSX：
 
   ```tsx
   <div dangerouslySetInnerHTML={{ __html: userProvidedHtml }} />
-  ```
-
-- 使用渲染函数：
-
-  ```tsx
-  h('div', {
-    dangerouslySetInnerHTML: { __html: userProvidedHtml },
-  })
   ```
 
 :::warning 警告

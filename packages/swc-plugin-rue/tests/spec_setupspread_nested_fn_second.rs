@@ -27,11 +27,11 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
-import { type FC } from '@rue-js/rue';
+    let expected_fragment = r##"import { computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
+import { type FC, ref } from '@rue-js/rue';
 const Comp: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(3));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(3);
             function build1() {
                 return {
                     u: a.value,
@@ -53,13 +53,14 @@ const Comp: FC = ()=>{
                     ]
                 };
             }
-            const obj = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+            const obj = computed(()=>({
                         ...build1(),
                         ...build2(),
                         more: `p=${a.value}-${a.value > 0 ? 'x' : 'y'}`
-                    })));
+                }));
+            obj.get();
             const __rue_phase2_obj = obj;
-            const arr = _$vaporWithHookId("computed:1:2", ()=>computed(()=>[
+            const arr = computed(()=>[
                         ...build2().nested,
                         ...build1().nested2,
                         a.value > 0 ? [
@@ -68,27 +69,33 @@ const Comp: FC = ()=>{
                         ] : [
                             'f'
                         ]
-                    ]));
+                ]);
+            arr.get();
             const __rue_phase2_arr = arr;
             return {
                 a: a,
                 build1: build1,
                 build2: build2,
                 obj: obj,
-                arr: arr
+                __rue_phase2_obj: __rue_phase2_obj,
+                arr: arr,
+                __rue_phase2_arr: __rue_phase2_arr
             };
         }));
-    const { a: a, build1: build1, build2: build2, obj: obj, arr: arr } = _$useSetup;
+    const { a: a, build1: build1, build2: build2, obj: obj, __rue_phase2_obj: __rue_phase2_obj, arr: arr, __rue_phase2_arr: __rue_phase2_arr } = _$useSetup;
     return <div>{obj.get().more}-{arr.get()[3][0]}</div>;
 };
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_spread_nested_fn_second.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

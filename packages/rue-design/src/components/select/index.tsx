@@ -508,7 +508,7 @@ const isListboxSize = (nativeSizeValue?: string) => {
   return Number.isFinite(resolved) && resolved > 1
 }
 
-const compactOpenStore = new Map<string, boolean>()
+const compactOpenStore = /*#__PURE__*/ new Map<string, boolean>()
 
 /** 解析 Compact Open Persistence Key 的内部工具函数。 */
 const resolveCompactOpenPersistenceKey = (
@@ -693,7 +693,7 @@ const clampSelectionToMaxCount = (
   const currentValues = Array.from(select.selectedOptions).map(option => option.value)
   const keptValues = clampSelectValues(currentValues, previousValues, maxCount)
 
-  const allowedValues = new Set(keptValues)
+  const allowedValues = /*#__PURE__*/ new Set(keptValues)
   Array.from(select.options).forEach(option => {
     option.selected = allowedValues.has(option.value)
   })
@@ -717,7 +717,7 @@ const normalizeSelectValues = (value?: SelectRawValue) => {
 /** group Resolved Options 的内部工具函数。 */
 const groupResolvedOptions = (options: SelectResolvedOption[]) => {
   const groups: SelectResolvedOptionGroup[] = []
-  const groupMap = new Map<string, SelectResolvedOptionGroup>()
+  const groupMap = /*#__PURE__*/ new Map<string, SelectResolvedOptionGroup>()
   const ungrouped: SelectResolvedOption[] = []
 
   options.forEach(option => {
@@ -887,7 +887,10 @@ const SelectRoot: FC<SelectProps> = ({
   )
   const compactResolvedOptions = ref<SelectResolvedOption[]>(resolveCompactOptions())
   const selectElementRef = useRef<HTMLSelectElement>()
+  const compactRootRef = useRef<HTMLDivElement>()
   let previousSelectedValues = compactSelectedValues.value.slice()
+  let compactIntentValues = compactSelectedValues.value.slice()
+  let pendingCompactValues: string[] | null = null
   const hasShellDecorators =
     prefix !== undefined ||
     suffix !== undefined ||
@@ -953,6 +956,14 @@ const SelectRoot: FC<SelectProps> = ({
 
     compactOpen.value = nextOpen
     writeCompactOpenState(compactPersistenceKey, nextOpen)
+    const root = compactRootRef.current
+    const popup = root?.querySelector('[data-rue-select-popup="true"]') as HTMLElement | null
+    const trigger = root?.querySelector('[data-rue-select-trigger="true"]') as HTMLElement | null
+    if (popup) {
+      popup.hidden = !nextOpen
+      popup.setAttribute('aria-hidden', nextOpen ? 'false' : 'true')
+    }
+    trigger?.setAttribute('aria-expanded', nextOpen ? 'true' : 'false')
   }
 
   const getCompactSelectedOptions = () => {
@@ -968,7 +979,7 @@ const SelectRoot: FC<SelectProps> = ({
       if (!select) return
 
       if (select.multiple) {
-        const selectedValueSet = new Set(nextValues)
+        const selectedValueSet = /*#__PURE__*/ new Set(nextValues)
         Array.from(select.options).forEach(option => {
           option.selected = selectedValueSet.has(option.value)
         })
@@ -977,6 +988,33 @@ const SelectRoot: FC<SelectProps> = ({
 
       select.value = nextValues[0] ?? ''
     }
+  }
+
+  const syncCompactTriggerLabels = (nextValues: string[]) => {
+    const root = compactRootRef.current
+    const trigger = root?.querySelector('[data-rue-select-trigger="true"]')
+    const labelHost = trigger?.querySelector('.min-w-0.flex-1.flex-wrap') as HTMLElement | null
+    if (!labelHost) return
+    labelHost.replaceChildren()
+    const selectedOptions = nextValues
+      .map(selectedValue =>
+        compactResolvedOptions.value.find(option => String(option.value) === selectedValue),
+      )
+      .filter(Boolean) as SelectResolvedOption[]
+    if (!selectedOptions.length) {
+      const placeholderNode = document.createElement('span')
+      placeholderNode.className = 'truncate text-sm text-base-content/40'
+      placeholderNode.textContent = String(compactPlaceholder)
+      labelHost.appendChild(placeholderNode)
+      return
+    }
+    selectedOptions.forEach(option => {
+      const label = document.createElement('span')
+      label.className =
+        'inline-flex max-w-full items-center gap-1 rounded-md bg-base-200 px-2 py-1 text-xs text-base-content'
+      label.textContent = String(option.label ?? option.value)
+      labelHost.appendChild(label)
+    })
   }
 
   const syncNativeSelectionFromProps = () => {
@@ -995,6 +1033,7 @@ const SelectRoot: FC<SelectProps> = ({
 
     const nextValues = normalizeSelectValues(sourceValue)
     compactSelectedValues.value = nextValues
+    compactIntentValues = nextValues.slice()
     previousSelectedValues = nextValues.slice()
   }
 
@@ -1022,6 +1061,9 @@ const SelectRoot: FC<SelectProps> = ({
     if (!select) return
 
     const previousValues = previousSelectedValues.slice()
+    if (pendingCompactValues) {
+      syncSelectionToDom(pendingCompactValues)(select)
+    }
     const nextValues = clampSelectionToMaxCount(select, previousValues, maxCount)
     const optionMetaMap = createOptionMetaMap(options, fieldNames)
     const changeState = buildChangeState(select, optionMetaMap, optionLabelProp, labelInValue)
@@ -1067,13 +1109,14 @@ const SelectRoot: FC<SelectProps> = ({
 
   const handleChange = (event: Event) => {
     emitSemanticCallbacks(event)
+    onChange?.(event)
     const select = findSelectFromEvent(event)
     if (select) {
-      compactSelectedValues.value = Array.from(select.selectedOptions).map(option => option.value)
+      if (!useCompactMultiple) {
+        compactSelectedValues.value = Array.from(select.selectedOptions).map(option => option.value)
+      }
     }
-    if (onChange) {
-      onChange(event)
-    }
+    pendingCompactValues = null
   }
 
   const dispatchNativeSelectionChange = (select: HTMLSelectElement | null) => {
@@ -1098,15 +1141,20 @@ const SelectRoot: FC<SelectProps> = ({
       return
     }
 
-    const previousValues = compactSelectedValues.value.slice()
+    const previousValues = compactIntentValues.slice()
     const nextValues = previousValues.includes(optionValue)
       ? previousValues.filter(valueKey => valueKey !== optionValue)
       : previousValues.concat(optionValue)
     const clampedValues = clampSelectValues(nextValues, previousValues, maxCount)
 
-    compactSelectedValues.value = clampedValues
+    compactIntentValues = clampedValues.slice()
+    pendingCompactValues = clampedValues
+    syncCompactTriggerLabels(clampedValues)
     syncSelectionToDom(clampedValues)(select)
     dispatchNativeSelectionChange(select)
+    const restoreSelection = () =>
+      syncSelectionToDom(clampedValues)(selectElementRef.current ?? select)
+    queueMicrotask(restoreSelection)
   }
 
   const removeCompactOption = (optionValue: string, event: MouseEvent) => {
@@ -1125,10 +1173,15 @@ const SelectRoot: FC<SelectProps> = ({
       return
     }
 
-    const nextValues = compactSelectedValues.value.filter(valueKey => valueKey !== optionValue)
-    compactSelectedValues.value = nextValues
+    const nextValues = compactIntentValues.filter(valueKey => valueKey !== optionValue)
+    compactIntentValues = nextValues.slice()
+    pendingCompactValues = nextValues
+    syncCompactTriggerLabels(nextValues)
     syncSelectionToDom(nextValues)(select)
     dispatchNativeSelectionChange(select)
+    const restoreSelection = () =>
+      syncSelectionToDom(nextValues)(selectElementRef.current ?? select)
+    queueMicrotask(restoreSelection)
   }
 
   const handleCompactTriggerClick = (event: MouseEvent) => {
@@ -1170,8 +1223,12 @@ const SelectRoot: FC<SelectProps> = ({
       select.value = ''
     }
 
-    compactSelectedValues.value = []
+    compactIntentValues = []
+    previousSelectedValues = []
+    pendingCompactValues = []
     dispatchNativeSelectionChange(select)
+    syncSelectionToDom([])(select)
+    queueMicrotask(() => syncSelectionToDom([])(selectElementRef.current ?? select))
 
     if (onClear) {
       onClear(event)
@@ -1182,7 +1239,6 @@ const SelectRoot: FC<SelectProps> = ({
     syncSelectionFromProps()
     syncNativeSelectionFromProps()
     queueMicrotask(syncNativeSelectionFromProps)
-    setTimeout(syncNativeSelectionFromProps, 0)
     syncSelectedSnapshot()
 
     if (typeof window === 'undefined') return
@@ -1217,15 +1273,6 @@ const SelectRoot: FC<SelectProps> = ({
       syncSelectedSnapshot()
     },
     { immediate: true },
-  )
-
-  watch(
-    () => defaultValue,
-    () => {
-      syncSelectionFromProps()
-      syncNativeSelectionFromProps()
-      syncSelectedSnapshot()
-    },
   )
 
   watch(
@@ -1317,6 +1364,9 @@ const SelectRoot: FC<SelectProps> = ({
   if (getUseCompactMultiple()) {
     return (
       <div
+        ref={(element: HTMLDivElement | null) => {
+          compactRootRef.current = element ?? undefined
+        }}
         className={mergeClassName('relative', rootClassName)}
         data-rue-select-root="true"
         aria-disabled={mergedDisabled ? 'true' : undefined}
@@ -1505,7 +1555,7 @@ const SelectRoot: FC<SelectProps> = ({
   )
 }
 
-const Select: SelectCompound = Object.assign(SelectRoot, {
+const Select: SelectCompound = /*#__PURE__*/ Object.assign(SelectRoot, {
   Option,
   OptGroup,
   Shell,

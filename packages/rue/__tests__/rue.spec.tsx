@@ -1,20 +1,25 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   type FC,
+  Fragment,
   Transition,
   createContext,
-  h,
+  createElement,
   ref,
   render,
   setReactiveScheduling,
   useApp,
   useContext,
 } from '@rue-js/rue'
-import { h as runtimeH, render as runtimeRender } from '../src/runtime'
+import * as rueEntry from '@rue-js/rue'
+import * as runtimeEntry from '../src/runtime'
+import { render as runtimeRender } from '../src/runtime'
 import { renderToString } from '../src/server-renderer'
-import { ref as vaporRef, vapor, watchEffect } from '../src/vapor'
+import { createCompiledDynamic as _$createDynamic } from '@rue-js/runtime/internal'
 
 setReactiveScheduling('sync')
 
@@ -33,6 +38,28 @@ afterEach(() => {
 })
 
 describe('rue public package entry', () => {
+  it('supports classic JSX createElement calls from the public entry', () => {
+    const container = document.createElement('div')
+
+    render(
+      createElement(Fragment, null, createElement('p', { class: 'classic' }, 'classic jsx')),
+      container,
+    )
+
+    const paragraph = container.querySelector('p.classic')
+    expect(paragraph?.textContent).toBe('classic jsx')
+  })
+
+  it('does not publish or re-export the removed Vapor API', () => {
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'packages/rue/package.json'), 'utf8'),
+    ) as { exports?: Record<string, unknown>; buildOptions?: { subEntries?: unknown[] } }
+    const source = readFileSync(resolve(process.cwd(), 'packages/rue/src/index.ts'), 'utf8')
+
+    expect(packageJson.exports).not.toHaveProperty('./vapor')
+    expect(JSON.stringify(packageJson.buildOptions?.subEntries ?? [])).not.toContain('rue.vapor')
+    expect(source).not.toMatch(/\b(?:vapor|normalizeRenderable|RenderableOutput)\b/)
+  })
   it('renders JSX from the main entry and updates reactive state from DOM events', async () => {
     const count = ref(0)
 
@@ -105,13 +132,17 @@ describe('rue public package entry', () => {
   })
 
   it('keeps the runtime deep entry aligned with the main entry', async () => {
-    expect(runtimeH).toBe(h)
+    expect('h' in rueEntry).toBe(false)
+    expect('h' in runtimeEntry).toBe(false)
     expect(runtimeRender).toBe(render)
 
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    runtimeRender(runtimeH('p', { 'data-testid': 'runtime-entry' }, 'runtime entry'), container)
+    runtimeRender(
+      _$createDynamic('p', { 'data-testid': 'runtime-entry', children: 'runtime entry' }),
+      container,
+    )
     await flushRender()
 
     expect(container.querySelector('[data-testid="runtime-entry"]')?.textContent).toBe(
@@ -148,42 +179,6 @@ describe('rue public package entry', () => {
     await expect(renderToString(<App />)).resolves.toBe(
       '<article id="server-entry"><h1>Rue SSR</h1><p data-active="true">ready</p></article>',
     )
-  })
-
-  it('mounts vapor-entry handles through the main renderer', async () => {
-    const App: FC = () => {
-      const label = vaporRef('alpha')
-
-      return vapor(() => {
-        const button = document.createElement('button')
-        button.dataset.testid = 'vapor-entry'
-        button.addEventListener('click', () => {
-          label.value = 'beta'
-        })
-
-        watchEffect(() => {
-          button.textContent = label.value
-        })
-
-        return button
-      })
-    }
-
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-
-    render(<App />, container)
-    await flushRender()
-
-    const button = container.querySelector(
-      '[data-testid="vapor-entry"]',
-    ) as HTMLButtonElement | null
-    expect(button?.textContent).toBe('alpha')
-
-    button?.click()
-    await flushRender()
-
-    expect(container.querySelector('[data-testid="vapor-entry"]')?.textContent).toBe('beta')
   })
 
   it('runs keyed Transition switches in out-in mode', async () => {

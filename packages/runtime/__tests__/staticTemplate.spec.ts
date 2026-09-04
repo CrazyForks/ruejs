@@ -2,8 +2,8 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { _$template as compiledTemplate } from '../src/compiled'
-import { _$template as vaporTemplate } from '../src/vapor'
+import { _$template as compiledTemplate } from '../src/internal'
+import { _$template as vaporTemplate } from './legacy-test-render'
 
 describe('compiled static template helper', () => {
   it('creates the template lazily and reuses it across getter calls', () => {

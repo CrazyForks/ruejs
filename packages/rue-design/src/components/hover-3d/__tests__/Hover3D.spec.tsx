@@ -10,7 +10,7 @@ import {
   _$createElement,
   _$setAttribute,
   _$setClassName,
-} from '@rue-js/rue/vapor'
+} from '@rue-js/rue/internal'
 import Hover3D from '..'
 
 const waitHover3DRender = () => new Promise(resolve => setTimeout(resolve, 0))
@@ -20,7 +20,7 @@ const ManualOverlayFragment = () =>
     const root = _$createDocumentFragment()
 
     for (let i = 0; i < 8; i += 1) {
-      const overlay = _$createElement('div', root)
+      const overlay = _$createElement('div')
       _$appendChild(root, overlay)
       _$setAttribute(overlay, 'aria-hidden', 'true')
       _$setAttribute(overlay, 'data-hover3d-overlay', '')
@@ -31,7 +31,7 @@ const ManualOverlayFragment = () =>
 
 const ManualVaporHoverRoot = ({ children }: { children?: any }) =>
   vapor(parent => {
-    const root = _$createElement('div', parent)
+    const root = _$createElement('div')
     _$setClassName(root, 'hover-3d')
 
     const childAnchor = _$createComment('rue:slot:anchor')

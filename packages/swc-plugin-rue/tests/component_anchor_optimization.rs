@@ -22,12 +22,12 @@ const Page: FC<{ code: string }> = props => (
     println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
-    assert!(out.contains(&utils::normalize("rue:component:anchor")));
+    assert!(out.contains(&utils::normalize("rue:opaque-hole:0")));
     assert!(!out.contains("renderBetween(__slot"));
 }
 
 #[test]
-fn lowers_dynamic_component_root_to_render_anchor() {
+fn lowers_dynamic_component_root_to_direct_component_handle() {
     let src = r##"
 import { type FC } from '@rue-js/rue';
 
@@ -41,8 +41,8 @@ const Page: FC<{ code: string }> = props => <Code code={props.code} />
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
     println!("DEBUG_OUT: {}", out);
 
-    assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
-    assert!(out.contains(&utils::normalize("rue:component:anchor")));
+    assert!(out.contains(&utils::normalize("_$createComponent(Code, ()=>({ code: props.code }))")));
+    assert!(!out.contains(&utils::normalize("rue:component:anchor")));
     assert!(!out.contains("renderBetween(__slot"));
 }
 
@@ -66,7 +66,7 @@ const Page: FC<{ show: boolean }> = props => (
     println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
-    assert!(out.contains(&utils::normalize("rue:component:anchor")));
+    assert!(out.contains(&utils::normalize("rue:text-hole:0")));
     assert!(!out.contains("rue:static:component"));
     assert!(!out.contains("renderStatic"));
 }
@@ -91,10 +91,10 @@ const Page: FC = () => (
     println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize(
-        "_$createComponent(Collapse.Title, { className: \"font-semibold\", children: \"Hello\" })"
+        "_$createComponent(Collapse.Title, ()=>({ className: \"font-semibold\", children: \"Hello\" }))"
     )));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
-    assert!(out.contains(&utils::normalize("rue:component:anchor")));
+    assert!(out.contains(&utils::normalize("rue:opaque-hole:0")));
 }
 
 #[test]
@@ -117,11 +117,11 @@ const Page: FC<{ items: string[] }> = props => (
     println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize(
-        "_$createComponent(TransitionGroup, { children: props.items.map"
+        "_$createComponent(TransitionGroup, ()=>({ children: props.items.map"
     )));
     assert!(out.contains("props.items.map"));
-    assert!(out.contains("_$vaporWithKey"));
-    assert!(out.contains("_$createElement(\"span\""));
+    assert!(out.contains("_$compiledWithKey"));
+    assert!(out.contains("_$template(\"<span>"));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(!out.contains("const __child1"));
     assert!(!out.contains("children={__child1}"));
@@ -147,11 +147,11 @@ const Page: FC<{ items: string[] }> = props => (
     println!("DEBUG_OUT: {}", out);
 
     assert!(out.contains(&utils::normalize(
-        "_$createComponent(TransitionGroup, { children: props.items.map"
+        "_$createComponent(TransitionGroup, ()=>({ children: props.items.map"
     )));
     assert!(out.contains("props.items.map"));
-    assert!(out.contains("_$vaporWithKey"));
-    assert!(out.contains("_$createElement(\"span\""));
+    assert!(out.contains("_$compiledWithKey"));
+    assert!(out.contains("_$template(\"<span>"));
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")));
     assert!(!out.contains("const __child1"));
     assert!(!out.contains("children={__child1}"));
@@ -184,9 +184,9 @@ const Page: FC = () => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
     println!("DEBUG_OUT: {}", out);
 
-    assert!(
-        out.contains(&utils::normalize("_$createComponent(IconHost, { children: icons[0].node })"))
-    );
+    assert!(out.contains(&utils::normalize(
+        "_$createComponent(IconHost, ()=>({ children: icons[0].node }))"
+    )));
     assert!(!out.contains(&utils::normalize("const __child1 = icons[0].node;")));
     assert!(!out.contains(&utils::normalize("_$settextContent(_el2, icons[0].node);")));
 }

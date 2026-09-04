@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { attachRouter, createRouter, RouterView } from '@rue-js/router'
 
-import { h, render, setReactiveScheduling, useComponent } from '../src'
+import { render, setReactiveScheduling, useComponent } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import { createStaticHistory, flush, mountContainer, waitForContent } from './page-test-utils'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
@@ -98,7 +99,7 @@ export const defineSplitHomeExampleActualSpec = (options: SplitHomeExampleSpecOp
       const { default: Page } = await options.importPage()
       const container = mountContainer()
 
-      render(h(Page as any, null), container)
+      render(createTestRenderable(Page as any, null), container)
 
       await waitForContent(() => {
         expectVisibleTexts(container, options.expectedTexts)
@@ -134,7 +135,7 @@ export const defineSplitHomeExampleActualSpec = (options: SplitHomeExampleSpecOp
         const { default: Page } = await options.importPage()
         const container = mountContainer()
 
-        render(h(Page as any, null), container)
+        render(createTestRenderable(Page as any, null), container)
         await waitForContent(() => {
           expectVisibleTexts(container, options.expectedTexts)
         })

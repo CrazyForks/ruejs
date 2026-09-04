@@ -6,25 +6,14 @@
 - 占位渲染：提供可覆盖的 Loading 与 Error 组件，满足不同产品形态的占位需求。
  * - 固定渲染：使用 vapor + renderAnchor，内部通过 display: contents 容器承载稳定锚点，既能正确卸载，又不额外产生布局盒。
 */
-import rue, {
-  captureOwnedMountContinuation,
-  FC,
-  h,
-  onBeforeUnmount,
-  renderAnchor,
-  vapor,
-} from '../rue'
-import {
-  appendChild,
-  createComment,
-  createDocumentFragment,
-  createElement,
-  getParentNode,
-} from '../dom'
-import { signal, untrack, watchEffect } from '../reactivity'
-import { registerOwnerCleanup } from '../renderable-lifecycle'
-import { _$createComponent } from '../vapor'
-import { useSetup } from '@rue-js/runtime-vapor/reactive'
+import rue, { FC } from '../rue'
+import { appendChild, createComment, createElement, getParentNode } from '../dom'
+import { signal, untrack } from '../reactivity'
+import { createCompiledDynamic } from '../compiled-dynamic'
+import { _$createComponent } from '../compiled-component-call'
+import { _$withCompiledPropsUpdater } from '../compiled-component'
+import { _$compiledRoot } from '../compiled-root'
+import { effect, onEffectCleanup, onOwnerCleanup } from '../internal-reactive'
 import {
   getCurrentSuspenseBoundary,
   RUE_SUSPENSE_BOUNDARY_KEY,
@@ -589,8 +578,11 @@ export function useComponent<P = any>(
           ;(slot as any).requestId = loadId + 1
           clearPendingState()
           setErrorState(loadError)
-          if (((slot as any).activeContexts as Set<object> | undefined)?.size) {
+          const activeContexts = (slot as any).activeContexts as Set<object> | undefined
+          if (activeContexts?.size) {
             appRue.handleError(loadError, null)
+          } else {
+            ;(slot as any).started = false
           }
         }
 
@@ -687,7 +679,8 @@ export function useComponent<P = any>(
       }
 
       /** 加载占位组件 */
-      const Loading: FC<any> = loadingComponent ?? (() => h('div', {}, ''))
+      const Loading: FC<any> =
+        loadingComponent ?? (() => createCompiledDynamic('div', { children: '' }))
 
       /** 错误占位组件 */
       const ErrorComp: FC<any> =
@@ -696,7 +689,7 @@ export function useComponent<P = any>(
           // 提取错误消息：优先 message 字段；其次字符串化；兜底 'Error'
           const err = p && p.error
           const msg = err && err.message ? err.message : typeof err === 'string' ? err : 'Error'
-          return h('div', null, msg)
+          return createCompiledDynamic('div', { children: msg })
         })
       // 缓存槽位，避免重复初始化
       slot = {
@@ -753,267 +746,127 @@ export function useComponent<P = any>(
     if (isServerRendering()) {
       const e = err.get()
       if (e) {
-        return h(ErrorComp, { error: e })
+        return _$createComponent(ErrorComp, { error: e })
       }
 
       const comp = component.get()
       if (comp) {
-        return h(comp as FC<P>, props)
+        return _$createComponent(comp as FC<P>, props)
       }
 
       registerServerPendingDependency((slot as any).promise)
       if (hasCustomLoading && loadingVisible.get()) {
-        return h(Loading, {})
+        return _$createComponent(Loading, {})
+      }
+      const pending = (slot as any).promise as Promise<unknown> | null
+      if (pending) {
+        return pending.then(() => {
+          const loadError = err.get()
+          if (loadError) return _$createComponent(ErrorComp, { error: loadError })
+          const loaded = component.get()
+          return loaded ? _$createComponent(loaded as FC<P>, props) : null
+        }) as ReturnType<FC<P>>
       }
       return null
     }
 
-    // 为每个 Hook 实例创建独立的容器、单锚点与 props 信号，
-    // 同一 loader 下仅共享“加载状态”，但不共享渲染区间与副作用。
-    const createRenderContext = (initialProps: any) => {
-      const ownedMountContinuation = captureOwnedMountContinuation()
-      const container = createElement('div') as any
-      if (container && container.style && typeof container.style === 'object') {
-        container.style.display = 'contents'
-      }
-      const anchorEl = createComment('rue-async-component-anchor')
-      appendChild(container, anchorEl)
-      const propsSig = signal<any>(initialProps, {}, true)
-      const mountKey = {}
-      const ctx = {
-        container,
-        anchorEl,
-        propsSig,
-        lastProps: initialProps,
-        pendingSuspenseCheck: false,
-        disposed: false,
-        effect: null as { dispose?: () => void } | null,
-        hydrationCleanup: null as (() => void) | null,
-        ownedMountContinuation,
-        dispose: () => {},
-      }
+    const propsSignal = signal<any>(props, {}, true)
+    const mountKey = {}
+    const root = _$compiledRoot(parent => {
+      if (parent == null) throw new Error('[rue] async component requires a mount parent')
+      const container = createElement('div') as HTMLElement
+      container.style.display = 'contents'
+      const anchor = createComment('rue-async-component-anchor')
+      appendChild(container, anchor)
+      appendChild(parent as any, container)
       const activeContexts = ((slot as any).activeContexts ??= new Set<object>()) as Set<object>
-      activeContexts.add(ctx)
-
-      const runOwned = (run: () => void) =>
-        ctx.ownedMountContinuation ? ctx.ownedMountContinuation.run(run) : (run(), true)
-
-      const isStillPending = (thenable: Promise<unknown>) =>
-        (slot as any).promise === thenable && !component.get() && !err.get()
+      const context = { parent: container, anchor }
+      activeContexts.add(context)
+      let hydrationCleanup: (() => void) | undefined
 
       const findSuspenseBoundary = (): SuspenseBoundary | null => {
         let node: any = container
         while (node) {
           const boundary = node[RUE_SUSPENSE_BOUNDARY_KEY] as SuspenseBoundary | undefined
-          if (boundary) {
-            return boundary
-          }
+          if (boundary) return boundary
           node = getParentNode(node) as any
         }
         return null
       }
 
       const registerSuspenseDependency = (thenable: Promise<unknown>) => {
-        if (!isStillPending(thenable)) {
-          return false
-        }
-
+        if ((slot as any).promise !== thenable || component.get() || err.get()) return
         registerServerPendingDependency(thenable)
-
-        const currentBoundary = getCurrentSuspenseBoundary()
-        if (currentBoundary) {
-          currentBoundary.register(thenable)
-          return true
-        }
-
-        const boundary = findSuspenseBoundary()
-        if (boundary) {
-          boundary.register(thenable)
-          return true
-        }
-
-        if (!ctx.pendingSuspenseCheck) {
-          ctx.pendingSuspenseCheck = true
-          queueMicrotask(() => {
-            ctx.pendingSuspenseCheck = false
-            if (ctx.disposed || !isStillPending(thenable)) {
-              return
-            }
-            const mountedBoundary = findSuspenseBoundary()
-            if (mountedBoundary) {
-              mountedBoundary.register(thenable)
-            }
-          })
-        }
-        return false
+        ;(getCurrentSuspenseBoundary() ?? findSuspenseBoundary())?.register(thenable)
       }
 
-      const renderCurrent = () => {
-        const curProps = propsSig.get()
-        if (curProps == null) {
-          return
-        }
-
-        // 根据当前状态选择渲染内容：
-        // - 有错误：渲染 ErrorComp 并展示错误信息
-        // - 有组件：渲染目标异步组件
-        // - 尚未就绪：渲染 Loading 占位
-        let nextOutput: any = null
-        const e = err.get()
-        if (e) {
-          nextOutput = h(ErrorComp, { error: e })
-        } else {
-          const comp = component.get()
-          if (comp) {
-            nextOutput = _$createComponent(comp as FC<P>, {
-              ...curProps,
-              key: mountKey,
-            })
-          } else if (
-            hasCustomLoading &&
-            (((slot as any).hydrate && !(slot as any).started) || loadingVisible.get())
-          ) {
-            if (suspensible && (slot as any).promise) {
-              registerSuspenseDependency((slot as any).promise)
+      if (!shouldStartImmediately) {
+        const strategy = (slot as any).hydrate as HydrationStrategy | undefined
+        if (strategy && !(slot as any).started && !component.get() && !err.get()) {
+          try {
+            const cleanup = strategy(startOnce, cb =>
+              forEachHydrationElement({ container, anchorEl: anchor }, cb),
+            )
+            if (typeof cleanup === 'function') {
+              hydrationCleanup = cleanup
+              ;((slot as any).hydrationCleanups as Set<() => void>).add(cleanup)
             }
-            nextOutput = h(Loading, {})
-          } else {
-            if (suspensible && (slot as any).promise) {
-              registerSuspenseDependency((slot as any).promise)
-            }
-            return
+          } catch (error: any) {
+            appRue.handleError(error, null)
+            startOnce()
           }
         }
+      }
+
+      let mounted: ReturnType<typeof _$createComponent> | undefined
+      effect(() => {
+        const curProps = propsSignal.get()
+        const currentError = err.get()
+        const currentComponent = component.get()
+        const showLoading =
+          hasCustomLoading &&
+          (((slot as any).hydrate && !(slot as any).started) || loadingVisible.get())
+        const pending = (slot as any).promise as Promise<unknown> | null
+        if (!currentError && !currentComponent && pending && suspensible) {
+          registerSuspenseDependency(pending)
+        }
+
+        mounted?.dispose()
+        mounted = undefined
+        if (currentError) mounted = _$createComponent(ErrorComp, { error: currentError })
+        else if (currentComponent) {
+          mounted = _$createComponent(currentComponent as FC<P>, { ...curProps, key: mountKey })
+        } else if (showLoading) mounted = _$createComponent(Loading, {})
+        if (!mounted) return
+
+        const handle = mounted
         untrack(() => {
-          runOwned(() => renderAnchor(nextOutput as any, container, anchorEl as any))
+          const staging = document.createDocumentFragment()
+          const result = handle.__rue_compiled_mount(staging)
+          if (result != null && result.parentNode !== staging) staging.appendChild(result)
+          container.insertBefore(staging, anchor as any)
         })
-      }
+        onEffectCleanup(() => {
+          if (mounted === handle) mounted = undefined
+          handle.dispose()
+        })
+      })
 
-      ctx.dispose = () => {
-        if (ctx.disposed) {
-          return
+      onOwnerCleanup(() => {
+        mounted?.dispose()
+        mounted = undefined
+        activeContexts.delete(context)
+        if (activeContexts.size === 0 && err.get()) {
+          ;(slot as any).started = false
         }
-
-        ctx.disposed = true
-        ctx.pendingSuspenseCheck = false
-        activeContexts.delete(ctx)
-
-        untrack(() => {
-          runOwned(() =>
-            renderAnchor(
-              vapor(() => createDocumentFragment() as any),
-              container,
-              anchorEl as any,
-            ),
-          )
-        })
-
-        ctx.effect?.dispose?.()
-        ctx.effect = null
-        ctx.hydrationCleanup?.()
-        ctx.hydrationCleanup = null
-      }
-
-      const startRenderEffect = () =>
-        watchEffect(() => {
-          if (ctx.disposed) {
-            return
-          }
-          renderCurrent()
-        })
-
-      if (component.get() && !isServerRendering()) {
-        queueMicrotask(() => {
-          if (ctx.disposed || ctx.effect) {
-            return
-          }
-          ctx.effect = startRenderEffect()
-        })
-      } else {
-        ctx.effect = startRenderEffect()
-      }
-
-      return ctx
-    }
-
-    const registerHydrationStrategy = (ctx: ReturnType<typeof createRenderContext>) => {
-      const strategy = (slot as any).hydrate as HydrationStrategy | undefined
-      if (!strategy || (slot as any).started || component.get() || err.get()) {
-        return
-      }
-      if (ctx.hydrationCleanup) {
-        return
-      }
-
-      let startedDuringSetup = false
-      const hydrate = () => {
-        startedDuringSetup = true
-        return startOnce()
-      }
-
-      let rawCleanup: (() => void) | void
-      try {
-        rawCleanup = strategy(hydrate, cb => {
-          forEachHydrationElement(ctx, cb)
-        })
-      } catch (error: any) {
-        appRue.handleError(error, null)
-        startOnce()
-        return
-      }
-
-      if (typeof rawCleanup !== 'function') {
-        return
-      }
-
-      let active = true
-      const cleanup = () => {
-        if (!active) {
-          return
+        if (hydrationCleanup) {
+          ;((slot as any).hydrationCleanups as Set<() => void>).delete(hydrationCleanup)
+          hydrationCleanup()
         }
-        active = false
-        ;((slot as any).hydrationCleanups as Set<() => void>).delete(cleanup)
-        rawCleanup()
-      }
-
-      if (startedDuringSetup || (slot as any).started) {
-        cleanup()
-        return
-      }
-
-      ctx.hydrationCleanup = cleanup
-      ;((slot as any).hydrationCleanups as Set<() => void>).add(cleanup)
-    }
-
-    const ctxHolder = useSetup(() => ({ current: createRenderContext(props) })) as {
-      current: ReturnType<typeof createRenderContext>
-    }
-    if (ctxHolder.current.disposed) {
-      ctxHolder.current = createRenderContext(props)
-    }
-    const ctx = ctxHolder.current
-
-    if (!shouldStartImmediately) {
-      registerHydrationStrategy(ctx)
-    }
-
-    onBeforeUnmount(() => {
-      ctx.dispose()
+      })
+      return container as any
     })
 
-    const handle = vapor(() => {
-      // 将 props 写入信号以驱动渲染，并把稳定容器直接暴露给 Vapor 渲染管线
-      if (ctx.lastProps !== props) {
-        ctx.lastProps = props
-        ctx.propsSig.set(props)
-      }
-      return ctx.container as any
-    })
-
-    registerOwnerCleanup(handle as any, () => {
-      ctx.dispose()
-    })
-
-    return handle
+    return _$withCompiledPropsUpdater(root, nextProps => propsSignal.set(nextProps))
   }
 }

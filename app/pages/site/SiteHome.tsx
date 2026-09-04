@@ -436,7 +436,7 @@ const SiteHome: FC = () => {
                 Framework For Native DOM
               </div>
               <p className="mt-6 text-lg md:text-xl text-base-content/70">
-                静态零 Rue 值依赖，Signal 最小核心，复杂能力按需加载
+                Signal 细粒度响应式 . Rust 编译器 . JSX 函数式组件
               </p>
             </figure>
             <div></div>
@@ -736,9 +736,8 @@ export default HelloWorld`}
             <Code
               className="h-full"
               lang="ts"
-              code={`/* RUE_VAPOR_TRANSFORMED */
-import { jsxDEV as _jsxDEV } from "@rue-js/jsx-dev-runtime";
-import { vapor, renderBetween, _$createElement, _$createComment, _$createTextNode, _$appendChild, _$setClassName } from "@rue-js/rue";
+              code={`/* RUE_TRANSFORMED */
+import { vapor, renderBetween, _$createComponent, _$createElement, _$createComment, _$createTextNode, _$appendChild, _$setClassName } from "@rue-js/rue";
 const Hello = ()=>vapor(()=>{
         const _root = _$createElement("div");
         _$setClassName(_root, "card bg-primary text-primary-content shadow-sm");
@@ -810,41 +809,25 @@ const HelloWorld = ()=>vapor(()=>{
         const _list2 = _$createComment("rue:component:end");
         _$appendChild(_root, _list1);
         _$appendChild(_root, _list2);
-        const __slot3 = /*#__PURE__*/ _jsxDEV(Hello, {}, void 0, false, {
-            fileName: "rue-plugin-input.tsx",
-            lineNumber: 39,
-            columnNumber: 5
-        }, this);
+        const __slot3 = _$createComponent(Hello, {});
         renderBetween(__slot3, _root, _list1, _list2);
         const _list4 = _$createComment("rue:component:start");
         const _list5 = _$createComment("rue:component:end");
         _$appendChild(_root, _list4);
         _$appendChild(_root, _list5);
-        const __slot6 = /*#__PURE__*/ _jsxDEV(World, {}, void 0, false, {
-            fileName: "rue-plugin-input.tsx",
-            lineNumber: 40,
-            columnNumber: 5
-        }, this);
+        const __slot6 = _$createComponent(World, {});
         renderBetween(__slot6, _root, _list4, _list5);
         const _list7 = _$createComment("rue:component:start");
         const _list8 = _$createComment("rue:component:end");
         _$appendChild(_root, _list7);
         _$appendChild(_root, _list8);
-        const __slot9 = /*#__PURE__*/ _jsxDEV(HelloRue, {}, void 0, false, {
-            fileName: "rue-plugin-input.tsx",
-            lineNumber: 41,
-            columnNumber: 5
-        }, this);
+        const __slot9 = _$createComponent(HelloRue, {});
         renderBetween(__slot9, _root, _list7, _list8);
         const _list10 = _$createComment("rue:component:start");
         const _list11 = _$createComment("rue:component:end");
         _$appendChild(_root, _list10);
         _$appendChild(_root, _list11);
-        const __slot12 = /*#__PURE__*/ _jsxDEV(IAmRue, {}, void 0, false, {
-            fileName: "rue-plugin-input.tsx",
-            lineNumber: 42,
-            columnNumber: 5
-        }, this);
+        const __slot12 = _$createComponent(IAmRue, {});
         renderBetween(__slot12, _root, _list10, _list11);
         return _root;
     });

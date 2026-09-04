@@ -77,7 +77,7 @@ import {
 } from './rue-shim-types.js'
 import { createTextCompatElement } from './component-adapter.js'
 import { readContextRuntime } from './context-runtime-global.js'
-import type { TextNode } from '../runtime/render-protocol.js'
+import { createTextElement, type TextNode } from '../runtime/render-protocol.js'
 
 type NavigateEvent = {
   url: URL
@@ -208,10 +208,10 @@ function hasServerLinkHookRuntime(): boolean {
 
 function shouldRenderStaticServerAnchor(): boolean {
   if (getCurrentSsrLinkRenderingState().active) return true
-  if (typeof window !== 'undefined') return false
   if (typeof (globalThis as Record<string, unknown>).__rue_is_server_rendering__ === 'number') {
     return true
   }
+  if (typeof window !== 'undefined') return false
   return !hasServerLinkHookRuntime()
 }
 
@@ -723,10 +723,10 @@ function Link({
       if (process.env.NODE_ENV !== 'production') {
         console.warn(`<Link> blocked dangerous href: ${resolvedHref}`)
       }
-      return createTextCompatElement('a', serverAnchorProps, children)
+      return createTextElement('a', serverAnchorProps, children)
     }
 
-    return createTextCompatElement('a', { href: fullHref, ...serverAnchorProps }, children)
+    return createTextElement('a', { href: fullHref, ...serverAnchorProps }, children)
   }
 
   // Track pending state for useLinkStatus()

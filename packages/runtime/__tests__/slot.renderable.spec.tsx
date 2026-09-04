@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { Slot, h, render, setReactiveScheduling, type FC } from '../src'
-import { RUE_SLOT_BAG_PROP } from '../src/components/Slot'
+import {
+  createCompiledBlock,
+  _$mountCompiledSlotAt,
+  mountCompiledDynamic,
+  mountCompiledSlot,
+  replaceCompiledBlock,
+  type CompiledSlotFactory,
+} from '../src/compiler-runtime/mount'
+import { _$compiledSignal } from '../src/compiled-component'
+import { createOwner, setReactiveScheduling } from '../src/internal-reactive'
 
 setReactiveScheduling('sync')
 
@@ -9,101 +17,103 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-const flush = async () => {
-  await Promise.resolve()
-  await Promise.resolve()
-}
+describe('compiled slot and dynamic component ABI', () => {
+  const textFactory =
+    (prefix: string): CompiledSlotFactory<{ label?: string }> =>
+    (target, props, owner) => {
+      const fragment = document.createDocumentFragment()
+      const first = document.createComment(`${prefix}:first`)
+      const text = document.createTextNode(`${prefix}${props.label ?? ''}`)
+      const last = document.createComment(`${prefix}:last`)
+      fragment.append(first, text, last)
+      target.parent.insertBefore(fragment, target.before)
+      return createCompiledBlock(target, owner, { first, last })
+    }
 
-const mount = (view: any) => {
-  const container = document.createElement('div')
-  document.body.appendChild(container)
-  render(view, container)
-  return container
-}
+  it('mounts scoped slot fragments and replaces the complete block range', () => {
+    const container = document.createElement('div')
+    const anchor = document.createComment('slot-anchor')
+    container.append(anchor)
+    const target = { parent: container, before: anchor }
 
-describe('Slot renderable boundary', () => {
-  it('renders default, named, fallback, and scoped slot content', async () => {
-    const Panel: FC<{ title?: any; item?: (props: { label: string }) => any }> = props => (
-      <section>
-        <header>
-          <Slot source={props} name="title">
-            Untitled
-          </Slot>
-        </header>
-        <main>
-          <Slot source={props}>Empty</Slot>
-        </main>
-        <footer>
-          <Slot source={props} name="item" props={{ label: 'scoped value' }}>
-            Missing scoped slot
-          </Slot>
-        </footer>
-      </section>
+    const initial = mountCompiledSlot(
+      target,
+      textFactory('default:'),
+      { label: 'one' },
+      createOwner(),
     )
+    expect(container.textContent).toBe('default:one')
 
-    const container = mount(
-      <div>
-        <Panel
-          title={<strong data-testid="title">Named title</strong>}
-          item={({ label }) => <em data-testid="scoped">{label}</em>}
-        >
-          <span data-testid="default">Body</span>
-        </Panel>
-        {h(Panel, null)}
-      </div>,
+    const next = replaceCompiledBlock(
+      initial,
+      target,
+      textFactory('named:'),
+      { label: 'two' },
+      createOwner(),
     )
-    await flush()
-
-    const sections = Array.from(container.querySelectorAll('section'))
-    expect(sections).toHaveLength(2)
-
-    expect(sections[0]?.querySelector('[data-testid="title"]')?.textContent).toBe('Named title')
-    expect(sections[0]?.querySelector('[data-testid="default"]')?.textContent).toBe('Body')
-    expect(sections[0]?.querySelector('[data-testid="scoped"]')?.textContent).toBe('scoped value')
-
-    expect(sections[1]?.querySelector('header')?.textContent).toBe('Untitled')
-    expect(sections[1]?.querySelector('main')?.textContent).toBe('Empty')
-    expect(sections[1]?.querySelector('footer')?.textContent).toBe('Missing scoped slot')
+    expect(container.textContent).toBe('named:two')
+    expect(next.first.parentNode).toBe(container)
+    expect(next.last.nextSibling).toBe(anchor)
   })
 
-  it('prefers slot bag entries over same-name plain props when source is explicit', async () => {
-    const BagPanel: FC<Record<string, unknown>> = props => (
-      <section>
-        <header>
-          <Slot source={props} name="title">
-            Untitled
-          </Slot>
-        </header>
-        <small>
-          <Slot source={props} name="subtitle">
-            No subtitle
-          </Slot>
-        </small>
-      </section>
-    )
+  it('switches only through an explicit dynamic component registry', () => {
+    const container = document.createElement('div')
+    const anchor = document.createComment('component-anchor')
+    container.append(anchor)
+    const target = { parent: container, before: anchor }
+    const registry = {
+      alpha: textFactory('A:'),
+      beta: textFactory('B:'),
+    }
 
-    const container = mount(
-      <div>
-        <BagPanel
-          title={<span data-testid="plain-title">Plain title</span>}
-          subtitle={<span data-testid="plain-subtitle">Plain subtitle</span>}
-          {...{
-            [RUE_SLOT_BAG_PROP]: {
-              title: <strong data-testid="bag-title">Bag title</strong>,
-            },
-          }}
-        />
-      </div>,
+    const alpha = mountCompiledDynamic(target, 'alpha', registry, { label: 'one' }, createOwner())
+    expect(container.textContent).toBe('A:one')
+    alpha.dispose()
+    mountCompiledDynamic(target, 'beta', registry, { label: 'two' }, createOwner())
+    expect(container.textContent).toBe('B:two')
+    expect(() => mountCompiledDynamic(target, 'missing', registry, {}, createOwner())).toThrow(
+      '[rue] unknown compiled dynamic component: missing',
     )
-    await flush()
+  })
 
-    const sections = Array.from(container.querySelectorAll('section'))
-    expect(sections).toHaveLength(1)
+  it('reactively replaces a production slot getter at one stable anchor', () => {
+    const container = document.createElement('div')
+    const anchor = document.createComment('compiled-slot-anchor')
+    container.append(anchor)
+    const current = _$compiledSignal<CompiledSlotFactory<{ label: string }>>(textFactory('first:'))
 
-    expect(sections[0]?.querySelector('[data-testid="bag-title"]')?.textContent).toBe('Bag title')
-    expect(sections[0]?.querySelector('[data-testid="plain-title"]')).toBeNull()
-    expect(sections[0]?.querySelector('[data-testid="plain-subtitle"]')?.textContent).toBe(
-      'Plain subtitle',
+    _$mountCompiledSlotAt(
+      { parent: container, before: anchor },
+      () => current.get(),
+      () => ({ label: 'value' }),
     )
+    expect(container.textContent).toBe('first:value')
+
+    current.set(textFactory('second:'))
+    expect(container.textContent).toBe('second:value')
+    expect(anchor.previousSibling?.nodeType).toBe(Node.COMMENT_NODE)
+  })
+
+  it('does not remount a slot when child setup reads its own reactive state', () => {
+    const container = document.createElement('div')
+    const anchor = document.createComment('compiled-slot-anchor')
+    container.append(anchor)
+    const childState = _$compiledSignal(0)
+    let mounts = 0
+    const factory: CompiledSlotFactory = (target, _props, owner) => {
+      mounts += 1
+      childState.get()
+      return textFactory('child:')(target, {}, owner)
+    }
+
+    _$mountCompiledSlotAt(
+      { parent: container, before: anchor },
+      () => factory,
+      () => ({}),
+    )
+    expect(mounts).toBe(1)
+
+    childState.set(1)
+    expect(mounts).toBe(1)
   })
 })

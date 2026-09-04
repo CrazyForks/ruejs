@@ -71,13 +71,15 @@ fn builds_setup_wrapper_and_binds_nested_names() {
     );
 
     let rendered = normalize(&emit_stmts(build_setup_with_binds(
+        "useSetup:0:0",
+        crate::emit::ident("_$useSetup"),
         vec!["foo".into(), "bar".into(), "rest".into(), "helper".into()],
         vec!["first".into(), "second".into()],
         collected,
     )));
 
     assert!(rendered.contains(&normalize(
-        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#,
+        r#"const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#,
     )));
     assert!(rendered.contains(&normalize(
         r#"return {
@@ -98,18 +100,84 @@ fn builds_setup_wrapper_and_binds_nested_names() {
 }
 
 #[test]
+fn builds_multiple_setup_regions_with_distinct_ids_and_bindings() {
+    let first_region = build_setup_with_binds(
+        "useSetup:0:0",
+        crate::emit::ident("_$useSetupRegion0"),
+        vec!["state".into(), "helper".into()],
+        vec!["count".into()],
+        parse_module_stmts(
+            "const state = ref(0); const helper = () => state.value; let count = 0;",
+        ),
+    );
+    let second_region = build_setup_with_binds(
+        "useSetup:0:1",
+        crate::emit::ident("_$useSetupRegion1"),
+        vec!["details".into(), "format".into()],
+        Vec::new(),
+        parse_module_stmts(
+            "const details = loadDetails(); function format() { return details.label; }",
+        ),
+    );
+
+    let rendered = normalize(&emit_stmts(first_region.into_iter().chain(second_region).collect()));
+
+    assert!(rendered.contains(&normalize(
+        r#"const _$useSetupRegion0 = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#,
+    )));
+    assert!(
+        rendered.contains(&normalize(
+            r#"const { state: state, helper: helper } = _$useSetupRegion0;"#,
+        ))
+    );
+    assert!(rendered.contains(&normalize(r#"let { count: count } = _$useSetupRegion0;"#,)));
+    assert!(rendered.contains(&normalize(
+        r#"const _$useSetupRegion1 = _$compiledWithHookId("useSetup:0:1", ()=>useSetup(()=>{"#,
+    )));
+    assert!(rendered.contains(&normalize(r#"return { details: details, format: format };"#,)));
+    assert!(rendered.contains(&normalize(
+        r#"const { details: details, format: format } = _$useSetupRegion1;"#,
+    )));
+    assert_eq!(rendered.matches("const _$useSetupRegion0 =").count(), 1);
+    assert_eq!(rendered.matches("const _$useSetupRegion1 =").count(), 1);
+}
+
+#[test]
 fn omits_extra_bindings_when_no_names_are_requested() {
     let collected = parse_module_stmts("const state = ref(0);");
-    let stmts = build_setup_with_binds(Vec::new(), Vec::new(), collected);
+    let stmts = build_setup_with_binds(
+        "useSetup:0:0",
+        crate::emit::ident("_$useSetup"),
+        Vec::new(),
+        Vec::new(),
+        collected,
+    );
     let rendered = normalize(&emit_stmts(stmts.clone()));
 
     assert_eq!(stmts.len(), 1);
     assert!(rendered.contains(&normalize(
-        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#
+        r#"const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#
     )));
     assert!(rendered.contains(&normalize("return {};")));
     assert!(!rendered.contains(&normalize("const {")));
     assert!(!rendered.contains(&normalize("let {")));
+}
+
+#[test]
+fn builds_compiled_owner_setup_without_vapor_helpers() {
+    let rendered = normalize(&emit_stmts(build_compiled_setup_with_binds(
+        "App:setup-region:0",
+        crate::emit::ident("_$useSetup"),
+        vec!["rows".into()],
+        Vec::new(),
+        parse_module_stmts("const rows = signal([]);"),
+    )));
+
+    assert!(rendered.contains(&normalize(
+        r#"const _$useSetup = _$compiledSetup("App:setup-region:0", ()=>{"#,
+    )));
+    assert!(!rendered.contains("_$compiledWithHookId"));
+    assert!(!rendered.contains("useSetup("));
 }
 
 #[test]
@@ -122,6 +190,8 @@ fn builds_setup_for_assignment_patterns_and_synthetic_exports() {
     );
 
     let rendered = normalize(&emit_stmts(build_setup_with_binds(
+        "useSetup:0:0",
+        crate::emit::ident("_$useSetup"),
         vec!["first".into(), "missing".into()],
         Vec::new(),
         collected,
@@ -150,7 +220,84 @@ fn build_setup_tolerates_uncollectable_patterns() {
         }],
     })))];
 
-    let stmts = build_setup_with_binds(vec!["missing".into()], Vec::new(), collected);
+    let stmts = build_setup_with_binds(
+        "useSetup:0:0",
+        crate::emit::ident("_$useSetup"),
+        vec!["missing".into()],
+        Vec::new(),
+        collected,
+    );
 
     assert_eq!(stmts.len(), 2);
+}
+
+#[test]
+fn strips_direct_internal_hook_ids_but_preserves_setup_identity() {
+    let collected = parse_module_stmts(
+        r#"
+        const state = _$compiledWithHookId("ref:0:0", () => ref(0)),
+            doubled = _$compiledWithHookId("computed:0:1", () => computed(() => state.value * 2));
+        _$compiledWithHookId("watchEffect:0:2", () => watchEffect(() => consume(state.value)));
+        "#,
+    );
+
+    let rendered = normalize(&emit_stmts(build_setup_with_binds(
+        "useSetup:0:0",
+        crate::emit::ident("_$useSetup"),
+        vec!["state".into(), "doubled".into()],
+        Vec::new(),
+        collected,
+    )));
+
+    assert!(rendered.contains(&normalize(
+        r#"const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{"#,
+    )));
+    assert!(
+        rendered
+            .contains(&normalize("const state = ref(0), doubled = computed(()=>state.value * 2);"))
+    );
+    assert!(rendered.contains(&normalize("watchEffect(()=>consume(state.value));")));
+    assert!(!rendered.contains("ref:0:0"));
+    assert!(!rendered.contains("computed:0:1"));
+    assert!(!rendered.contains("watchEffect:0:2"));
+}
+
+#[test]
+fn preserves_deferred_and_noncanonical_hook_wrappers() {
+    let collected = parse_module_stmts(
+        r#"
+        function helper() {
+            return _$compiledWithHookId("ref:nested", () => ref(0));
+        }
+        const callback = () => _$compiledWithHookId("ref:arrow", () => ref(1));
+        const memo = computed(() => _$compiledWithHookId("ref:computed", () => ref(2)));
+        useMemo(() => _$compiledWithHookId("ref:memo", () => ref(3)), []);
+        watchEffect(() => _$compiledWithHookId("ref:effect", () => ref(4)));
+        const missingRunner = _$compiledWithHookId("ref:missing");
+        const parameterizedRunner = _$compiledWithHookId("ref:param", (value) => ref(value));
+        const indirect = _$compiledWithHookId("ref:indirect", () => factory);
+        "#,
+    );
+
+    let rendered = normalize(&emit_stmts(build_setup_with_binds(
+        "Component:setup-region:0",
+        crate::emit::ident("_$useSetupRegion0"),
+        vec!["helper".into(), "callback".into(), "memo".into()],
+        Vec::new(),
+        collected,
+    )));
+
+    assert!(rendered.contains("Component:setup-region:0"));
+    for id in [
+        "ref:nested",
+        "ref:arrow",
+        "ref:computed",
+        "ref:memo",
+        "ref:effect",
+        "ref:missing",
+        "ref:param",
+        "ref:indirect",
+    ] {
+        assert!(rendered.contains(id), "expected wrapper id {id} in {rendered}");
+    }
 }

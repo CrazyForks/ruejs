@@ -31,14 +31,14 @@ export const readDocRouteSegment = ({
   staticRenderUrl?: string | null
   uiBase: string
 }) => {
-  const propSegment = normalizeDocRouteSegment(propPath)
-  if (propSegment) {
-    return propSegment
-  }
-
   const routeSegment = normalizeDocRouteSegment(routePath)
   if (routeSegment) {
     return routeSegment
+  }
+
+  const propSegment = normalizeDocRouteSegment(propPath)
+  if (propSegment) {
+    return propSegment
   }
 
   const currentRouteSegment = normalizeDocRouteSegment(

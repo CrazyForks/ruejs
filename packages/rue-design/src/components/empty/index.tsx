@@ -3,8 +3,7 @@ Empty 模块概述
 - 汇总空状态组件的公开类型、渲染入口和局部工具逻辑。
 - 导出注释用于 API 文档生成，内部注释标明状态归一化、样式映射与 DOM 交互边界。
 */
-import type { FC } from '@rue-js/rue'
-import { h } from '@rue-js/rue'
+import { Component, type FC } from '@rue-js/rue'
 
 /** EmptySize 尺寸类型。 */
 export type EmptySize = 'sm' | 'md' | 'lg' | 'small' | 'default' | 'large'
@@ -447,60 +446,60 @@ const Empty = (({
         className="block h-auto w-full object-contain"
       />
     ) : mergedImage === DefaultPresentedImage || mergedImage === SimplePresentedImage ? (
-      h(mergedImage as FC<EmptyPresentedImageProps>, { size: normalizedSize })
+      <Component is={mergedImage as FC<EmptyPresentedImageProps>} size={normalizedSize} />
     ) : typeof mergedImage === 'function' ? (
-      h(mergedImage as FC<any>, {})
+      <Component is={mergedImage as FC<any>} />
     ) : (
       mergedImage
     )
 
-  return h(
-    'div',
-    {
-      ...rest,
-      role,
-      className: rootCls,
-      style: rootStyle,
-      'data-rue-empty': 'true',
-      'data-rue-empty-align': align,
-      'data-rue-empty-size': normalizedSize,
-      'data-rue-empty-variant': variant,
-    },
-    <>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-8 top-0 h-20 rounded-full bg-primary/10 blur-3xl"
-      />
+  return (
+    <div
+      {...rest}
+      role={role}
+      className={rootCls}
+      style={rootStyle}
+      data-rue-empty="true"
+      data-rue-empty-align={align}
+      data-rue-empty-size={normalizedSize}
+      data-rue-empty-variant={variant}
+    >
+      <>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-8 top-0 h-20 rounded-full bg-primary/10 blur-3xl"
+        />
 
-      <div
-        className={appendClassName(
-          `relative z-[1] flex ${resolveContentGapClass(normalizedSize)} w-full flex-col`,
-          align === 'start' ? 'items-start' : 'items-center',
-        )}
-      >
-        {hasImage ? (
-          <div data-rue-empty-image="true" className={imageShellCls} style={imageShellStyle}>
-            <>{imageNode}</>
-          </div>
-        ) : null}
+        <div
+          className={appendClassName(
+            `relative z-[1] flex ${resolveContentGapClass(normalizedSize)} w-full flex-col`,
+            align === 'start' ? 'items-start' : 'items-center',
+          )}
+        >
+          {hasImage ? (
+            <div data-rue-empty-image="true" className={imageShellCls} style={imageShellStyle}>
+              <>{imageNode}</>
+            </div>
+          ) : null}
 
-        {hasDescription ? (
-          <div
-            data-rue-empty-description="true"
-            className={descriptionCls}
-            style={descriptionStyle}
-          >
-            <>{mergedDescription}</>
-          </div>
-        ) : null}
+          {hasDescription ? (
+            <div
+              data-rue-empty-description="true"
+              className={descriptionCls}
+              style={descriptionStyle}
+            >
+              <>{mergedDescription}</>
+            </div>
+          ) : null}
 
-        {hasFooter ? (
-          <div data-rue-empty-footer="true" className={footerCls} style={footerStyle}>
-            <>{children}</>
-          </div>
-        ) : null}
-      </div>
-    </>,
+          {hasFooter ? (
+            <div data-rue-empty-footer="true" className={footerCls} style={footerStyle}>
+              <>{children}</>
+            </div>
+          ) : null}
+        </div>
+      </>
+    </div>
   )
 }) as EmptyType
 

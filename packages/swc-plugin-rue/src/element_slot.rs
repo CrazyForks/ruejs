@@ -23,7 +23,62 @@ pub fn render_between_for_slot(
     let make_anchor = call_ident("_$createComment", vec![string_expr(anchor_marker)]);
     stmts.push(const_decl(anchor.clone(), make_anchor));
     stmts.push(append_child(el_ident.clone(), Expr::Ident(anchor.clone())));
+    render_between_for_slot_at(vt, el_ident, &anchor, inner_expr, stmts);
+}
 
+pub(crate) fn render_between_for_slot_at(
+    _vt: &mut VaporTransform,
+    el_ident: &Ident,
+    anchor: &Ident,
+    inner_expr: &Expr,
+    stmts: &mut Vec<Stmt>,
+) {
+    if crate::element_expr::is_compiled_slot_source_expr(inner_expr) {
+        let target = Expr::Object(ObjectLit {
+            span: DUMMY_SP,
+            props: vec![
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("parent")),
+                    value: Box::new(Expr::Ident(el_ident.clone())),
+                }))),
+                PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("before")),
+                    value: Box::new(Expr::Ident(anchor.clone())),
+                }))),
+            ],
+        });
+        let read_factory = Expr::Arrow(ArrowExpr {
+            span: DUMMY_SP,
+            params: vec![],
+            body: Box::new(BlockStmtOrExpr::Expr(Box::new(inner_expr.clone()))),
+            is_async: false,
+            is_generator: false,
+            type_params: None,
+            return_type: None,
+            ctxt: SyntaxContext::empty(),
+        });
+        let read_props = Expr::Arrow(ArrowExpr {
+            span: DUMMY_SP,
+            params: vec![],
+            body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Paren(ParenExpr {
+                span: DUMMY_SP,
+                expr: Box::new(Expr::Object(ObjectLit { span: DUMMY_SP, props: vec![] })),
+            })))),
+            is_async: false,
+            is_generator: false,
+            type_params: None,
+            return_type: None,
+            ctxt: SyntaxContext::empty(),
+        });
+        stmts.push(Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::new(call_ident(
+                "_$mountCompiledSlotAt",
+                vec![target, read_factory, read_props],
+            )),
+        }));
+        return;
+    }
     // 槽值：对于标识符/成员表达式使用括号包裹以保证后续判断
     let expr_for_slot = match inner_expr.clone() {
         Expr::Member(_) | Expr::Ident(_) => {
@@ -82,7 +137,7 @@ pub fn render_between_for_slot(
         ctxt: SyntaxContext::empty(),
     });
     // watch 包裹，保证插槽值变化时进行增量更新
-    let watch = call_ident("watchEffect", vec![arrow]);
+    let watch = call_ident("effect", vec![arrow]);
     stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
 }
 
@@ -97,6 +152,54 @@ pub fn render_once_for_slot(
     stmts.push(const_decl(anchor.clone(), make_anchor));
     stmts.push(append_child(el_ident.clone(), Expr::Ident(anchor.clone())));
 
+    render_once_for_slot_at(vt, el_ident, &anchor, inner_expr, stmts);
+}
+
+/// `_$compiledBranch` owns its reactive replacement effect, so the surrounding
+/// slot only mounts the stable branch handle once.
+pub fn render_compiled_branch_for_slot(
+    vt: &mut VaporTransform,
+    el_ident: &Ident,
+    branch_expr: &Expr,
+    stmts: &mut Vec<Stmt>,
+) {
+    let branch = vt.next_list_ident();
+    stmts.push(const_decl(branch.clone(), branch_expr.clone()));
+    stmts.push(Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(call_member(
+            branch,
+            "__rue_compiled_mount",
+            vec![Expr::Ident(el_ident.clone())],
+        )),
+    }));
+}
+
+pub(crate) fn render_compiled_branch_for_slot_at(
+    _vt: &mut VaporTransform,
+    el_ident: &Ident,
+    anchor: &Ident,
+    branch_expr: &Expr,
+    stmts: &mut Vec<Stmt>,
+) {
+    let reader = crate::element_expr::compiled_branch_reader_from_handle(branch_expr)
+        .unwrap_or_else(|| branch_expr.clone());
+    stmts.push(Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(call_ident(
+            "_$compiledBranchAt",
+            vec![Expr::Ident(el_ident.clone()), Expr::Ident(anchor.clone()), reader],
+        )),
+    }));
+}
+
+pub(crate) fn render_once_for_slot_at(
+    vt: &mut VaporTransform,
+    el_ident: &Ident,
+    anchor: &Ident,
+    inner_expr: &Expr,
+    stmts: &mut Vec<Stmt>,
+) {
     let slot_ident = vt.next_list_ident();
     let expr_for_slot = match inner_expr.clone() {
         Expr::Member(_) | Expr::Ident(_) => {
@@ -112,7 +215,7 @@ pub fn render_once_for_slot(
         args: vec![
             ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(slot_ident)) },
             ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(el_ident.clone())) },
-            ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(anchor)) },
+            ExprOrSpread { spread: None, expr: Box::new(Expr::Ident(anchor.clone())) },
         ],
         type_args: None,
         ctxt: SyntaxContext::empty(),

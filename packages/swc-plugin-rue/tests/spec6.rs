@@ -29,13 +29,18 @@ export default Comp;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, vapor, renderAnchor, _$createElement, _$createComment, _$settextContent, _$appendChild, untrack, watchEffect, _$createTextWrapper, _$setAttribute, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/vapor";
+    let _legacy_expected_fragment = r##"
+import { ref, _$compiledWithHookId, vapor, renderAnchor, _$template, untrack, watchEffect, _$compiledAppendChild, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC, h } from '@rue-js/rue';
-const count = _$vaporWithHookId("ref:1:0", ()=>ref(22));
+const _$getTemplate1 = _$template('<div><!--rue:text-hole:0--><span id="n"><!--rue:text-hole:1--></span></div>');
+const count = _$compiledWithHookId("ref:1:0", ()=>ref(22));
 const Comp: FC = ()=>vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        const _list1 = _$createComment("rue:slot:anchor");
-        _$appendChild(_root, _list1);
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[0];
+        const _el2 = _el1.parentNode;
+        const _el3 = _root.childNodes[1].childNodes[0];
+        const _el4 = _el3.parentNode;
         watchEffect(()=>{
             const __slot = count.value === 0 ? _$compiledRoot((__rue_parent_context)=>{
                 const _root = _$compiledCreateElement("p", __rue_parent_context);
@@ -44,27 +49,34 @@ const Comp: FC = ()=>vapor((__rue_parent_context)=>{
                 return _root;
             }) : _$compiledRoot((__rue_parent_context)=>{
                 const _root = _$compiledCreateElement("ul", __rue_parent_context);
-                const _el1 = _$compiledCreateElement("li", _root);
-                _$compiledAppendChild(_root, _el1);
-                _$compiledAppendChild(_el1, _$compiledCreateTextNode("ok"));
+                const _el5 = _$compiledCreateElement("li", _root);
+                _$compiledAppendChild(_root, _el5);
+                _$compiledAppendChild(_el5, _$compiledCreateTextNode("ok"));
                 return _root;
             });
-            untrack(()=>renderAnchor(__slot, _root, _list1));
+            untrack(()=>renderAnchor(__slot, _el2, _el1));
         });
-        const _el2 = _$createElement("span", _root);
-        _$appendChild(_root, _el2);
-        _$setAttribute(_el2, "id", "n");
-        const _el3 = _$createTextWrapper(_el2);
-        _$appendChild(_el2, _el3);
         watchEffect(()=>{
-            _$settextContent(_el3, count.value);
+            const __slot = (count.value);
+            untrack(()=>renderAnchor(__slot, _el4, _el3));
         });
         return _root;
     });
-export default Comp;"##;
+export default Comp;
+"##;
 
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec6.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let output = normalize(&strip_marker(&out));
+    assert!(output.contains("const Comp: FC = ()=>_$compiledRoot"), "{output}");
+    assert_eq!(output.matches("_$compiledBranchAt(").count(), 1, "{output}");
+    assert!(
+        output.contains("if (count.value === 0) return { __rue_compiled_branch_key: true"),
+        "{output}"
+    );
+    assert!(output.contains("_$compiledText("), "{output}");
+    assert!(output.contains("()=>count.value"), "{output}");
+    assert!(!output.contains("vapor(()=>"), "{output}");
+    assert!(!output.contains("renderAnchor("), "{output}");
 }

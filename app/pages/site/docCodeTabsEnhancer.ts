@@ -7,6 +7,40 @@ const findCodeTabs = (target: EventTarget | null) =>
 const readTabs = (root: HTMLElement) =>
   Array.from(root.querySelectorAll<HTMLButtonElement>(tabSelector))
 
+export const initializeDocCodeTabs = (root: HTMLElement) => {
+  const tabList = root.querySelector<HTMLElement>('[role="tablist"]')
+  const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-doc-code-tab]'))
+  if (!tabList || panels.length === 0 || readTabs(root).length > 0) return
+
+  panels.forEach((panel, index) => {
+    const value = panel.dataset.docCodeTab || `tab-${index + 1}`
+    const label = panel.dataset.docCodeTabLabel || value
+    const idPart =
+      value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '-') || `tab-${index + 1}`
+    const tabId = `${root.id}-tab-${idPart}`
+    const panelId = `${root.id}-panel-${idPart}`
+    const selected = index === 0
+    const tab = root.ownerDocument.createElement('button')
+    tab.type = 'button'
+    tab.id = tabId
+    tab.className = `tab ${selected ? 'tab-active' : ''}`
+    tab.setAttribute('role', 'tab')
+    tab.setAttribute('aria-selected', String(selected))
+    tab.setAttribute('aria-controls', panelId)
+    tab.tabIndex = selected ? 0 : -1
+    tab.textContent = label
+    tabList.appendChild(tab)
+
+    panel.id = panelId
+    panel.setAttribute('aria-labelledby', tabId)
+    panel.setAttribute('aria-hidden', String(!selected))
+    panel.classList.toggle('hidden', !selected)
+  })
+}
+
 const selectTab = (root: HTMLElement, selectedTab: HTMLButtonElement, focus: boolean) => {
   for (const tab of readTabs(root)) {
     const selected = tab === selectedTab

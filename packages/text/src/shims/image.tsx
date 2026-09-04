@@ -721,13 +721,12 @@ function Image({
       ref={mergedRef}
       src={optimizedSrc}
       alt={alt}
-      width={fill ? undefined : imgWidth}
-      height={fill ? undefined : imgHeight}
+      {...(fill ? {} : { width: imgWidth, height: imgHeight })}
       loading={imageLoading}
-      fetchPriority={priorityFetchPriority}
+      {...(priorityFetchPriority ? { fetchPriority: priorityFetchPriority } : {})}
       decoding="async"
-      srcSet={srcSet}
-      sizes={imageSizes}
+      {...(srcSet ? { srcSet } : {})}
+      {...(imageSizes ? { sizes: imageSizes } : {})}
       className={className}
       data-nimg={fill ? 'fill' : '1'}
       onLoad={handleLoad}

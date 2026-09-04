@@ -611,7 +611,7 @@ type CardCompound = FC<CardProps> & {
   Meta: FC<CardMetaProps>
 }
 
-const CardCompound: CardCompound = Object.assign(Card, {
+const CardCompound: CardCompound = /*#__PURE__*/ Object.assign(Card, {
   Body,
   Title,
   Actions,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import TextRotate from '..'
 import Typography from '../../typography'
@@ -14,7 +14,15 @@ afterEach(() => {
 describe('TextRotate', () => {
   it('renders with base class and children', async () => {
     const c = mountContainer()
-    render(h(TextRotate, null, h('span', null, h('span', null, 'ONE'), h('span', null, 'TWO'))), c)
+    render(
+      <TextRotate>
+        <span>
+          <span>{'ONE'}</span>
+          <span>{'TWO'}</span>
+        </span>
+      </TextRotate>,
+      c,
+    )
 
     await waitForContent(() => {
       const el = c.querySelector('span.text-rotate') as HTMLElement
@@ -26,7 +34,14 @@ describe('TextRotate', () => {
 
   it('appends custom className', async () => {
     const c = mountContainer()
-    render(h(TextRotate, { className: 'text-7xl' }, h('span', null, h('span', null, 'A'))), c)
+    render(
+      <TextRotate className={'text-7xl'}>
+        <span>
+          <span>{'A'}</span>
+        </span>
+      </TextRotate>,
+      c,
+    )
 
     await waitForContent(() => {
       const el = c.querySelector('span.text-rotate') as HTMLElement
@@ -37,14 +52,14 @@ describe('TextRotate', () => {
   it('renders items array with inner and item classes', async () => {
     const c = mountContainer()
     render(
-      h(TextRotate, {
-        innerClassName: 'justify-items-center',
-        items: [
+      <TextRotate
+        innerClassName={'justify-items-center'}
+        items={[
           { text: 'ONE' },
-          { text: h('span', { className: 'font-bold italic px-2' }, 'TWO') },
+          { text: <span className={'font-bold italic px-2'}>{'TWO'}</span> },
           { text: 'THREE', className: 'text-red-500' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 
@@ -65,13 +80,13 @@ describe('TextRotate', () => {
   it('renders semantic items via text and link presets', async () => {
     const c = mountContainer()
     render(
-      h(TextRotate, {
-        items: [
+      <TextRotate
+        items={[
           { text: 'Secondary', type: 'secondary' },
           { text: 'Marked', mark: true, strong: true },
           { text: 'Read docs', href: 'https://rue.dev', type: 'danger' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 

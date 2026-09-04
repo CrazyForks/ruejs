@@ -73,7 +73,7 @@ fn wraps_dynamic_slot_reads_in_watch_effect_with_children_anchor() {
     assert!(out.contains(&normalize(r#"const _list1 = _$createComment("rue:children:anchor");"#)));
     assert!(out.contains(&normalize(r#"_$appendChild(root, _list1);"#)));
     assert!(out.contains(&normalize(
-        r#"watchEffect(()=>{ const __slot = (slotValue); untrack(()=>renderAnchor(__slot, root, _list1)); });"#,
+        r#"effect(()=>{ const __slot = (slotValue); untrack(()=>renderAnchor(__slot, root, _list1)); });"#,
     )));
 }
 

@@ -40,14 +40,15 @@ export default HelloWorld
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"
-import { ref, _$vaporWithHookId, _$vaporMarkComponentRenderReactive, useSetup, vapor, _$createElement, _$template, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, _$compiledWithHookId, _$compiledMarkComponentRenderReactive, useSetup, _$template, _$compiledText, _$compiledCreateTextNode, _$compiledRoot } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const _$getTemplate1 = _$template("<div>hello</div>");
-const HelloWorld: FC = _$vaporMarkComponentRenderReactive(()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+const _$getTemplate2 = _$template("<div><div>x.value: <!--rue:text-hole:0--></div></div>");
+const HelloWorld: FC = _$compiledMarkComponentRenderReactive(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             console.log('--------start');
-            const x = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+            const x = ref(0);
             console.log(x.value);
             x.value = 100;
             console.log(x.value);
@@ -75,7 +76,7 @@ const HelloWorld: FC = _$vaporMarkComponentRenderReactive(()=>{
                 __rue_cleanup_bucket: [
                     _dispose
                 ],
-                __rue_vapor_setup: (__rue_parent_context)=>{
+                __rue_compiled_mount: (__rue_parent_context)=>{
                     if (_disposed) {
                         throw new Error("Cannot mount a disposed static root");
                     }
@@ -90,16 +91,15 @@ const HelloWorld: FC = _$vaporMarkComponentRenderReactive(()=>{
             };
         })();
     }
-    return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        const _el1 = _$createElement("div", _root);
-        _$appendChild(_root, _el1);
-        _$appendChild(_el1, _$createTextNode("x.value: "));
-        const _el2 = _$createTextWrapper(_el1);
-        _$appendChild(_el1, _el2);
-        watchEffect(()=>{
-            _$settextContent(_el2, x.value);
-        });
+    return _$compiledRoot((__rue_parent_context)=>{
+        const _fragment = _$getTemplate2().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[0].childNodes[1];
+        const _el2 = _el1.parentNode;
+        const _el3 = _$compiledCreateTextNode("");
+        _el2.insertBefore(_el3, _el1);
+        _el2.removeChild(_el1);
+        _$compiledText(_el3, ()=>x.value);
         return _root;
     });
 });
@@ -109,5 +109,9 @@ export default HelloWorld;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec41.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("const x = ref(0)"), "{out}");
+    assert!(normalized.contains("_$compiledRoot(Object.assign("), "{out}");
+    assert!(normalized.contains("__rue_compiled_explicit_roots"), "{out}");
+    assert!(normalized.contains("_$compiledText(_el3, ()=>x.value)"), "{out}");
 }

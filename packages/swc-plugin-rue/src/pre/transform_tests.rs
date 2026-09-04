@@ -77,7 +77,7 @@ fn wraps_hook_calls_without_module_scope_and_leaves_member_calls_alone() {
     expr.visit_mut_with(&mut PreTransform::default());
     let out = normalize(&emit_expr(&expr));
 
-    assert!(out.contains("_$vaporWithHookId"));
+    assert!(out.contains("_$compiledWithHookId"));
     assert!(out.contains("\"useState:0:0\""));
     assert!(out.contains("()=>useState(0)"));
 
@@ -85,7 +85,7 @@ fn wraps_hook_calls_without_module_scope_and_leaves_member_calls_alone() {
     member_expr.visit_mut_with(&mut PreTransform::default());
     let member_out = normalize(&emit_expr(&member_expr));
 
-    assert!(!member_out.contains("_$vaporWithHookId"));
+    assert!(!member_out.contains("_$compiledWithHookId"));
     assert!(member_out.contains("hooks.useState(0)"));
 
     let mut super_call = CallExpr {
@@ -120,7 +120,7 @@ const plain = hooks.useState(0);
     module.visit_mut_with(&mut PreTransform::default());
     let out = normalize(&emit_module(&module, cm));
 
-    assert!(out.contains("_$vaporWithHookId"));
+    assert!(out.contains("_$compiledWithHookId"));
     assert!(out.contains("\"ref:"));
     assert!(out.contains("\"shallowReadonly:"));
     assert!(out.contains("factory()(value)"));
@@ -133,10 +133,10 @@ const plain = hooks.useState(0);
 #[test]
 fn hook_id_deduper_ignores_malformed_calls_and_suffixes_duplicates() {
     let src = r#"
-_$vaporWithHookId();
-_$vaporWithHookId(id, () => ref(0));
-_$vaporWithHookId("same", () => ref(1));
-_$vaporWithHookId("same", () => ref(2));
+_$compiledWithHookId();
+_$compiledWithHookId(id, () => ref(0));
+_$compiledWithHookId("same", () => ref(1));
+_$compiledWithHookId("same", () => ref(2));
 (factory())();
 "#;
     let (mut module, cm) = parse_module(src);
@@ -144,8 +144,8 @@ _$vaporWithHookId("same", () => ref(2));
     module.visit_mut_with(&mut HookIdDeduper::default());
     let out = normalize(&emit_module(&module, cm));
 
-    assert!(out.contains("_$vaporWithHookId()"));
-    assert!(out.contains("_$vaporWithHookId(id"));
+    assert!(out.contains("_$compiledWithHookId()"));
+    assert!(out.contains("_$compiledWithHookId(id"));
     assert!(out.contains("\"same\""));
     assert!(out.contains("\"same:dup1\""));
     assert!(out.contains("factory"));
@@ -167,6 +167,17 @@ fn injects_component_render_marker_only_for_setup_render_control() {
 const Plain: FC = () => {
   return vapor(() => <input value={label.get()} />)
 }
+const DynamicComponentRoot: FC = () => {
+  const active = ref('a')
+  return <Tabs activeKey={active.value} />
+}
+const ConciseDynamicRoot = () => <Tabs activeKey={active.value} />
+const ConciseDynamicChildren = () => (
+  <Rating><Rating.Item checked={score.value === 1} /></Rating>
+)
+const ConciseNativeChildren = () => (
+  <Card><div><Rating.Item checked={score.value === 1} /></div></Card>
+)
 const EarlyReturn: FC = () => {
   if (active.get()) return <input value="active" />
   return <input value="idle" />
@@ -187,7 +198,35 @@ function FunctionBranch(): JSX.Element {
     module.visit_mut_with(&mut PreTransform::default());
     let out = normalize(&emit_module(&module, cm));
 
-    let plain = out.split("const EarlyReturn").next().expect("plain component output");
+    let plain = out.split("const DynamicComponentRoot").next().expect("plain component output");
+    let dynamic_root = out
+        .split("const DynamicComponentRoot")
+        .nth(1)
+        .expect("dynamic component root output")
+        .split("const ConciseDynamicRoot")
+        .next()
+        .expect("dynamic component root body");
+    let concise = out
+        .split("const ConciseDynamicRoot")
+        .nth(1)
+        .expect("concise dynamic root output")
+        .split("const ConciseDynamicChildren")
+        .next()
+        .expect("concise dynamic root body");
+    let concise_children = out
+        .split("const ConciseDynamicChildren")
+        .nth(1)
+        .expect("concise dynamic children output")
+        .split("const ConciseNativeChildren")
+        .next()
+        .expect("concise dynamic children body");
+    let concise_native_children = out
+        .split("const ConciseNativeChildren")
+        .nth(1)
+        .expect("concise native children output")
+        .split("const EarlyReturn")
+        .next()
+        .expect("concise native children body");
     let early = out
         .split("const EarlyReturn")
         .nth(1)
@@ -203,11 +242,70 @@ function FunctionBranch(): JSX.Element {
         .next()
         .expect("assigned-branch body");
 
-    assert!(!plain.contains("_$vaporMarkComponentRenderReactive()"), "{plain}");
-    assert!(!plain.contains("const Plain: FC = _$vaporMarkComponentRenderReactive"), "{plain}");
-    assert!(early.contains("_$vaporMarkComponentRenderReactive(()=>"), "{early}");
-    assert!(!early.contains("_$vaporMarkComponentRenderReactive()"), "{early}");
-    assert!(assigned.contains("_$vaporMarkComponentRenderReactive(()=>"), "{assigned}");
-    assert!(!assigned.contains("_$vaporMarkComponentRenderReactive()"), "{assigned}");
-    assert!(out.contains("_$vaporMarkComponentRenderReactive(FunctionBranch)"), "{out}");
+    assert!(!plain.contains("_$compiledMarkComponentRenderReactive()"), "{plain}");
+    assert!(!plain.contains("const Plain: FC = _$compiledMarkComponentRenderReactive"), "{plain}");
+    assert!(dynamic_root.contains("_$compiledMarkComponentRenderReactive(()=>"), "{dynamic_root}");
+    assert!(dynamic_root.contains("useSetup"), "{dynamic_root}");
+    assert!(concise.contains("_$compiledMarkComponentRenderReactive(()=>"), "{concise}");
+    assert!(
+        concise_children.contains("_$compiledMarkComponentRenderReactive(()=>"),
+        "{concise_children}"
+    );
+    assert!(
+        !concise_native_children.contains("_$compiledMarkComponentRenderReactive(()=>"),
+        "{concise_native_children}"
+    );
+    assert!(early.contains("_$compiledMarkComponentRenderReactive(()=>"), "{early}");
+    assert!(!early.contains("_$compiledMarkComponentRenderReactive()"), "{early}");
+    assert!(assigned.contains("_$compiledMarkComponentRenderReactive(()=>"), "{assigned}");
+    assert!(!assigned.contains("_$compiledMarkComponentRenderReactive()"), "{assigned}");
+    assert!(out.contains("_$compiledMarkComponentRenderReactive(FunctionBranch)"), "{out}");
+}
+
+#[test]
+fn keeps_custom_composables_in_the_reactive_render_phase() {
+    let src = r#"
+const useLocale = () => {
+  const context = useContext(LocaleContext)
+  return context
+}
+
+const LocaleReader: FC = () => {
+  const { locale, translate } = useLocale()
+  const currentLocale = locale.value
+  return <p>{translate('hello', currentLocale)}</p>
+}
+"#;
+    let (mut module, cm) = parse_module(src);
+
+    module.visit_mut_with(&mut PreTransform::default());
+    let out = normalize(&emit_module(&module, cm));
+
+    assert!(
+        out.contains("const LocaleReader: FC = _$compiledMarkComponentRenderReactive(()=>"),
+        "{out}"
+    );
+    assert!(out.contains("const { locale, translate } = useLocale();"), "{out}");
+    assert!(!out.contains("useSetup(()=>{ const { locale, translate } = useLocale();"), "{out}");
+    assert!(
+        !out.contains("_$compiledMarkComponentRenderReactive(()=>{ const context = useContext"),
+        "custom composables must not be wrapped as component render functions: {out}"
+    );
+}
+
+#[test]
+fn preserves_destructured_list_callback_params_inside_components() {
+    let src = r#"
+const Tree: FC<{ rows: Row[]; enabled: boolean }> = ({ rows, enabled }) => {
+  return <div>{rows.map(({ node }) => <Row node={node} enabled={enabled} />)}</div>
+}
+"#;
+    let (mut module, cm) = parse_module(src);
+
+    module.visit_mut_with(&mut PreTransform::default());
+    let out = normalize(&emit_module(&module, cm));
+
+    assert!(out.contains("rows.map(({ node })=>"), "{out}");
+    assert!(out.contains("enabled={__rue_props.enabled}"), "{out}");
+    assert!(!out.contains("rows.map((__rue_props)=>"), "{out}");
 }

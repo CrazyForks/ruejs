@@ -1,11 +1,6 @@
 import type { TextNode as RueRenderableOutput } from '../runtime/render-protocol.js'
 import type { TextCompatNode } from '../shims/text-compat-types.js'
-import {
-  cloneServerProtocolElement,
-  createServerProtocolElement,
-  isServerProtocolElement,
-} from './element-protocol.js'
-import { readAppSlotPlaceholderSentinel } from './app-slot-placeholder-protocol.js'
+import { createServerProtocolElement, isServerProtocolElement } from './element-protocol.js'
 import { AppElementsWire } from './app-elements.js'
 import { readCurrentSsrAppElementsFallback } from '../shims/slot-core.js'
 
@@ -15,83 +10,6 @@ type RueServerRendererModule = {
   default?: {
     renderToString?: RueServerRenderer
   }
-}
-
-const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
-const TEXT_HEAD_RECORD = Symbol.for('text.head.record')
-
-function sanitizeAppSlotPlaceholdersForHtml(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    let changed = false
-    const nextValue = value.map(item => {
-      const sanitized = sanitizeAppSlotPlaceholdersForHtml(item)
-      if (sanitized !== item) changed = true
-      return sanitized
-    })
-    return changed ? nextValue : value
-  }
-
-  if (isServerProtocolElement(value)) {
-    if (readAppSlotPlaceholderSentinel(value.type, value.props)) {
-      return null
-    }
-
-    const props = (value.props ?? {}) as Record<string, unknown>
-    const nextProps = sanitizePropsAppSlotPlaceholdersForHtml(props)
-    return nextProps === props ? value : cloneServerProtocolElement(value, nextProps)
-  }
-
-  if (typeof value !== 'object' || value === null) return value
-
-  const props = (value as { props?: unknown }).props
-  const nextProps =
-    props && typeof props === 'object'
-      ? sanitizePropsAppSlotPlaceholdersForHtml(props as Record<string, unknown>)
-      : props
-
-  const headRecord = Reflect.get(value, RUE_ELEMENT_HEAD_RECORD)
-  const nextHeadRecord =
-    headRecord &&
-    typeof headRecord === 'object' &&
-    Reflect.get(headRecord, TEXT_HEAD_RECORD) === true
-      ? sanitizeRueElementHeadRecordForHtml(headRecord as Record<string | symbol, unknown>)
-      : headRecord
-
-  if (nextProps === props && nextHeadRecord === headRecord) return value
-
-  const clone = { ...(value as Record<string, unknown>) }
-  if (nextProps !== props) clone.props = nextProps
-  if (nextHeadRecord !== headRecord) {
-    Object.defineProperty(clone, RUE_ELEMENT_HEAD_RECORD, {
-      configurable: true,
-      enumerable: false,
-      value: nextHeadRecord,
-      writable: true,
-    })
-  }
-  return clone
-}
-
-function sanitizePropsAppSlotPlaceholdersForHtml(
-  props: Record<string, unknown>,
-): Record<string, unknown> {
-  let changed = false
-  const nextProps: Record<string, unknown> = {}
-  for (const [key, propValue] of Object.entries(props)) {
-    const sanitized = sanitizeAppSlotPlaceholdersForHtml(propValue)
-    if (sanitized !== propValue) changed = true
-    nextProps[key] = sanitized
-  }
-  return changed ? nextProps : props
-}
-
-function sanitizeRueElementHeadRecordForHtml(
-  record: Record<string | symbol, unknown>,
-): Record<string | symbol, unknown> {
-  const props = record.props
-  if (!props || typeof props !== 'object') return record
-  const nextProps = sanitizePropsAppSlotPlaceholdersForHtml(props as Record<string, unknown>)
-  return nextProps === props ? record : { ...record, props: nextProps }
 }
 
 function getActivePageId(): string | null {
@@ -151,10 +69,9 @@ function getInjectedRueServerRenderer(): RueServerRenderer | null {
 }
 
 async function renderRueRenderableToString(value: RueRenderableOutput): Promise<string> {
-  const sanitizedValue = sanitizeAppSlotPlaceholdersForHtml(value) as RueRenderableOutput
   const injectedRenderer = getInjectedRueServerRenderer()
   if (injectedRenderer) {
-    return replaceRueObjectSlotLeak(await injectedRenderer(sanitizedValue))
+    return replaceRueObjectSlotLeak(await injectedRenderer(value))
   }
 
   const rendererModule = (await import('@rue-js/server-renderer')) as RueServerRendererModule
@@ -169,7 +86,7 @@ async function renderRueRenderableToString(value: RueRenderableOutput): Promise<
     throw new Error('text: @rue-js/server-renderer did not export renderToString.')
   }
 
-  return replaceRueObjectSlotLeak(await renderToString(sanitizedValue))
+  return replaceRueObjectSlotLeak(await renderToString(value))
 }
 
 export async function renderRueRenderableForRsc(

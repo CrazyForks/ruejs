@@ -27,6 +27,7 @@
  */
 // oxlint-disable typescript/no-explicit-any -- match Text.js's permissive _app.tsx generics
 import {
+  createTextCompatElement,
   TextCompatComponent,
   type TextCompatComponentType,
   type TextCompatNode,
@@ -110,7 +111,7 @@ export default class App<P = any, CP = any, S = any> extends TextCompatComponent
     // works in practice: callers extending `App` rarely supply explicit
     // page-prop generics, so the spread has to be permissive here.
     const PageComponent = Component as TextCompatComponentType<any>
-    return <PageComponent {...pageProps} />
+    return createTextCompatElement(PageComponent, pageProps as Record<string, unknown>)
   }
 }
 

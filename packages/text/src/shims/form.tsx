@@ -72,12 +72,19 @@ function getSubmitter(nativeEvent: unknown): FormSubmitter | null {
     nativeEvent &&
     typeof nativeEvent === 'object' &&
     'submitter' in nativeEvent &&
-    nativeEvent.submitter instanceof Element
+    nativeEvent.submitter != null &&
+    typeof nativeEvent.submitter === 'object'
       ? nativeEvent.submitter
       : null
 
-  if (submitter instanceof HTMLButtonElement || submitter instanceof HTMLInputElement) {
-    return submitter
+  if (
+    submitter &&
+    typeof (submitter as { getAttribute?: unknown }).getAttribute === 'function' &&
+    'disabled' in submitter &&
+    'name' in submitter &&
+    'value' in submitter
+  ) {
+    return submitter as FormSubmitter
   }
   return null
 }
@@ -114,37 +121,6 @@ function checkFormActionUrl(action: string, source: 'action' | 'formAction'): vo
         `If you need to pass in additional search params, use an \`<input type="hidden" />\` instead.`,
     )
   }
-}
-
-function hasUnsupportedSubmitterAttributes(submitter: FormSubmitter): boolean {
-  const formEncType = submitter.getAttribute('formenctype')
-  if (formEncType !== null && formEncType !== SUPPORTED_FORM_ENCTYPE) {
-    console.error(
-      `<Form>'s \`encType\` was set to an unsupported value via \`formEncType="${formEncType}"\`. ` +
-        `This will disable <Form>'s navigation functionality. If you need this, use a native <form> element instead.`,
-    )
-    return true
-  }
-
-  const formMethod = submitter.getAttribute('formmethod')
-  if (formMethod !== null && formMethod.toUpperCase() !== SUPPORTED_FORM_METHOD) {
-    console.error(
-      `<Form>'s \`method\` was set to an unsupported value via \`formMethod="${formMethod}"\`. ` +
-        `This will disable <Form>'s navigation functionality. If you need this, use a native <form> element instead.`,
-    )
-    return true
-  }
-
-  const formTarget = submitter.getAttribute('formtarget')
-  if (formTarget !== null && formTarget !== SUPPORTED_FORM_TARGET) {
-    console.error(
-      `<Form>'s \`target\` was set to an unsupported value via \`formTarget="${formTarget}"\`. ` +
-        `This will disable <Form>'s navigation functionality. If you need this, use a native <form> element instead.`,
-    )
-    return true
-  }
-
-  return false
 }
 
 function createFormSubmitDestinationUrl(
@@ -246,8 +222,28 @@ function Form(props: FormProps & { ref?: RueRef<HTMLFormElement> }): TextNode {
     }
 
     const submitter = getSubmitEventSubmitter(e)
-    if (submitter && hasUnsupportedSubmitterAttributes(submitter)) {
-      return
+    if (submitter) {
+      const formEncType = submitter.getAttribute('formenctype')
+      if (formEncType !== null && formEncType !== SUPPORTED_FORM_ENCTYPE) {
+        console.error(
+          `<Form>'s \`encType\` was set to an unsupported value via \`formEncType="${formEncType}"\`. This will disable <Form>'s navigation functionality. If you need this, use a native <form> element instead.`,
+        )
+        return
+      }
+      const formMethod = submitter.getAttribute('formmethod')
+      if (formMethod !== null && formMethod.toUpperCase() !== SUPPORTED_FORM_METHOD) {
+        console.error(
+          `<Form>'s \`method\` was set to an unsupported value via \`formMethod="${formMethod}"\`. This will disable <Form>'s navigation functionality. If you need this, use a native <form> element instead.`,
+        )
+        return
+      }
+      const formTarget = submitter.getAttribute('formtarget')
+      if (formTarget !== null && formTarget !== SUPPORTED_FORM_TARGET) {
+        console.error(
+          `<Form>'s \`target\` was set to an unsupported value via \`formTarget="${formTarget}"\`. This will disable <Form>'s navigation functionality. If you need this, use a native <form> element instead.`,
+        )
+        return
+      }
     }
 
     // Only intercept GET forms for client-side navigation
@@ -308,9 +304,7 @@ function Form(props: FormProps & { ref?: RueRef<HTMLFormElement> }): TextNode {
   return createCompatFormElement({
     ref,
     action: actionHref,
-    onSubmit: (event: RueSubmitEvent<HTMLFormElement>) => {
-      void handleSubmit(event)
-    },
+    onSubmit: handleSubmit,
     ...rest,
   })
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { onError, render, setReactiveScheduling } from '@rue-js/rue'
 import Transfer from '../index'
+import Steps from '../../steps'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
 setReactiveScheduling('sync')
@@ -59,6 +60,32 @@ afterEach(() => {
 })
 
 describe('Transfer', () => {
+  it('forwards ref and click events through a compiler-only dynamic tag', async () => {
+    const container = mountContainer()
+    let rootElement: HTMLElement | null = null
+    const handleClick = vi.fn()
+    resetActiveRuntime()
+
+    render(
+      <Steps
+        as="nav"
+        ref={(element: HTMLElement | null) => {
+          rootElement = element
+        }}
+        data-testid="dynamic-steps-root"
+        onClick={handleClick}
+      />,
+      container,
+    )
+
+    await waitForContent(() => {
+      expect(rootElement).toBe(container.querySelector('[data-testid="dynamic-steps-root"]'))
+    })
+
+    ;(rootElement as HTMLElement | null)?.click()
+    expect(handleClick).toHaveBeenCalledTimes(1)
+  })
+
   it('moves selected source items in uncontrolled mode and emits compatible callbacks', async () => {
     const container = mountContainer()
     const handleChange = vi.fn()

@@ -47,14 +47,15 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-            const pre = _$vaporWithHookId("computed:1:1", ()=>computed(()=>a.value + 1));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(0);
+            const pre = computed(()=>a.value + 1);
+            pre.get();
             const __rue_phase2_pre = pre;
-            _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>console.log('setup', __rue_phase2_pre.get())));
+            watchEffect(()=>console.log('setup', __rue_phase2_pre.get()));
             switch(a.value % 3){
                 case 0:
                     {
@@ -68,7 +69,7 @@ const Comp: FC = ()=>{
                     }
                 case 1:
                     {
-                        _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>console.log('case1', a.value)));
+                        _$compiledWithHookId("watchEffect:1:3", ()=>watchEffect(()=>console.log('case1', a.value)));
                         break;
                     }
                 case 2:
@@ -76,7 +77,7 @@ const Comp: FC = ()=>{
                         try {
                             const d = a.value + 4;
                         } finally{
-                            _$vaporWithHookId("watchEffect:1:4", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('case2', a.value))));
+                            _$compiledWithHookId("watchEffect:1:4", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('case2', a.value))));
                         }
                         break;
                     }
@@ -87,20 +88,24 @@ const Comp: FC = ()=>{
             }
             return {
                 a: a,
-                pre: pre
+                pre: pre,
+                __rue_phase2_pre: __rue_phase2_pre
             };
         }));
-    const { a: a, pre: pre } = _$useSetup;
+    const { a: a, pre: pre, __rue_phase2_pre: __rue_phase2_pre } = _$useSetup;
     return <div>{pre.get()}</div>;
 };
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_switch_multi_case_deep.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

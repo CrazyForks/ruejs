@@ -411,7 +411,9 @@ const ControlledPreview: FC = () => {
       <Splitter
         style={{ height: 300 }}
         onResize={sizes => {
-          controlledSizes.value = sizes
+          queueMicrotask(() => {
+            controlledSizes.value = sizes
+          })
           controlledStatus.value = `当前尺寸：${sizes.join(' / ')}`
         }}
       >

@@ -36,9 +36,8 @@ const packages = [
     subpaths: [
       '.',
       './server',
-      './vapor',
-      './compiled',
-      './vapor-core',
+      './internal',
+      './internal/compiler',
       './island',
       './server-island',
       './dom',
@@ -72,6 +71,17 @@ const resolveEsm = (specifier: string) =>
   )
 
 describe('core runtime ESM package contract', () => {
+  it('removes the legacy package and public Vapor/compiled subentries', () => {
+    expect(existsSync(path.resolve(projectRoot, 'packages/runtime-vapor'))).toBe(false)
+    for (const directory of ['runtime', 'rue']) {
+      const manifest = readManifest(directory)
+      expect(manifest.exports).toHaveProperty('./internal')
+      for (const subpath of ['./vapor', './vapor-core', './compiled']) {
+        expect(manifest.exports).not.toHaveProperty(subpath)
+      }
+    }
+  })
+
   it.each(packages)('publishes $name as ESM without CommonJS package conditions', pkg => {
     const manifest = readManifest(pkg.directory)
     const packageDir = path.resolve(projectRoot, 'packages', pkg.directory)
@@ -121,9 +131,9 @@ describe('core runtime ESM package contract', () => {
     const subEntries = runtime.buildOptions.subEntries ?? []
 
     expect(runtime.buildOptions.formats).toEqual(['esm-bundler', 'esm-browser', 'global'])
-    expect(subEntries).toHaveLength(7)
+    expect(subEntries).toHaveLength(6)
     expect(subEntries.map(entry => entry.formats)).toEqual(
-      Array.from({ length: 7 }, () => ['esm-bundler']),
+      Array.from({ length: 6 }, () => ['esm-bundler']),
     )
   })
 
@@ -137,6 +147,10 @@ describe('core runtime ESM package contract', () => {
         ).toBe(true)
       }
     }
+  })
+
+  it('includes the compact Runtime compiler artifact in the npm tarball', () => {
+    expect(packFiles('runtime')).toContain('dist/runtime.internal-compiler.esm-bundler.js')
   })
 })
 

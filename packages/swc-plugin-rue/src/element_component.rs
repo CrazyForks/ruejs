@@ -19,6 +19,37 @@ pub(crate) struct ComponentChildrenRewrite {
     pub(crate) direct_render_expr: Option<Expr>,
 }
 
+pub(crate) fn component_expr_with_prelude(mut stmts: Vec<Stmt>, expr: Expr) -> Expr {
+    if stmts.is_empty() {
+        return expr;
+    }
+
+    stmts.push(Stmt::Return(ReturnStmt { span: DUMMY_SP, arg: Some(Box::new(expr)) }));
+    Expr::Call(CallExpr {
+        span: DUMMY_SP,
+        callee: Callee::Expr(Box::new(Expr::Paren(ParenExpr {
+            span: DUMMY_SP,
+            expr: Box::new(Expr::Arrow(ArrowExpr {
+                span: DUMMY_SP,
+                ctxt: SyntaxContext::empty(),
+                params: vec![],
+                body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
+                    span: DUMMY_SP,
+                    ctxt: SyntaxContext::empty(),
+                    stmts,
+                })),
+                is_async: false,
+                is_generator: false,
+                type_params: None,
+                return_type: None,
+            })),
+        }))),
+        args: vec![],
+        type_args: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
 fn jsx_name_to_expr(name: &JSXElementName) -> Option<Expr> {
     fn jsx_object_to_expr(obj: &JSXObject) -> Option<Expr> {
         match obj {
@@ -213,6 +244,28 @@ fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<Lowered
             let cons_inner = crate::utils::unwrap_expr(cons.as_ref());
             let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
 
+            let branch_uses_router_fast_path = |branch: &Expr| {
+                matches!(branch, Expr::JSXElement(element)
+                    if crate::router_link::rewrite_router_link_fast_path(element).is_some())
+            };
+            if (branch_uses_router_fast_path(cons_inner) || branch_uses_router_fast_path(alt_inner))
+                && let (Some(lowered_cons), Some(lowered_alt)) =
+                    (lower_expr_slot_value(vt, cons_inner), lower_expr_slot_value(vt, alt_inner))
+            {
+                let mut stmts = lowered_cons.stmts;
+                stmts.extend(lowered_alt.stmts);
+                return Some(LoweredSlotValue {
+                    stmts,
+                    expr: Expr::Cond(CondExpr {
+                        span: DUMMY_SP,
+                        test: test.clone(),
+                        cons: Box::new(lowered_cons.expr),
+                        alt: Box::new(lowered_alt.expr),
+                    }),
+                    is_function: false,
+                });
+            }
+
             // 只在“一边是 slot，一边是静态空值”的情况下折叠。
             // 两边都复杂时交给上层插槽表达式编译，避免丢失分支语义。
             if let Some(lowered_cons) = lower_expr_slot_value(vt, cons_inner)
@@ -295,7 +348,8 @@ pub(crate) fn lower_slot_value(
     if simple_children.len() == 1 {
         match simple_children[0] {
             JSXElementChild::JSXElement(el_box)
-                if crate::utils::is_component(&el_box.opening.name) =>
+                if crate::utils::is_component(&el_box.opening.name)
+                    && crate::router_link::rewrite_router_link_fast_path(el_box).is_none() =>
             {
                 // 单个组件 child 可以先创建组件实例，再把实例标识符直接作为 children。
                 // 这样避免额外包一层 DocumentFragment，slot 结构更薄。
@@ -357,6 +411,55 @@ pub(crate) fn lower_slot_value(
                 }
             }
             _ => {}
+        }
+    }
+
+    if simple_children.len() > 1 {
+        let mut stmts = Vec::new();
+        let mut elems = Vec::with_capacity(simple_children.len());
+        let mut lowered_all = true;
+        for child in &simple_children {
+            let compiled_native = match child {
+                JSXElementChild::JSXElement(element)
+                    if crate::element_children::is_compiled_safe_element(vt, element) =>
+                {
+                    if vt.static_templates
+                        && let Some((expr, reserved_elements)) =
+                            crate::vapor::template::static_root_handle_expr(element)
+                    {
+                        vt.next_el += reserved_elements;
+                        Some(LoweredSlotValue { stmts: vec![], expr, is_function: false })
+                    } else {
+                        let block =
+                            crate::element_children::compiled_scalar_element_to_block(vt, element);
+                        Some(LoweredSlotValue {
+                            stmts: vec![],
+                            expr: crate::element_children::compiled_block_to_root_expr(block),
+                            is_function: false,
+                        })
+                    }
+                }
+                _ => None,
+            };
+            let recursively_lowered = if compiled_native.is_none() {
+                let single = vec![(*child).clone()];
+                lower_slot_value(vt, &single)
+            } else {
+                None
+            };
+            let Some(lowered) = compiled_native.or(recursively_lowered) else {
+                lowered_all = false;
+                break;
+            };
+            stmts.extend(lowered.stmts);
+            elems.push(Some(ExprOrSpread { spread: None, expr: Box::new(lowered.expr) }));
+        }
+        if lowered_all {
+            return Some(LoweredSlotValue {
+                stmts,
+                expr: Expr::Array(ArrayLit { span: DUMMY_SP, elems }),
+                is_function: false,
+            });
         }
     }
 
@@ -524,8 +627,24 @@ pub(crate) fn build_component_mount_expr(comp_el: &JSXElement) -> Expr {
             }
         })
         .collect();
-    let props_expr = Expr::Object(ObjectLit { span: DUMMY_SP, props });
-    let mount_expr = call_ident("_$createComponent", vec![type_expr, props_expr]);
+    // Keep the object explicitly parenthesized. SWC's emitter can otherwise print an arrow
+    // expression body containing slot objects as a labelled block (`()=>{ __rue_slots: ... }`),
+    // which is syntactically invalid once the nested slot value is itself an object literal.
+    let props_expr = Expr::Paren(ParenExpr {
+        span: DUMMY_SP,
+        expr: Box::new(Expr::Object(ObjectLit { span: DUMMY_SP, props })),
+    });
+    let read_props = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(props_expr))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    let mount_expr = call_ident("_$createComponent", vec![type_expr, read_props]);
 
     if native_events.is_empty() {
         return mount_expr;
@@ -549,7 +668,330 @@ pub(crate) fn build_component_mount_expr(comp_el: &JSXElement) -> Expr {
             .collect(),
     });
 
-    call_ident("_$vaporWithNativeEvents", vec![mount_expr, native_events_expr])
+    call_ident("_$compiledWithNativeEvents", vec![mount_expr, native_events_expr])
+}
+
+/// Emit direct lookup against a finite compiler-provided component registry.
+#[cfg(test)]
+pub(crate) fn build_compiled_dynamic_mount_expr(key: Expr, registry: Expr, props: Expr) -> Expr {
+    call_ident(
+        "_$mountCompiledDynamic",
+        vec![Expr::Ident(ident("target")), key, registry, props, Expr::Ident(ident("owner"))],
+    )
+}
+
+fn dynamic_attr_expr(element: &JSXElement, target: &str) -> Option<Expr> {
+    element.opening.attrs.iter().find_map(|attr| {
+        let JSXAttrOrSpread::JSXAttr(attr) = attr else { return None };
+        let JSXAttrName::Ident(name) = &attr.name else { return None };
+        if name.sym.as_ref() != target {
+            return None;
+        }
+        let Some(JSXAttrValue::JSXExprContainer(container)) = &attr.value else { return None };
+        let JSXExpr::Expr(expr) = &container.expr else { return None };
+        Some(crate::utils::unwrap_expr(expr.as_ref()).clone())
+    })
+}
+
+pub(crate) fn build_compiled_dynamic_component_expr(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+) -> Option<Expr> {
+    let JSXElementName::Ident(name) = &element.opening.name else { return None };
+    if name.sym.as_ref() != "Component" {
+        return None;
+    }
+    let key = dynamic_attr_expr(element, "is")?;
+    let registry = dynamic_attr_expr(element, "registry")?;
+    let mut normalized = element.clone();
+    normalized.opening.name = JSXElementName::Ident(ident("__rueDynamicSelected"));
+    if let Some(closing) = &mut normalized.closing {
+        closing.name = JSXElementName::Ident(ident("__rueDynamicSelected"));
+    }
+    normalized.opening.attrs.retain(|attr| {
+        !matches!(attr, JSXAttrOrSpread::JSXAttr(JSXAttr { name: JSXAttrName::Ident(name), .. }) if matches!(name.sym.as_ref(), "is" | "registry"))
+    });
+    let read_props = build_compiled_component_read_props(vt, &normalized)?;
+    let selected = Expr::Member(MemberExpr {
+        span: DUMMY_SP,
+        obj: Box::new(Expr::Paren(ParenExpr { span: DUMMY_SP, expr: Box::new(registry) })),
+        prop: MemberProp::Computed(ComputedPropName { span: DUMMY_SP, expr: Box::new(key) }),
+    });
+    let read_factory = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(selected))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    Some(call_ident("_$compiledDynamicComponent", vec![read_factory, read_props]))
+}
+
+pub(crate) fn is_compiled_component_element(vt: &VaporTransform, element: &JSXElement) -> bool {
+    // Transition children must retain their structural key through the dedicated factory.
+    // The generic compiled-slot fast path only retains the DOM/text effects.
+    if crate::utils::is_transition_raw_children_component(element)
+        && element.children.iter().any(is_substantive_slot_child)
+    {
+        return false;
+    }
+    let JSXElementName::Ident(name) = &element.opening.name else {
+        return false;
+    };
+    let is_compiled_builtin = matches!(
+        name.sym.as_ref(),
+        "Teleport" | "Suspense" | "KeepAlive" | "Transition" | "TransitionGroup" | "Template"
+    );
+    if !is_compiled_builtin && !vt.is_compiled_component(name.sym.as_ref()) {
+        return false;
+    }
+    let substantive_children = element.children.iter().any(is_substantive_slot_child);
+    if substantive_children {
+        let fragment = JSXFragment {
+            span: DUMMY_SP,
+            opening: JSXOpeningFragment { span: DUMMY_SP },
+            children: element.children.clone(),
+            closing: JSXClosingFragment { span: DUMMY_SP },
+        };
+        if !crate::element_children::is_compiled_safe_fragment(vt, &fragment) {
+            return false;
+        }
+    }
+    element.opening.attrs.iter().all(|attr| match attr {
+        JSXAttrOrSpread::SpreadElement(_) => true,
+        JSXAttrOrSpread::JSXAttr(attr) => match &attr.name {
+            JSXAttrName::Ident(name) => {
+                !matches!(name.sym.as_ref(), "key" | "ref" | "children" | "dangerouslySetInnerHTML")
+                    && !name.sym.as_ref().starts_with("__rue_")
+            }
+            JSXAttrName::JSXNamespacedName(_) => false,
+        },
+    })
+}
+
+pub(crate) fn is_compiled_opaque_component_element(element: &JSXElement) -> bool {
+    crate::utils::is_component(&element.opening.name)
+        && crate::router_link::rewrite_router_link_fast_path(element).is_none()
+        && crate::utils::component_has_no_dynamic_props_excluding_children(element)
+        && element.children.iter().all(
+            |child| matches!(child, JSXElementChild::JSXText(text) if text.value.trim().is_empty()),
+        )
+}
+
+pub(crate) fn try_build_compiled_opaque_component_element(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+    parent: &Ident,
+    stmts: &mut Vec<Stmt>,
+) -> bool {
+    if !is_compiled_opaque_component_element(element) {
+        return false;
+    }
+
+    let mount = build_component_mount_expr(element);
+    let factory = Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(mount))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    });
+    let child = vt.next_el_ident();
+    stmts.push(const_decl(child.clone(), call_ident("_$compiledRootFactory", vec![factory])));
+    stmts.push(Stmt::Expr(ExprStmt {
+        span: DUMMY_SP,
+        expr: Box::new(call_member(
+            child,
+            "__rue_compiled_mount",
+            vec![Expr::Ident(parent.clone())],
+        )),
+    }));
+    true
+}
+
+pub(crate) fn try_build_compiled_component_element(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+    parent: &Ident,
+    stmts: &mut Vec<Stmt>,
+) -> bool {
+    try_build_compiled_component_element_with_anchor(vt, element, parent, None, stmts)
+}
+
+pub(crate) fn try_build_compiled_component_element_at(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+    parent: &Ident,
+    anchor: &Ident,
+    stmts: &mut Vec<Stmt>,
+) -> bool {
+    try_build_compiled_component_element_with_anchor(vt, element, parent, Some(anchor), stmts)
+}
+
+pub(crate) fn build_compiled_component_read_props(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+) -> Option<Expr> {
+    let JSXElementName::Ident(component) = &element.opening.name else {
+        return None;
+    };
+    let mut props: Vec<PropOrSpread> = element
+        .opening
+        .attrs
+        .iter()
+        .filter_map(|attr| {
+            let JSXAttrOrSpread::JSXAttr(attr) = attr else {
+                let JSXAttrOrSpread::SpreadElement(spread) = attr else { unreachable!() };
+                return Some(PropOrSpread::Spread(SpreadElement {
+                    dot3_token: spread.dot3_token,
+                    expr: spread.expr.clone(),
+                }));
+            };
+            let value = match &attr.value {
+                Some(JSXAttrValue::JSXElement(element)) => {
+                    let expr = Expr::JSXElement(element.clone());
+                    crate::element_expr::compiled_slot_factory_expr(vt, &expr)?
+                }
+                Some(JSXAttrValue::JSXFragment(fragment)) => {
+                    let expr = Expr::JSXFragment(fragment.clone());
+                    crate::element_expr::compiled_slot_factory_expr(vt, &expr)?
+                }
+                Some(value) => jsx_attr_value_to_expr(value)?,
+                None => Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: true })),
+            };
+            let key = jsx_attr_name_to_prop_name(&attr.name)?;
+            Some(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                key,
+                value: Box::new(value),
+            }))))
+        })
+        .collect();
+    let substantive_children: Vec<JSXElementChild> =
+        element.children.iter().filter(|child| is_substantive_slot_child(child)).cloned().collect();
+    if !substantive_children.is_empty() {
+        let compile_children = |vt: &mut VaporTransform, children: Vec<JSXElementChild>| {
+            let fragment = Expr::JSXFragment(JSXFragment {
+                span: DUMMY_SP,
+                opening: JSXOpeningFragment { span: DUMMY_SP },
+                children,
+                closing: JSXClosingFragment { span: DUMMY_SP },
+            });
+            crate::element_expr::compiled_slot_factory_expr(vt, &fragment)
+        };
+        let children = if substantive_children.len() == 1 {
+            compile_children(vt, substantive_children)?
+        } else {
+            let factories = substantive_children
+                .into_iter()
+                .map(|child| {
+                    compile_children(vt, vec![child])
+                        .map(|factory| ExprOrSpread { spread: None, expr: Box::new(factory) })
+                })
+                .collect::<Option<Vec<_>>>()?;
+            Expr::Array(ArrayLit {
+                span: DUMMY_SP,
+                elems: factories.into_iter().map(Some).collect(),
+            })
+        };
+        props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+            key: PropName::Ident(ident_name("children")),
+            value: Box::new(children),
+        }))));
+    }
+    if component.sym.as_ref() == "KeepAlive" {
+        let direct_child = element.children.iter().find_map(|child| match child {
+            JSXElementChild::JSXElement(child) => Some(child.as_ref()),
+            _ => None,
+        });
+        if !jsx_attrs_has_ident(&element.opening.attrs, "cacheKey")
+            && let Some(child) = direct_child
+        {
+            let identity = extract_jsx_key_expr(child).or_else(|| match &child.opening.name {
+                JSXElementName::Ident(name) => Some(string_expr(name.sym.as_ref())),
+                _ => None,
+            });
+            if let Some(identity) = identity {
+                props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident_name("cacheKey")),
+                    value: Box::new(identity),
+                }))));
+            }
+        }
+        if !jsx_attrs_has_ident(&element.opening.attrs, "cacheName")
+            && let Some(JSXElement {
+                opening: JSXOpeningElement { name: JSXElementName::Ident(name), .. },
+                ..
+            }) = direct_child
+        {
+            props.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                key: PropName::Ident(ident_name("cacheName")),
+                value: Box::new(string_expr(name.sym.as_ref())),
+            }))));
+        }
+    }
+    Some(Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(Expr::Paren(ParenExpr {
+            span: DUMMY_SP,
+            expr: Box::new(Expr::Object(ObjectLit { span: DUMMY_SP, props })),
+        })))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    }))
+}
+
+fn try_build_compiled_component_element_with_anchor(
+    vt: &mut VaporTransform,
+    element: &JSXElement,
+    parent: &Ident,
+    anchor: Option<&Ident>,
+    stmts: &mut Vec<Stmt>,
+) -> bool {
+    if !is_compiled_component_element(vt, element) {
+        return false;
+    }
+    let JSXElementName::Ident(component) = &element.opening.name else {
+        return false;
+    };
+    let Some(read_props) = build_compiled_component_read_props(vt, element) else {
+        return false;
+    };
+    let mount_parent = if anchor.is_some() {
+        let staging = vt.next_el_ident();
+        stmts.push(const_decl(
+            staging.clone(),
+            call_ident("_$compiledCreateDocumentFragment", vec![Expr::Ident(parent.clone())]),
+        ));
+        staging
+    } else {
+        parent.clone()
+    };
+    let mount = call_ident(
+        "_$mountCompiledComponent",
+        vec![Expr::Ident(mount_parent.clone()), Expr::Ident(component.clone()), read_props],
+    );
+    stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(mount) }));
+    if let Some(anchor) = anchor {
+        stmts.push(Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::new(call_member(
+                parent.clone(),
+                "insertBefore",
+                vec![Expr::Ident(mount_parent), Expr::Ident(anchor.clone())],
+            )),
+        }));
+    }
+    true
 }
 
 fn extract_jsx_key_expr(jsx_el: &JSXElement) -> Option<Expr> {
@@ -580,9 +1022,47 @@ fn extract_jsx_key_expr(jsx_el: &JSXElement) -> Option<Expr> {
     None
 }
 
+fn extract_jsx_attr_expr(jsx_el: &JSXElement, expected: &str) -> Option<Expr> {
+    jsx_el.opening.attrs.iter().find_map(|attr| {
+        let JSXAttrOrSpread::JSXAttr(attr) = attr else { return None };
+        let JSXAttrName::Ident(name) = &attr.name else { return None };
+        if name.sym.as_ref() != expected {
+            return None;
+        }
+        attr.value.as_ref().and_then(jsx_attr_value_to_expr)
+    })
+}
+
+fn keep_alive_inferred_props(element: &JSXElement) -> (Option<Expr>, Option<Expr>) {
+    let Some(child) = element.children.iter().find_map(|child| match child {
+        JSXElementChild::JSXElement(child) => Some(child.as_ref()),
+        _ => None,
+    }) else {
+        return (None, None);
+    };
+    let identity = extract_jsx_key_expr(child).or_else(|| match &child.opening.name {
+        JSXElementName::Ident(name) => Some(string_expr(name.sym.as_ref())),
+        _ => None,
+    });
+    let name = match &child.opening.name {
+        JSXElementName::Ident(component) if component.sym.as_ref() == "Component" => {
+            extract_jsx_attr_expr(child, "is").map(|value| {
+                Expr::Member(MemberExpr {
+                    span: DUMMY_SP,
+                    obj: Box::new(value),
+                    prop: MemberProp::Ident(ident_name("name")),
+                })
+            })
+        }
+        JSXElementName::Ident(name) => Some(string_expr(name.sym.as_ref())),
+        _ => None,
+    };
+    (identity, name)
+}
+
 fn wrap_transition_group_child_expr(expr: Expr, key_expr: Option<Expr>) -> Expr {
     if let Some(key_expr) = key_expr {
-        call_ident("_$vaporWithKey", vec![expr, key_expr])
+        call_ident("_$compiledWithKey", vec![expr, key_expr])
     } else {
         expr
     }
@@ -830,6 +1310,12 @@ pub(crate) fn rewrite_component_children_to_props(
     let mut direct_render_expr: Option<Expr> = None;
 
     let is_transition = crate::utils::is_transition_component(comp_el);
+    let keep_alive_props = match &comp_el.opening.name {
+        JSXElementName::Ident(name) if name.sym.as_ref() == "KeepAlive" => {
+            Some(keep_alive_inferred_props(comp_el))
+        }
+        _ => None,
+    };
     let needs_raw_transition_children = crate::utils::is_transition_raw_children_component(comp_el);
 
     if !comp_el.children.is_empty() && needs_raw_transition_children {
@@ -907,6 +1393,33 @@ pub(crate) fn rewrite_component_children_to_props(
             default_slot.as_ref().map(|slot| slot.is_function).unwrap_or(false);
 
         let mut new_attrs = comp_el.opening.attrs.clone();
+
+        if let Some((identity, name)) = keep_alive_props {
+            if !jsx_attrs_has_ident(&new_attrs, "cacheKey")
+                && let Some(identity) = identity
+            {
+                new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
+                    span: DUMMY_SP,
+                    name: JSXAttrName::Ident(ident_name("cacheKey")),
+                    value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                        span: DUMMY_SP,
+                        expr: JSXExpr::Expr(Box::new(identity)),
+                    })),
+                }));
+            }
+            if !jsx_attrs_has_ident(&new_attrs, "cacheName")
+                && let Some(name) = name
+            {
+                new_attrs.push(JSXAttrOrSpread::JSXAttr(JSXAttr {
+                    span: DUMMY_SP,
+                    name: JSXAttrName::Ident(ident_name("cacheName")),
+                    value: Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                        span: DUMMY_SP,
+                        expr: JSXExpr::Expr(Box::new(name)),
+                    })),
+                }));
+            }
+        }
 
         let default_in_slot_bag = has_named_slots || default_requires_slot_bag;
 
@@ -987,26 +1500,47 @@ pub fn build_component_element(
     parent: &Ident,
     stmts: &mut Vec<Stmt>,
 ) {
+    build_component_element_with_anchor(vt, jsx_el, parent, None, stmts);
+}
+
+pub(crate) fn build_component_element_at(
+    vt: &mut VaporTransform,
+    jsx_el: &JSXElement,
+    parent: &Ident,
+    anchor: &Ident,
+    stmts: &mut Vec<Stmt>,
+) {
+    build_component_element_with_anchor(vt, jsx_el, parent, Some(anchor), stmts);
+}
+
+fn build_component_element_with_anchor(
+    vt: &mut VaporTransform,
+    jsx_el: &JSXElement,
+    parent: &Ident,
+    preset_anchor: Option<&Ident>,
+    stmts: &mut Vec<Stmt>,
+) {
     let mut comp_el = jsx_el.clone();
     let rewrite = rewrite_component_children_to_props(vt, &mut comp_el);
     let slot_init_expr =
         rewrite.direct_render_expr.clone().unwrap_or_else(|| build_component_mount_expr(&comp_el));
+    let child_stmts = rewrite.stmts;
 
-    let is_static = !crate::utils::is_transition_group_component(&comp_el)
+    let is_static = child_stmts.is_empty()
+        && !crate::utils::is_transition_group_component(&comp_el)
         && (crate::utils::is_static_component_without_props(&comp_el)
             || crate::utils::is_static_component_children_ident(&comp_el)
             || crate::utils::component_has_no_dynamic_props_excluding_children(&comp_el));
 
-    let anchor = vt.next_list_ident();
-    let make_anchor = call_ident("_$createComment", vec![string_expr("rue:component:anchor")]);
-    stmts.push(const_decl(anchor.clone(), make_anchor));
-    stmts.push(append_child(parent.clone(), Expr::Ident(anchor.clone())));
-
-    if !rewrite.stmts.is_empty() {
-        for s in rewrite.stmts {
-            stmts.push(s);
-        }
-    }
+    let anchor = if let Some(anchor) = preset_anchor {
+        anchor.clone()
+    } else {
+        let anchor = vt.next_list_ident();
+        let make_anchor = call_ident("_$createComment", vec![string_expr("rue:component:anchor")]);
+        stmts.push(const_decl(anchor.clone(), make_anchor));
+        stmts.push(append_child(parent.clone(), Expr::Ident(anchor.clone())));
+        anchor
+    };
 
     let slot_ident = vt.next_slot_ident();
     let decl_slot = const_decl(slot_ident.clone(), slot_init_expr.clone());
@@ -1023,6 +1557,7 @@ pub fn build_component_element(
     });
 
     if is_static {
+        stmts.extend(child_stmts);
         stmts.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
             span: DUMMY_SP,
             ctxt: SyntaxContext::empty(),
@@ -1056,16 +1591,18 @@ pub fn build_component_element(
             type_args: None,
             ctxt: SyntaxContext::empty(),
         });
+        let mut render_stmts = child_stmts;
+        render_stmts.extend([
+            decl_slot,
+            Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(untrack_render) }),
+        ]);
         let render_arrow = Expr::Arrow(ArrowExpr {
             span: DUMMY_SP,
             params: vec![],
             body: Box::new(BlockStmtOrExpr::BlockStmt(BlockStmt {
                 span: DUMMY_SP,
                 ctxt: SyntaxContext::empty(),
-                stmts: vec![
-                    decl_slot,
-                    Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(untrack_render) }),
-                ],
+                stmts: render_stmts,
             })),
             is_async: false,
             is_generator: false,
@@ -1073,7 +1610,7 @@ pub fn build_component_element(
             return_type: None,
             ctxt: SyntaxContext::empty(),
         });
-        let watch = call_ident("watchEffect", vec![render_arrow]);
+        let watch = call_ident("effect", vec![render_arrow]);
         stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
     }
 }

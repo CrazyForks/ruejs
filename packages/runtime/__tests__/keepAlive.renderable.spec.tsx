@@ -8,7 +8,7 @@ import {
 import {
   _$createElement as _$createElementFromRueVapor,
   _$settextContent as _$settextContentFromRueVapor,
-  _$vaporWithHookId as _$vaporWithHookIdFromRueVapor,
+  _$compiledWithHookId as _$compiledWithHookIdFromRueVapor,
   renderAnchor as renderAnchorFromRueVapor,
   ref as refFromRueVapor,
   untrack as untrackFromRueVapor,
@@ -16,13 +16,12 @@ import {
   useState as useStateFromRueVapor,
   vapor as vaporFromRueVapor,
   watchEffect as watchEffectFromRueVapor,
-} from '@rue-js/rue/vapor'
+} from './legacy-test-render'
 import {
   Component,
   KeepAlive,
   _$createElement,
   _$settextContent,
-  _$vaporWithHookId,
   onActivated,
   onDeactivated,
   onUnmounted,
@@ -32,14 +31,15 @@ import {
   signal,
   useSetup,
   useState,
-  vapor,
   watchEffect,
   type FC,
 } from '../src'
+import { _$compiledWithHookId } from '../src/internal'
 import {
   onActivated as onActivatedFromVapor,
   onDeactivated as onDeactivatedFromVapor,
-} from '../src/vapor'
+} from './legacy-test-render'
+import { vapor } from './legacy-test-render'
 
 setReactiveScheduling('sync')
 
@@ -422,9 +422,9 @@ describe('KeepAlive renderable boundary', () => {
     document.body.appendChild(host)
 
     const A: FC = () => {
-      const state = _$vaporWithHookId('useSetup:keep-alive:A', () =>
+      const state = _$compiledWithHookId('useSetup:keep-alive:A', () =>
         useSetup(() => {
-          const [text] = _$vaporWithHookId('useState:keep-alive:A', () => useState('alpha'))
+          const [text] = _$compiledWithHookId('useState:keep-alive:A', () => useState('alpha'))
           onDeactivated(() => {
             aDeactivated(text.value)
           })
@@ -442,9 +442,9 @@ describe('KeepAlive renderable boundary', () => {
     }
 
     const B: FC = () => {
-      const state = _$vaporWithHookId('useSetup:keep-alive:B', () =>
+      const state = _$compiledWithHookId('useSetup:keep-alive:B', () =>
         useSetup(() => {
-          const [count] = _$vaporWithHookId('useState:keep-alive:B', () => useState(1))
+          const [count] = _$compiledWithHookId('useState:keep-alive:B', () => useState(1))
           onDeactivated(() => {
             bDeactivated(count.value)
           })
@@ -548,9 +548,9 @@ describe('KeepAlive renderable boundary', () => {
     document.body.appendChild(host)
 
     const A: FC = () => {
-      const state = _$vaporWithHookIdFromRueVapor('useSetup:mixed:A', () =>
+      const state = _$compiledWithHookIdFromRueVapor('useSetup:mixed:A', () =>
         useSetupFromRueVapor(() => {
-          const [text] = _$vaporWithHookIdFromRueVapor('useState:mixed:A', () =>
+          const [text] = _$compiledWithHookIdFromRueVapor('useState:mixed:A', () =>
             useStateFromRueVapor('alpha'),
           )
           onDeactivatedFromRue(() => {
@@ -570,9 +570,9 @@ describe('KeepAlive renderable boundary', () => {
     }
 
     const B: FC = () => {
-      const state = _$vaporWithHookIdFromRueVapor('useSetup:mixed:B', () =>
+      const state = _$compiledWithHookIdFromRueVapor('useSetup:mixed:B', () =>
         useSetupFromRueVapor(() => {
-          const [count] = _$vaporWithHookIdFromRueVapor('useState:mixed:B', () =>
+          const [count] = _$compiledWithHookIdFromRueVapor('useState:mixed:B', () =>
             useStateFromRueVapor(1),
           )
           onDeactivatedFromRue(() => {
@@ -634,9 +634,9 @@ describe('KeepAlive renderable boundary', () => {
     document.body.appendChild(host)
 
     const A: FC<{ writeLog: (message: string) => void }> = props => {
-      const state = _$vaporWithHookIdFromRueVapor('useSetup:nested:A', () =>
+      const state = _$compiledWithHookIdFromRueVapor('useSetup:nested:A', () =>
         useSetupFromRueVapor(() => {
-          const [text] = _$vaporWithHookIdFromRueVapor('useState:nested:A', () =>
+          const [text] = _$compiledWithHookIdFromRueVapor('useState:nested:A', () =>
             useStateFromRueVapor('alpha'),
           )
           onDeactivatedFromRue(() => {
@@ -655,9 +655,9 @@ describe('KeepAlive renderable boundary', () => {
       }) as any
     }
     const B: FC<{ writeLog: (message: string) => void }> = props => {
-      const state = _$vaporWithHookIdFromRueVapor('useSetup:nested:B', () =>
+      const state = _$compiledWithHookIdFromRueVapor('useSetup:nested:B', () =>
         useSetupFromRueVapor(() => {
-          const [count] = _$vaporWithHookIdFromRueVapor('useState:nested:B', () =>
+          const [count] = _$compiledWithHookIdFromRueVapor('useState:nested:B', () =>
             useStateFromRueVapor(1),
           )
           onDeactivatedFromRue(() => {
@@ -703,9 +703,9 @@ describe('KeepAlive renderable boundary', () => {
       }) as any
 
     const App: FC = () => {
-      const setup = _$vaporWithHookIdFromRueVapor('useSetup:nested:App', () =>
+      const setup = _$compiledWithHookIdFromRueVapor('useSetup:nested:App', () =>
         useSetupFromRueVapor(() => {
-          const activePanel = _$vaporWithHookIdFromRueVapor('ref:nested:active', () =>
+          const activePanel = _$compiledWithHookIdFromRueVapor('ref:nested:active', () =>
             refFromRueVapor('A'),
           )
           activePanelRef = activePanel

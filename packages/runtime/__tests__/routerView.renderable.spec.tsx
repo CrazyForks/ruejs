@@ -10,6 +10,7 @@ import {
 
 import {
   onMounted,
+  onError,
   onUnmounted,
   ref,
   render,
@@ -33,7 +34,7 @@ import SidebarPlaygroundGuide, {
   GuideRouteLayout,
 } from '../../../app/pages/site/SidebarPlaygroundGuide'
 import UseStateCounterDemo from '../../../app/pages/examples/home-demos/UseStateCounterDemo'
-import { createAppRouter } from '../../../app/router'
+import { createAppRouter, routeComponent } from '../../../app/router'
 import { waitForContent } from './page-test-utils'
 
 setReactiveScheduling('sync')
@@ -85,6 +86,59 @@ const OtherRoute: FC = () => <section data-testid="route-other">other</section>
 const slowTestTimeout = 40_000
 
 describe('RouterView renderable boundary', () => {
+  it('recovers a route whose dynamic import succeeds after a failed visit', async () => {
+    const loadError = new Error('temporary route import failure')
+    const reported = vi.fn()
+    const stop = onError(reported)
+    const loader = vi
+      .fn()
+      .mockRejectedValueOnce(loadError)
+      .mockResolvedValue({
+        default: () => <section data-testid="recovered-route">map list rendering</section>,
+      })
+    const RetryRoute = routeComponent(loader)
+    const UseStateRoute: FC = () => (
+      <section data-testid="use-state-route">use state counter</section>
+    )
+    const router = createRouter({
+      history: createMemoryHistory('/examples/use-state-counter'),
+      routes: [
+        { path: '/examples/use-state-counter', component: UseStateRoute },
+        { path: '/examples/map-list-rendering', component: RetryRoute },
+      ],
+    })
+    attachRouter(router)
+    const container = mountTestContainer()
+
+    render(<RouterView />, container)
+    await flush()
+    expect(container.querySelector('[data-testid="use-state-route"]')?.textContent).toBe(
+      'use state counter',
+    )
+
+    await router.push('/examples/map-list-rendering')
+    await flush()
+    expect(reported).toHaveBeenCalledWith(loadError, null)
+    expect(container.textContent).toContain('temporary route import failure')
+
+    await router.push('/examples/use-state-counter')
+    await flush()
+    expect(container.querySelector('[data-testid="use-state-route"]')?.textContent).toBe(
+      'use state counter',
+    )
+
+    await router.push('/examples/map-list-rendering')
+    await flush()
+    await flush()
+
+    expect(loader).toHaveBeenCalledTimes(2)
+    expect(container.querySelector('[data-testid="recovered-route"]')?.textContent).toBe(
+      'map list rendering',
+    )
+    expect(container.textContent).not.toContain('temporary route import failure')
+    stop?.()
+  })
+
   it('preserves persist route state while non-persist routes reset', async () => {
     const persistMounted = vi.fn()
     const persistUnmounted = vi.fn()
@@ -272,6 +326,57 @@ describe('RouterView renderable boundary', () => {
     await router.push('/stable')
     await flush()
     expect(container.querySelector('[data-testid="stable-route"]')?.textContent).toBe('stable')
+  })
+
+  it('reinitializes once content when a route is mounted again', async () => {
+    let mountSequence = 0
+    const OnceRoute: FC = () => {
+      const value = ref(`mount:${++mountSequence}`)
+      return (
+        <section>
+          <button
+            data-testid="once-route-update"
+            onClick={() => {
+              value.value = 'updated'
+            }}
+          >
+            update
+          </button>
+          <span data-testid="once-route-value" v-once>
+            {value.value}
+          </span>
+          <span data-testid="live-route-value">{value.value}</span>
+        </section>
+      )
+    }
+    const router = createRouter({
+      history: createMemoryHistory('/once'),
+      routes: [
+        { path: '/once', component: OnceRoute },
+        { path: '/other', component: OtherRoute },
+      ],
+    })
+    attachRouter(router)
+    const container = mountTestContainer()
+
+    render(<RouterView />, container)
+    await flush()
+    expect(container.querySelector('[data-testid="once-route-value"]')?.textContent).toBe('mount:1')
+
+    container
+      .querySelector('[data-testid="once-route-update"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flush()
+    expect(container.querySelector('[data-testid="once-route-value"]')?.textContent).toBe('mount:1')
+    expect(container.querySelector('[data-testid="live-route-value"]')?.textContent).toBe('updated')
+
+    await router.push('/other')
+    await flush()
+    await router.push('/once')
+    await flush()
+
+    expect(container.querySelector('[data-testid="once-route-value"]')?.textContent).toBe('mount:2')
+    expect(container.querySelector('[data-testid="live-route-value"]')?.textContent).toBe('mount:2')
   })
 
   it('fires route component onUnmounted when switching away', async () => {
@@ -487,6 +592,48 @@ describe('RouterView renderable boundary', () => {
       expect(container.textContent).toContain('你好，世界（移植自 Vue）')
       expect(container.querySelector('#doc-body')).toBeNull()
     }, 400)
+  })
+
+  it('renders the home page after leaving the API index route', async () => {
+    const ApiIndex: FC = () => <article id="doc-body">API 参考</article>
+    const Home: FC = () => <main>Framework For Native DOM</main>
+    const ApiLayout: FC = () => (
+      <section className="sidebar-playground">
+        <RouterView />
+      </section>
+    )
+    const router = createRouter({
+      history: createMemoryHistory('/api/api/index'),
+      routes: [
+        { path: '/', component: useComponent(async () => ({ default: Home })) },
+        {
+          path: '/api',
+          component: useComponent(async () => ({ default: ApiLayout })),
+          children: [
+            {
+              path: 'api/index',
+              component: useComponent(async () => ({ default: ApiIndex })),
+            },
+          ],
+        },
+      ],
+    })
+    attachRouter(router)
+
+    const container = mountTestContainer()
+    render(<RouterView />, container)
+
+    await router.isReady()
+    await waitForContent(() => {
+      expect(container.querySelector('#doc-body')?.textContent).toContain('API 参考')
+    }, 800)
+
+    await router.push('/')
+    await router.isReady()
+    await waitForContent(() => {
+      expect(container.textContent).toContain('Framework For Native DOM')
+      expect(container.querySelector('.sidebar-playground')).toBeNull()
+    }, 800)
   })
 
   it('keeps lazy route page interactions reactive through a preview shell', async () => {
@@ -944,6 +1091,48 @@ describe('RouterView renderable boundary', () => {
     },
     slowTestTimeout,
   )
+
+  it('switches lazy example children inside the persistent route layout', async () => {
+    window.location.hash = '#/examples/hello-world'
+
+    const LazyHelloWorld = useComponent(async () => ({ default: HelloWorld }))
+    const LazyHandlingInput = useComponent(async () => ({ default: HandlingInput }))
+
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        {
+          path: '/examples',
+          component: ExamplesRouteLayout,
+          meta: { sidebarPlaygroundLayout: 'examples' },
+          children: [
+            { path: 'hello-world', component: LazyHelloWorld },
+            { path: 'handling-input', component: LazyHandlingInput },
+          ],
+        },
+      ],
+    })
+    attachRouter(router)
+
+    const container = mountTestContainer()
+    render(<RouterView />, container)
+
+    await flush()
+    await flush()
+
+    const handlingInputLink = container.querySelector(
+      'a[href="#/examples/handling-input"]',
+    ) as HTMLAnchorElement | null
+    expect(handlingInputLink).toBeTruthy()
+
+    handlingInputLink?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await flush()
+    await flush()
+
+    expect(window.location.hash).toBe('#/examples/handling-input')
+    expect(container.textContent).toContain('处理输入（移植自 Vue）')
+    expect(container.textContent).not.toContain('你好，世界（移植自 Vue）')
+  })
 
   it(
     'keeps example tabs interactive after switching away and back to a lazy route',

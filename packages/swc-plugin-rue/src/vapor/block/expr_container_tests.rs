@@ -65,6 +65,20 @@ fn parse_empty_container() -> JSXExprContainer {
     container
 }
 
+fn parse_module(src: &str) -> Module {
+    let cm = Arc::new(SourceMap::default());
+    let fm = cm.new_source_file(
+        FileName::Custom("expr-container-provenance-test.tsx".into()).into(),
+        src.to_string(),
+    );
+    let mut parser = Parser::new(
+        Syntax::Typescript(TsSyntax { tsx: true, ..Default::default() }),
+        StringInput::from(&*fm),
+        None,
+    );
+    parser.parse_module().expect("parse module")
+}
+
 fn emit_stmts(stmts: Vec<Stmt>) -> String {
     let cm = Arc::new(SourceMap::default());
     let module = Module {
@@ -108,13 +122,16 @@ fn emits_watch_anchor_for_dynamic_text_exprs() {
     let out = compact(&emit_stmts(stmts));
 
     assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
-    assert!(out.contains("watchEffect(()=>{const__slot=(message);"));
+    assert!(out.contains("effect(()=>{const__slot=(message);"));
     assert!(out.contains("untrack(()=>renderAnchor(__slot,_root,_list1));"));
 }
 
 #[test]
 fn emits_cached_direct_text_effect_for_proven_scalars() {
     let mut vt = new_vt();
+    let module =
+        parse_module("import { signal } from '@rue-js/rue'; const message = signal('ready');");
+    vt.plain_local_scopes.push(crate::reactive_provenance::collect_module_scope(&module, &[]));
     let root = crate::emit::ident("_root");
     let mut stmts = Vec::new();
 
@@ -131,9 +148,9 @@ fn emits_cached_direct_text_effect_for_proven_scalars() {
     assert!(out.contains("_$compiledAppendChild(_root,_el1)"), "{out}");
     assert!(!out.contains("document.createTextNode"), "{out}");
     assert!(!out.contains(".appendChild("), "{out}");
-    assert!(out.contains("effect(()=>"), "{out}");
-    assert!(out.contains("Object.is("), "{out}");
-    assert!(out.contains(".textContent="), "{out}");
+    assert!(out.contains("_$compiledText(_el1,()=>String(message.get()))"), "{out}");
+    assert!(!out.contains("Object.is("), "{out}");
+    assert!(!out.contains(".textContent="), "{out}");
     assert!(!out.contains("watchEffect"), "{out}");
     assert!(!out.contains("_$settextContent"), "{out}");
     assert!(!out.contains("renderAnchor"), "{out}");
@@ -152,6 +169,32 @@ fn emits_cached_direct_text_effect_for_proven_scalars() {
 }
 
 #[test]
+fn emits_cached_effect_for_existing_text() {
+    let mut vt = new_vt();
+    let module =
+        parse_module("import { signal } from '@rue-js/rue'; const message = signal('ready');");
+    vt.plain_local_scopes.push(crate::reactive_provenance::collect_module_scope(&module, &[]));
+    let node = crate::emit::ident("_text");
+    let mut stmts = Vec::new();
+
+    emit_compiled_text_effect(
+        &mut vt,
+        &node,
+        &parse_expr_container("String(message.get())"),
+        &mut stmts,
+    )
+    .expect("compiled scalar text effect");
+    let out = compact(&emit_stmts(stmts));
+
+    assert!(!out.contains("_$compiledCreateTextNode"), "{out}");
+    assert!(!out.contains("_$compiledAppendChild"), "{out}");
+    assert!(out.contains("_$compiledText(_text,()=>String(message.get()))"), "{out}");
+    assert!(!out.contains("Object.is("), "{out}");
+    assert!(!out.contains("_text.textContent="), "{out}");
+    assert!(!out.contains("watchEffect"), "{out}");
+}
+
+#[test]
 fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
     let root = crate::emit::ident("_root");
 
@@ -159,8 +202,9 @@ fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
     let mut jsx_stmts = Vec::new();
     handle_expr_container(&mut jsx_vt, &root, &parse_expr_container("<Box />"), &mut jsx_stmts);
     let jsx_out = compact(&emit_stmts(jsx_stmts));
-    assert!(jsx_out.contains("const__slot4=vapor(()=>{"));
-    assert!(jsx_out.contains("renderAnchor(__slot4,_root,_list1);"));
+    assert!(jsx_out.contains("_$createComponent(Box"));
+    assert!(jsx_out.contains("renderAnchor("));
+    assert!(jsx_out.contains(",_root,_list1);"));
     assert!(!jsx_out.contains("watchEffect("));
 
     let mut map_vt = new_vt();
@@ -212,8 +256,8 @@ fn handles_children_slots_non_map_calls_and_static_component_variants() {
     let mut call_stmts = Vec::new();
     handle_expr_container(&mut call_vt, &root, &parse_expr_container("render()"), &mut call_stmts);
     let call_out = compact(&emit_stmts(call_stmts));
-    assert!(call_out.contains("watchEffect(()=>{const__slot=render();"));
-    assert!(!call_out.contains("_$vaporKeyedList("));
+    assert!(call_out.contains("effect(()=>{const__slot=render();"));
+    assert!(!call_out.contains("_$compiledKeyedList("));
 
     let mut children_ident_vt = new_vt();
     let mut children_ident_stmts = Vec::new();
@@ -224,7 +268,8 @@ fn handles_children_slots_non_map_calls_and_static_component_variants() {
         &mut children_ident_stmts,
     );
     let children_ident_out = compact(&emit_stmts(children_ident_stmts));
-    assert!(children_ident_out.contains("renderAnchor(__slot4,_root,_list1);"));
+    assert!(children_ident_out.contains("renderAnchor("));
+    assert!(children_ident_out.contains(",_root,_list1);"));
     assert!(!children_ident_out.contains("watchEffect("));
 
     let mut static_props_vt = new_vt();
@@ -236,7 +281,8 @@ fn handles_children_slots_non_map_calls_and_static_component_variants() {
         &mut static_props_stmts,
     );
     let static_props_out = compact(&emit_stmts(static_props_stmts));
-    assert!(static_props_out.contains("renderAnchor(__slot4,_root,_list1);"));
+    assert!(static_props_out.contains("renderAnchor("));
+    assert!(static_props_out.contains(",_root,_list1);"));
     assert!(!static_props_out.contains("watchEffect("));
 }
 
@@ -268,6 +314,6 @@ fn hardens_memoized_jsx_and_transition_group_container_paths() {
     );
     let transition_out = compact(&emit_stmts(transition_stmts));
     assert!(transition_out.contains("_$createComment(\"rue:slot:anchor\")"), "{transition_out}");
-    assert!(transition_out.contains("watchEffect("), "{transition_out}");
+    assert!(transition_out.contains("effect("), "{transition_out}");
     assert!(transition_out.contains("_$createComponent(TransitionGroup"), "{transition_out}");
 }

@@ -84,11 +84,11 @@ export default UseCart
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let _expected_fragment = r##"import { onBeforeCreate, onCreated, onMounted, onBeforeUnmount, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$addEventListener, _$setClassName } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { onBeforeCreate, onCreated, onMounted, onBeforeUnmount, _$compiledWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$compiledKeyedList, _$createTextWrapper, _$addEventListener, _$setClassName } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import { useCart } from '../hooks/useCart';
 const UseCart: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             const cart = useCart();
             const products = [
                 {
@@ -142,7 +142,7 @@ const UseCart: FC = ()=>{
         let _map1_elements = new Map;
         watchEffect(()=>{
             const _map1_current = products || [];
-            const _map1_newElements = _$vaporKeyedList({
+            const _map1_newElements = _$compiledKeyedList({
                 items: _map1_current,
                 getKey: (pr, idx)=>pr.id,
                 elements: _map1_elements,
@@ -211,7 +211,7 @@ const UseCart: FC = ()=>{
                 let _map2_elements = new Map;
                 watchEffect(()=>{
                     const _map2_current = cart.items.value || [];
-                    const _map2_newElements = _$vaporKeyedList({
+                    const _map2_newElements = _$compiledKeyedList({
                         items: _map2_current,
                         getKey: (i, idx)=>i.id,
                         elements: _map2_elements,
@@ -283,13 +283,14 @@ export default UseCart;
     std::fs::write("target/vapor_outputs/spec5.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
     assert_eq!(normalized.matches("_$reconcileKeyed(").count(), 2);
-    assert!(normalized.contains("const _$rowBindingNext0 = pr.name"));
-    assert!(normalized.contains("_el5.textContent = _$rowBindingNext0"));
-    assert!(normalized.contains("const _$rowBindingNext1 = pr.price"));
-    assert!(normalized.contains("_el6.textContent = _$rowBindingNext1"));
-    assert!(normalized.contains("const _$rowBindingNext0 = i.name"));
-    assert!(normalized.contains("_el11.textContent = _$rowBindingNext0"));
-    assert!(normalized.contains("const _$rowBindingNext1 = i.qty"));
-    assert!(normalized.contains("_el12.textContent = _$rowBindingNext1"));
-    assert!(!normalized.contains("_$vaporKeyedList"));
+    assert_eq!(normalized.matches("_$mountCompiledKeyedRow(").count(), 2);
+    assert_eq!(normalized.matches("_$compiledSignal(pr)").count(), 1);
+    assert_eq!(normalized.matches("_$compiledSignal(i)").count(), 1);
+    assert!(normalized.contains("_$compiledText(_el9, ()=>_$rowItem.get().name)"));
+    assert!(normalized.contains("_$compiledText(_el10, ()=>_$rowItem.get().price)"));
+    assert!(normalized.contains("_$compiledText(_el13, ()=>_$rowItem.get().name)"));
+    assert!(normalized.contains("_$compiledText(_el14, ()=>_$rowItem.get().qty)"));
+    assert!(normalized.contains("()=>cart.add(_$rowItem.get())"));
+    assert!(normalized.contains("()=>cart.remove(_$rowItem.get().id)"));
+    assert!(!normalized.contains("_$compiledKeyedList"));
 }

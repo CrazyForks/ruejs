@@ -579,7 +579,7 @@ const compactPageSize = ref(10)
             <p className="m-0 opacity-80">
               `simple`
               适合工具栏、卡片头部、移动端等横向空间有限的区域；如果只想展示当前页而不允许直接输入，
-              可以传 `simple={{ readOnly: true }}`。
+              可以传 <code>{'simple={{ readOnly: true }}'}</code>。
             </p>
           </div>
           <div>

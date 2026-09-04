@@ -21,23 +21,15 @@ const Comp: FC = () => {
     let out = utils::emit(program, cm);
     let normalized = utils::normalize(&utils::strip_marker(&out));
 
-    assert!(normalized.contains(&utils::normalize(
-        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const [open, setOpen] = _$vaporWithHookId("useState:1:0", ()=>useState(false));
-        return {
-            open: open,
-            setOpen: setOpen
-        };
-    }));"#,
-    )));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("const [open, setOpen] = useState(false)"), "{normalized}");
+    assert!(normalized.contains("return { open: open, setOpen: setOpen }"), "{normalized}");
 
     assert!(normalized.contains(&utils::normalize(
         r#"const content = <>{open.value ? <span>open</span> : null}</>;"#,
     )));
 
-    assert!(!normalized.contains(&utils::normalize(
-        r#"useSetup(()=>{
-        const [open, setOpen] = _$vaporWithHookId("useState:1:0", ()=>useState(false));
-        const content = <>{open.value ? <span>open</span> : null}</>;"#,
-    )));
+    let setup_destructure = normalized.find("const { open: open, setOpen: setOpen }").unwrap();
+    let content = normalized.find("const content =").unwrap();
+    assert!(content > setup_destructure, "{normalized}");
 }

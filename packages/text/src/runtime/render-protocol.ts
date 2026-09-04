@@ -1,4 +1,4 @@
-import { createElement, Fragment, Suspense } from '@rue-js/rue'
+import { Suspense } from '@rue-js/rue'
 
 export type TextNode =
   | string
@@ -27,23 +27,13 @@ export type TextElementProps = Record<string, unknown> & {
   children?: TextNode
 }
 
-export const TextFragment: 'fragment' = Fragment
+export const TextFragment = 'fragment' as const
 export const TextSuspense: TextComponentType<{
   children?: TextNode
   fallback?: TextNode
 }> = Suspense as never
 
 const TextProtocolElementSymbol = Symbol.for('rue.transitional.element')
-const DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR =
-  'Unsupported object inputs are no longer accepted on the default @rue-js/runtime entry.'
-
-function isUnsupportedObjectInputError(error: unknown): boolean {
-  return (
-    error instanceof TypeError &&
-    String(error.message).includes(DEFAULT_UNSUPPORTED_OBJECT_INPUT_ERROR)
-  )
-}
-
 function createTextProtocolElement<P>(
   type: unknown,
   props: TextElementProps | null,
@@ -106,18 +96,8 @@ export function createRueTextElement<P = {}>(
       const instance = new ClassComponent(componentProps)
       return instance.render()
     }
-    try {
-      return createElement(FunctionAdapter, props, ...children) as TextElement<P>
-    } catch (error) {
-      if (!isUnsupportedObjectInputError(error)) throw error
-      return createTextProtocolElement<P>(ClassComponent, props, children)
-    }
+    return createTextProtocolElement<P>(FunctionAdapter, props, children)
   }
 
-  try {
-    return createElement(type as never, props, ...children) as TextElement<P>
-  } catch (error) {
-    if (!isUnsupportedObjectInputError(error)) throw error
-    return createTextProtocolElement<P>(type, props, children)
-  }
+  return createTextProtocolElement<P>(type, props, children)
 }

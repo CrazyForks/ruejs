@@ -1,6 +1,7 @@
 import type { TextCompatNode } from '../shims/text-compat-types.js'
 import { buildClientHookErrorMessage } from '../shims/client-hook-error.js'
 import {
+  readTextCompatContextProviderValue,
   readTextCompatContextProviderContext,
   runWithTextCompatContextProviderValue,
 } from '../shims/context-provider-adapter.js'
@@ -13,6 +14,7 @@ import { readAppSsrThenableValue } from './app-ssr-thenable-protocol.js'
 import {
   ServerProtocolFragment,
   ServerProtocolSuspense,
+  createServerProtocolElement,
   isServerProtocolElement,
 } from './element-protocol.js'
 import { isRueRenderable, type TextRenderable } from './renderable.js'
@@ -23,7 +25,12 @@ import {
 import { resolveAppClientReference } from './app-client-reference-resolver.js'
 import { adaptAppServerRenderableForHtmlSsr } from './app-server-tree.js'
 import { AppElementsWire } from './app-elements.js'
-import { readCurrentSsrAppElementsFallback } from '../shims/slot-core.js'
+import {
+  ChildrenContext,
+  ParallelSlotsContext,
+  readCurrentSsrAppElementsFallback,
+} from '../shims/slot-core.js'
+import { runWithUnifiedStateMutation } from '../shims/unified-request-context.js'
 
 export type { AppSsrReadableStream, AppSsrRenderOptions }
 export { readAppSsrThenableValue }
@@ -61,6 +68,7 @@ const RUE_SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
 const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const TEXT_CLIENT_REFERENCE_SSR_KEY = Symbol.for('text.clientReferenceSsr')
 const TEXT_DYNAMIC_RESOLVED_COMPONENT_MARKER = Symbol.for('text.dynamic.resolvedComponent')
+const RUE_SERVER_OPERATION = Symbol.for('rue.server.operation')
 const VOID_HTML_TAGS = new Set([
   'area',
   'base',
@@ -82,7 +90,12 @@ export async function renderAppSsrToReadableStream(
   node: TextCompatNode,
   options: AppSsrRenderOptions,
 ): Promise<AppSsrReadableStream> {
-  return runWithAppContextRuntimeStream(() => renderRueAppSsrToReadableStream(node, options))
+  return runWithUnifiedStateMutation(
+    context => {
+      context.appRouterRenderPhase = 'ssr'
+    },
+    () => runWithAppContextRuntimeStream(() => renderRueAppSsrToReadableStream(node, options)),
+  )
 }
 
 export function renderAppSsrToStaticMarkup(node: TextCompatNode): string {
@@ -179,6 +192,23 @@ async function renderAppSsrNodeToHtmlOnce(
     streamTasks?: AppSsrStreamTask[]
   },
 ): Promise<string> {
+  if (value && typeof value === 'object' && RUE_SERVER_OPERATION in value) {
+    const operation = value as Record<PropertyKey, unknown>
+    const children = Array.isArray(operation.children) ? operation.children : []
+    if (operation[RUE_SERVER_OPERATION] === 'fragment') {
+      return renderAppSsrNodeToHtml(children, options)
+    }
+    return renderAppSsrNodeToHtml(
+      createServerProtocolElement(
+        operation.type,
+        operation.props && typeof operation.props === 'object'
+          ? (operation.props as Record<string, unknown>)
+          : null,
+        ...children,
+      ),
+      options,
+    )
+  }
   if (value == null || typeof value === 'boolean') return ''
   if (typeof value === 'string' || typeof value === 'number') {
     return escapeHtmlText(String(value))
@@ -186,7 +216,7 @@ async function renderAppSsrNodeToHtmlOnce(
   if (Array.isArray(value)) {
     return (await Promise.all(value.map(child => renderAppSsrNodeToHtml(child, options)))).join('')
   }
-  if (isRueRenderable(value)) {
+  if (isRueRenderable(value) && !isServerProtocolElement(value)) {
     const adaptedValue = await adaptAppServerRenderableForHtmlSsr(value as TextRenderable)
     return renderAppSsrNodeToHtml(adaptedValue, options)
   }
@@ -255,7 +285,9 @@ async function renderAppSsrNodeToHtmlOnce(
 
   const innerHtml = (props.dangerouslySetInnerHTML as { __html?: unknown } | undefined)?.__html
   if (type === 'text-rue-html') {
-    return innerHtml != null ? String(innerHtml) : renderAppSsrNodeToHtml(children, options)
+    return innerHtml != null
+      ? renderTextRueHtmlWithSlots(String(innerHtml), options)
+      : renderAppSsrNodeToHtml(children, options)
   }
 
   const formActionMetadata = type === 'form' ? readFormActionMetadata(props) : null
@@ -269,6 +301,48 @@ async function renderAppSsrNodeToHtmlOnce(
       ? String(innerHtml)
       : hiddenInputs + (await renderAppSsrNodeToHtml(children, options))
   return `<${type}${attrs}>${body}</${type}>`
+}
+
+async function renderTextRueHtmlWithSlots(
+  html: string,
+  options: {
+    mode: 'full' | 'shell'
+    onError?: (error: unknown) => string | undefined
+    streamTasks?: AppSsrStreamTask[]
+  },
+): Promise<string> {
+  if (!html.includes('<text-slot-placeholder')) return html
+
+  const childrenContext =
+    readTextCompatContextProviderContext(ChildrenContext.Provider) ?? (ChildrenContext as object)
+  const parallelSlotsContext =
+    readTextCompatContextProviderContext(ParallelSlotsContext.Provider) ??
+    (ParallelSlotsContext as object)
+  const children = readTextCompatContextProviderValue<TextCompatNode>(childrenContext)
+  const parallelSlots = readTextCompatContextProviderValue<Readonly<
+    Record<string, TextCompatNode>
+  > | null>(parallelSlotsContext)
+  const placeholderPattern = /<text-slot-placeholder\b([^>]*)>(?:<\/text-slot-placeholder>)?/gi
+  let result = ''
+  let cursor = 0
+  let match: RegExpExecArray | null
+  while ((match = placeholderPattern.exec(html))) {
+    const attributes = match[1] ?? ''
+    const kindMatch = /\bdata-text-slot-placeholder=(?:"([^"]+)"|'([^']+)')/i.exec(attributes)
+    const kind = kindMatch?.[1] ?? kindMatch?.[2]
+    if (kind !== 'children' && kind !== 'parallel-slot') continue
+
+    result += html.slice(cursor, match.index)
+    if (kind === 'children' && children.found) {
+      result += await renderAppSsrNodeToHtml(children.value, options)
+    } else if (kind === 'parallel-slot' && parallelSlots.found) {
+      const nameMatch = /\bdata-text-slot-name=(?:"([^"]+)"|'([^']+)')/i.exec(attributes)
+      const name = nameMatch?.[1] ?? nameMatch?.[2]
+      result += await renderAppSsrNodeToHtml(name ? parallelSlots.value?.[name] : null, options)
+    }
+    cursor = placeholderPattern.lastIndex
+  }
+  return cursor === 0 ? html : result + html.slice(cursor)
 }
 
 function renderStaticAppSsrNodeToHtml(value: unknown): string {
@@ -675,7 +749,9 @@ async function replaceAppSsrObjectSlotLeak(
   html: string,
   options: { onError?: (error: unknown) => string | undefined },
 ): Promise<string> {
-  if (!html.includes('[object Object]')) return html
+  const hasObjectSlotLeak = html.includes('[object Object]')
+  const hasEmptyBodySlotLeak = /<body\b([^>]*)><\/body>/i.test(html)
+  if (!hasObjectSlotLeak && !hasEmptyBodySlotLeak) return html
   const pageValue = readActivePageValueForObjectSlotLeak()
   const pageHtml =
     readTextRueHtml(pageValue) ??
@@ -685,7 +761,11 @@ async function replaceAppSsrObjectSlotLeak(
           mode: 'full',
           onError: options.onError,
         }))
-  return pageHtml === null ? html : html.replaceAll('[object Object]', pageHtml)
+  if (pageHtml === null) return html
+  const replacedObjectSlot = hasObjectSlotLeak ? html.replaceAll('[object Object]', pageHtml) : html
+  return hasEmptyBodySlotLeak
+    ? replacedObjectSlot.replace(/<body\b([^>]*)><\/body>/i, `<body$1>${pageHtml}</body>`)
+    : replacedObjectSlot
 }
 
 function renderBootstrapModules(options: AppSsrRenderOptions): string {

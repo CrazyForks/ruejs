@@ -109,7 +109,6 @@ describe('Rue Design consumer tree-shaking', () => {
     expect(normalizedModuleIds).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/packages\/rue-design\/dist\/components\/esm\/button\.js$/),
-        expect.stringMatching(/packages\/rue-design\/dist\/components\/esm\/_chunks\/.+\.js$/),
       ]),
     )
     expect(

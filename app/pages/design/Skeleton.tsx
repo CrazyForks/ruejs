@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { h, ref } from '@rue-js/rue'
+import { Component, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundDesign'
 import Code from '../site/components/Code'
 import Skeleton from '../../../packages/rue-design/src/components/skeleton/index'
@@ -300,10 +300,10 @@ const ExampleBlock: FC<ExampleBlockProps> = ({ title, summary, tab, preview, cod
 }
 
 const DemoCard: FC<{ children?: any }> = ({ children }) => {
-  return h(
-    'div',
-    { className: 'card bg-base-100 shadow-sm' },
-    h('div', { className: 'card-body' }, ...(toChildArray(children) as any[])),
+  return (
+    <div className="card bg-base-100 shadow-sm">
+      <div className="card-body">{toChildArray(children)}</div>
+    </div>
   )
 }
 
@@ -312,7 +312,11 @@ const SpreadChildren: FC<{ as?: any; children?: any; [key: string]: any }> = ({
   children,
   ...rest
 }) => {
-  return h(as as any, rest, ...(toChildArray(children) as any[]))
+  return (
+    <Component is={as as any} {...rest}>
+      {toChildArray(children)}
+    </Component>
+  )
 }
 
 type DemoToggleButtonActive = boolean | (() => boolean)
@@ -500,38 +504,42 @@ const ElementVariantsPreview: FC = () => {
               (avatarShape.value = avatarShape.value === 'circle' ? 'square' : 'circle')
             }
           >
-            Avatar: {avatarShape.value}
+            {`Avatar: ${avatarShape.value}`}
           </DemoToggleButton>
           <DemoToggleButton
             active={() => imageAspect.value === 'video'}
             onClick={() => (imageAspect.value = imageAspect.value === 'video' ? 'square' : 'video')}
           >
-            Image: {imageAspect.value}
+            {`Image: ${imageAspect.value}`}
           </DemoToggleButton>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <SpreadChildren className="flex flex-wrap items-center gap-2">
-            {elementSizes.map(size => (
-              <DemoToggleButton
-                key={size}
-                active={() => elementSize.value === size}
-                onClick={() => (elementSize.value = size)}
-              >
-                size: {size}
-              </DemoToggleButton>
-            ))}
+            {elementSizes
+              .map(size => ({ size, active: elementSize.value === size }))
+              .map(option => (
+                <DemoToggleButton
+                  key={`${option.size}-${option.active}`}
+                  active={option.active}
+                  onClick={() => (elementSize.value = option.size)}
+                >
+                  {`size: ${option.size}`}
+                </DemoToggleButton>
+              ))}
           </SpreadChildren>
           <SpreadChildren className="flex flex-wrap items-center gap-2">
-            {buttonShapes.map(shape => (
-              <DemoToggleButton
-                key={shape}
-                active={() => buttonShape.value === shape}
-                onClick={() => (buttonShape.value = shape)}
-              >
-                button: {shape}
-              </DemoToggleButton>
-            ))}
+            {buttonShapes
+              .map(shape => ({ shape, active: buttonShape.value === shape }))
+              .map(option => (
+                <DemoToggleButton
+                  key={`${option.shape}-${option.active}`}
+                  active={option.active}
+                  onClick={() => (buttonShape.value = option.shape)}
+                >
+                  {`button: ${option.shape}`}
+                </DemoToggleButton>
+              ))}
           </SpreadChildren>
         </div>
 
@@ -805,7 +813,11 @@ const SkeletonPage: FC = () => {
   as = 'div',
   children,
   ...rest
-}) => h(as as any, rest, ...toChildArray(children))
+}) => (
+  <Component is={as as any} {...rest}>
+    {toChildArray(children)}
+  </Component>
+)
 
 const listLoading = ref(true)
 

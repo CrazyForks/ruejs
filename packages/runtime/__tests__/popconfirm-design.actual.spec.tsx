@@ -42,7 +42,7 @@ describe('Popconfirm design actual page', () => {
     expect(
       '__rue_mount_id' in spinner ||
         '__rue_component_type' in spinner ||
-        '__rue_vapor_setup' in spinner,
+        '__rue_compiled_mount' in spinner,
     ).toBe(true)
   })
 

@@ -2024,8 +2024,8 @@
       "title": "内置组件",
       "sectionTitle": "内置组件",
       "type": "paragraph",
-      "text": "在渲染函数中使用它们时，需要显式导入。例如：",
-      "searchText": "内置组件 内置组件 在渲染函数中使用它们时，需要显式导入。例如： api/built-in-components"
+      "text": "在 TSX 中使用它们时，需要显式导入。例如：",
+      "searchText": "内置组件 内置组件 在 tsx 中使用它们时，需要显式导入。例如： api/built-in-components"
     },
     {
       "id": "api/built-in-components:4",
@@ -2035,8 +2035,8 @@
       "title": "内置组件",
       "sectionTitle": "内置组件",
       "type": "code",
-      "text": "import { h, Transition } from '@rue-js/rue' h(Transition, { /* props */ })",
-      "searchText": "内置组件 内置组件 import { h, transition } from '@rue-js/rue' h(transition, { /* props */ }) api/built-in-components"
+      "text": "import { Transition } from '@rue-js/rue' const View = () => <Transition mode=\"out-in\">{/* content */}</Transition>",
+      "searchText": "内置组件 内置组件 import { transition } from '@rue-js/rue' const view = () => <transition mode=\"out-in\">{/* content */}</transition> api/built-in-components"
     },
     {
       "id": "api/built-in-components:5",
@@ -4972,8 +4972,8 @@
       "title": "组件实例",
       "sectionTitle": "ComponentInstance",
       "type": "paragraph",
-      "text": "ComponentInstance 是 Rue 对组件入口的类型别名。它可用于 useApp() 的根组件、app.component() 注册的全局组件、 动态组件以及手写渲染函数中的组件参数。",
-      "searchText": "组件实例 componentinstance componentinstance 是 rue 对组件入口的类型别名。它可用于 useapp() 的根组件、app.component() 注册的全局组件、 动态组件以及手写渲染函数中的组件参数。 api/component-instance"
+      "text": "ComponentInstance 是 Rue 对组件入口的类型别名。它可用于 useApp() 的根组件、app.component() 注册的全局组件以及 动态组件的 is 参数。",
+      "searchText": "组件实例 componentinstance componentinstance 是 rue 对组件入口的类型别名。它可用于 useapp() 的根组件、app.component() 注册的全局组件以及 动态组件的 is 参数。 api/component-instance"
     },
     {
       "id": "api/component-instance:7",
@@ -10700,176 +10700,220 @@
       "docId": "api/render-function",
       "route": "/api/api/render-function",
       "href": "/api/api/render-function#render-function-apis",
-      "title": "渲染函数 API",
-      "sectionTitle": "渲染函数 API",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译渲染边界",
       "type": "heading",
-      "text": "渲染函数 API",
-      "searchText": "渲染函数 api 渲染函数 api 渲染函数 api api/render-function"
+      "text": "编译渲染边界",
+      "searchText": "编译渲染边界 编译渲染边界 编译渲染边界 api/render-function"
     },
     {
       "id": "api/render-function:1",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "heading",
-      "text": "h()",
-      "searchText": "渲染函数 api h() h() api/render-function"
+      "href": "/api/api/render-function#render-function-apis",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译渲染边界",
+      "type": "paragraph",
+      "text": "Rue 不提供通用的手写建树 API。应用中的 JSX / TSX 必须先经过 Rue 编译器，再交给运行时挂载。编译器会根据源码结构生成窄 DOM、组件和动态挂载操作；这些生成的 helper 不是应用 API。",
+      "searchText": "编译渲染边界 编译渲染边界 rue 不提供通用的手写建树 api。应用中的 jsx / tsx 必须先经过 rue 编译器，再交给运行时挂载。编译器会根据源码结构生成窄 dom、组件和动态挂载操作；这些生成的 helper 不是应用 api。 api/render-function"
     },
     {
       "id": "api/render-function:2",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "paragraph",
-      "text": "创建手写渲染输出。",
-      "searchText": "渲染函数 api h() 创建手写渲染输出。 api/render-function"
+      "href": "/api/api/render-function#compiler-requirement",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译要求",
+      "type": "heading",
+      "text": "编译要求",
+      "searchText": "编译渲染边界 编译要求 编译要求 api/render-function"
     },
     {
       "id": "api/render-function:3",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "list",
-      "text": "类型",
-      "searchText": "渲染函数 api h() 类型 api/render-function"
+      "href": "/api/api/render-function#compiler-requirement",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译要求",
+      "type": "paragraph",
+      "text": "TypeScript 只负责类型检查并保留 JSX：",
+      "searchText": "编译渲染边界 编译要求 typescript 只负责类型检查并保留 jsx： api/render-function"
     },
     {
       "id": "api/render-function:4",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
+      "href": "/api/api/render-function#compiler-requirement",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译要求",
       "type": "code",
-      "text": "function h( type: string | Component, props?: object | null, ...children: RenderOutput[] ): RenderableOutput type RenderOutput = Renderable | RueMountHandle | ReadonlyArray<RenderOutput> type RenderProp<T = any> = (scope: T) => RenderOutput",
-      "searchText": "渲染函数 api h() function h( type: string | component, props?: object | null, ...children: renderoutput[] ): renderableoutput type renderoutput = renderable | ruemounthandle | readonlyarray<renderoutput> type renderprop<t = any> = (scope: t) => renderoutput api/render-function"
+      "text": "{ \"compilerOptions\": { \"jsx\": \"preserve\" } }",
+      "searchText": "编译渲染边界 编译要求 { \"compileroptions\": { \"jsx\": \"preserve\" } } api/render-function"
     },
     {
       "id": "api/render-function:5",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "blockquote",
-      "text": "> 类型为可读性而简化。",
-      "searchText": "渲染函数 api h() > 类型为可读性而简化。 api/render-function"
+      "href": "/api/api/render-function#compiler-requirement",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译要求",
+      "type": "paragraph",
+      "text": "Vite 项目必须在转换链中启用 Rue 插件：",
+      "searchText": "编译渲染边界 编译要求 vite 项目必须在转换链中启用 rue 插件： api/render-function"
     },
     {
       "id": "api/render-function:6",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "list",
-      "text": "详情",
-      "searchText": "渲染函数 api h() 详情 api/render-function"
+      "href": "/api/api/render-function#compiler-requirement",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译要求",
+      "type": "code",
+      "text": "import { defineConfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineConfig({ plugins: [rue()], })",
+      "searchText": "编译渲染边界 编译要求 import { defineconfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineconfig({ plugins: [rue()], }) api/render-function"
     },
     {
       "id": "api/render-function:7",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
+      "href": "/api/api/render-function#compiler-requirement",
+      "title": "编译渲染边界",
+      "sectionTitle": "编译要求",
       "type": "paragraph",
-      "text": "第一个参数可以是字符串（用于原生元素）或 Rue 组件定义。第二个参数是 props，其余参数是 children。",
-      "searchText": "渲染函数 api h() 第一个参数可以是字符串（用于原生元素）或 rue 组件定义。第二个参数是 props，其余参数是 children。 api/render-function"
+      "text": "如果转换结束后仍有 JSX AST，构建会报告包含文件与语法位置的错误。由 TypeScript 或其他工具直接降低 JSX 的 automatic 模式不属于受支持的执行路径。",
+      "searchText": "编译渲染边界 编译要求 如果转换结束后仍有 jsx ast，构建会报告包含文件与语法位置的错误。由 typescript 或其他工具直接降低 jsx 的 automatic 模式不属于受支持的执行路径。 api/render-function"
     },
     {
       "id": "api/render-function:8",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "paragraph",
-      "text": "在 Rue 当前主路径里，组件 children 最终会落到 props.children。如果你需要作用域插槽语义，可以把函数作为 children 传入；如果你需要具名插槽样式的 API，通常直接把它们建模成显式命名 props，例如 header、footer。",
-      "searchText": "渲染函数 api h() 在 rue 当前主路径里，组件 children 最终会落到 props.children。如果你需要作用域插槽语义，可以把函数作为 children 传入；如果你需要具名插槽样式的 api，通常直接把它们建模成显式命名 props，例如 header、footer。 api/render-function"
+      "href": "/api/api/render-function#creating-render-output",
+      "title": "编译渲染边界",
+      "sectionTitle": "静态和组件输出",
+      "type": "heading",
+      "text": "静态和组件输出",
+      "searchText": "编译渲染边界 静态和组件输出 静态和组件输出 api/render-function"
     },
     {
       "id": "api/render-function:9",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
+      "href": "/api/api/render-function#creating-render-output",
+      "title": "编译渲染边界",
+      "sectionTitle": "静态和组件输出",
       "type": "paragraph",
-      "text": "为方便起见，当不需要 props 时，可以省略第二个参数。",
-      "searchText": "渲染函数 api h() 为方便起见，当不需要 props 时，可以省略第二个参数。 api/render-function"
+      "text": "使用 TSX 描述原生节点和已知组件：",
+      "searchText": "编译渲染边界 静态和组件输出 使用 tsx 描述原生节点和已知组件： api/render-function"
     },
     {
       "id": "api/render-function:10",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "list",
-      "text": "示例",
-      "searchText": "渲染函数 api h() 示例 api/render-function"
+      "href": "/api/api/render-function#creating-render-output",
+      "title": "编译渲染边界",
+      "sectionTitle": "静态和组件输出",
+      "type": "code",
+      "text": "import type { FC } from '@rue-js/rue' import UserCard from './UserCard' const Profile: FC<{ name: string }> = props => ( <section className=\"profile\"> <h2>{props.name}</h2> <UserCard name={props.name} /> </section> )",
+      "searchText": "编译渲染边界 静态和组件输出 import type { fc } from '@rue-js/rue' import usercard from './usercard' const profile: fc<{ name: string }> = props => ( <section classname=\"profile\"> <h2>{props.name}</h2> <usercard name={props.name} /> </section> ) api/render-function"
     },
     {
       "id": "api/render-function:11",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
+      "href": "/api/api/render-function#creating-render-output",
+      "title": "编译渲染边界",
+      "sectionTitle": "静态和组件输出",
       "type": "paragraph",
-      "text": "创建原生元素：",
-      "searchText": "渲染函数 api h() 创建原生元素： api/render-function"
+      "text": "组件 children 通过 props.children 接收；具名内容和 render prop 应建模为显式 props。",
+      "searchText": "编译渲染边界 静态和组件输出 组件 children 通过 props.children 接收；具名内容和 render prop 应建模为显式 props。 api/render-function"
     },
     {
       "id": "api/render-function:12",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "code",
-      "text": "import { h } from '@rue-js/rue' h('div') h('div', { id: 'foo' }) h('div', { class: 'bar', innerHTML: 'hello' }) h('div', { class: [foo, { bar }], style: { color: 'red' } }) h('div', { onClick: () => {} }) h('div', { id: 'foo' }, 'hello') h('div', 'hello') h('div', [h('span', 'hello')]) h('div', ['hello', h('span', 'hello')])",
-      "searchText": "渲染函数 api h() import { h } from '@rue-js/rue' h('div') h('div', { id: 'foo' }) h('div', { class: 'bar', innerhtml: 'hello' }) h('div', { class: [foo, { bar }], style: { color: 'red' } }) h('div', { onclick: () => {} }) h('div', { id: 'foo' }, 'hello') h('div', 'hello') h('div', [h('span', 'hello')]) h('div', ['hello', h('span', 'hello')]) api/render-function"
+      "href": "/api/api/render-function#dynamic-components",
+      "title": "编译渲染边界",
+      "sectionTitle": "动态组件",
+      "type": "heading",
+      "text": "动态组件",
+      "searchText": "编译渲染边界 动态组件 动态组件 api/render-function"
     },
     {
       "id": "api/render-function:13",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
+      "href": "/api/api/render-function#dynamic-components",
+      "title": "编译渲染边界",
+      "sectionTitle": "动态组件",
       "type": "paragraph",
-      "text": "创建组件：",
-      "searchText": "渲染函数 api h() 创建组件： api/render-function"
+      "text": "运行时才知道标签或组件身份时，使用 ：",
+      "searchText": "编译渲染边界 动态组件 运行时才知道标签或组件身份时，使用 ： api/render-function"
     },
     {
       "id": "api/render-function:14",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
+      "href": "/api/api/render-function#dynamic-components",
+      "title": "编译渲染边界",
+      "sectionTitle": "动态组件",
       "type": "code",
-      "text": "import Foo from './Foo' h(Foo, { someProp: 'hello', onUpdate: () => {}, }) h(Foo, 'default content') h(Foo, scope => h('span', scope.label)) h( MyComponent, { footer: ({ text }) => h('small', text), }, 'body', )",
-      "searchText": "渲染函数 api h() import foo from './foo' h(foo, { someprop: 'hello', onupdate: () => {}, }) h(foo, 'default content') h(foo, scope => h('span', scope.label)) h( mycomponent, { footer: ({ text }) => h('small', text), }, 'body', ) api/render-function"
+      "text": "import { Component, type FC } from '@rue-js/rue' const DynamicSurface: FC<{ as: string | FC; title: string }> = props => ( <Component is={props.as} className=\"surface\"> {props.title} </Component> )",
+      "searchText": "编译渲染边界 动态组件 import { component, type fc } from '@rue-js/rue' const dynamicsurface: fc<{ as: string | fc; title: string }> = props => ( <component is={props.as} classname=\"surface\"> {props.title} </component> ) api/render-function"
     },
     {
       "id": "api/render-function:15",
       "docId": "api/render-function",
       "route": "/api/api/render-function",
-      "href": "/api/api/render-function#h",
-      "title": "渲染函数 API",
-      "sectionTitle": "h()",
-      "type": "list",
-      "text": "另请参阅 指南 - 渲染函数 - 创建渲染输出",
-      "searchText": "渲染函数 api h() 另请参阅 指南 - 渲染函数 - 创建渲染输出 api/render-function"
+      "href": "/api/api/render-function#dynamic-components",
+      "title": "编译渲染边界",
+      "sectionTitle": "动态组件",
+      "type": "paragraph",
+      "text": "is 可以是原生标签名、组件函数或已注册组件名。普通静态元素和已知组件仍应直接写成 TSX，让编译器选择更窄的输出。",
+      "searchText": "编译渲染边界 动态组件 is 可以是原生标签名、组件函数或已注册组件名。普通静态元素和已知组件仍应直接写成 tsx，让编译器选择更窄的输出。 api/render-function"
+    },
+    {
+      "id": "api/render-function:16",
+      "docId": "api/render-function",
+      "route": "/api/api/render-function",
+      "href": "/api/api/render-function#imperative-mount",
+      "title": "编译渲染边界",
+      "sectionTitle": "命令式挂载",
+      "type": "heading",
+      "text": "命令式挂载",
+      "searchText": "编译渲染边界 命令式挂载 命令式挂载 api/render-function"
+    },
+    {
+      "id": "api/render-function:17",
+      "docId": "api/render-function",
+      "route": "/api/api/render-function",
+      "href": "/api/api/render-function#imperative-mount",
+      "title": "编译渲染边界",
+      "sectionTitle": "命令式挂载",
+      "type": "paragraph",
+      "text": "需要挂载到既有容器时，先让 TSX 经过 Rue 编译，再将产物交给 render：",
+      "searchText": "编译渲染边界 命令式挂载 需要挂载到既有容器时，先让 tsx 经过 rue 编译，再将产物交给 render： api/render-function"
+    },
+    {
+      "id": "api/render-function:18",
+      "docId": "api/render-function",
+      "route": "/api/api/render-function",
+      "href": "/api/api/render-function#imperative-mount",
+      "title": "编译渲染边界",
+      "sectionTitle": "命令式挂载",
+      "type": "code",
+      "text": "import { render } from '@rue-js/rue' import App from './App' render(<App />, document.querySelector('#app')!)",
+      "searchText": "编译渲染边界 命令式挂载 import { render } from '@rue-js/rue' import app from './app' render(<app />, document.queryselector('#app')!) api/render-function"
+    },
+    {
+      "id": "api/render-function:19",
+      "docId": "api/render-function",
+      "route": "/api/api/render-function",
+      "href": "/api/api/render-function#imperative-mount",
+      "title": "编译渲染边界",
+      "sectionTitle": "命令式挂载",
+      "type": "paragraph",
+      "text": "另请参阅：编译 JSX 与动态渲染和渲染机制。",
+      "searchText": "编译渲染边界 命令式挂载 另请参阅：编译 jsx 与动态渲染和渲染机制。 api/render-function"
     },
     {
       "id": "ecosystem/newsletters:0",
@@ -12078,8 +12122,8 @@
       "title": "术语表",
       "sectionTitle": "属性",
       "type": "list",
-      "text": "组件 props 渲染输出 props 插槽 props",
-      "searchText": "术语表 属性 组件 props 渲染输出 props 插槽 props glossary/index"
+      "text": "组件 props JSX props 插槽 props",
+      "searchText": "术语表 属性 组件 props jsx props 插槽 props glossary/index"
     },
     {
       "id": "glossary/index:88",
@@ -12100,8 +12144,8 @@
       "title": "术语表",
       "sectionTitle": "属性",
       "type": "paragraph",
-      "text": "渲染输出 props这个术语指的是作为第二个参数传递给 h() 的对象属性。这些可以包括组件 props，但它们也可以包括组件事件、DOM 事件、DOM 属性和 DOM attribute。只要你在手写渲染函数边界里直接调用 h()，通常就会接触到这一层 props。",
-      "searchText": "术语表 属性 渲染输出 props这个术语指的是作为第二个参数传递给 h() 的对象属性。这些可以包括组件 props，但它们也可以包括组件事件、dom 事件、dom 属性和 dom attribute。只要你在手写渲染函数边界里直接调用 h()，通常就会接触到这一层 props。 glossary/index"
+      "text": "JSX props是写在 JSX 标签上的属性。它们可以表示组件 props、组件事件、DOM 事件、DOM property 或 DOM attribute，并由 Rue 编译器转换为对应的窄操作。",
+      "searchText": "术语表 属性 jsx props是写在 jsx 标签上的属性。它们可以表示组件 props、组件事件、dom 事件、dom property 或 dom attribute，并由 rue 编译器转换为对应的窄操作。 glossary/index"
     },
     {
       "id": "glossary/index:90",
@@ -12518,8 +12562,8 @@
       "title": "术语表",
       "sectionTitle": "渲染函数",
       "type": "paragraph",
-      "text": "渲染函数是组件中生成渲染输出的部分。模板或 JSX 可以被编译成更接近 Renderable / Block 的产物，而手写渲染函数则通过 h() 等 API 显式描述输出边界。",
-      "searchText": "术语表 渲染函数 渲染函数是组件中生成渲染输出的部分。模板或 jsx 可以被编译成更接近 renderable / block 的产物，而手写渲染函数则通过 h() 等 api 显式描述输出边界。 glossary/index"
+      "text": "渲染函数是函数组件中返回 JSX / TSX 的部分。Rue 编译器会把这段源码转换为 Renderable / Block 及相应的窄挂载操作。",
+      "searchText": "术语表 渲染函数 渲染函数是函数组件中返回 jsx / tsx 的部分。rue 编译器会把这段源码转换为 renderable / block 及相应的窄挂载操作。 glossary/index"
     },
     {
       "id": "glossary/index:128",
@@ -12870,8 +12914,8 @@
       "title": "术语表",
       "sectionTitle": "公开渲染输出",
       "type": "paragraph",
-      "text": "这个锚点同样保留给历史跳转使用。对 Rue 当前主路径来说，更准确的理解是：h() 产出的是公开渲染输出对象，它属于显式手写渲染边界，而不是默认内部渲染货币。",
-      "searchText": "术语表 公开渲染输出 这个锚点同样保留给历史跳转使用。对 rue 当前主路径来说，更准确的理解是：h() 产出的是公开渲染输出对象，它属于显式手写渲染边界，而不是默认内部渲染货币。 glossary/index"
+      "text": "这个锚点保留给历史跳转使用。Rue 当前的公开边界是经过编译的 JSX / TSX；生成的 Renderable / Block 和挂载 helper 属于编译 ABI，不是应用手写的通用树对象。",
+      "searchText": "术语表 公开渲染输出 这个锚点保留给历史跳转使用。rue 当前的公开边界是经过编译的 jsx / tsx；生成的 renderable / block 和挂载 helper 属于编译 abi，不是应用手写的通用树对象。 glossary/index"
     },
     {
       "id": "glossary/index:161",
@@ -14300,8 +14344,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "全链路性能预算 (End-to-End Performance Budgets)",
       "type": "paragraph",
-      "text": "浏览器命令会先重建 workspace 的 Rue 与 runtime-vapor TypeScript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；budget.entries 给出尺寸、CPU、select/swap、heap 与 first-paint 比率。validSamples 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。",
-      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 浏览器命令会先重建 workspace 的 rue 与 runtime-vapor typescript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 sha-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 rue ref、rue native signal 和 vue 等价实现；budget.entries 给出尺寸、cpu、select/swap、heap 与 first-paint 比率。validsamples 必须满足预算中的最小样本数，缺失 vue、版本、hash 或样本都会使命令非零退出。 guide/best-practices/performance"
+      "text": "浏览器命令会先重建 workspace 的 Rue 与 runtime TypeScript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 SHA-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 Rue ref、Rue native signal 和 Vue 等价实现；budget.entries 给出尺寸、CPU、select/swap、heap 与 first-paint 比率。validSamples 必须满足预算中的最小样本数，缺失 Vue、版本、hash 或样本都会使命令非零退出。",
+      "searchText": "性能 (performance) 全链路性能预算 (end-to-end performance budgets) 浏览器命令会先重建 workspace 的 rue 与 runtime typescript 产物，验证版本、workspace 解析路径、lockfile 与构建产物 sha-256 在采样前后保持一致，然后运行预热和多轮有效采样。报告中的 results.rue、results.rue-signal 和 results.vue 分别代表 rue ref、rue native signal 和 vue 等价实现；budget.entries 给出尺寸、cpu、select/swap、heap 与 first-paint 比率。validsamples 必须满足预算中的最小样本数，缺失 vue、版本、hash 或样本都会使命令非零退出。 guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:23",
@@ -15763,8 +15807,8 @@
       "title": "安全 (Security)",
       "sectionTitle": "HTML 注入 (HTML Injection)",
       "type": "list",
-      "text": "使用 JSX：",
-      "searchText": "安全 (security) html 注入 (html injection) 使用 jsx： guide/best-practices/security"
+      "text": "使用经过 Rue 编译器处理的 JSX：",
+      "searchText": "安全 (security) html 注入 (html injection) 使用经过 rue 编译器处理的 jsx： guide/best-practices/security"
     },
     {
       "id": "guide/best-practices/security:31",
@@ -15784,34 +15828,12 @@
       "href": "/guide/guide/best-practices/security#html-injection",
       "title": "安全 (Security)",
       "sectionTitle": "HTML 注入 (HTML Injection)",
-      "type": "list",
-      "text": "使用渲染函数：",
-      "searchText": "安全 (security) html 注入 (html injection) 使用渲染函数： guide/best-practices/security"
-    },
-    {
-      "id": "guide/best-practices/security:33",
-      "docId": "guide/best-practices/security",
-      "route": "/guide/guide/best-practices/security",
-      "href": "/guide/guide/best-practices/security#html-injection",
-      "title": "安全 (Security)",
-      "sectionTitle": "HTML 注入 (HTML Injection)",
-      "type": "code",
-      "text": "h('div', { dangerouslySetInnerHTML: { __html: userProvidedHtml }, })",
-      "searchText": "安全 (security) html 注入 (html injection) h('div', { dangerouslysetinnerhtml: { __html: userprovidedhtml }, }) guide/best-practices/security"
-    },
-    {
-      "id": "guide/best-practices/security:34",
-      "docId": "guide/best-practices/security",
-      "route": "/guide/guide/best-practices/security",
-      "href": "/guide/guide/best-practices/security#html-injection",
-      "title": "安全 (Security)",
-      "sectionTitle": "HTML 注入 (HTML Injection)",
       "type": "paragraph",
       "text": ":::warning 警告 用户提供的 HTML 永远不能被认为 100% 安全，除非它在沙盒化的 iframe 中，或者在只有编写该 HTML 的用户才能接触到的应用部分中。此外，允许用户编写并执行自己的 Rue 组件代码也会带来类似的危险。 :::",
       "searchText": "安全 (security) html 注入 (html injection) :::warning 警告 用户提供的 html 永远不能被认为 100% 安全，除非它在沙盒化的 iframe 中，或者在只有编写该 html 的用户才能接触到的应用部分中。此外，允许用户编写并执行自己的 rue 组件代码也会带来类似的危险。 ::: guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:35",
+      "id": "guide/best-practices/security:33",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#url-injection",
@@ -15822,7 +15844,7 @@
       "searchText": "安全 (security) url 注入 (url injection) url 注入 (url injection) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:36",
+      "id": "guide/best-practices/security:34",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#url-injection",
@@ -15833,7 +15855,7 @@
       "searchText": "安全 (security) url 注入 (url injection) 在这样的 url 中： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:37",
+      "id": "guide/best-practices/security:35",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#url-injection",
@@ -15844,7 +15866,7 @@
       "searchText": "安全 (security) url 注入 (url injection) <a href={userprovidedurl}>点击我</a> guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:38",
+      "id": "guide/best-practices/security:36",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#url-injection",
@@ -15855,7 +15877,7 @@
       "searchText": "安全 (security) url 注入 (url injection) 如果 url 没有被 \"消毒\" 以防止使用 javascript: 执行 javascript，则存在潜在的安全问题。有一些库如 sanitize-url 可以帮助解决这个问题，但请注意：如果您在前端进行 url 消毒，您已经有了安全问题。用户提供的 url 应该始终在保存到数据库之前由后端进行消毒。 这样就避免了 每个 连接到您 api 的客户端（包括原生移动应用）的问题。另请注意，即使使用消毒后的 url，rue 也无法帮助您保证它们指向安全的目的地。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:39",
+      "id": "guide/best-practices/security:37",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15866,7 +15888,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) 样式注入 (style injection) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:40",
+      "id": "guide/best-practices/security:38",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15877,7 +15899,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) 查看此示例： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:41",
+      "id": "guide/best-practices/security:39",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15888,7 +15910,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) <a href={sanitizedurl} style={userprovidedstyles}> 点击我 </a> guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:42",
+      "id": "guide/best-practices/security:40",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15899,7 +15921,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) 假设 sanitizedurl 已经过消毒，因此它肯定是一个真实的 url 而不是 javascript。有了 userprovidedstyles，恶意用户仍然可以提供 css 进行 \"点击劫持\"，例如将链接样式化为覆盖 \"登录\" 按钮的透明框。然后，如果 https://user-controlled-website.com/ 被构建为类似于应用的登录页面，他们可能刚刚捕获了用户的真实登录信息。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:43",
+      "id": "guide/best-practices/security:41",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15910,7 +15932,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) 您可以想象允许用户提供的内容用于 元素会创建更大的漏洞，让该用户完全控制如何样式化整个页面。这就是为什么 rue 阻止在模板内渲染 style 标签： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:44",
+      "id": "guide/best-practices/security:42",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15921,7 +15943,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) // 这会报错或被阻止 <style>{userprovidedstyles}</style> guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:45",
+      "id": "guide/best-practices/security:43",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15932,7 +15954,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) 为了让您的用户完全免受点击劫持的保护，我们建议只允许在沙盒化的 iframe 内完全控制 css。或者，当通过样式绑定提供用户控制时，我们建议使用其 对象语法 并只允许用户提供他们可以安全控制的特定属性的值，如下所示： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:46",
+      "id": "guide/best-practices/security:44",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#style-injection",
@@ -15943,7 +15965,7 @@
       "searchText": "安全 (security) 样式注入 (style injection) <a href={sanitizedurl} style={{ color: userprovidedcolor, background: userprovidedbackground, }} > 点击我 </a> guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:47",
+      "id": "guide/best-practices/security:45",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#javascript-injection",
@@ -15954,7 +15976,7 @@
       "searchText": "安全 (security) javascript 注入 (javascript injection) javascript 注入 (javascript injection) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:48",
+      "id": "guide/best-practices/security:46",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#javascript-injection",
@@ -15965,7 +15987,7 @@
       "searchText": "安全 (security) javascript 注入 (javascript injection) 我们强烈反对使用 rue 渲染 元素，因为模板和渲染函数永远不应该有副作用。然而，这不是包含将在运行时作为 javascript 评估的字符串的唯一方式。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:49",
+      "id": "guide/best-practices/security:47",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#javascript-injection",
@@ -15976,7 +15998,7 @@
       "searchText": "安全 (security) javascript 注入 (javascript injection) 每个 html 元素都有接受 javascript 字符串作为值的属性，例如 onclick、onfocus 和 onmouseenter。将用户提供的 javascript 绑定到任何这些事件属性都是潜在的安全风险，因此应避免。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:50",
+      "id": "guide/best-practices/security:48",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#javascript-injection",
@@ -15987,7 +16009,7 @@
       "searchText": "安全 (security) javascript 注入 (javascript injection) :::warning 警告 用户提供的 javascript 永远不能被认为 100% 安全，除非它在沙盒化的 iframe 中，或者在只有编写该 javascript 的用户才能接触到的应用部分中。 ::: guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:51",
+      "id": "guide/best-practices/security:49",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#javascript-injection",
@@ -15998,7 +16020,7 @@
       "searchText": "安全 (security) javascript 注入 (javascript injection) 有时我们会收到关于如何在 rue 模板中进行跨站脚本 (xss) 的漏洞报告。一般来说，我们不认为此类情况是实际的漏洞，因为没有实际的方法可以保护开发人员免受允许 xss 的两种场景的影响： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:52",
+      "id": "guide/best-practices/security:50",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#javascript-injection",
@@ -16009,7 +16031,7 @@
       "searchText": "安全 (security) javascript 注入 (javascript injection) 开发人员明确要求 rue 将用户提供的、未经消毒的内容渲染为 rue 模板。这本质上是危险的，rue 无法知道其来源。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:53",
+      "id": "guide/best-practices/security:51",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#javascript-injection",
@@ -16020,7 +16042,7 @@
       "searchText": "安全 (security) javascript 注入 (javascript injection) 开发人员将 rue 挂载到包含服务器渲染和用户提供内容的整个 html 页面。这从根本上与 #1 是相同的问题，但有时开发人员可能会在没有意识到的情况下这样做。这可能导致攻击者提供作为纯 html 安全但作为 rue 模板不安全的 html 的潜在漏洞。最佳做法是 永远不要在可能包含服务器渲染和用户提供内容的节点上挂载 rue。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:54",
+      "id": "guide/best-practices/security:52",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#best-practices",
@@ -16031,7 +16053,7 @@
       "searchText": "安全 (security) 最佳实践 (best practices) 最佳实践 (best practices) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:55",
+      "id": "guide/best-practices/security:53",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#best-practices",
@@ -16042,7 +16064,7 @@
       "searchText": "安全 (security) 最佳实践 (best practices) 一般规则是，如果您允许未经消毒的、用户提供的内容被执行（作为 html、javascript 甚至 css），您可能会使自己面临攻击。这个建议实际上无论使用 rue、其他框架还是根本没有框架都适用。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:56",
+      "id": "guide/best-practices/security:54",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#best-practices",
@@ -16053,7 +16075,7 @@
       "searchText": "安全 (security) 最佳实践 (best practices) 除了上述关于 潜在危险 的建议外，我们还建议熟悉这些资源： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:57",
+      "id": "guide/best-practices/security:55",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#best-practices",
@@ -16064,7 +16086,7 @@
       "searchText": "安全 (security) 最佳实践 (best practices) html5 安全备忘单 owasp 跨站脚本 (xss) 预防备忘单 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:58",
+      "id": "guide/best-practices/security:56",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#best-practices",
@@ -16075,7 +16097,7 @@
       "searchText": "安全 (security) 最佳实践 (best practices) 然后使用您学到的知识来审查依赖项的源代码中潜在的危险模式，如果它们包含第三方组件或以其他方式影响渲染到 dom 的内容。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:59",
+      "id": "guide/best-practices/security:57",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#backend-coordination",
@@ -16086,7 +16108,7 @@
       "searchText": "安全 (security) 后端协调 (backend coordination) 后端协调 (backend coordination) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:60",
+      "id": "guide/best-practices/security:58",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#backend-coordination",
@@ -16097,7 +16119,7 @@
       "searchText": "安全 (security) 后端协调 (backend coordination) http 安全漏洞，如跨站请求伪造 (csrf/xsrf) 和跨站脚本包含 (xssi)，主要在后端解决，因此不是 rue 关注的问题。但是，与后端团队沟通以了解如何最好地与他们的 api 交互仍然是一个好主意，例如，通过表单提交提交 csrf 令牌。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:61",
+      "id": "guide/best-practices/security:59",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#content-security-policy",
@@ -16108,7 +16130,7 @@
       "searchText": "安全 (security) 内容安全策略 (csp) 内容安全策略 (csp) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:62",
+      "id": "guide/best-practices/security:60",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#content-security-policy",
@@ -16119,7 +16141,7 @@
       "searchText": "安全 (security) 内容安全策略 (csp) 实施内容安全策略 (csp) 是保护您的应用免受 xss 和其他代码注入攻击的重要步骤。 guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:63",
+      "id": "guide/best-practices/security:61",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#-推荐的-csp-配置-recommended-csp-configuration",
@@ -16130,7 +16152,7 @@
       "searchText": "安全 (security) 推荐的 csp 配置 (recommended csp configuration) 推荐的 csp 配置 (recommended csp configuration) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:64",
+      "id": "guide/best-practices/security:62",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#-推荐的-csp-配置-recommended-csp-configuration",
@@ -16141,7 +16163,7 @@
       "searchText": "安全 (security) 推荐的 csp 配置 (recommended csp configuration) content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.yoursite.com; guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:65",
+      "id": "guide/best-practices/security:63",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#-在-rue-中实施-csp-implementing-csp-in-rue",
@@ -16152,7 +16174,7 @@
       "searchText": "安全 (security) 在 rue 中实施 csp (implementing csp in rue) 在 rue 中实施 csp (implementing csp in rue) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:66",
+      "id": "guide/best-practices/security:64",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#-在-rue-中实施-csp-implementing-csp-in-rue",
@@ -16163,7 +16185,7 @@
       "searchText": "安全 (security) 在 rue 中实施 csp (implementing csp in rue) 对于使用 vite 构建的 rue 应用，您可以在 vite.config.ts 中配置 csp： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:67",
+      "id": "guide/best-practices/security:65",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#-在-rue-中实施-csp-implementing-csp-in-rue",
@@ -16174,7 +16196,7 @@
       "searchText": "安全 (security) 在 rue 中实施 csp (implementing csp in rue) import { defineconfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineconfig({ plugins: [rue()], server: { headers: { 'content-security-policy': \"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'\", }, }, }) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:68",
+      "id": "guide/best-practices/security:66",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#dependency-security",
@@ -16185,7 +16207,7 @@
       "searchText": "安全 (security) 依赖安全 (dependency security) 依赖安全 (dependency security) guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:69",
+      "id": "guide/best-practices/security:67",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#dependency-security",
@@ -16196,7 +16218,7 @@
       "searchText": "安全 (security) 依赖安全 (dependency security) 定期检查和更新您的依赖项： guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:70",
+      "id": "guide/best-practices/security:68",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#dependency-security",
@@ -16207,7 +16229,7 @@
       "searchText": "安全 (security) 依赖安全 (dependency security) # 检查漏洞 npm audit # 修复漏洞 npm audit fix # 更新依赖 npm update guide/best-practices/security"
     },
     {
-      "id": "guide/best-practices/security:71",
+      "id": "guide/best-practices/security:69",
       "docId": "guide/best-practices/security",
       "route": "/guide/guide/best-practices/security",
       "href": "/guide/guide/best-practices/security#dependency-security",
@@ -35054,1166 +35076,440 @@
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#render-functions-jsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译 JSX 与动态渲染",
       "type": "heading",
-      "text": "渲染函数与 JSX",
-      "searchText": "渲染函数与 jsx 渲染函数与 jsx 渲染函数与 jsx guide/extras/render-function"
+      "text": "编译 JSX 与动态渲染",
+      "searchText": "编译 jsx 与动态渲染 编译 jsx 与动态渲染 编译 jsx 与动态渲染 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:1",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#render-functions-jsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译 JSX 与动态渲染",
       "type": "paragraph",
-      "text": "Rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 UI。对绝大多数应用代码来说，普通 JSX 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。",
-      "searchText": "渲染函数与 jsx 渲染函数与 jsx rue 依然支持手写渲染函数，但它们更适合作为显式边界来使用：例如基础组件或极动态 ui。对绝大多数应用代码来说，普通 jsx 仍然是首选，因为它们会在编译阶段直接生成更精确的渲染产物。 guide/extras/render-function"
+      "text": "Rue 的渲染入口是经过编译的 JSX / TSX。源码由 Rue 编译器转换为静态 DOM、compiled core 或按能力选择的 Vapor 操作；应用代码不直接构造通用树对象。",
+      "searchText": "编译 jsx 与动态渲染 编译 jsx 与动态渲染 rue 的渲染入口是经过编译的 jsx / tsx。源码由 rue 编译器转换为静态 dom、compiled core 或按能力选择的 vapor 操作；应用代码不直接构造通用树对象。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:2",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#render-functions-jsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染函数与 JSX",
-      "type": "paragraph",
-      "text": "h()/render 使用默认入口的 rerender 兼容协议：同身份组件更新时可以重新执行渲染函数，并使用通用 Element / Fragment patch 保留 DOM 语义。这个兼容 renderer 是手写渲染函数的独立 bundle 成本；编译组件使用 fine-grained helper，同身份 props 更新只同步响应式 props 并触发局部 effect，不会自动携带这套 compat patch。",
-      "searchText": "渲染函数与 jsx 渲染函数与 jsx h()/render 使用默认入口的 rerender 兼容协议：同身份组件更新时可以重新执行渲染函数，并使用通用 element / fragment patch 保留 dom 语义。这个兼容 renderer 是手写渲染函数的独立 bundle 成本；编译组件使用 fine-grained helper，同身份 props 更新只同步响应式 props 并触发局部 effect，不会自动携带这套 compat patch。 guide/extras/render-function"
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译 JSX 与动态渲染",
+      "type": "blockquote",
+      "text": "如果你还没建立整体图景，请先阅读渲染机制。",
+      "searchText": "编译 jsx 与动态渲染 编译 jsx 与动态渲染 如果你还没建立整体图景，请先阅读渲染机制。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:3",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#render-functions-jsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染函数与 JSX",
-      "type": "blockquote",
-      "text": "如果你还没建立 Rue 渲染机制的整体图景，请先阅读渲染机制。",
-      "searchText": "渲染函数与 jsx 渲染函数与 jsx 如果你还没建立 rue 渲染机制的整体图景，请先阅读渲染机制。 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#compiler-required",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译器是必需环节",
+      "type": "heading",
+      "text": "编译器是必需环节",
+      "searchText": "编译 jsx 与动态渲染 编译器是必需环节 编译器是必需环节 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:4",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#basic-usage",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "基本用法",
-      "type": "heading",
-      "text": "基本用法",
-      "searchText": "渲染函数与 jsx 基本用法 基本用法 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#compiler-required",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译器是必需环节",
+      "type": "paragraph",
+      "text": "TypeScript 配置应保留 JSX，实际转换由 Rue 插件完成：",
+      "searchText": "编译 jsx 与动态渲染 编译器是必需环节 typescript 配置应保留 jsx，实际转换由 rue 插件完成： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:5",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "创建渲染输出",
-      "type": "heading",
-      "text": "创建渲染输出",
-      "searchText": "渲染函数与 jsx 创建渲染输出 创建渲染输出 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#compiler-required",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译器是必需环节",
+      "type": "code",
+      "text": "{ \"compilerOptions\": { \"jsx\": \"preserve\" } }",
+      "searchText": "编译 jsx 与动态渲染 编译器是必需环节 { \"compileroptions\": { \"jsx\": \"preserve\" } } guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:6",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#compiler-required",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译器是必需环节",
+      "type": "code",
+      "text": "// vite.config.ts import { defineConfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineConfig({ plugins: [rue()], })",
+      "searchText": "编译 jsx 与动态渲染 编译器是必需环节 // vite.config.ts import { defineconfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineconfig({ plugins: [rue()], }) guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:7",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "创建渲染输出",
+      "href": "/guide/guide/extras/render-function#compiler-required",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "编译器是必需环节",
       "type": "paragraph",
-      "text": "h() 创建的是公开渲染输出。编译器通常会直接生成 Renderable / Block，而不是在每个节点上都显式调用 h()。",
-      "searchText": "渲染函数与 jsx 创建渲染输出 h() 创建的是公开渲染输出。编译器通常会直接生成 renderable / block，而不是在每个节点上都显式调用 h()。 guide/extras/render-function"
+      "text": "Rue 编译完成后会检查是否仍有 JSX AST。只要存在残留，构建就会在对应文件和语法位置失败。不要让 TypeScript、Babel 或其他转换器先以 automatic 模式降低 JSX；那会绕过 Rue 的语义入口。",
+      "searchText": "编译 jsx 与动态渲染 编译器是必需环节 rue 编译完成后会检查是否仍有 jsx ast。只要存在残留，构建就会在对应文件和语法位置失败。不要让 typescript、babel 或其他转换器先以 automatic 模式降低 jsx；那会绕过 rue 的语义入口。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:8",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
       "sectionTitle": "创建渲染输出",
-      "type": "paragraph",
-      "text": "更严格地说，经过 Rue SWC 的 JSX 不会生成 h()、jsx、jsxs 或 jsxDEV 调用，也不会导入 @rue-js/jsx-runtime；它会按已证明的能力直接选择 compiled 或 Vapor 子入口。@rue-js/jsx-runtime 仍为没有经过 Rue SWC 的 automatic JSX transform 提供兼容性，它和手写 h() 一样会加载通用 renderer。若目标是 compiled-only 体积，请确保源码经过 Rue SWC，而不是仅把 TypeScript 的 jsxImportSource 指向 Rue。",
-      "searchText": "渲染函数与 jsx 创建渲染输出 更严格地说，经过 rue swc 的 jsx 不会生成 h()、jsx、jsxs 或 jsxdev 调用，也不会导入 @rue-js/jsx-runtime；它会按已证明的能力直接选择 compiled 或 vapor 子入口。@rue-js/jsx-runtime 仍为没有经过 rue swc 的 automatic jsx transform 提供兼容性，它和手写 h() 一样会加载通用 renderer。若目标是 compiled-only 体积，请确保源码经过 rue swc，而不是仅把 typescript 的 jsximportsource 指向 rue。 guide/extras/render-function"
+      "type": "heading",
+      "text": "创建渲染输出",
+      "searchText": "编译 jsx 与动态渲染 创建渲染输出 创建渲染输出 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:9",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
       "sectionTitle": "创建渲染输出",
-      "type": "code",
-      "text": "import { h } from '@rue-js/rue' const output = h('div', { id: 'foo', class: 'bar' }, [ /* children */ ])",
-      "searchText": "渲染函数与 jsx 创建渲染输出 import { h } from '@rue-js/rue' const output = h('div', { id: 'foo', class: 'bar' }, [ /* children */ ]) guide/extras/render-function"
+      "type": "paragraph",
+      "text": "函数组件直接返回 TSX：",
+      "searchText": "编译 jsx 与动态渲染 创建渲染输出 函数组件直接返回 tsx： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:10",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
       "sectionTitle": "创建渲染输出",
-      "type": "paragraph",
-      "text": "h() 是 hyperscript 的缩写。你可以把它理解为“手写描述渲染输出的最小 API”。它在 Rue 中主要用于：",
-      "searchText": "渲染函数与 jsx 创建渲染输出 h() 是 hyperscript 的缩写。你可以把它理解为“手写描述渲染输出的最小 api”。它在 rue 中主要用于： guide/extras/render-function"
+      "type": "code",
+      "text": "import { ref, type FC } from '@rue-js/rue' interface Props { message: string } const Counter: FC<Props> = props => { const count = ref(0) return ( <button onClick={() => (count.value += 1)}> {props.message}: {count.value} </button> ) }",
+      "searchText": "编译 jsx 与动态渲染 创建渲染输出 import { ref, type fc } from '@rue-js/rue' interface props { message: string } const counter: fc<props> = props => { const count = ref(0) return ( <button onclick={() => (count.value += 1)}> {props.message}: {count.value} </button> ) } guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:11",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
       "sectionTitle": "创建渲染输出",
-      "type": "list",
-      "text": "手写渲染函数 包装高度动态的子树 构造需要手动组合的渲染输出",
-      "searchText": "渲染函数与 jsx 创建渲染输出 手写渲染函数 包装高度动态的子树 构造需要手动组合的渲染输出 guide/extras/render-function"
+      "type": "paragraph",
+      "text": "静态结构、动态文本、属性和事件会由编译器分别归类。编译产物可能导入 @rue-js/rue/internal 的窄 helper；应用源码不应手写这些 helper。",
+      "searchText": "编译 jsx 与动态渲染 创建渲染输出 静态结构、动态文本、属性和事件会由编译器分别归类。编译产物可能导入 @rue-js/rue/internal 的窄 helper；应用源码不应手写这些 helper。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:12",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
       "sectionTitle": "创建渲染输出",
       "type": "paragraph",
-      "text": "h() 的参数保持灵活：",
-      "searchText": "渲染函数与 jsx 创建渲染输出 h() 的参数保持灵活： guide/extras/render-function"
+      "text": "组件也可以返回文本、条件片段或多个根节点：",
+      "searchText": "编译 jsx 与动态渲染 创建渲染输出 组件也可以返回文本、条件片段或多个根节点： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:13",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
+      "title": "编译 JSX 与动态渲染",
       "sectionTitle": "创建渲染输出",
       "type": "code",
-      "text": "// 除 type 外的所有参数都是可选的 h('div') h('div', { id: 'foo' }) // props 中可以使用属性和特性 h('div', { class: 'bar', innerHTML: 'hello' }) // 可以使用 `.` 和 `^` 前缀分别添加 `.prop` 和 `.attr` 修饰符 h('div', { '.name': 'some-name', '^width': '100' }) // class 和 style 具有与模板中相同的对象/数组值支持 h('div', { class: [foo, { bar }], style: { color: 'red' } }) // 事件监听器应该以 onXxx 形式传递 h('div', { onClick: () => {} }) // children 可以是字符串、数组或 renderable h('div', { id: 'foo' }, 'hello') h('div', 'hello') h('div', [h('span', 'hello')]) h('div', ['hello', h('span', 'hello')])",
-      "searchText": "渲染函数与 jsx 创建渲染输出 // 除 type 外的所有参数都是可选的 h('div') h('div', { id: 'foo' }) // props 中可以使用属性和特性 h('div', { class: 'bar', innerhtml: 'hello' }) // 可以使用 `.` 和 `^` 前缀分别添加 `.prop` 和 `.attr` 修饰符 h('div', { '.name': 'some-name', '^width': '100' }) // class 和 style 具有与模板中相同的对象/数组值支持 h('div', { class: [foo, { bar }], style: { color: 'red' } }) // 事件监听器应该以 onxxx 形式传递 h('div', { onclick: () => {} }) // children 可以是字符串、数组或 renderable h('div', { id: 'foo' }, 'hello') h('div', 'hello') h('div', [h('span', 'hello')]) h('div', ['hello', h('span', 'hello')]) guide/extras/render-function"
+      "text": "const Message: FC<{ ready: boolean }> = props => props.ready ? <strong>ready</strong> : <span>waiting</span> const MultiRoot: FC = () => ( <> <div>one</div> <div>two</div> </> )",
+      "searchText": "编译 jsx 与动态渲染 创建渲染输出 const message: fc<{ ready: boolean }> = props => props.ready ? <strong>ready</strong> : <span>waiting</span> const multiroot: fc = () => ( <> <div>one</div> <div>two</div> </> ) guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:14",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "创建渲染输出",
-      "type": "paragraph",
-      "text": "当你显式操作这类公开渲染输出对象时，通常会看到下面这些公开字段：",
-      "searchText": "渲染函数与 jsx 创建渲染输出 当你显式操作这类公开渲染输出对象时，通常会看到下面这些公开字段： guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#control-flow",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "条件与列表",
+      "type": "heading",
+      "text": "条件与列表",
+      "searchText": "编译 jsx 与动态渲染 条件与列表 条件与列表 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:15",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "创建渲染输出",
-      "type": "code",
-      "text": "const output = h('div', { id: 'foo' }, []) output.type output.props output.children output.key",
-      "searchText": "渲染函数与 jsx 创建渲染输出 const output = h('div', { id: 'foo' }, []) output.type output.props output.children output.key guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#control-flow",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "条件与列表",
+      "type": "paragraph",
+      "text": "使用 JavaScript 表达式描述条件和列表：",
+      "searchText": "编译 jsx 与动态渲染 条件与列表 使用 javascript 表达式描述条件和列表： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:16",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#creating-render-output",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "创建渲染输出",
-      "type": "paragraph",
-      "text": ":::warning 注意 不要依赖公开字段之外的内部属性。Rue 当前的公开渲染输出会继续随运行时演进而调整。 :::",
-      "searchText": "渲染函数与 jsx 创建渲染输出 :::warning 注意 不要依赖公开字段之外的内部属性。rue 当前的公开渲染输出会继续随运行时演进而调整。 ::: guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#control-flow",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "条件与列表",
+      "type": "code",
+      "text": "import { ref, type FC } from '@rue-js/rue' const TodoList: FC = () => { const showDone = ref(false) const items = ref([ { id: 1, text: '编译 JSX', done: true }, { id: 2, text: '运行验证', done: false }, ]) return ( <ul> {items.value .filter(item => showDone.value || !item.done) .map(item => ( <li key={item.id}>{item.text}</li> ))} </ul> ) }",
+      "searchText": "编译 jsx 与动态渲染 条件与列表 import { ref, type fc } from '@rue-js/rue' const todolist: fc = () => { const showdone = ref(false) const items = ref([ { id: 1, text: '编译 jsx', done: true }, { id: 2, text: '运行验证', done: false }, ]) return ( <ul> {items.value .filter(item => showdone.value || !item.done) .map(item => ( <li key={item.id}>{item.text}</li> ))} </ul> ) } guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:17",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "heading",
-      "text": "声明渲染函数",
-      "searchText": "渲染函数与 jsx 声明渲染函数 声明渲染函数 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#control-flow",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "条件与列表",
+      "type": "paragraph",
+      "text": "稳定列表项应提供 key，以便编译器和运行时保持身份及 DOM 区间。",
+      "searchText": "编译 jsx 与动态渲染 条件与列表 稳定列表项应提供 key，以便编译器和运行时保持身份及 dom 区间。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:18",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "paragraph",
-      "text": "在 Rue 当前的 FC 模式下，函数组件本身就是渲染函数。你直接返回渲染输出即可，不需要再额外返回一个 () => ...。",
-      "searchText": "渲染函数与 jsx 声明渲染函数 在 rue 当前的 fc 模式下，函数组件本身就是渲染函数。你直接返回渲染输出即可，不需要再额外返回一个 () => ...。 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#events-and-attributes",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "事件和属性",
+      "type": "heading",
+      "text": "事件和属性",
+      "searchText": "编译 jsx 与动态渲染 事件和属性 事件和属性 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:19",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "code",
-      "text": "import { ref, h } from '@rue-js/rue' import type { FC } from '@rue-js/rue' interface Props { msg: string } const App: FC<Props> = props => { const count = ref(1) return h('div', `${props.msg} ${count.value}`) }",
-      "searchText": "渲染函数与 jsx 声明渲染函数 import { ref, h } from '@rue-js/rue' import type { fc } from '@rue-js/rue' interface props { msg: string } const app: fc<props> = props => { const count = ref(1) return h('div', `${props.msg} ${count.value}`) } guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#events-and-attributes",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "事件和属性",
+      "type": "paragraph",
+      "text": "事件监听器使用 onXxx props；DOM 属性、attribute、class 和 style 直接写在 JSX 上：",
+      "searchText": "编译 jsx 与动态渲染 事件和属性 事件监听器使用 onxxx props；dom 属性、attribute、class 和 style 直接写在 jsx 上： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:20",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "paragraph",
-      "text": "除了返回单个节点，你还可以直接返回字符串或数组：",
-      "searchText": "渲染函数与 jsx 声明渲染函数 除了返回单个节点，你还可以直接返回字符串或数组： guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#events-and-attributes",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "事件和属性",
+      "type": "code",
+      "text": "<button class={active.value ? 'active' : ''} aria-pressed={active.value} onClick={() => (active.value = !active.value)} > 切换 </button>",
+      "searchText": "编译 jsx 与动态渲染 事件和属性 <button class={active.value ? 'active' : ''} aria-pressed={active.value} onclick={() => (active.value = !active.value)} > 切换 </button> guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:21",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "code",
-      "text": "import type { FC } from '@rue-js/rue' const TextOnly: FC = () => 'hello world!'",
-      "searchText": "渲染函数与 jsx 声明渲染函数 import type { fc } from '@rue-js/rue' const textonly: fc = () => 'hello world!' guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#events-and-attributes",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "事件和属性",
+      "type": "paragraph",
+      "text": ".passive、.capture 和 .once 可以拼在事件名后，例如 onClickCapture 和 onKeyupOnce。其他控制逻辑直接写在处理器中。",
+      "searchText": "编译 jsx 与动态渲染 事件和属性 .passive、.capture 和 .once 可以拼在事件名后，例如 onclickcapture 和 onkeyuponce。其他控制逻辑直接写在处理器中。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:22",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "code",
-      "text": "import { h } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const MultiRoot: FC = () => [h('div', 'one'), h('div', 'two'), h('div', 'three')]",
-      "searchText": "渲染函数与 jsx 声明渲染函数 import { h } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const multiroot: fc = () => [h('div', 'one'), h('div', 'two'), h('div', 'three')] guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "组件与动态身份",
+      "type": "heading",
+      "text": "组件与动态身份",
+      "searchText": "编译 jsx 与动态渲染 组件与动态身份 组件与动态身份 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:23",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
+      "href": "/guide/guide/extras/render-function#components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "组件与动态身份",
       "type": "paragraph",
-      "text": ":::tip 如果你在旧文档或旧代码里见到 return () => ...，那通常对应的是早期 setup() 风格写法，不是 Rue 当前推荐的 FC 组件签名。 :::",
-      "searchText": "渲染函数与 jsx 声明渲染函数 :::tip 如果你在旧文档或旧代码里见到 return () => ...，那通常对应的是早期 setup() 风格写法，不是 rue 当前推荐的 fc 组件签名。 ::: guide/extras/render-function"
+      "text": "已知组件直接使用其 JSX 标签：",
+      "searchText": "编译 jsx 与动态渲染 组件与动态身份 已知组件直接使用其 jsx 标签： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:24",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "paragraph",
-      "text": "如果组件不需要额外状态，也可以直接写成普通函数：",
-      "searchText": "渲染函数与 jsx 声明渲染函数 如果组件不需要额外状态，也可以直接写成普通函数： guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "组件与动态身份",
+      "type": "code",
+      "text": "import UserCard from './UserCard' const Profile = () => ( <section> <UserCard name=\"Rue\" /> </section> )",
+      "searchText": "编译 jsx 与动态渲染 组件与动态身份 import usercard from './usercard' const profile = () => ( <section> <usercard name=\"rue\" /> </section> ) guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:25",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#declaring-render-functions",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "声明渲染函数",
-      "type": "code",
-      "text": "function Hello() { return 'hello world!' }",
-      "searchText": "渲染函数与 jsx 声明渲染函数 function hello() { return 'hello world!' } guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "组件与动态身份",
+      "type": "paragraph",
+      "text": "如果标签或组件身份直到运行时才确定，使用公开的 边界：",
+      "searchText": "编译 jsx 与动态渲染 组件与动态身份 如果标签或组件身份直到运行时才确定，使用公开的 边界： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:26",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染输出必须唯一",
-      "type": "heading",
-      "text": "渲染输出必须唯一",
-      "searchText": "渲染函数与 jsx 渲染输出必须唯一 渲染输出必须唯一 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "组件与动态身份",
+      "type": "code",
+      "text": "import { Component, type FC } from '@rue-js/rue' const DynamicPanel: FC<{ as: string | FC }> = props => ( <Component is={props.as} className=\"panel\"> 动态内容 </Component> )",
+      "searchText": "编译 jsx 与动态渲染 组件与动态身份 import { component, type fc } from '@rue-js/rue' const dynamicpanel: fc<{ as: string | fc }> = props => ( <component is={props.as} classname=\"panel\"> 动态内容 </component> ) guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:27",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染输出必须唯一",
+      "href": "/guide/guide/extras/render-function#components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "组件与动态身份",
       "type": "paragraph",
-      "text": "同一个输出对象不要在一次渲染里重复复用。这个规则同样适用于你手动持有的 DOM / block / renderable 边界。",
-      "searchText": "渲染函数与 jsx 渲染输出必须唯一 同一个输出对象不要在一次渲染里重复复用。这个规则同样适用于你手动持有的 dom / block / renderable 边界。 guide/extras/render-function"
+      "text": "is 支持原生标签名、组件函数和已注册组件名。不要为了静态节点使用动态边界；直接 TSX 能提供更精确的编译结果。",
+      "searchText": "编译 jsx 与动态渲染 组件与动态身份 is 支持原生标签名、组件函数和已注册组件名。不要为了静态节点使用动态边界；直接 tsx 能提供更精确的编译结果。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:28",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染输出必须唯一",
-      "type": "code",
-      "text": "function render() { const p = h('p', 'hi') return h('div', [p, p]) }",
-      "searchText": "渲染函数与 jsx 渲染输出必须唯一 function render() { const p = h('p', 'hi') return h('div', [p, p]) } guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#rendering-slots",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Children、具名内容与 render prop",
+      "type": "heading",
+      "text": "Children、具名内容与 render prop",
+      "searchText": "编译 jsx 与动态渲染 children、具名内容与 render prop children、具名内容与 render prop guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:29",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染输出必须唯一",
+      "href": "/guide/guide/extras/render-function#rendering-slots",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Children、具名内容与 render prop",
       "type": "paragraph",
-      "text": "如果你需要多个相同节点，请为每一项重新创建：",
-      "searchText": "渲染函数与 jsx 渲染输出必须唯一 如果你需要多个相同节点，请为每一项重新创建： guide/extras/render-function"
+      "text": "默认内容读取 props.children。具名内容使用显式命名 props；需要把数据传回父组件时使用函数 prop：",
+      "searchText": "编译 jsx 与动态渲染 children、具名内容与 render prop 默认内容读取 props.children。具名内容使用显式命名 props；需要把数据传回父组件时使用函数 prop： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:30",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#vnodes-must-be-unique",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染输出必须唯一",
+      "href": "/guide/guide/extras/render-function#rendering-slots",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Children、具名内容与 render prop",
       "type": "code",
-      "text": "function render() { return h( 'div', Array.from({ length: 20 }).map(() => h('p', 'hi')), ) }",
-      "searchText": "渲染函数与 jsx 渲染输出必须唯一 function render() { return h( 'div', array.from({ length: 20 }).map(() => h('p', 'hi')), ) } guide/extras/render-function"
+      "text": "import type { FC, RenderableOutput } from '@rue-js/rue' interface LayoutProps { footer?: (text: string) => RenderableOutput children?: RenderableOutput } const Layout: FC<LayoutProps> = props => ( <section> <main>{props.children}</main> <footer>{props.footer?.('状态正常')}</footer> </section> ) const Page = () => <Layout footer={text => <small>{text}</small>}>正文</Layout>",
+      "searchText": "编译 jsx 与动态渲染 children、具名内容与 render prop import type { fc, renderableoutput } from '@rue-js/rue' interface layoutprops { footer?: (text: string) => renderableoutput children?: renderableoutput } const layout: fc<layoutprops> = props => ( <section> <main>{props.children}</main> <footer>{props.footer?.('状态正常')}</footer> </section> ) const page = () => <layout footer={text => <small>{text}</small>}>正文</layout> guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:31",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-tsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX / TSX",
+      "href": "/guide/guide/extras/render-function#built-in-components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "内置组件",
       "type": "heading",
-      "text": "JSX / TSX",
-      "searchText": "渲染函数与 jsx jsx / tsx jsx / tsx guide/extras/render-function"
+      "text": "内置组件",
+      "searchText": "编译 jsx 与动态渲染 内置组件 内置组件 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:32",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-tsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX / TSX",
+      "href": "/guide/guide/extras/render-function#built-in-components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "内置组件",
       "type": "paragraph",
-      "text": "JSX 允许你用更接近模板的方式编写渲染逻辑：",
-      "searchText": "渲染函数与 jsx jsx / tsx jsx 允许你用更接近模板的方式编写渲染逻辑： guide/extras/render-function"
+      "text": "内置组件和普通组件一样显式导入并在 TSX 中使用：",
+      "searchText": "编译 jsx 与动态渲染 内置组件 内置组件和普通组件一样显式导入并在 tsx 中使用： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:33",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-tsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX / TSX",
+      "href": "/guide/guide/extras/render-function#built-in-components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "内置组件",
       "type": "code",
-      "text": "const output = <div>hello</div>",
-      "searchText": "渲染函数与 jsx jsx / tsx const output = <div>hello</div> guide/extras/render-function"
+      "text": "import { Teleport, Transition, TransitionGroup } from '@rue-js/rue' const Overlay = () => ( <Teleport to=\"body\"> <Transition mode=\"out-in\"> <div>overlay</div> </Transition> </Teleport> )",
+      "searchText": "编译 jsx 与动态渲染 内置组件 import { teleport, transition, transitiongroup } from '@rue-js/rue' const overlay = () => ( <teleport to=\"body\"> <transition mode=\"out-in\"> <div>overlay</div> </transition> </teleport> ) guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:34",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-tsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX / TSX",
-      "type": "code",
-      "text": "const output = <div id={dynamicId}>hello, {userName}</div>",
-      "searchText": "渲染函数与 jsx jsx / tsx const output = <div id={dynamicid}>hello, {username}</div> guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#template-refs",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "模板 refs",
+      "type": "heading",
+      "text": "模板 refs",
+      "searchText": "编译 jsx 与动态渲染 模板 refs 模板 refs guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:35",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-tsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX / TSX",
+      "href": "/guide/guide/extras/render-function#template-refs",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "模板 refs",
       "type": "paragraph",
-      "text": "Rue 的 JSX 与 React JSX 有两点最容易混淆的区别：",
-      "searchText": "渲染函数与 jsx jsx / tsx rue 的 jsx 与 react jsx 有两点最容易混淆的区别： guide/extras/render-function"
+      "text": "在 JSX 路径中使用 useRef() 返回的容器或函数 ref 持有 DOM / 组件实例。模板 ref 与带 .value 的响应式 ref 是两类不同概念。",
+      "searchText": "编译 jsx 与动态渲染 模板 refs 在 jsx 路径中使用 useref() 返回的容器或函数 ref 持有 dom / 组件实例。模板 ref 与带 .value 的响应式 ref 是两类不同概念。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:36",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-tsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX / TSX",
-      "type": "list",
-      "text": "你可以直接使用 class 和 for，无需改写成 className 或 htmlFor 组件 children 最终会落到 props.children 或显式命名 props，而不是默认套入额外的 slots 上下文",
-      "searchText": "渲染函数与 jsx jsx / tsx 你可以直接使用 class 和 for，无需改写成 classname 或 htmlfor 组件 children 最终会落到 props.children 或显式命名 props，而不是默认套入额外的 slots 上下文 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#functional-components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "函数组件类型",
+      "type": "heading",
+      "text": "函数组件类型",
+      "searchText": "编译 jsx 与动态渲染 函数组件类型 函数组件类型 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:37",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-tsx",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX / TSX",
+      "href": "/guide/guide/extras/render-function#functional-components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "函数组件类型",
       "type": "paragraph",
-      "text": "Rue 的 JSX 编译会优先落到当前的 Renderable / Block 执行模型。",
-      "searchText": "渲染函数与 jsx jsx / tsx rue 的 jsx 编译会优先落到当前的 renderable / block 执行模型。 guide/extras/render-function"
+      "text": "使用 FC 标注函数组件；需要 render prop 时将函数签名声明到 props：",
+      "searchText": "编译 jsx 与动态渲染 函数组件类型 使用 fc 标注函数组件；需要 render prop 时将函数签名声明到 props： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:38",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-type-inference",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX 类型推断",
-      "type": "heading",
-      "text": "JSX 类型推断",
-      "searchText": "渲染函数与 jsx jsx 类型推断 jsx 类型推断 guide/extras/render-function"
+      "href": "/guide/guide/extras/render-function#functional-components",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "函数组件类型",
+      "type": "code",
+      "text": "import type { FC, RenderableOutput } from '@rue-js/rue' interface ListProps { items: string[] children?: (item: string, index: number) => RenderableOutput } const List: FC<ListProps> = props => ( <ul> {props.items.map((item, index) => ( <li key={item}>{props.children?.(item, index) ?? item}</li> ))} </ul> )",
+      "searchText": "编译 jsx 与动态渲染 函数组件类型 import type { fc, renderableoutput } from '@rue-js/rue' interface listprops { items: string[] children?: (item: string, index: number) => renderableoutput } const list: fc<listprops> = props => ( <ul> {props.items.map((item, index) => ( <li key={item}>{props.children?.(item, index) ?? item}</li> ))} </ul> ) guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:39",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-type-inference",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX 类型推断",
-      "type": "paragraph",
-      "text": "使用 TSX 时，请确保 tsconfig.json 中保留 JSX 语法给 Rue 的转换器处理：",
-      "searchText": "渲染函数与 jsx jsx 类型推断 使用 tsx 时，请确保 tsconfig.json 中保留 jsx 语法给 rue 的转换器处理： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:40",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-type-inference",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX 类型推断",
-      "type": "code",
-      "text": "{ \"compilerOptions\": { \"jsx\": \"preserve\", \"jsxImportSource\": \"@rue-js/rue\" } }",
-      "searchText": "渲染函数与 jsx jsx 类型推断 { \"compileroptions\": { \"jsx\": \"preserve\", \"jsximportsource\": \"@rue-js/rue\" } } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:41",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#jsx-type-inference",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "JSX 类型推断",
-      "type": "paragraph",
-      "text": "你也可以在单个文件顶部使用 / @jsxImportSource @rue-js/rue /。",
-      "searchText": "渲染函数与 jsx jsx 类型推断 你也可以在单个文件顶部使用 / @jsximportsource @rue-js/rue /。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:42",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#render-function-recipes",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染函数配方",
-      "type": "heading",
-      "text": "渲染函数配方",
-      "searchText": "渲染函数与 jsx 渲染函数配方 渲染函数配方 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:43",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#render-function-recipes",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染函数配方",
-      "type": "paragraph",
-      "text": "下面是一些模板能力对应的渲染函数 / JSX 写法。",
-      "searchText": "渲染函数与 jsx 渲染函数配方 下面是一些模板能力对应的渲染函数 / jsx 写法。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:44",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-if",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-if",
-      "type": "heading",
-      "text": "v-if",
-      "searchText": "渲染函数与 jsx v-if v-if guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:45",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-if",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-if",
-      "type": "paragraph",
-      "text": "模板：",
-      "searchText": "渲染函数与 jsx v-if 模板： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:46",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-if",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-if",
-      "type": "code",
-      "text": "<div> <div v-if={ok.value}>yes</div> <span v-else>no</span> </div>",
-      "searchText": "渲染函数与 jsx v-if <div> <div v-if={ok.value}>yes</div> <span v-else>no</span> </div> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:47",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-if",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-if",
-      "type": "paragraph",
-      "text": "等效渲染函数 / JSX：",
-      "searchText": "渲染函数与 jsx v-if 等效渲染函数 / jsx： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:48",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-if",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-if",
-      "type": "code",
-      "text": "import { h, ref } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const App: FC = () => { const ok = ref(true) return h('div', [ok.value ? h('div', 'yes') : h('span', 'no')]) }",
-      "searchText": "渲染函数与 jsx v-if import { h, ref } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = () => { const ok = ref(true) return h('div', [ok.value ? h('div', 'yes') : h('span', 'no')]) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:49",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-if",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-if",
-      "type": "code",
-      "text": "<div>{ok.value ? <div>yes</div> : <span>no</span>}</div>",
-      "searchText": "渲染函数与 jsx v-if <div>{ok.value ? <div>yes</div> : <span>no</span>}</div> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:50",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-for",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-for",
-      "type": "heading",
-      "text": "v-for",
-      "searchText": "渲染函数与 jsx v-for v-for guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:51",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-for",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-for",
-      "type": "paragraph",
-      "text": "模板：",
-      "searchText": "渲染函数与 jsx v-for 模板： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:52",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-for",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-for",
-      "type": "code",
-      "text": "<ul> <li v-for=\"{ id, text } in items.value\" key={id}> {text} </li> </ul>",
-      "searchText": "渲染函数与 jsx v-for <ul> <li v-for=\"{ id, text } in items.value\" key={id}> {text} </li> </ul> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:53",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-for",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-for",
-      "type": "paragraph",
-      "text": "等效渲染函数 / JSX：",
-      "searchText": "渲染函数与 jsx v-for 等效渲染函数 / jsx： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:54",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-for",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-for",
-      "type": "code",
-      "text": "import { h, ref } from '@rue-js/rue' import type { FC } from '@rue-js/rue' interface Item { id: number text: string } const App: FC = () => { const items = ref<Item[]>([ { id: 1, text: 'Item 1' }, { id: 2, text: 'Item 2' }, ]) return h( 'ul', items.value.map(({ id, text }) => h('li', { key: id }, text)), ) }",
-      "searchText": "渲染函数与 jsx v-for import { h, ref } from '@rue-js/rue' import type { fc } from '@rue-js/rue' interface item { id: number text: string } const app: fc = () => { const items = ref<item[]>([ { id: 1, text: 'item 1' }, { id: 2, text: 'item 2' }, ]) return h( 'ul', items.value.map(({ id, text }) => h('li', { key: id }, text)), ) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:55",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-for",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-for",
-      "type": "code",
-      "text": "<ul> {items.value.map(({ id, text }) => ( <li key={id}>{text}</li> ))} </ul>",
-      "searchText": "渲染函数与 jsx v-for <ul> {items.value.map(({ id, text }) => ( <li key={id}>{text}</li> ))} </ul> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:56",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-on",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-on",
-      "type": "heading",
-      "text": "v-on",
-      "searchText": "渲染函数与 jsx v-on v-on guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:57",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-on",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-on",
-      "type": "paragraph",
-      "text": "以 on 开头后跟大写字母的 prop 名称会被视为事件监听器：",
-      "searchText": "渲染函数与 jsx v-on 以 on 开头后跟大写字母的 prop 名称会被视为事件监听器： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:58",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-on",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-on",
-      "type": "code",
-      "text": "import { h } from '@rue-js/rue' h( 'button', { onClick(event: MouseEvent) { /* ... */ }, }, '点击我', )",
-      "searchText": "渲染函数与 jsx v-on import { h } from '@rue-js/rue' h( 'button', { onclick(event: mouseevent) { /* ... */ }, }, '点击我', ) guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:59",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-on",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-on",
-      "type": "code",
-      "text": "<button onClick={event => { /* ... */ }} > 点击我 </button>",
-      "searchText": "渲染函数与 jsx v-on <button onclick={event => { /* ... */ }} > 点击我 </button> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:60",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#event-modifiers",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "事件修饰符",
-      "type": "heading",
-      "text": "事件修饰符",
-      "searchText": "渲染函数与 jsx 事件修饰符 事件修饰符 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:61",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#event-modifiers",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "事件修饰符",
-      "type": "paragraph",
-      "text": ".passive、.capture 和 .once 可以直接拼在事件名后面：",
-      "searchText": "渲染函数与 jsx 事件修饰符 .passive、.capture 和 .once 可以直接拼在事件名后面： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:62",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#event-modifiers",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "事件修饰符",
-      "type": "code",
-      "text": "h('input', { onClickCapture() { /* capture */ }, onKeyupOnce() { /* once */ }, onMouseoverOnceCapture() { /* once + capture */ }, })",
-      "searchText": "渲染函数与 jsx 事件修饰符 h('input', { onclickcapture() { /* capture */ }, onkeyuponce() { /* once */ }, onmouseoveroncecapture() { /* once + capture */ }, }) guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:63",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#event-modifiers",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "事件修饰符",
-      "type": "code",
-      "text": "<input onClickCapture={() => {}} onKeyupOnce={() => {}} onMouseoverOnceCapture={() => {}} />",
-      "searchText": "渲染函数与 jsx 事件修饰符 <input onclickcapture={() => {}} onkeyuponce={() => {}} onmouseoveroncecapture={() => {}} /> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:64",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#event-modifiers",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "事件修饰符",
-      "type": "paragraph",
-      "text": "其他修饰符可以直接写在处理器中，或在 TSX 模板中使用 v-on / r-on 事件指令：",
-      "searchText": "渲染函数与 jsx 事件修饰符 其他修饰符可以直接写在处理器中，或在 tsx 模板中使用 v-on / r-on 事件指令： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:65",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#event-modifiers",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "事件修饰符",
-      "type": "code",
-      "text": "h('div', { onClick(event) { if (event.target !== event.currentTarget) return // ... }, })",
-      "searchText": "渲染函数与 jsx 事件修饰符 h('div', { onclick(event) { if (event.target !== event.currenttarget) return // ... }, }) guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:66",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "组件",
-      "type": "heading",
-      "text": "组件",
-      "searchText": "渲染函数与 jsx 组件 组件 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:67",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "组件",
-      "type": "paragraph",
-      "text": "要为组件创建输出，传给 h() 的第一个参数应该是组件本身：",
-      "searchText": "渲染函数与 jsx 组件 要为组件创建输出，传给 h() 的第一个参数应该是组件本身： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:68",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "组件",
-      "type": "code",
-      "text": "import Foo from './Foo.tsx' import Bar from './Bar.tsx' function render() { return h('div', [h(Foo), h(Bar)]) }",
-      "searchText": "渲染函数与 jsx 组件 import foo from './foo.tsx' import bar from './bar.tsx' function render() { return h('div', [h(foo), h(bar)]) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:69",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "组件",
-      "type": "code",
-      "text": "function render() { return ( <div> <Foo /> <Bar /> </div> ) }",
-      "searchText": "渲染函数与 jsx 组件 function render() { return ( <div> <foo /> <bar /> </div> ) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:70",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "组件",
-      "type": "paragraph",
-      "text": "动态组件同样直接通过条件表达式切换：",
-      "searchText": "渲染函数与 jsx 组件 动态组件同样直接通过条件表达式切换： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:71",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "组件",
-      "type": "code",
-      "text": "function render() { return ok.value ? h(Foo) : h(Bar) }",
-      "searchText": "渲染函数与 jsx 组件 function render() { return ok.value ? h(foo) : h(bar) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:72",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "组件",
-      "type": "paragraph",
-      "text": "Rue 当前更推荐直接导入组件。默认主入口不再另外文档化按名称解析组件的渲染函数 helper。",
-      "searchText": "渲染函数与 jsx 组件 rue 当前更推荐直接导入组件。默认主入口不再另外文档化按名称解析组件的渲染函数 helper。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:73",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#rendering-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染插槽",
-      "type": "heading",
-      "text": "渲染插槽",
-      "searchText": "渲染函数与 jsx 渲染插槽 渲染插槽 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:74",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#rendering-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染插槽",
-      "type": "paragraph",
-      "text": "Rue 当前更推荐把插槽理解成普通 props：",
-      "searchText": "渲染函数与 jsx 渲染插槽 rue 当前更推荐把插槽理解成普通 props： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:75",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#rendering-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染插槽",
-      "type": "list",
-      "text": "默认插槽读取 props.children 具名插槽通常建模成显式命名 props，如 header、footer 作用域插槽则是“函数作为 children / prop”",
-      "searchText": "渲染函数与 jsx 渲染插槽 默认插槽读取 props.children 具名插槽通常建模成显式命名 props，如 header、footer 作用域插槽则是“函数作为 children / prop” guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:76",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#rendering-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染插槽",
-      "type": "code",
-      "text": "import { h } from '@rue-js/rue' import type { FC, RenderableOutput } from '@rue-js/rue' interface LayoutProps { message: string footer?: (scope: { text: string }) => RenderableOutput children?: RenderableOutput } const Layout: FC<LayoutProps> = props => { return h('section', [ h('div', props.children), h('footer', props.footer?.({ text: props.message }) ?? null), ]) }",
-      "searchText": "渲染函数与 jsx 渲染插槽 import { h } from '@rue-js/rue' import type { fc, renderableoutput } from '@rue-js/rue' interface layoutprops { message: string footer?: (scope: { text: string }) => renderableoutput children?: renderableoutput } const layout: fc<layoutprops> = props => { return h('section', [ h('div', props.children), h('footer', props.footer?.({ text: props.message }) ?? null), ]) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:77",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#rendering-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染插槽",
-      "type": "paragraph",
-      "text": "JSX 中同样如此：",
-      "searchText": "渲染函数与 jsx 渲染插槽 jsx 中同样如此： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:78",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#rendering-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "渲染插槽",
-      "type": "code",
-      "text": "function Layout(props: LayoutProps) { return ( <section> <div>{props.children}</div> <footer>{props.footer?.({ text: props.message })}</footer> </section> ) }",
-      "searchText": "渲染函数与 jsx 渲染插槽 function layout(props: layoutprops) { return ( <section> <div>{props.children}</div> <footer>{props.footer?.({ text: props.message })}</footer> </section> ) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:79",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#passing-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "传递插槽",
-      "type": "heading",
-      "text": "传递插槽",
-      "searchText": "渲染函数与 jsx 传递插槽 传递插槽 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:80",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#passing-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "传递插槽",
-      "type": "paragraph",
-      "text": "传递默认内容时，直接把 children 放到第三个参数或 JSX 子节点里即可；传递具名内容时，使用显式命名 props。",
-      "searchText": "渲染函数与 jsx 传递插槽 传递默认内容时，直接把 children 放到第三个参数或 jsx 子节点里即可；传递具名内容时，使用显式命名 props。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:81",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#passing-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "传递插槽",
-      "type": "code",
-      "text": "// 默认内容 h(Layout, { message: 'hello' }, 'body') // 具名内容 h( Layout, { message: 'hello', footer: ({ text }) => h('small', text), }, 'body', )",
-      "searchText": "渲染函数与 jsx 传递插槽 // 默认内容 h(layout, { message: 'hello' }, 'body') // 具名内容 h( layout, { message: 'hello', footer: ({ text }) => h('small', text), }, 'body', ) guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:82",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#passing-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "传递插槽",
-      "type": "code",
-      "text": "<Layout message=\"hello\">body</Layout> <Layout message=\"hello\" footer={({ text }) => <small>{text}</small>}> body </Layout>",
-      "searchText": "渲染函数与 jsx 传递插槽 <layout message=\"hello\">body</layout> <layout message=\"hello\" footer={({ text }) => <small>{text}</small>}> body </layout> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:83",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#passing-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "传递插槽",
-      "type": "paragraph",
-      "text": "如果你需要把调用时机延迟到子组件内部，就把 children 本身写成函数。",
-      "searchText": "渲染函数与 jsx 传递插槽 如果你需要把调用时机延迟到子组件内部，就把 children 本身写成函数。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:84",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#scoped-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "作用域插槽",
-      "type": "heading",
-      "text": "作用域插槽",
-      "searchText": "渲染函数与 jsx 作用域插槽 作用域插槽 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:85",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#scoped-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "作用域插槽",
-      "type": "paragraph",
-      "text": "作用域插槽在 Rue 中就是 render prop：父组件把函数传给子组件，子组件在合适的时机调用，并把自己的数据作为参数传回去。",
-      "searchText": "渲染函数与 jsx 作用域插槽 作用域插槽在 rue 中就是 render prop：父组件把函数传给子组件，子组件在合适的时机调用，并把自己的数据作为参数传回去。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:86",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#scoped-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "作用域插槽",
-      "type": "code",
-      "text": "import { h, ref } from '@rue-js/rue' import type { FC, RenderableOutput } from '@rue-js/rue' interface ChildProps { children?: (scope: { text: string }) => RenderableOutput } const Child: FC<ChildProps> = props => { const text = ref('hi') return h('div', props.children?.({ text: text.value }) ?? null) } const Parent: FC = () => h(Child, ({ text }) => h('p', text))",
-      "searchText": "渲染函数与 jsx 作用域插槽 import { h, ref } from '@rue-js/rue' import type { fc, renderableoutput } from '@rue-js/rue' interface childprops { children?: (scope: { text: string }) => renderableoutput } const child: fc<childprops> = props => { const text = ref('hi') return h('div', props.children?.({ text: text.value }) ?? null) } const parent: fc = () => h(child, ({ text }) => h('p', text)) guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:87",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#scoped-slots",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "作用域插槽",
-      "type": "code",
-      "text": "<Child>{({ text }) => <p>{text}</p>}</Child>",
-      "searchText": "渲染函数与 jsx 作用域插槽 <child>{({ text }) => <p>{text}</p>}</child> guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:88",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#built-in-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "内置组件",
-      "type": "heading",
-      "text": "内置组件",
-      "searchText": "渲染函数与 jsx 内置组件 内置组件 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:89",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#built-in-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "内置组件",
-      "type": "paragraph",
-      "text": "渲染函数里使用内置组件时，直接导入它们即可。当前文档中的核心内置组件包括 Teleport、Transition 和 TransitionGroup：",
-      "searchText": "渲染函数与 jsx 内置组件 渲染函数里使用内置组件时，直接导入它们即可。当前文档中的核心内置组件包括 teleport、transition 和 transitiongroup： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:90",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#built-in-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "内置组件",
-      "type": "code",
-      "text": "import { h, Teleport, Transition, TransitionGroup } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const App: FC = () => h(Transition, { mode: 'out-in' })",
-      "searchText": "渲染函数与 jsx 内置组件 import { h, teleport, transition, transitiongroup } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = () => h(transition, { mode: 'out-in' }) guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:91",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#built-in-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "内置组件",
-      "type": "paragraph",
-      "text": "这些组件在默认路径下同样直接消费 Renderable / children，而不要求你手动构造旧的对象桥接层。",
-      "searchText": "渲染函数与 jsx 内置组件 这些组件在默认路径下同样直接消费 renderable / children，而不要求你手动构造旧的对象桥接层。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:92",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-model",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-model",
-      "type": "heading",
-      "text": "v-model",
-      "searchText": "渲染函数与 jsx v-model v-model guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:93",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-model",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-model",
-      "type": "paragraph",
-      "text": "v-model 在手写渲染函数里需要你显式提供 modelValue 和 onUpdateModelValue：",
-      "searchText": "渲染函数与 jsx v-model v-model 在手写渲染函数里需要你显式提供 modelvalue 和 onupdatemodelvalue： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:94",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#v-model",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "v-model",
-      "type": "code",
-      "text": "import type { FC } from '@rue-js/rue' interface Props { modelValue: string onUpdateModelValue?: (value: string) => void } const MyInput: FC<Props> = props => { return ( <input value={props.modelValue} onInput={event => props.onUpdateModelValue?.((event.target as HTMLInputElement).value)} /> ) }",
-      "searchText": "渲染函数与 jsx v-model import type { fc } from '@rue-js/rue' interface props { modelvalue: string onupdatemodelvalue?: (value: string) => void } const myinput: fc<props> = props => { return ( <input value={props.modelvalue} oninput={event => props.onupdatemodelvalue?.((event.target as htmlinputelement).value)} /> ) } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:95",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#template-refs",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "模板 Refs",
-      "type": "heading",
-      "text": "模板 Refs",
-      "searchText": "渲染函数与 jsx 模板 refs 模板 refs guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:96",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#template-refs",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "模板 Refs",
-      "type": "paragraph",
-      "text": "模板 ref 当前更适合在模板或 JSX 路径中使用。对于手写 h() 边界，如需获取节点引用，优先通过显式回调 props、对象 ref、原始 DOM 节点或 mount handle 来建模，而不是再假设存在额外的旧式 ref 收集机制。",
-      "searchText": "渲染函数与 jsx 模板 refs 模板 ref 当前更适合在模板或 jsx 路径中使用。对于手写 h() 边界，如需获取节点引用，优先通过显式回调 props、对象 ref、原始 dom 节点或 mount handle 来建模，而不是再假设存在额外的旧式 ref 收集机制。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:97",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件",
-      "type": "heading",
-      "text": "函数式组件",
-      "searchText": "渲染函数与 jsx 函数式组件 函数式组件 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:98",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "函数组件类型",
       "type": "paragraph",
-      "text": "Rue 当前的函数式组件就是普通 FC：接收 props，直接返回渲染输出。它不需要 this，也不依赖额外的 setup 上下文。",
-      "searchText": "渲染函数与 jsx 函数式组件 rue 当前的函数式组件就是普通 fc：接收 props，直接返回渲染输出。它不需要 this，也不依赖额外的 setup 上下文。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:99",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件",
-      "type": "code",
-      "text": "import type { FC } from '@rue-js/rue' interface Props { message: string onSendMessage?: (message: string) => void } const MyComponent: FC<Props> = props => { return <button onClick={() => props.onSendMessage?.(props.message)}>{props.message}</button> }",
-      "searchText": "渲染函数与 jsx 函数式组件 import type { fc } from '@rue-js/rue' interface props { message: string onsendmessage?: (message: string) => void } const mycomponent: fc<props> = props => { return <button onclick={() => props.onsendmessage?.(props.message)}>{props.message}</button> } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:100",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件",
-      "type": "paragraph",
-      "text": "如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 onSendMessage、onClose、onUpdateModelValue。如果组件需要默认内容或 render prop，则继续使用 props.children。",
-      "searchText": "渲染函数与 jsx 函数式组件 如果组件需要向父级发信号，优先把它建模成显式 callback props，例如 onsendmessage、onclose、onupdatemodelvalue。如果组件需要默认内容或 render prop，则继续使用 props.children。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:101",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件",
-      "type": "paragraph",
-      "text": "函数组件可以像普通组件一样被导入、注册和消费；把函数传给 h() 的第一个参数时，它就会被视为组件。",
-      "searchText": "渲染函数与 jsx 函数式组件 函数组件可以像普通组件一样被导入、注册和消费；把函数传给 h() 的第一个参数时，它就会被视为组件。 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:102",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#typing-functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件的类型定义",
-      "type": "heading",
-      "text": "函数式组件的类型定义",
-      "searchText": "渲染函数与 jsx 函数式组件的类型定义 函数式组件的类型定义 guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:103",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#typing-functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件的类型定义",
-      "type": "paragraph",
-      "text": "大多数场景下，直接给 FC 标注类型就够了：",
-      "searchText": "渲染函数与 jsx 函数式组件的类型定义 大多数场景下，直接给 fc 标注类型就够了： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:104",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#typing-functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件的类型定义",
-      "type": "code",
-      "text": "import type { FC } from '@rue-js/rue' interface MessageButtonProps { message: string onSendMessage?: (message: string) => void } const MessageButton: FC<MessageButtonProps> = props => { return <button onClick={() => props.onSendMessage?.(props.message)}>{props.message}</button> }",
-      "searchText": "渲染函数与 jsx 函数式组件的类型定义 import type { fc } from '@rue-js/rue' interface messagebuttonprops { message: string onsendmessage?: (message: string) => void } const messagebutton: fc<messagebuttonprops> = props => { return <button onclick={() => props.onsendmessage?.(props.message)}>{props.message}</button> } guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:105",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#typing-functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件的类型定义",
-      "type": "paragraph",
-      "text": "如果你的组件还要接受 render prop，可以继续把它声明在 props 里：",
-      "searchText": "渲染函数与 jsx 函数式组件的类型定义 如果你的组件还要接受 render prop，可以继续把它声明在 props 里： guide/extras/render-function"
-    },
-    {
-      "id": "guide/extras/render-function:106",
-      "docId": "guide/extras/render-function",
-      "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#typing-functional-components",
-      "title": "渲染函数与 JSX",
-      "sectionTitle": "函数式组件的类型定义",
-      "type": "code",
-      "text": "import type { FC, RenderableOutput } from '@rue-js/rue' interface ListProps { items: string[] children?: (item: string, index: number) => RenderableOutput } const List: FC<ListProps> = props => { return ( <ul> {props.items.map((item, index) => ( <li key={item}>{props.children?.(item, index) ?? item}</li> ))} </ul> ) }",
-      "searchText": "渲染函数与 jsx 函数式组件的类型定义 import type { fc, renderableoutput } from '@rue-js/rue' interface listprops { items: string[] children?: (item: string, index: number) => renderableoutput } const list: fc<listprops> = props => { return ( <ul> {props.items.map((item, index) => ( <li key={item}>{props.children?.(item, index) ?? item}</li> ))} </ul> ) } guide/extras/render-function"
+      "text": "编译器生成的 helper 和协议属于编译 ABI，不构成可手写的兼容接口。",
+      "searchText": "编译 jsx 与动态渲染 函数组件类型 编译器生成的 helper 和协议属于编译 abi，不构成可手写的兼容接口。 guide/extras/render-function"
     },
     {
       "id": "guide/extras/rendering-mechanism:0",
@@ -36256,8 +35552,8 @@
       "title": "渲染机制",
       "sectionTitle": "公开渲染输出",
       "type": "paragraph",
-      "text": "Rue 允许你手写 h() 或 JSX。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小输出。应用代码通常继续从 @rue-js/rue 导入；@rue-js/rue/compiled 和 @rue-js/rue/vapor 主要是编译产物和底层集成的入口，不需要为普通组件手动切换。",
-      "searchText": "渲染机制 公开渲染输出 rue 允许你手写 h() 或 jsx。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小输出。应用代码通常继续从 @rue-js/rue 导入；@rue-js/rue/compiled 和 @rue-js/rue/vapor 主要是编译产物和底层集成的入口，不需要为普通组件手动切换。 guide/extras/rendering-mechanism"
+      "text": "Rue 应用使用 JSX / TSX 描述输出。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小产物。应用代码通常继续从 @rue-js/rue 导入；@rue-js/rue/internal 是编译产物和底层集成的入口，不需要为普通组件手动切换。",
+      "searchText": "渲染机制 公开渲染输出 rue 应用使用 jsx / tsx 描述输出。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小产物。应用代码通常继续从 @rue-js/rue 导入；@rue-js/rue/internal 是编译产物和底层集成的入口，不需要为普通组件手动切换。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:5",
@@ -36278,8 +35574,8 @@
       "title": "渲染机制",
       "sectionTitle": "三层执行模型",
       "type": "list",
-      "text": "静态 DOM：没有 Rue 动态值的原生 JSX 会被直接编译成 DOM 创建与插入代码，Rue 值依赖为零。 Compiled core：Signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 DOM 核心，不依赖 createRue、JSX facade 或通用 Vapor helper。 Vapor fallback：手写 h()、未编译组件，以及 Hydration、Teleport、Transition、异步或不透明 renderable 等无法静态证明的能力进入兼容层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。",
-      "searchText": "渲染机制 三层执行模型 静态 dom：没有 rue 动态值的原生 jsx 会被直接编译成 dom 创建与插入代码，rue 值依赖为零。 compiled core：signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 dom 核心，不依赖 createrue、jsx facade 或通用 vapor helper。 vapor fallback：手写 h()、未编译组件，以及 hydration、teleport、transition、异步或不透明 renderable 等无法静态证明的能力进入兼容层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。 guide/extras/rendering-mechanism"
+      "text": "静态 DOM：没有 Rue 动态值的原生 JSX 会被直接编译成 DOM 创建与插入代码，Rue 值依赖为零。 Compiled core：Signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 DOM 核心，不依赖 createRue、JSX facade 或通用 Vapor helper。 Vapor fallback：Hydration、Teleport、Transition、异步或不透明 renderable 等无法静态证明的能力由编译器导向 Vapor 层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。",
+      "searchText": "渲染机制 三层执行模型 静态 dom：没有 rue 动态值的原生 jsx 会被直接编译成 dom 创建与插入代码，rue 值依赖为零。 compiled core：signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 dom 核心，不依赖 createrue、jsx facade 或通用 vapor helper。 vapor fallback：hydration、teleport、transition、异步或不透明 renderable 等无法静态证明的能力由编译器导向 vapor 层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:7",
@@ -36342,10 +35638,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
-      "sectionTitle": "模板与渲染函数",
+      "sectionTitle": "JSX 与动态渲染",
       "type": "heading",
-      "text": "模板与渲染函数",
-      "searchText": "渲染机制 模板与渲染函数 模板与渲染函数 guide/extras/rendering-mechanism"
+      "text": "JSX 与动态渲染",
+      "searchText": "渲染机制 jsx 与动态渲染 jsx 与动态渲染 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:13",
@@ -36353,10 +35649,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
-      "sectionTitle": "模板与渲染函数",
+      "sectionTitle": "JSX 与动态渲染",
       "type": "paragraph",
-      "text": "Rue 依然支持手写渲染函数，但默认推荐模板或普通 JSX，原因和以前不同了：",
-      "searchText": "渲染机制 模板与渲染函数 rue 依然支持手写渲染函数，但默认推荐模板或普通 jsx，原因和以前不同了： guide/extras/rendering-mechanism"
+      "text": "普通 JSX 是 Rue 的源码渲染边界：",
+      "searchText": "渲染机制 jsx 与动态渲染 普通 jsx 是 rue 的源码渲染边界： guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:14",
@@ -36364,10 +35660,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
-      "sectionTitle": "模板与渲染函数",
+      "sectionTitle": "JSX 与动态渲染",
       "type": "list",
-      "text": "它们更接近 HTML 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而选择静态 DOM 或更小的 compiled 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。",
-      "searchText": "渲染机制 模板与渲染函数 它们更接近 html 与组件声明，适合大多数应用代码。 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而选择静态 dom 或更小的 compiled 输出。 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。 guide/extras/rendering-mechanism"
+      "text": "它接近 HTML 与组件声明，适合应用和基础组件。 编译器能识别静态段、动态段、锚点和清理边界，从而选择静态 DOM 或更小的 compiled 输出。 应用无需维护底层渲染对象，也不会依赖生成 helper 的内部协议。",
+      "searchText": "渲染机制 jsx 与动态渲染 它接近 html 与组件声明，适合应用和基础组件。 编译器能识别静态段、动态段、锚点和清理边界，从而选择静态 dom 或更小的 compiled 输出。 应用无需维护底层渲染对象，也不会依赖生成 helper 的内部协议。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:15",
@@ -36375,10 +35671,10 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
-      "sectionTitle": "模板与渲染函数",
+      "sectionTitle": "JSX 与动态渲染",
       "type": "paragraph",
-      "text": "手写渲染函数仍然有价值，尤其适合：",
-      "searchText": "渲染机制 模板与渲染函数 手写渲染函数仍然有价值，尤其适合： guide/extras/rendering-mechanism"
+      "text": "高度动态的标签或组件身份使用 表达；children 和 render prop 继续建模为普通 props。相关写法见编译 JSX 与动态渲染。",
+      "searchText": "渲染机制 jsx 与动态渲染 高度动态的标签或组件身份使用 表达；children 和 render prop 继续建模为普通 props。相关写法见编译 jsx 与动态渲染。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:16",
@@ -36386,35 +35682,13 @@
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
       "title": "渲染机制",
-      "sectionTitle": "模板与渲染函数",
-      "type": "list",
-      "text": "高度动态的可复用组件 需要精确控制 children / render prop 的基础组件",
-      "searchText": "渲染机制 模板与渲染函数 高度动态的可复用组件 需要精确控制 children / render prop 的基础组件 guide/extras/rendering-mechanism"
+      "sectionTitle": "JSX 与动态渲染",
+      "type": "paragraph",
+      "text": "这里的“编译 JSX”特指经过 Rue SWC 的产物。编译器会直接导入 @rue-js/rue/internal。TypeScript 配置必须使用 jsx: preserve，并由 Rue 插件执行转换；如果转换后仍有 JSX AST，构建会在对应文件和语法位置失败。其他工具的 automatic JSX 降级不能替代 Rue 编译器。",
+      "searchText": "渲染机制 jsx 与动态渲染 这里的“编译 jsx”特指经过 rue swc 的产物。编译器会直接导入 @rue-js/rue/internal。typescript 配置必须使用 jsx: preserve，并由 rue 插件执行转换；如果转换后仍有 jsx ast，构建会在对应文件和语法位置失败。其他工具的 automatic jsx 降级不能替代 rue 编译器。 guide/extras/rendering-mechanism"
     },
     {
       "id": "guide/extras/rendering-mechanism:17",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
-      "title": "渲染机制",
-      "sectionTitle": "模板与渲染函数",
-      "type": "paragraph",
-      "text": "如果你需要手写 h()，请把它视为显式边界，而不是默认开发路径。相关写法见 渲染函数与 JSX。",
-      "searchText": "渲染机制 模板与渲染函数 如果你需要手写 h()，请把它视为显式边界，而不是默认开发路径。相关写法见 渲染函数与 jsx。 guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:18",
-      "docId": "guide/extras/rendering-mechanism",
-      "route": "/guide/guide/extras/rendering-mechanism",
-      "href": "/guide/guide/extras/rendering-mechanism#templates-vs-render-functions",
-      "title": "渲染机制",
-      "sectionTitle": "模板与渲染函数",
-      "type": "paragraph",
-      "text": "这里的“编译 JSX”特指经过 Rue SWC 的产物。编译器会直接导入 @rue-js/rue/compiled 或按能力回退到 @rue-js/rue/vapor，不会把 h()、jsx、jsxs、jsxDEV 当作内部渲染货币，也不会引入 @rue-js/jsx-runtime。手写 h()，以及没有经过 Rue SWC、由 TypeScript/Babel automatic runtime 生成的 JSX，则属于显式兼容消费端，会加载默认 renderer 的通用 Element / Fragment patch。两类兼容写法仍受支持，但其 bundle 成本不能代表 compiled core 的成本。",
-      "searchText": "渲染机制 模板与渲染函数 这里的“编译 jsx”特指经过 rue swc 的产物。编译器会直接导入 @rue-js/rue/compiled 或按能力回退到 @rue-js/rue/vapor，不会把 h()、jsx、jsxs、jsxdev 当作内部渲染货币，也不会引入 @rue-js/jsx-runtime。手写 h()，以及没有经过 rue swc、由 typescript/babel automatic runtime 生成的 jsx，则属于显式兼容消费端，会加载默认 renderer 的通用 element / fragment patch。两类兼容写法仍受支持，但其 bundle 成本不能代表 compiled core 的成本。 guide/extras/rendering-mechanism"
-    },
-    {
-      "id": "guide/extras/rendering-mechanism:19",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36425,7 +35699,7 @@
       "searchText": "渲染机制 编译器知情的渲染路径 编译器知情的渲染路径 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:21",
+      "id": "guide/extras/rendering-mechanism:19",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36436,7 +35710,7 @@
       "searchText": "渲染机制 编译器知情的渲染路径 rue 的核心优势在于同时掌控编译器与分层运行时。编译器可以提前知道哪些结构稳定、哪些片段会更新、哪些区段需要锚点、哪些分支在切换时必须清理；无法证明安全时则保守回退，而不是牺牲行为一致性。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:22",
+      "id": "guide/extras/rendering-mechanism:20",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36447,7 +35721,7 @@
       "searchText": "渲染机制 编译器知情的渲染路径 rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量接近真实 dom 变更本身。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:23",
+      "id": "guide/extras/rendering-mechanism:21",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiler-informed-rendering",
@@ -36458,7 +35732,7 @@
       "searchText": "渲染机制 编译器知情的渲染路径 下面这些优化服务于静态 dom、compiled core 和编译组件；只有无法静态证明安全的结构才会自动改用 vapor fallback。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:24",
+      "id": "guide/extras/rendering-mechanism:22",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36469,7 +35743,7 @@
       "searchText": "渲染机制 静态提升 静态提升 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:25",
+      "id": "guide/extras/rendering-mechanism:23",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36480,7 +35754,7 @@
       "searchText": "渲染机制 静态提升 模板中不含动态绑定的片段，会在编译阶段被提升、缓存或折叠成可复用的静态结构。这样更新时无需重新创建这些节点，也无需再次遍历它们。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:26",
+      "id": "guide/extras/rendering-mechanism:24",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36491,7 +35765,7 @@
       "searchText": "渲染机制 静态提升 <div> <div>foo</div> <div>bar</div> <div>{dynamic.value}</div> </div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:27",
+      "id": "guide/extras/rendering-mechanism:25",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#cache-static",
@@ -36502,7 +35776,7 @@
       "searchText": "渲染机制 静态提升 在这个例子里，只有 dynamic 所在的片段需要参与更新；静态节点会在初次挂载后尽量复用。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:28",
+      "id": "guide/extras/rendering-mechanism:26",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36513,7 +35787,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 patch 标记与精准更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:29",
+      "id": "guide/extras/rendering-mechanism:27",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36524,7 +35798,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 对于有动态绑定的节点，编译器会把“究竟什么会变”编码进产物，例如文本、class、style、属性或稳定片段。运行时据此直接走对应的更新路径。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:30",
+      "id": "guide/extras/rendering-mechanism:28",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36535,7 +35809,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 <div class={active.value ? 'active' : ''}></div> <input id={id.value} value={value.value} /> <div>{dynamic.value}</div> guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:31",
+      "id": "guide/extras/rendering-mechanism:29",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#patch-flags",
@@ -36546,7 +35820,7 @@
       "searchText": "渲染机制 patch 标记与精准更新 这类提示让运行时可以把更新收敛为“改 class”“改 value”“改 text”这样的定点操作。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:32",
+      "id": "guide/extras/rendering-mechanism:30",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
@@ -36557,7 +35831,7 @@
       "searchText": "渲染机制 编译组件更新与根替换 编译组件更新与根替换 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:33",
+      "id": "guide/extras/rendering-mechanism:31",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
@@ -36568,7 +35842,7 @@
       "searchText": "渲染机制 编译组件更新与根替换 编译器生成的组件 helper 会把组件标记为 fine-grained。首次挂载后，运行时保留同一个组件实例和响应式只读 props；父组件传入新 props 时只同步这层 props，组件内部已经建立的文本、属性、列表和子组件 effect 会各自更新。没有显式 render-effect 标记时，props 更新不会重新执行组件函数，也不会递归 patch 组件返回的整棵 element / fragment 树。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:34",
+      "id": "guide/extras/rendering-mechanism:32",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
@@ -36579,18 +35853,18 @@
       "searchText": "渲染机制 编译组件更新与根替换 根替换仍然是必要的动态边界，而不是常规 props 更新手段。组件身份或 key 改变、动态分支切换到不同根、锚点区间需要替换，或者组件显式声明组件级响应式控制流时，运行时会通过已有 anchor / range 完成替换和清理。这样保留了结构变化的正确性，同时让稳定组件的日常更新停留在局部 effect。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:35",
+      "id": "guide/extras/rendering-mechanism:33",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#compiled-component-updates",
       "title": "渲染机制",
       "sectionTitle": "编译组件更新与根替换",
       "type": "paragraph",
-      "text": "手写 h() 与未编译组件使用 rerender 兼容协议。该路径继续提供通用 Element / Fragment props 与 children patch，但它是默认入口带来的显式兼容成本，不会被编译组件消费端自动加载。",
-      "searchText": "渲染机制 编译组件更新与根替换 手写 h() 与未编译组件使用 rerender 兼容协议。该路径继续提供通用 element / fragment props 与 children patch，但它是默认入口带来的显式兼容成本，不会被编译组件消费端自动加载。 guide/extras/rendering-mechanism"
+      "text": "应用不会直接进入通用 Element / Fragment patch。需要组件身份切换、根替换或不透明 renderable 时，编译器会生成对应的动态挂载协议，并只加载该能力需要的运行时层。",
+      "searchText": "渲染机制 编译组件更新与根替换 应用不会直接进入通用 element / fragment patch。需要组件身份切换、根替换或不透明 renderable 时，编译器会生成对应的动态挂载协议，并只加载该能力需要的运行时层。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:36",
+      "id": "guide/extras/rendering-mechanism:34",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -36601,7 +35875,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 树扁平化与区间更新 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:37",
+      "id": "guide/extras/rendering-mechanism:35",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -36612,7 +35886,7 @@
       "searchText": "渲染机制 树扁平化与区间更新 编译器会把真正可能变化的后代节点提取出来，以 block 或区间边界的方式组织。这样组件更新时，运行时通常只需要遍历动态段，而不是重新访问整个静态子树。 guide/extras/rendering-mechanism"
     },
     {
-      "id": "guide/extras/rendering-mechanism:38",
+      "id": "guide/extras/rendering-mechanism:36",
       "docId": "guide/extras/rendering-mechanism",
       "route": "/guide/guide/extras/rendering-mechanism",
       "href": "/guide/guide/extras/rendering-mechanism#tree-flattening",
@@ -37015,8 +36289,8 @@
       "title": "使用 Rue 的方式",
       "sectionTitle": "使用 Rue 的方式",
       "type": "paragraph",
-      "text": "使用构建插件时，普通应用代码保持从 @rue-js/rue 导入。编译器会按能力选择三层交付：纯静态 JSX 直接生成 DOM，Signal 交互使用 compiled core，组件和复杂结构按需回退 Vapor。@rue-js/rue/compiled 与 @rue-js/rue/vapor 主要面向编译产物或底层集成，不是要求应用作者维护的两套编程模型。",
-      "searchText": "使用 rue 的方式 使用 rue 的方式 使用构建插件时，普通应用代码保持从 @rue-js/rue 导入。编译器会按能力选择三层交付：纯静态 jsx 直接生成 dom，signal 交互使用 compiled core，组件和复杂结构按需回退 vapor。@rue-js/rue/compiled 与 @rue-js/rue/vapor 主要面向编译产物或底层集成，不是要求应用作者维护的两套编程模型。 guide/extras/ways-of-using-rue"
+      "text": "使用构建插件时，普通应用代码保持从 @rue-js/rue 导入。编译器会按能力选择两层交付：纯静态 JSX 直接生成 DOM，动态交互使用 compiled core。@rue-js/rue/internal 主要面向编译产物或底层集成，应用作者无需手动维护另一套编程模型。",
+      "searchText": "使用 rue 的方式 使用 rue 的方式 使用构建插件时，普通应用代码保持从 @rue-js/rue 导入。编译器会按能力选择两层交付：纯静态 jsx 直接生成 dom，动态交互使用 compiled core。@rue-js/rue/internal 主要面向编译产物或底层集成，应用作者无需手动维护另一套编程模型。 guide/extras/ways-of-using-rue"
     },
     {
       "id": "guide/extras/ways-of-using-rue:3",
@@ -42647,8 +41921,8 @@
       "title": "测试",
       "sectionTitle": "测试 Composables",
       "type": "code",
-      "text": "import { h, useApp, type RenderableOutput } from '@rue-js/rue' export function withSetup<T>(composable: () => T): [T, ReturnType<typeof useApp>] { let result!: T const app = useApp({ setup() { result = composable() return {} }, render(): RenderableOutput { return h('div') }, }) app.mount(document.createElement('div')) // 返回结果和应用实例 // 用于测试 Context / unmount return [result, app] }",
-      "searchText": "测试 测试 composables import { h, useapp, type renderableoutput } from '@rue-js/rue' export function withsetup<t>(composable: () => t): [t, returntype<typeof useapp>] { let result!: t const app = useapp({ setup() { result = composable() return {} }, render(): renderableoutput { return h('div') }, }) app.mount(document.createelement('div')) // 返回结果和应用实例 // 用于测试 context / unmount return [result, app] } guide/scaling-up/testing"
+      "text": "import { useApp, type FC } from '@rue-js/rue' export function withSetup<T>(composable: () => T): [T, ReturnType<typeof useApp>] { let result!: T const Host: FC = () => { result = composable() return <div /> } const app = useApp(Host) app.mount(document.createElement('div')) // 返回结果和应用实例 // 用于测试 Context / unmount return [result, app] }",
+      "searchText": "测试 测试 composables import { useapp, type fc } from '@rue-js/rue' export function withsetup<t>(composable: () => t): [t, returntype<typeof useapp>] { let result!: t const host: fc = () => { result = composable() return <div /> } const app = useapp(host) app.mount(document.createelement('div')) // 返回结果和应用实例 // 用于测试 context / unmount return [result, app] } guide/scaling-up/testing"
     },
     {
       "id": "guide/scaling-up/testing:113",
@@ -43208,8 +42482,8 @@
       "title": "工具链",
       "sectionTitle": "底层包与生态",
       "type": "list",
-      "text": "@rue-js/runtime：Rue 运行时核心 @rue-js/shared：通用工具与类型 @rue-js/vite-plugin-rue：Rue 与 Vite 集成的官方插件 @rue-js/router：路由能力 @rue-js/jsx-runtime：JSX 相关运行时支持 @rue-js/runtime-vapor：针对特定运行模式的优化实现",
-      "searchText": "工具链 底层包与生态 @rue-js/runtime：rue 运行时核心 @rue-js/shared：通用工具与类型 @rue-js/vite-plugin-rue：rue 与 vite 集成的官方插件 @rue-js/router：路由能力 @rue-js/jsx-runtime：jsx 相关运行时支持 @rue-js/runtime-vapor：针对特定运行模式的优化实现 guide/scaling-up/tooling"
+      "text": "@rue-js/runtime：Rue 运行时核心 @rue-js/shared：通用工具与类型 @rue-js/vite-plugin-rue：Rue 与 Vite 集成的官方插件 @rue-js/router：路由能力",
+      "searchText": "工具链 底层包与生态 @rue-js/runtime：rue 运行时核心 @rue-js/shared：通用工具与类型 @rue-js/vite-plugin-rue：rue 与 vite 集成的官方插件 @rue-js/router：路由能力 guide/scaling-up/tooling"
     },
     {
       "id": "guide/scaling-up/tooling:49",
@@ -43219,8 +42493,8 @@
       "title": "工具链",
       "sectionTitle": "底层包与生态",
       "type": "paragraph",
-      "text": "你可以在本仓库的脚本中查看它们的构建方式与使用姿势。",
-      "searchText": "工具链 底层包与生态 你可以在本仓库的脚本中查看它们的构建方式与使用姿势。 guide/scaling-up/tooling"
+      "text": "应用 JSX 必须经过 Rue 插件编译；工具链不需要安装额外的 JSX 运行时包。你可以在本仓库的脚本中查看这些包的构建方式与使用姿势。",
+      "searchText": "工具链 底层包与生态 应用 jsx 必须经过 rue 插件编译；工具链不需要安装额外的 jsx 运行时包。你可以在本仓库的脚本中查看这些包的构建方式与使用姿势。 guide/scaling-up/tooling"
     },
     {
       "id": "guide/typescript/composition-api:0",
@@ -44154,8 +43428,8 @@
       "title": "使用 Rue 与 TypeScript",
       "sectionTitle": "配置 tsconfig.json",
       "type": "code",
-      "text": "{ \"compilerOptions\": { \"target\": \"ES2022\", \"module\": \"ESNext\", \"moduleResolution\": \"bundler\", \"jsx\": \"react-jsx\", \"jsxImportSource\": \"@rue-js\", \"strict\": true, \"isolatedModules\": true, \"noEmit\": true, \"types\": [\"vite/client\"] }, \"include\": [\"src\"] }",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json { \"compileroptions\": { \"target\": \"es2022\", \"module\": \"esnext\", \"moduleresolution\": \"bundler\", \"jsx\": \"react-jsx\", \"jsximportsource\": \"@rue-js\", \"strict\": true, \"isolatedmodules\": true, \"noemit\": true, \"types\": [\"vite/client\"] }, \"include\": [\"src\"] } guide/typescript/overview"
+      "text": "{ \"compilerOptions\": { \"target\": \"ES2022\", \"module\": \"ESNext\", \"moduleResolution\": \"bundler\", \"jsx\": \"preserve\", \"strict\": true, \"isolatedModules\": true, \"noEmit\": true, \"types\": [\"vite/client\"] }, \"include\": [\"src\"] }",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json { \"compileroptions\": { \"target\": \"es2022\", \"module\": \"esnext\", \"moduleresolution\": \"bundler\", \"jsx\": \"preserve\", \"strict\": true, \"isolatedmodules\": true, \"noemit\": true, \"types\": [\"vite/client\"] }, \"include\": [\"src\"] } guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:20",
@@ -44176,8 +43450,8 @@
       "title": "使用 Rue 与 TypeScript",
       "sectionTitle": "配置 tsconfig.json",
       "type": "list",
-      "text": "compilerOptions.jsx 应设为 \"react-jsx\"，并将 compilerOptions.jsxImportSource 设为 \"@rue-js\"，让 TypeScript 使用 Rue 提供的 JSX runtime 和类型声明。",
-      "searchText": "使用 rue 与 typescript 配置 tsconfig.json compileroptions.jsx 应设为 \"react-jsx\"，并将 compileroptions.jsximportsource 设为 \"@rue-js\"，让 typescript 使用 rue 提供的 jsx runtime 和类型声明。 guide/typescript/overview"
+      "text": "compilerOptions.jsx 应设为 \"preserve\"，让 TypeScript 负责类型检查并把 JSX 转换留给 Rue Vite 插件。绕过插件的 automatic JSX 降级不是受支持的构建路径。",
+      "searchText": "使用 rue 与 typescript 配置 tsconfig.json compileroptions.jsx 应设为 \"preserve\"，让 typescript 负责类型检查并把 jsx 转换留给 rue vite 插件。绕过插件的 automatic jsx 降级不是受支持的构建路径。 guide/typescript/overview"
     },
     {
       "id": "guide/typescript/overview:22",
@@ -44462,8 +43736,8 @@
       "title": "安装",
       "sectionTitle": "安装",
       "type": "paragraph",
-      "text": "使用包管理器安装 Rue 与路由：",
-      "searchText": "安装 安装 使用包管理器安装 rue 与路由： installation"
+      "text": "使用包管理器安装 Rue、路由与 Vite 插件：",
+      "searchText": "安装 安装 使用包管理器安装 rue、路由与 vite 插件： installation"
     },
     {
       "id": "installation:2",
@@ -44473,8 +43747,8 @@
       "title": "安装",
       "sectionTitle": "安装",
       "type": "code",
-      "text": "pnpm add @rue-js/rue @rue-js/router",
-      "searchText": "安装 安装 pnpm add @rue-js/rue @rue-js/router installation"
+      "text": "pnpm add @rue-js/rue @rue-js/router pnpm add -D @rue-js/vite-plugin-rue",
+      "searchText": "安装 安装 pnpm add @rue-js/rue @rue-js/router pnpm add -d @rue-js/vite-plugin-rue installation"
     },
     {
       "id": "installation:3",
@@ -44495,8 +43769,19 @@
       "title": "安装",
       "sectionTitle": "安装",
       "type": "code",
-      "text": "// vite.config.ts export default defineConfig({ esbuild: { jsxImportSource: '@rue-js/rue' }, })",
-      "searchText": "安装 安装 // vite.config.ts export default defineconfig({ esbuild: { jsximportsource: '@rue-js/rue' }, }) installation"
+      "text": "import { defineConfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineConfig({ plugins: [rue()], })",
+      "searchText": "安装 安装 import { defineconfig } from 'vite' import rue from '@rue-js/vite-plugin-rue' export default defineconfig({ plugins: [rue()], }) installation"
+    },
+    {
+      "id": "installation:5",
+      "docId": "installation",
+      "route": "/page/installation",
+      "href": "/page/installation#-安装",
+      "title": "安装",
+      "sectionTitle": "安装",
+      "type": "paragraph",
+      "text": "TypeScript 应使用 \"jsx\": \"preserve\"，把 JSX 转换留给 Rue 插件。",
+      "searchText": "安装 安装 typescript 应使用 \"jsx\": \"preserve\"，把 jsx 转换留给 rue 插件。 installation"
     },
     {
       "id": "intro:0",

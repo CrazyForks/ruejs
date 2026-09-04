@@ -3,15 +3,7 @@
  *
  * 展示 Vapor setup、watchEffect 与 scope.run 中 active effect scope 的读取差异。
  */
-import {
-  type EffectScope,
-  type FC,
-  getCurrentScope,
-  onScopeDispose,
-  ref,
-  vapor,
-  watchEffect,
-} from '@rue-js/rue'
+import { type EffectScope, type FC, getCurrentScope, onScopeDispose, ref } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -27,40 +19,20 @@ type ScopeProbeProps = {
 
 /** 在 Vapor 子树中捕获当前 scope，并用 watchEffect 验证重跑时的 scope 归属。 */
 const ScopeProbe: FC<ScopeProbeProps> = props => {
-  return vapor(() => {
-    const scope = getCurrentScope()
-    props.scopeRef.value = scope
-
-    const root = document.createElement('section')
-    const heading = document.createElement('h2')
-    const status = document.createElement('p')
-    const countText = document.createElement('p')
-
-    root.className = 'rounded-lg border border-base-300 bg-base-200/60 p-5 space-y-3'
-    heading.className = 'text-xl font-semibold'
-    status.className = 'text-sm text-base-content/70'
-    countText.className = 'font-mono text-sm'
-
-    heading.textContent = 'Vapor scope probe'
-    root.append(heading, status, countText)
-
-    onScopeDispose(() => {
-      props.report('onScopeDispose: probe 卸载，scope 清理回调已执行')
-    })
-
-    watchEffect(() => {
-      const current = getCurrentScope()
-      const sameScope = current === scope
-      const active = scope?.active === true ? 'active' : 'stopped'
-
-      status.textContent = sameScope
-        ? `watchEffect 重跑时仍处于同一个 scope（${active}）`
-        : 'watchEffect 没有读到创建时的 scope'
-      countText.textContent = `count = ${props.count.value}`
-    })
-
-    return root
-  }) as any
+  const scope = getCurrentScope()
+  props.scopeRef.value = scope
+  onScopeDispose(() => {
+    props.report('onScopeDispose: probe 卸载，scope 清理回调已执行')
+  })
+  return (
+    <section className="rounded-lg border border-base-300 bg-base-200/60 p-5 space-y-3">
+      <h2 className="text-xl font-semibold">Compiled scope probe</h2>
+      <p className="text-sm text-base-content/70">
+        {scope?.active === true ? 'probe scope 处于 active 状态' : 'probe scope 已停止'}
+      </p>
+      <p className="font-mono text-sm">count = {props.count.value}</p>
+    </section>
+  )
 }
 
 /** getCurrentScope 交互示例入口。 */

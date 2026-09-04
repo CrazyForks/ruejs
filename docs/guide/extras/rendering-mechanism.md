@@ -6,13 +6,13 @@ Rue 的渲染机制由编译器选择最小可用层级：静态 JSX 直接降�
 
 <span id="virtual-dom"></span>
 
-Rue 允许你手写 `h()` 或 JSX。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小输出。应用代码通常继续从 `@rue-js/rue` 导入；`@rue-js/rue/compiled` 和 `@rue-js/rue/vapor` 主要是编译产物和底层集成的入口，不需要为普通组件手动切换。
+Rue 应用使用 JSX / TSX 描述输出。编译器会提前识别静态结构、动态绑定、锚点布局和清理边界，并为每个模块选择足以保持语义的最小产物。应用代码通常继续从 `@rue-js/rue` 导入；`@rue-js/rue/internal` 是编译产物和底层集成的入口，不需要为普通组件手动切换。
 
 ## 三层执行模型 {#three-tier-execution-model}
 
 1. **静态 DOM**：没有 Rue 动态值的原生 JSX 会被直接编译成 DOM 创建与插入代码，Rue 值依赖为零。
 2. **Compiled core**：Signal、effect、owner、选择器和可证明安全的键控列表只加载最小响应式与 DOM 核心，不依赖 `createRue`、JSX facade 或通用 Vapor helper。
-3. **Vapor fallback**：手写 `h()`、未编译组件，以及 Hydration、Teleport、Transition、异步或不透明 renderable 等无法静态证明的能力进入兼容层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。
+3. **Vapor fallback**：Hydration、Teleport、Transition、异步或不透明 renderable 等无法静态证明的能力由编译器导向 Vapor 层，以完整语义为优先。编译组件本身不等于 fallback；它通过 fine-grained 协议挂载，并由局部 effect 响应 props。
 
 “静态零运行时”只描述第一层的构建产物。只要页面使用交互状态或复杂能力，就会加载与该能力匹配的运行时代码。
 
@@ -27,22 +27,17 @@ Rue 允许你手写 `h()` 或 JSX。编译器会提前识别静态结构、动�
 
 可以把它理解成一条能力路由管道：编译器先证明最小安全能力集，再生成静态 DOM 或导入恰好足够的运行时层，后者负责挂载、更新与清理。
 
-## 模板与渲染函数 {#templates-vs-render-functions}
+## JSX 与动态渲染 {#templates-vs-render-functions}
 
-Rue 依然支持手写渲染函数，但默认推荐模板或普通 JSX，原因和以前不同了：
+普通 JSX 是 Rue 的源码渲染边界：
 
-1. 它们更接近 HTML 与组件声明，适合大多数应用代码。
-2. 它们能让编译器更早识别静态段、动态段、锚点和清理边界，从而选择静态 DOM 或更小的 compiled 输出。
-3. 它们不需要你手动维护底层渲染对象细节，也更不容易意外依赖内部字段。
+1. 它接近 HTML 与组件声明，适合应用和基础组件。
+2. 编译器能识别静态段、动态段、锚点和清理边界，从而选择静态 DOM 或更小的 compiled 输出。
+3. 应用无需维护底层渲染对象，也不会依赖生成 helper 的内部协议。
 
-手写渲染函数仍然有价值，尤其适合：
+高度动态的标签或组件身份使用 `<Component is={...}>` 表达；children 和 render prop 继续建模为普通 props。相关写法见[编译 JSX 与动态渲染](/guide/guide/extras/render-function)。
 
-- 高度动态的可复用组件
-- 需要精确控制 children / render prop 的基础组件
-
-如果你需要手写 `h()`，请把它视为显式边界，而不是默认开发路径。相关写法见 [渲染函数与 JSX](/guide/guide/extras/render-function)。
-
-这里的“编译 JSX”特指经过 Rue SWC 的产物。编译器会直接导入 `@rue-js/rue/compiled` 或按能力回退到 `@rue-js/rue/vapor`，不会把 `h()`、`jsx`、`jsxs`、`jsxDEV` 当作内部渲染货币，也不会引入 `@rue-js/jsx-runtime`。手写 `h()`，以及没有经过 Rue SWC、由 TypeScript/Babel automatic runtime 生成的 JSX，则属于显式兼容消费端，会加载默认 renderer 的通用 Element / Fragment patch。两类兼容写法仍受支持，但其 bundle 成本不能代表 compiled core 的成本。
+这里的“编译 JSX”特指经过 Rue SWC 的产物。编译器会直接导入 `@rue-js/rue/internal`。TypeScript 配置必须使用 `jsx: preserve`，并由 Rue 插件执行转换；如果转换后仍有 JSX AST，构建会在对应文件和语法位置失败。其他工具的 automatic JSX 降级不能替代 Rue 编译器。
 
 ## 编译器知情的渲染路径 {#compiler-informed-rendering}
 
@@ -87,7 +82,7 @@ Rue 会把编译期知识直接下沉到渲染运行时，让更新路径尽量�
 
 根替换仍然是必要的动态边界，而不是常规 props 更新手段。组件身份或 key 改变、动态分支切换到不同根、锚点区间需要替换，或者组件显式声明组件级响应式控制流时，运行时会通过已有 anchor / range 完成替换和清理。这样保留了结构变化的正确性，同时让稳定组件的日常更新停留在局部 effect。
 
-手写 `h()` 与未编译组件使用 rerender 兼容协议。该路径继续提供通用 Element / Fragment props 与 children patch，但它是默认入口带来的显式兼容成本，不会被编译组件消费端自动加载。
+应用不会直接进入通用 Element / Fragment patch。需要组件身份切换、根替换或不透明 renderable 时，编译器会生成对应的动态挂载协议，并只加载该能力需要的运行时层。
 
 ### 树扁平化与区间更新 {#tree-flattening}
 

@@ -3,6 +3,7 @@ import { createIslandContainerHtml, type RueIslandManifestEntry } from '@rue-js/
 import { renderToString } from '@rue-js/server-renderer'
 import { manifest } from 'virtual:rue-island-manifest'
 import Counter from './components/Counter'
+import HydratedPanel from './components/HydratedPanel'
 import OnlyPanel from './components/OnlyPanel'
 
 const StaticPage: FC = () => <main data-page="static">static fixture</main>
@@ -14,6 +15,9 @@ const OnlyPage: FC = () => (
 // This component is intentionally not rendered. The real plugin still indexes it and creates
 // the idle Counter importer used by the nested-island page below.
 export const NestedRegistrySeed: FC = () => <Counter client:idle label="nested seed" />
+export const CompiledHydrationRegistrySeed: FC = () => (
+  <HydratedPanel client:visible label="compiled hydration seed" />
+)
 
 const findEntry = (hydrate: RueIslandManifestEntry['hydrate']) => {
   const match = Object.entries(manifest).find(

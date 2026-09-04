@@ -817,7 +817,13 @@ const LegacyDropdownItem: FC<LegacyDropdownItemProps> = ({
   const dropdownOpen = ref(!!initialOpen)
   const toggleDropdown = (event: MouseEvent) => {
     if (itemEntry.disabled) return
-    dropdownOpen.value = !dropdownOpen.value
+    const toggle = event.currentTarget as HTMLElement | null
+    const itemRoot = toggle?.closest('li')
+    const dropdownElement = itemRoot?.querySelector(':scope > .menu-dropdown') as HTMLElement | null
+    const nextOpen = !toggle?.classList.contains('menu-dropdown-show')
+    toggle?.classList.toggle('menu-dropdown-show', nextOpen)
+    toggle?.setAttribute('aria-expanded', nextOpen ? 'true' : 'false')
+    dropdownElement?.classList.toggle('menu-dropdown-show', nextOpen)
     if (dropdownToggle?.onClick) dropdownToggle.onClick(event)
   }
 
@@ -1261,7 +1267,7 @@ type MenuCompound = FC<MenuProps> & {
   Divider: FC<MenuDividerProps>
 }
 
-const MenuCompound: MenuCompound = Object.assign(Menu, {
+const MenuCompound: MenuCompound = /*#__PURE__*/ Object.assign(Menu, {
   Item,
   Title,
   Dropdown,

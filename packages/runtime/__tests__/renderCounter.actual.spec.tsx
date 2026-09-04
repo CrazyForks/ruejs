@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { attachRouter, createRouter, RouterView } from '@rue-js/router'
 
-import { h, render, setReactiveScheduling, useComponent } from '../src'
+import { render, setReactiveScheduling, useComponent } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 import { clickByText, defineSplitHomeExampleActualSpec } from './splitHomeExampleTestUtils'
 import { createStaticHistory, mountContainer, waitForContent } from './page-test-utils'
 
@@ -52,7 +53,7 @@ describe('RenderCounter actual page interactions', () => {
     const { default: Page } = await import('../../../app/pages/examples/RenderCounter')
     const container = mountContainer()
 
-    render(h(Page as any, null), container)
+    render(createTestRenderable(Page as any, null), container)
 
     await waitForContent(() => {
       expect(counterValueText(container)).toBe('0')
@@ -119,7 +120,7 @@ describe('RenderCounter actual page interactions', () => {
     const { default: Page } = await import('../../../app/pages/examples/RenderCounter')
     const container = mountContainer()
 
-    render(h(Page as any, null), container)
+    render(createTestRenderable(Page as any, null), container)
 
     await waitForContent(() => {
       expect(counterValueText(container)).toBe('0')

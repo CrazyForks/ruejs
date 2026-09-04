@@ -1,4 +1,4 @@
-import { ref, setReactiveScheduling, shallowRef, triggerRef, type FC } from '@rue-js/rue/vapor'
+import { ref, setReactiveScheduling, shallowRef, triggerRef, type FC } from '@rue-js/rue'
 
 import { buildData, installBenchmarkApi, type Row } from './shared'
 
@@ -101,6 +101,6 @@ const RefBenchmark: FC = () => {
 const container = document.querySelector('#app')
 if (!container) throw new Error('Missing #app benchmark container')
 const handle = RefBenchmark({}) as unknown as {
-  __rue_vapor_setup: (parent: Element) => Node
+  __rue_compiled_mount: (parent: Element) => Node
 }
-container.appendChild(handle.__rue_vapor_setup(container))
+container.appendChild(handle.__rue_compiled_mount(container))

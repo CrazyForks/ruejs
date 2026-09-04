@@ -1,70 +1,75 @@
-# 渲染函数 API {#render-function-apis}
+# 编译渲染边界 {#render-function-apis}
 
-## h() {#h}
+Rue 不提供通用的手写建树 API。应用中的 JSX / TSX 必须先经过 Rue 编译器，再交给运行时挂载。编译器会根据源码结构生成窄 DOM、组件和动态挂载操作；这些生成的 helper 不是应用 API。
 
-创建手写渲染输出。
+## 编译要求 {#compiler-requirement}
 
-- **类型**
+TypeScript 只负责类型检查并保留 JSX：
 
-  ```ts
-  function h(
-    type: string | Component,
-    props?: object | null,
-    ...children: RenderOutput[]
-  ): RenderableOutput
+```json
+{
+  "compilerOptions": {
+    "jsx": "preserve"
+  }
+}
+```
 
-  type RenderOutput = Renderable | RueMountHandle | ReadonlyArray<RenderOutput>
-  type RenderProp<T = any> = (scope: T) => RenderOutput
-  ```
+Vite 项目必须在转换链中启用 Rue 插件：
 
-  > 类型为可读性而简化。
+```ts
+import { defineConfig } from 'vite'
+import rue from '@rue-js/vite-plugin-rue'
 
-- **详情**
+export default defineConfig({
+  plugins: [rue()],
+})
+```
 
-  第一个参数可以是字符串（用于原生元素）或 Rue 组件定义。第二个参数是 props，其余参数是 children。
+如果转换结束后仍有 JSX AST，构建会报告包含文件与语法位置的错误。由 TypeScript 或其他工具直接降低 JSX 的 automatic 模式不属于受支持的执行路径。
 
-  在 Rue 当前主路径里，组件 children 最终会落到 `props.children`。如果你需要作用域插槽语义，可以把函数作为 children 传入；如果你需要具名插槽样式的 API，通常直接把它们建模成显式命名 props，例如 `header`、`footer`。
+## 静态和组件输出 {#creating-render-output}
 
-  为方便起见，当不需要 props 时，可以省略第二个参数。
+使用 TSX 描述原生节点和已知组件：
 
-- **示例**
+```tsx
+import type { FC } from '@rue-js/rue'
+import UserCard from './UserCard'
 
-  创建原生元素：
+const Profile: FC<{ name: string }> = props => (
+  <section className="profile">
+    <h2>{props.name}</h2>
+    <UserCard name={props.name} />
+  </section>
+)
+```
 
-  ```js
-  import { h } from '@rue-js/rue'
+组件 children 通过 `props.children` 接收；具名内容和 render prop 应建模为显式 props。
 
-  h('div')
-  h('div', { id: 'foo' })
-  h('div', { class: 'bar', innerHTML: 'hello' })
-  h('div', { class: [foo, { bar }], style: { color: 'red' } })
-  h('div', { onClick: () => {} })
-  h('div', { id: 'foo' }, 'hello')
-  h('div', 'hello')
-  h('div', [h('span', 'hello')])
-  h('div', ['hello', h('span', 'hello')])
-  ```
+## 动态组件 {#dynamic-components}
 
-  创建组件：
+运行时才知道标签或组件身份时，使用 `<Component is={...}>`：
 
-  ```js
-  import Foo from './Foo'
+```tsx
+import { Component, type FC } from '@rue-js/rue'
 
-  h(Foo, {
-    someProp: 'hello',
-    onUpdate: () => {},
-  })
+const DynamicSurface: FC<{ as: string | FC; title: string }> = props => (
+  <Component is={props.as} className="surface">
+    {props.title}
+  </Component>
+)
+```
 
-  h(Foo, 'default content')
-  h(Foo, scope => h('span', scope.label))
+`is` 可以是原生标签名、组件函数或已注册组件名。普通静态元素和已知组件仍应直接写成 TSX，让编译器选择更窄的输出。
 
-  h(
-    MyComponent,
-    {
-      footer: ({ text }) => h('small', text),
-    },
-    'body',
-  )
-  ```
+## 命令式挂载 {#imperative-mount}
 
-- **另请参阅** [指南 - 渲染函数 - 创建渲染输出](/guide/guide/extras/render-function#creating-render-output)
+需要挂载到既有容器时，先让 TSX 经过 Rue 编译，再将产物交给 `render`：
+
+```tsx
+import { render } from '@rue-js/rue'
+import App from './App'
+
+render(<App />, document.querySelector('#app')!)
+```
+
+另请参阅：[编译 JSX 与动态渲染](/guide/guide/extras/render-function)和[渲染机制](/guide/guide/extras/rendering-mechanism)。

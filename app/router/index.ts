@@ -9,7 +9,7 @@ import {
 } from '@rue-js/router'
 import { routerDemoLabEnabled } from '../pages/examples/router-demo/state'
 
-const routeComponent = (loader: RouteComponentLoader) =>
+export const routeComponent = (loader: RouteComponentLoader) =>
   import.meta.env.SSR ? useAsyncRouteComponent(loader) : useComponent(loader)
 
 const loadRouterDemoScene = () => import('../pages/examples/router-demo/RouterDemoScene')
@@ -288,6 +288,12 @@ const flatRoutes: RouteRecordRaw[] = [
   {
     path: '/examples/react-style-conditional',
     component: routeComponent(() => import('../pages/examples/ReactStyleConditional')),
+  },
+  {
+    path: '/examples/compiled-control-flow',
+    component: routeComponent(
+      () => import('../pages/examples/compiled-control-flow/CompiledControlFlowDemo'),
+    ),
   },
   {
     path: '/examples/child-to-parent-notify',

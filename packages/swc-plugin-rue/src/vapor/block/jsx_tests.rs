@@ -83,12 +83,12 @@ fn jsx_to_block_builds_native_root_attrs_children_and_return() {
 
     assert!(out.contains("const_root=_$createElement(\"section\",__rue_parent_context);"));
     assert!(out.contains("_$setAttribute(_root,\"id\",\"app\");"));
-    assert!(out.contains("watchEffect(()=>{_$setClassName(_root,(klass));"));
+    assert!(out.contains("effect(()=>{_$setClassName(_root,(klass));"));
     assert!(out.contains("_$appendChild(_root,_$createTextNode(\"hello\"));"));
     assert!(out.contains("const_el1=_$createElement(\"span\",_root);"));
     assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
     assert!(out.contains(
-        "watchEffect(()=>{const__slot=(name);untrack(()=>renderAnchor(__slot,_el1,_list1));});"
+        "effect(()=>{const__slot=(name);untrack(()=>renderAnchor(__slot,_el1,_list1));});"
     ));
     assert!(out.ends_with("return_root;}"));
 }
@@ -104,7 +104,7 @@ fn jsx_fragment_to_block_builds_document_fragment_children_and_return() {
     assert!(out.contains("const_el1=_$createElement(\"span\",_root);"));
     assert!(out.contains("_$appendChild(_el1,_$createTextNode(\"child\"));"));
     assert!(out.contains("_$createComment(\"rue:slot:anchor\")"));
-    assert!(out.contains("watchEffect(()=>{"));
+    assert!(out.contains("effect(()=>{"));
     assert!(out.ends_with("return_root;}"));
 }
 
@@ -116,7 +116,7 @@ fn jsx_to_block_delegates_component_roots() {
 
     assert!(out.contains("const_root=_$createDocumentFragment();"));
     assert!(out.contains("const_list1=_$createComment(\"rue:component:anchor\")"));
-    assert!(out.contains("_$createComponent(Box,{title:title})"));
+    assert!(out.contains("_$createComponent(Box,()=>({title:title}))"));
     assert!(out.contains("renderAnchor(__slot2,_root,_list1)"));
     assert!(out.ends_with("return_root;}"));
 }

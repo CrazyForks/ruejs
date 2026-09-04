@@ -1,4 +1,4 @@
-import clientReferences from 'virtual:text-rsc/client-references'
+import clientReferences, { clientReferenceMetadata } from 'virtual:text-rsc/client-references'
 import * as appRouterScrollShim from '../shims/app-router-scroll.js'
 import * as errorBoundaryShim from '../shims/error-boundary.js'
 import * as layoutSegmentContextShim from '../shims/layout-segment-context-core.js'
@@ -15,10 +15,26 @@ import type { AppRscPluginRuntime } from './app-rsc-plugin-runtime.js'
 type CompatClientReferenceLoaders = Readonly<
   Record<string, () => Promise<Record<string, unknown>> | Record<string, unknown>>
 >
+type CompatClientReferenceMetadata = Readonly<
+  Record<string, { importId: string; referenceKey: string }>
+>
 
 const compatClientReferenceLoaders = clientReferences as CompatClientReferenceLoaders
+const compatClientReferenceMetadata = (clientReferenceMetadata ??
+  {}) as CompatClientReferenceMetadata
 const COMPAT_CLIENT_REFERENCE_LOADERS_KEY = Symbol.for('text.compat.clientReferenceLoaders')
+const COMPAT_CLIENT_REFERENCE_MODULES_KEY = Symbol.for('text.compat.clientReferenceModules')
 const resolvedClientReferenceCache = new Map<string, PromiseLike<unknown> | unknown>()
+const resolvedCompatClientReferenceModules = (() => {
+  const globalState = globalThis as Record<symbol, unknown>
+  const existing = globalState[COMPAT_CLIENT_REFERENCE_MODULES_KEY]
+  if (existing instanceof Map) {
+    return existing as Map<string, Record<string, unknown>>
+  }
+  const modules = new Map<string, Record<string, unknown>>()
+  globalState[COMPAT_CLIENT_REFERENCE_MODULES_KEY] = modules
+  return modules
+})()
 const APP_SSR_ERROR_BOUNDARY_EXPORT_NAMES = new Set([
   'ErrorBoundary',
   'ForbiddenBoundary',
@@ -69,6 +85,44 @@ const localSsrClientReferenceModules: readonly {
   },
 ]
 
+const preloadedCompatClientReferenceLoaders: CompatClientReferenceLoaders = Object.fromEntries(
+  Object.entries(compatClientReferenceLoaders).map(([referenceKey, load]) => [
+    referenceKey,
+    () =>
+      Promise.resolve(load()).then(module => {
+        const resolvedModule = module as Record<string, unknown>
+        resolvedCompatClientReferenceModules.set(referenceKey, resolvedModule)
+        resolvedCompatClientReferenceModules.set(
+          normalizeSsrClientReferenceKey(referenceKey),
+          resolvedModule,
+        )
+        return resolvedModule
+      }),
+  ]),
+)
+
+const localSsrClientReferenceModulesByKey = new Map<string, Record<string, unknown>>()
+for (const meta of Object.values(compatClientReferenceMetadata)) {
+  const normalizedImportId = meta.importId.replaceAll('\\', '/')
+  const localModule = localSsrClientReferenceModules.find(entry =>
+    normalizedImportId.includes(entry.match),
+  )?.module
+  if (localModule) {
+    localSsrClientReferenceModulesByKey.set(meta.referenceKey, localModule)
+  }
+}
+for (const entry of localSsrClientReferenceModules) {
+  for (const value of Object.values(entry.module)) {
+    const referenceKey =
+      value && (typeof value === 'object' || typeof value === 'function')
+        ? (value as { $$referenceKey?: unknown }).$$referenceKey
+        : undefined
+    if (typeof referenceKey === 'string') {
+      localSsrClientReferenceModulesByKey.set(referenceKey, entry.module)
+    }
+  }
+}
+
 function readGlobalCompatClientReferenceLoaders(): CompatClientReferenceLoaders {
   const registry = (globalThis as Record<symbol, unknown>)[COMPAT_CLIENT_REFERENCE_LOADERS_KEY]
   return registry && typeof registry === 'object' ? (registry as CompatClientReferenceLoaders) : {}
@@ -83,7 +137,7 @@ function registerGlobalCompatClientReferenceLoaders(loaders: CompatClientReferen
   }
 }
 
-registerGlobalCompatClientReferenceLoaders(compatClientReferenceLoaders)
+registerGlobalCompatClientReferenceLoaders(preloadedCompatClientReferenceLoaders)
 
 function normalizeSsrClientReferenceKey(referenceKey: string): string {
   return referenceKey.replace(/\$\$cache=[^?#]+/g, '')
@@ -94,6 +148,17 @@ function resolveLocalSsrClientReference(
   exportName: string,
 ): { found: boolean; value?: unknown } {
   const normalizedReferenceKey = normalizeSsrClientReferenceKey(referenceKey)
+  const hashedModule =
+    localSsrClientReferenceModulesByKey.get(referenceKey) ??
+    localSsrClientReferenceModulesByKey.get(normalizedReferenceKey)
+  if (hashedModule) {
+    if (!Object.hasOwn(hashedModule, exportName)) {
+      throw new Error(
+        `[text] App client reference "${referenceKey}" does not export "${exportName}".`,
+      )
+    }
+    return { found: true, value: hashedModule[exportName] }
+  }
   for (const entry of localSsrClientReferenceModules) {
     if (normalizedReferenceKey.includes(entry.match)) {
       if (!Object.hasOwn(entry.module, exportName)) {
@@ -197,9 +262,15 @@ export function installCompatAppClientReferenceResolver(): void {
 
     const loadCompatReference = () => {
       const normalizedReferenceKey = normalizeSsrClientReferenceKey(referenceKey)
+      const preloadedModule =
+        resolvedCompatClientReferenceModules.get(referenceKey) ??
+        resolvedCompatClientReferenceModules.get(normalizedReferenceKey)
+      if (preloadedModule) {
+        return resolveExport(preloadedModule)
+      }
       const load =
-        compatClientReferenceLoaders[referenceKey] ??
-        compatClientReferenceLoaders[normalizedReferenceKey] ??
+        preloadedCompatClientReferenceLoaders[referenceKey] ??
+        preloadedCompatClientReferenceLoaders[normalizedReferenceKey] ??
         readGlobalCompatClientReferenceLoaders()[referenceKey] ??
         readGlobalCompatClientReferenceLoaders()[normalizedReferenceKey]
       const loaded = load
@@ -224,12 +295,21 @@ export function installCompatAppClientReferenceResolver(): void {
     }
 
     const resolved = loadCompatReference()
-    resolvedClientReferenceCache.set(cacheKey, resolved)
     if (resolved && typeof (resolved as { then?: unknown }).then === 'function') {
-      void Promise.resolve(resolved).catch(() => {
-        resolvedClientReferenceCache.delete(cacheKey)
-      })
+      const pending = Promise.resolve(resolved).then(
+        value => {
+          resolvedClientReferenceCache.set(cacheKey, value)
+          return value
+        },
+        error => {
+          resolvedClientReferenceCache.delete(cacheKey)
+          throw error
+        },
+      )
+      resolvedClientReferenceCache.set(cacheKey, pending)
+      return pending
     }
+    resolvedClientReferenceCache.set(cacheKey, resolved)
     return resolved
   })
 }
@@ -237,7 +317,7 @@ export function installCompatAppClientReferenceResolver(): void {
 export function createCompatAppRscSsrRuntimeProtocol(): AppRscSsrRuntimeProtocol {
   return createAppRscSsrRuntimeProtocol({
     getClientReferences() {
-      return clientReferences
+      return preloadedCompatClientReferenceLoaders
     },
     getClientRequire() {
       return undefined

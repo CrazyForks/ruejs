@@ -486,6 +486,7 @@ async function renderLegacyProtocolNodeToHtml(
   options: {
     mode: LegacyProtocolRenderMode
     streamTasks?: LegacyProtocolStreamTask[]
+    renderRueToString?: RueServerRenderer
   },
 ): Promise<string> {
   if (value == null || typeof value === 'boolean') return ''
@@ -516,6 +517,7 @@ async function renderLegacyProtocolNodeToHtml(
       options.streamTasks.push(
         renderLegacyProtocolNodeToHtml(children, {
           mode: 'full',
+          renderRueToString: options.renderRueToString,
         }),
       )
       return renderLegacyProtocolNodeToHtml(props.fallback, options)
@@ -532,6 +534,9 @@ async function renderLegacyProtocolNodeToHtml(
 
   if (typeof type === 'function') {
     const output = await renderProtocolComponent(type, props)
+    if (isRueRenderable(output)) {
+      return renderRueRenderableToString(output, options.renderRueToString)
+    }
     return renderLegacyProtocolNodeToHtml(output, options)
   }
 
@@ -555,16 +560,20 @@ async function renderLegacyProtocolNodeToHtml(
   return `<${type}${attrs}>${body}</${type}>`
 }
 
-async function renderLegacyProtocolHtmlToString(element: TextCompatNode): Promise<string> {
-  return renderLegacyProtocolNodeToHtml(element, { mode: 'full' })
+async function renderLegacyProtocolHtmlToString(
+  element: TextCompatNode,
+  renderRueToString?: RueServerRenderer,
+): Promise<string> {
+  return renderLegacyProtocolNodeToHtml(element, { mode: 'full', renderRueToString })
 }
 
 async function renderLegacyProtocolHtmlToStringWithFallback(
   element: TextCompatNode,
   renderLegacyProtocolToString?: LegacyProtocolStringRenderer,
+  renderRueToString?: RueServerRenderer,
 ): Promise<string> {
   try {
-    return await renderLegacyProtocolHtmlToString(element)
+    return await renderLegacyProtocolHtmlToString(element, renderRueToString)
   } catch (error) {
     if (!isInvalidCompatHookCall(error)) throw error
     return (renderLegacyProtocolToString ?? defaultRenderLegacyProtocolToString)(element)
@@ -573,11 +582,13 @@ async function renderLegacyProtocolHtmlToStringWithFallback(
 
 async function renderLegacyProtocolHtmlToReadableStream(
   element: TextCompatNode,
+  renderRueToString?: RueServerRenderer,
 ): Promise<ReadableStream<Uint8Array>> {
   const streamTasks: LegacyProtocolStreamTask[] = []
   const shellHtml = await renderLegacyProtocolNodeToHtml(element, {
     mode: 'shell',
     streamTasks,
+    renderRueToString,
   })
   if (streamTasks.length === 0) return stringToStream(shellHtml)
   const encoder = new TextEncoder()
@@ -600,9 +611,10 @@ async function renderLegacyProtocolHtmlToReadableStream(
 async function renderLegacyProtocolHtmlToReadableStreamWithFallback(
   element: TextCompatNode,
   renderLegacyProtocolToReadableStream?: LegacyProtocolStreamRenderer,
+  renderRueToString?: RueServerRenderer,
 ): Promise<ReadableStream<Uint8Array>> {
   try {
-    return await renderLegacyProtocolHtmlToReadableStream(element)
+    return await renderLegacyProtocolHtmlToReadableStream(element, renderRueToString)
   } catch (error) {
     if (!isInvalidCompatHookCall(error)) throw error
     return (renderLegacyProtocolToReadableStream ?? defaultRenderLegacyProtocolToReadableStream)(
@@ -652,6 +664,13 @@ async function renderRueRenderableToString(
 
   const { renderToString } = await import('@rue-js/server-renderer')
   return withServerRenderScope(() => renderToString(element))
+}
+
+async function renderRueRenderableToReadableStream(
+  element: TextRenderable,
+): Promise<ReadableStream<Uint8Array>> {
+  const { renderToReadableStream } = await import('@rue-js/server-renderer')
+  return withServerRenderScope(() => renderToReadableStream(element))
 }
 
 async function runWithRueServerDOMAdapter<T>(fn: () => T | Promise<T>): Promise<T> {
@@ -830,6 +849,7 @@ export async function renderPagesRenderableToString(
       return renderLegacyProtocolHtmlToStringWithFallback(
         rendered as TextCompatNode,
         renderLegacyProtocolToString,
+        renderRueToString,
       )
     }
     const rueElement = legacyProtocolToRueRenderable(rendered)
@@ -849,6 +869,7 @@ export async function renderPagesRenderableToString(
     return renderLegacyProtocolHtmlToStringWithFallback(
       element as TextCompatNode,
       renderLegacyProtocolToString,
+      renderRueToString,
     )
   }
 
@@ -870,12 +891,13 @@ export async function renderPagesRenderableToReadableStream(
   if (isPagesRenderableFactory(element)) {
     const rendered = await withServerRenderScope(() => element.render())
     if (isRueRenderable(rendered)) {
-      return stringToStream(await renderRueRenderableToString(rendered, renderRueToString))
+      return renderRueRenderableToReadableStream(rendered)
     }
     if (isServerProtocolElement(rendered) || Array.isArray(rendered)) {
       return renderLegacyProtocolHtmlToReadableStreamWithFallback(
         rendered as TextCompatNode,
         renderLegacyProtocolToReadableStream,
+        renderRueToString,
       )
     }
     const rueElement = legacyProtocolToRueRenderable(rendered)
@@ -888,19 +910,20 @@ export async function renderPagesRenderableToReadableStream(
   }
 
   if (isRueRenderable(element)) {
-    return stringToStream(await renderRueRenderableToString(element, renderRueToString))
+    return renderRueRenderableToReadableStream(element)
   }
 
   if (isServerProtocolElement(element) || Array.isArray(element)) {
     return renderLegacyProtocolHtmlToReadableStreamWithFallback(
       element as TextCompatNode,
       renderLegacyProtocolToReadableStream,
+      renderRueToString,
     )
   }
 
   const rueElement = legacyProtocolToRueRenderable(element)
   if (rueElement) {
-    return stringToStream(await renderRueRenderableToString(rueElement, renderRueToString))
+    return renderRueRenderableToReadableStream(rueElement)
   }
 
   return (renderLegacyProtocolToReadableStream ?? defaultRenderLegacyProtocolToReadableStream)(

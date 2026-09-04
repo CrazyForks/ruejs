@@ -2,14 +2,13 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { effect, signal } from '../../runtime-vapor/dist/compiled.js'
-import { _$compiledRoot } from '../src/compiled-root'
+import * as compiledRuntime from '../src/internal'
 
-const step = signal(0)
+const step = compiledRuntime.signal(0)
 
 const bind = <T,>(read: () => T, write: (value: T) => void): void => {
   let previous: T | undefined
-  effect(() => {
+  compiledRuntime.effect(() => {
     const next = read()
     if (Object.is(previous, next)) return
     previous = next
@@ -17,61 +16,60 @@ const bind = <T,>(read: () => T, write: (value: T) => void): void => {
   })
 }
 
-const ScalarBindings = () =>
-  _$compiledRoot(() => {
-    const root = document.createElement('section')
-    const text = document.createElement('span')
-    const input = document.createElement('input')
-    text.dataset.binding = 'text'
-    input.dataset.binding = 'input'
-    root.append(text, input)
+const scalarBindings = compiledRuntime._$compiledRoot(() => {
+  const root = document.createElement('section')
+  const text = document.createElement('span')
+  const input = document.createElement('input')
+  text.dataset.binding = 'text'
+  input.dataset.binding = 'input'
+  root.append(text, input)
 
-    bind(
-      () => (step.get() < 2 ? 'idle' : 'ready'),
-      value => {
-        root.className = value
-      },
-    )
-    bind(
-      () => String(step.get() < 2 ? 'color:red' : 'color:blue'),
-      value => {
-        root.style.cssText = value
-      },
-    )
-    bind(
-      () => (step.get() < 2 ? 'present' : null),
-      value => {
-        if (value == null) root.removeAttribute('title')
-        else root.setAttribute('title', String(value))
-      },
-    )
-    bind(
-      () => String(step.get() < 2 ? 'first' : 'second'),
-      value => {
-        text.textContent = value
-      },
-    )
-    bind(
-      () => String(step.get() < 2 ? 'one' : 'two'),
-      value => {
-        input.value = value
-      },
-    )
-    bind(
-      () => Boolean(step.get() >= 2),
-      value => {
-        input.checked = value
-      },
-    )
-    bind(
-      () => Boolean(step.get() >= 2),
-      value => {
-        input.disabled = value
-      },
-    )
+  bind(
+    () => (step.get() < 2 ? 'idle' : 'ready'),
+    value => {
+      root.className = value
+    },
+  )
+  bind(
+    () => String(step.get() < 2 ? 'color:red' : 'color:blue'),
+    value => {
+      root.style.cssText = value
+    },
+  )
+  bind(
+    () => (step.get() < 2 ? 'present' : null),
+    value => {
+      if (value == null) root.removeAttribute('title')
+      else root.setAttribute('title', String(value))
+    },
+  )
+  bind(
+    () => String(step.get() < 2 ? 'first' : 'second'),
+    value => {
+      text.textContent = value
+    },
+  )
+  bind(
+    () => String(step.get() < 2 ? 'one' : 'two'),
+    value => {
+      input.value = value
+    },
+  )
+  bind(
+    () => Boolean(step.get() >= 2),
+    value => {
+      input.checked = value
+    },
+  )
+  bind(
+    () => Boolean(step.get() >= 2),
+    value => {
+      input.disabled = value
+    },
+  )
 
-    return root
-  })
+  return root
+})
 
 const flushCompiledEffects = async (): Promise<void> => {
   const waitForScheduler = (): Promise<void> =>
@@ -85,43 +83,72 @@ const flushCompiledEffects = async (): Promise<void> => {
 }
 
 const trackPropertyWrites = (target: object, property: string): (() => number) => {
-  let owner: object | null = target
-  let descriptor: PropertyDescriptor | undefined
-  while (owner && descriptor === undefined) {
-    descriptor = Object.getOwnPropertyDescriptor(owner, property)
-    owner = Object.getPrototypeOf(owner)
-  }
-  if (!descriptor?.get || !descriptor.set) {
-    throw new Error(`Missing writable descriptor for ${property}`)
-  }
+  const getter = (target as any).__lookupGetter__(property) as (() => unknown) | undefined
+  const setter = (target as any).__lookupSetter__(property) as
+    | ((value: unknown) => void)
+    | undefined
+  expect(getter, `Missing getter for ${property}`).toBeTypeOf('function')
+  expect(setter, `Missing setter for ${property}`).toBeTypeOf('function')
 
   let writes = 0
   Object.defineProperty(target, property, {
     configurable: true,
-    get: () => descriptor.get?.call(target),
+    get: () => getter?.call(target),
     set: value => {
       writes += 1
-      descriptor.set?.call(target, value)
+      setter?.call(target, value)
     },
   })
   return () => writes
 }
 
 afterEach(() => {
+  compiledRuntime.setReactiveScheduling('frame')
   step.set(0)
   document.body.innerHTML = ''
 })
 
 describe('compiled scalar DOM bindings', () => {
+  it('normalizes text and skips writes when raw values render identically', () => {
+    compiledRuntime.setReactiveScheduling('sync')
+    const source = compiledRuntime.signal<unknown>(null)
+    let textContent: string | null = 'stale'
+    let writes = 0
+    const node = {
+      get textContent() {
+        return textContent
+      },
+      set textContent(value: string | null) {
+        writes += 1
+        textContent = value
+      },
+    }
+
+    const binding = compiledRuntime._$compiledText(node, () => source.get())
+    expect({ textContent, writes }).toEqual({ textContent: '', writes: 1 })
+
+    source.set(false)
+    source.set(undefined)
+    expect({ textContent, writes }).toEqual({ textContent: '', writes: 1 })
+
+    source.set(0)
+    source.set('0')
+    expect({ textContent, writes }).toEqual({ textContent: '0', writes: 2 })
+
+    binding.dispose()
+    source.set('after-dispose')
+    expect({ textContent, writes }).toEqual({ textContent: '0', writes: 2 })
+  })
+
   it('writes each binding only when its normalized value changes and stops after dispose', async () => {
     const host = document.createElement('main')
     document.body.appendChild(host)
 
-    const handle = ScalarBindings() as unknown as {
-      __rue_vapor_setup(parent: ParentNode): Node | null | undefined
+    const handle = scalarBindings as unknown as {
+      __rue_compiled_mount(parent: ParentNode): Node | null | undefined
       dispose(): void
     }
-    const mounted = handle.__rue_vapor_setup(host)
+    const mounted = handle.__rue_compiled_mount(host)
     if (!(mounted instanceof HTMLElement)) throw new Error('Expected a compiled HTMLElement root')
     host.appendChild(mounted)
 

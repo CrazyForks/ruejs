@@ -61,14 +61,13 @@ fn component_root_emits_static_mount_with_children_props() {
     let el = parse_jsx_element("<Box><span>child</span></Box>");
     let out = compact(&emit_block(emit_component_root(&mut vt, &el)));
 
-    assert!(out.contains("const_root=_$createDocumentFragment();"));
-    assert!(out.contains("_$createComment(\"rue:component:anchor\")"));
-    assert!(out.contains("const__child1=vapor(()=>{"));
-    assert!(out.contains("_$createElement(\"span\",_root)"));
-    assert!(out.contains("_$createComponent(Box,{children:__child1})"));
-    assert!(out.contains("renderAnchor(__slot2,_root,_list1);"));
-    assert!(!out.contains("watchEffect("));
-    assert!(out.ends_with("return_root;}"));
+    assert!(out.contains("const_root=_$createDocumentFragment();"), "{out}");
+    assert!(out.contains("_$createComment(\"rue:component:anchor\")"), "{out}");
+    assert!(out.contains("const__child1=vapor(()=>{"), "{out}");
+    assert!(out.contains("_$createElement(\"span\",_root)"), "{out}");
+    assert!(out.contains("_$createComponent(Box,()=>({children:__child1}))"), "{out}");
+    assert!(out.contains("renderAnchor("), "{out}");
+    assert!(out.ends_with("return_root;}"), "{out}");
 }
 
 #[test]
@@ -77,8 +76,8 @@ fn component_root_wraps_dynamic_props_in_watch_effect() {
     let el = parse_jsx_element("<Box title={title} />");
     let out = compact(&emit_block(emit_component_root(&mut vt, &el)));
 
-    assert!(out.contains("watchEffect(()=>{"));
-    assert!(out.contains("const__slot2=_$createComponent(Box,{title:title});"));
-    assert!(out.contains("untrack(()=>renderAnchor(__slot2,_root,_list1))"));
-    assert!(out.contains("return_root;"));
+    assert!(out.contains("effect(()=>{"), "{out}");
+    assert!(out.contains("const__slot2=_$createComponent(Box,()=>({title:title}));"), "{out}");
+    assert!(out.contains("untrack(()=>renderAnchor(__slot2,_root,_list1))"), "{out}");
+    assert!(out.contains("return_root;"), "{out}");
 }

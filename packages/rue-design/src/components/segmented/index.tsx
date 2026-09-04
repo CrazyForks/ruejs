@@ -376,16 +376,16 @@ const Segmented: FC<SegmentedProps<any>> = props => {
   const mergedName = name ?? generatedNameRef.value
 
   if (!managedHostsRef.current) {
-    managedHostsRef.current = new Set()
+    managedHostsRef.current = /*#__PURE__*/ new Set()
   }
   if (!iconHostCacheRef.current) {
-    iconHostCacheRef.current = new WeakMap()
+    iconHostCacheRef.current = /*#__PURE__*/ new WeakMap()
   }
   if (!labelHostCacheRef.current) {
-    labelHostCacheRef.current = new WeakMap()
+    labelHostCacheRef.current = /*#__PURE__*/ new WeakMap()
   }
   if (!hostAnchorsRef.current) {
-    hostAnchorsRef.current = new WeakMap()
+    hostAnchorsRef.current = /*#__PURE__*/ new WeakMap()
   }
 
   const setRootRef = (element: HTMLDivElement | null) => {
@@ -411,7 +411,7 @@ const Segmented: FC<SegmentedProps<any>> = props => {
 
     if (!root) return
 
-    const nextHosts = new Set<HTMLElement>()
+    const nextHosts = /*#__PURE__*/ new Set<HTMLElement>()
     const iconCache = iconHostCacheRef.current!
     const labelCache = labelHostCacheRef.current!
     const hostAnchors = hostAnchorsRef.current!

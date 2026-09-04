@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import {
-  _$vaporWithHookId,
   computed,
   effect,
   ref,
@@ -9,10 +8,11 @@ import {
   renderAnchor,
   setReactiveScheduling,
   useSetup,
-  vapor,
   watch,
   watchEffect,
 } from '../src'
+import { _$compiledWithHookId } from '../src/internal'
+import { vapor } from './legacy-test-render'
 import { SortFilterPreview, TogglePanel } from '../../../app/test-fixtures/VaporReactivityFixture'
 
 setReactiveScheduling('sync')
@@ -27,7 +27,7 @@ const flush = async () => {
 }
 
 const ManualSetupToggle = () => {
-  const setupState = _$vaporWithHookId('useSetup:manual:0', () =>
+  const setupState = _$compiledWithHookId('useSetup:manual:0', () =>
     useSetup(() => ({
       open: ref(false),
     })),
@@ -95,7 +95,7 @@ const ManualPropParent = () => {
 }
 
 const ManualComputedChild = (props: { query: string }) => {
-  const setupState = _$vaporWithHookId('useSetup:manual-computed:0', () =>
+  const setupState = _$compiledWithHookId('useSetup:manual-computed:0', () =>
     useSetup(() => ({
       derived: computed(() => props.query),
     })),
@@ -116,7 +116,7 @@ const ManualComputedChild = (props: { query: string }) => {
 }
 
 const ManualSetupWatchPropChild = (props: { query: string }) => {
-  const setupState = _$vaporWithHookId('useSetup:manual-watch-prop:0', () =>
+  const setupState = _$compiledWithHookId('useSetup:manual-watch-prop:0', () =>
     useSetup(() => {
       const latest = ref('')
       const runs = ref('0')
@@ -173,7 +173,7 @@ const ManualSetupWatchPropParent = () => {
 }
 
 const ManualSetupWatchAndEffectChild = (props: { query: string; label: string }) => {
-  const setupState = _$vaporWithHookId('useSetup:manual-watch-and-effect:0', () =>
+  const setupState = _$compiledWithHookId('useSetup:manual-watch-and-effect:0', () =>
     useSetup(() => {
       const watched = ref('')
       const watchRuns = ref('0')
@@ -328,7 +328,7 @@ const ManualDirectComputedParent = () => {
 }
 
 const ManualIntervalCounter = () => {
-  const setupState = _$vaporWithHookId('useSetup:manual-interval:0', () =>
+  const setupState = _$compiledWithHookId('useSetup:manual-interval:0', () =>
     useSetup(() => {
       const tick = ref(0)
       let timer: ReturnType<typeof setInterval> | null = null
@@ -398,7 +398,7 @@ const NestedVaporParent = () => {
 }
 
 const StableMixedChild = (props: { slot: any; children?: any[] }) => {
-  const setupState = _$vaporWithHookId('useSetup:stable-mixed:0', () =>
+  const setupState = _$compiledWithHookId('useSetup:stable-mixed:0', () =>
     useSetup(() => {
       const root = document.createElement('div')
       const slotRuns = document.createElement('span')
@@ -472,7 +472,7 @@ const CompiledReactiveDestructureWatchChild = (__rue_props: {
   count: number
   label?: string
 }) => {
-  const setupState = _$vaporWithHookId('useSetup:compiled-reactive-watch:0', () =>
+  const setupState = _$compiledWithHookId('useSetup:compiled-reactive-watch:0', () =>
     useSetup(() => {
       const summary = computed(
         () =>
@@ -579,7 +579,7 @@ const createHookedVaporToggle = (onHookRun: () => void) => {
       // - effect 同时读取 source，便于我们用 hookRuns 观察旧订阅有没有被真正 dispose。
       // 只要 owner cleanup bucket、hook scope 或 vapor scope 任意一环没接上，
       // 切到 code 分支后继续 bump source，hookRuns 就会错误增长。
-      _$vaporWithHookId('useSetup:hooked-vapor-toggle:0', () =>
+      _$compiledWithHookId('useSetup:hooked-vapor-toggle:0', () =>
         useSetup(() => {
           watchEffect(() => {
             void source.value

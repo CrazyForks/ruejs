@@ -117,28 +117,23 @@ export default FetchingData;
     std::fs::write("target/vapor_outputs/spec14.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
 
-    assert!(
-        normalized
-            .contains("import { useEffect, ref, _$vaporWithHookId, useSetup, vapor, renderAnchor")
-    );
-    assert!(normalized.contains(&normalize("singleRoot: true")));
-    assert!(normalized.contains(&normalize("renderAnchor(__slot, parent, start);")));
+    assert!(normalized.contains("useEffect"), "{normalized}");
+    assert!(normalized.contains("_$compiledSetup"), "{normalized}");
+    assert!(normalized.contains("_$reconcileKeyed"), "{normalized}");
+    assert!(normalized.contains("_$mountCompiledKeyedRow"), "{normalized}");
     assert!(
         normalized.contains(&normalize("const __slot = commits.value.length > 0 ? vapor(()=>{"))
     );
     assert!(
-        normalized.contains(&normalize(
-            "const __slot = item.author && item.author.html_url ? vapor(()=>{"
-        ))
+        normalized.contains(&normalize("const __slot = author && author.html_url ? vapor(()=>{"))
     );
-    assert!(normalized.contains(&normalize("_$settextContent(_el20, item.commit.author.name);")));
-    assert!(normalized.contains(&normalize("_$settextContent(_el22, item.commit.author.name);")));
-    assert!(normalized.contains(&normalize("_$settextContent(_el9, currentBranch.value);")));
-    assert!(normalized.contains(&normalize("_$settextContent(_el13, item.sha.slice(0, 7));")));
+    assert!(normalized.contains(&normalize("const __slot = (commit.author.name);")));
+    assert!(normalized.contains(&normalize("const __slot = (currentBranch.value);")));
+    assert!(normalized.contains(&normalize("_$settextContent(_el13, sha.slice(0, 7));")));
     assert!(normalized.contains(&normalize(
-      "const __slot = truncate(item.commit.message); untrack(()=>renderAnchor(__slot, _el15, _list5));"
+        "const __slot = truncate(commit.message); untrack(()=>renderAnchor(__slot, _el15, _list1));"
     )));
     assert!(normalized.contains(&normalize(
-      "const __slot = formatDate(item.commit.author.date); untrack(()=>renderAnchor(__slot, _el24, _list7));"
+      "const __slot = formatDate(commit.author.date); untrack(()=>renderAnchor(__slot, _el22, _list5));"
     )));
 }

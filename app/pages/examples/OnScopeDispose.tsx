@@ -11,6 +11,11 @@ type ScopedTimerProps = {
   onDispose: (message: string) => void
 }
 
+type CleanupLog = {
+  id: number
+  message: string
+}
+
 /** 生成示例中展示的本地时间文本。 */
 const formatTime = () => new Date().toLocaleTimeString()
 
@@ -65,6 +70,11 @@ type ScopedTimerProps = {
   onDispose: (message: string) => void;
 };
 
+type CleanupLog = {
+  id: number;
+  message: string;
+};
+
 const ScopedTimer: FC<ScopedTimerProps> = props => {
   const ticks = ref(0);
   const startedAt = new Date().toLocaleTimeString();
@@ -86,10 +96,11 @@ const ScopedTimer: FC<ScopedTimerProps> = props => {
 /** 控制 ScopedTimer 挂载状态并展示 dispose 日志的示例主体。 */
 const OnScopeDisposeDemo: FC = () => {
   const visible = ref(true);
-  const logs = ref<string[]>([]);
+  const logs = ref<CleanupLog[]>([]);
+  let nextLogId = 0;
 
   const addLog = (message: string) => {
-    logs.value = [message, ...logs.value].slice(0, 5);
+    logs.value = [{ id: nextLogId++, message }, ...logs.value].slice(0, 5);
   };
 
   return (
@@ -98,7 +109,7 @@ const OnScopeDisposeDemo: FC = () => {
         {visible.value ? '卸载子作用域' : '重新挂载子作用域'}
       </button>
       {visible.value && <ScopedTimer onDispose={addLog} />}
-      {logs.value.map(log => <p>{log}</p>)}
+      {logs.value.map(log => <p key={log.id}>{log.message}</p>)}
     </section>
   );
 };
@@ -109,10 +120,14 @@ export default OnScopeDisposeDemo;`
 const OnScopeDispose: FC = () => {
   const activeTab = ref<'preview' | 'code'>('preview')
   const visible = ref(true)
-  const logs = ref<string[]>([])
+  const logs = ref<CleanupLog[]>([])
+  let nextLogId = 0
 
   const addLog = (message: string) => {
-    logs.value = [`${formatTime()} ${message}`, ...logs.value].slice(0, 5)
+    logs.value = [{ id: nextLogId++, message: `${formatTime()} ${message}` }, ...logs.value].slice(
+      0,
+      5,
+    )
   }
 
   return (
@@ -181,8 +196,12 @@ const OnScopeDispose: FC = () => {
                     <p className="text-sm text-base-content/60">还没有清理记录。</p>
                   ) : (
                     logs.value.map(log => (
-                      <p className="rounded-box bg-base-100 px-3 py-2 text-sm" key={log}>
-                        {log}
+                      <p
+                        className="rounded-box bg-base-100 px-3 py-2 text-sm"
+                        data-cleanup-log
+                        key={log.id}
+                      >
+                        {log.message}
                       </p>
                     ))
                   )}

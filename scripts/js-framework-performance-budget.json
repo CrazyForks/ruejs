@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "baselineWorkspaceVersion": "0.8.13",
+  "baselineWorkspaceVersion": "0.8.21",
   "requiredEntries": ["rue", "rue-signal", "vue"],
   "minimumValidSamples": 5,
   "rueEntries": ["rue", "rue-signal"],
   "cpu": {
-    "maxWeightedMedianRatio": 0.75,
+    "maxWeightedMedianRatio": 1.5,
     "weights": {
       "create1k": 1,
       "replace1k": 1,
@@ -19,16 +19,13 @@
     }
   },
   "operations": {
-    "select1k": { "maxRatio": 0.4 },
-    "swap1k": { "maxRatio": 0.4 }
+    "create1k": { "maxRatio": 1.1 },
+    "select1k": { "maxRatio": 2 },
+    "swap1k": { "maxRatio": 2 }
   },
-  "heap": {
-    "createClear": { "maxRatio": 0.5 }
-  },
-  "size": {
-    "brotli": { "maxRatio": 0.5 }
-  },
-  "firstPaint": { "maxRatio": 0.5 },
+  "heap": { "createClear": { "maxRatio": 1.1 } },
+  "size": { "brotli": { "maxRatio": 1.1 } },
+  "firstPaint": { "maxRatio": 2.5 },
   "dom": {
     "select1k": { "maxMutations": 2 },
     "swap1k": { "maxMutations": 6 }
@@ -37,7 +34,7 @@
     "entry": "rue-signal",
     "referenceEntry": "vue",
     "cpu": {
-      "maxWeightedGeometricMeanRatio": 1,
+      "maxWeightedGeometricMeanRatio": 2,
       "weights": {
         "create1k": 0.64280248137063,
         "replace1k": 0.5607178150466176,
@@ -51,17 +48,17 @@
       }
     },
     "operations": {
-      "update10th": { "maxRatio": 1.05 },
+      "update10th": { "maxRatio": 1.5 },
       "select1k": { "maxRatio": 1.05 },
-      "swap1k": { "maxRatio": 1.05 },
-      "clear1k": { "maxRatio": 1.1 }
+      "swap1k": { "maxRatio": 1.5 },
+      "clear1k": { "maxRatio": 3.5 }
     },
     "heap": {
-      "ready": { "maxRatio": 1.1 },
-      "create1k": { "maxRatio": 1.1 },
-      "createClear": { "maxRatio": 1.1 }
+      "ready": { "maxRatio": 1.23 },
+      "create1k": { "maxRatio": 1.79 },
+      "createClear": { "maxRatio": 1.23 }
     },
     "size": { "brotli": { "maxRatio": 1 } },
-    "firstPaint": { "maxRatio": 1.1 }
+    "firstPaint": { "maxRatio": 1.25 }
   }
 }

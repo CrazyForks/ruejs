@@ -74,10 +74,32 @@ describe('FormBindings actual page', () => {
     selects[0].value = 'C'
     selects[0].dispatchEvent(new Event('change', { bubbles: true, cancelable: true }))
 
-    Array.from(selects[1].options).forEach(option => {
-      option.selected = option.value === 'B' || option.value === 'C'
+    const ordinaryClickOption = async (value: string) => {
+      const option = Array.from(selects[1].options).find(item => item.value === value) ?? null
+      expect(option).not.toBeNull()
+      option!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+      option!.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }))
+      option!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+      await Promise.resolve()
+    }
+
+    await ordinaryClickOption('B')
+    await waitForContent(() => {
+      expect(container.textContent).toContain('Selected: A, B')
+      expect(Array.from(selects[1].selectedOptions, option => option.value)).toEqual(['A', 'B'])
     })
-    selects[1].dispatchEvent(new Event('change', { bubbles: true, cancelable: true }))
+
+    await ordinaryClickOption('C')
+    await waitForContent(() => {
+      expect(container.textContent).toContain('Selected: A, B, C')
+      expect(Array.from(selects[1].selectedOptions, option => option.value)).toEqual([
+        'A',
+        'B',
+        'C',
+      ])
+    })
+
+    await ordinaryClickOption('A')
 
     await waitForContent(() => {
       expect(container.textContent).toContain('Rue forms')
@@ -86,6 +108,7 @@ describe('FormBindings actual page', () => {
       expect(container.textContent).toContain('Picked: Two')
       expect(container.textContent).toContain('Selected: C')
       expect(container.textContent).toContain('Selected: B, C')
+      expect(Array.from(selects[1].selectedOptions, option => option.value)).toEqual(['B', 'C'])
     })
 
     await click(findTab(container, '代码'))

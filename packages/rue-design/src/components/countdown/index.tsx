@@ -167,7 +167,7 @@ const parseFormat = (format: string): CountdownFormatToken[] => {
 
 /** 读取 Unit Values 的内部工具函数。 */
 const getUnitValues = (duration: number, tokens: CountdownFormatToken[]) => {
-  const remainingUnits = new Set<CountdownFormatUnit>()
+  const remainingUnits = /*#__PURE__*/ new Set<CountdownFormatUnit>()
   tokens.forEach(token => {
     if (token.type === 'unit') remainingUnits.add(token.unit)
   })
@@ -428,7 +428,7 @@ type CountdownCompound = FC<CountdownProps> & {
   Value: FC<ValueProps>
 }
 
-const CountdownCompound: CountdownCompound = Object.assign(Countdown, {
+const CountdownCompound: CountdownCompound = /*#__PURE__*/ Object.assign(Countdown, {
   Value,
 })
 

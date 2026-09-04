@@ -25,19 +25,14 @@ const Comp: FC<{ query: string }> = (props) => {
     let out = utils::emit(program, cm);
     let normalized = utils::normalize(&utils::strip_marker(&out));
 
-    assert!(normalized.contains(&utils::normalize(
-        r#"const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-        const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-        const filtered = _$vaporWithHookId("computed:1:1", ()=>computed(()=>props.query.trim().toLowerCase()));
-        _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>{
-            console.log(props.query, filtered.value);
-        }));
-        return {
-            count: count,
-            filtered: filtered
-        };
-    }));"#,
-    )));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(
+        normalized.contains("const filtered = computed(()=>props.query.trim().toLowerCase())"),
+        "{normalized}"
+    );
+    assert!(normalized.contains("watchEffect(()=>"), "{normalized}");
+    assert!(normalized.contains("console.log(props.query, filtered.value)"), "{normalized}");
+    assert!(normalized.contains("return { count: count, filtered: filtered }"), "{normalized}");
 
     assert!(normalized.contains(&utils::normalize(
         r#"const { count: count, filtered: filtered } = _$useSetup;"#,

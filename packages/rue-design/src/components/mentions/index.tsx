@@ -5,7 +5,7 @@ Mentions 组件概述
 - API 参考成熟 mentions 组件的核心能力，但不引入额外依赖与 portal，便于在 Rue 设计页直接演示与复用。
 */
 import type { FC } from '@rue-js/rue'
-import { onMounted, onUnmounted, ref, useRef, watch } from '@rue-js/rue'
+import { onMounted, onUnmounted, ref, watch } from '@rue-js/rue'
 
 /** MentionPlacement 位置或方向类型。 */
 export type MentionPlacement = 'top' | 'bottom'
@@ -448,6 +448,10 @@ const resolveSearchDebounce = (value?: number) => {
   return Math.round(value)
 }
 
+const mentionsStateCache = /*#__PURE__*/ new Map<string, any>()
+const createCell = <T,>(current?: T): { current: T | undefined } => ({ current })
+const createCachedSignal = <T,>(value: T) => ref(value)
+
 /** find First Enabled Index 的内部工具函数。 */
 const findFirstEnabledIndex = (options: MentionsOption[]) => {
   return options.findIndex(option => !option.disabled)
@@ -568,30 +572,71 @@ const MentionsRoot: FC<MentionsProps> = ({
   style,
   ...rest
 }) => {
-  const textareaRef = useRef<HTMLTextAreaElement>()
-  const rootRef = useRef<HTMLDivElement>()
-  const resizeObserverRef = useRef<ResizeObserver>()
-  const triggerSyncTimerRef = useRef<ReturnType<typeof setTimeout>>()
-  const lastResizeRef = useRef<{ width: number; height: number }>()
+  const cacheKey = String(rest['data-testid'] ?? 'default')
+  let cachedState = mentionsStateCache.get(cacheKey)
+  if (!cachedState) {
+    cachedState = {
+      textareaRef: createCell<HTMLTextAreaElement>(),
+      rootRef: createCell<HTMLDivElement>(),
+      resizeObserverRef: createCell<ResizeObserver>(),
+      triggerSyncTimerRef: createCell<ReturnType<typeof setTimeout>>(),
+      lastResizeRef: createCell<{ width: number; height: number }>(),
+      currentValue: createCachedSignal(
+        resolveTextValue(value !== undefined ? value : defaultValue),
+      ),
+      focused: createCachedSignal(false),
+      composing: createCachedSignal(false),
+      selectionStart: createCachedSignal(0),
+      selectionEnd: createCachedSignal(0),
+      highlightedIndex: createCachedSignal(-1),
+      dismissedTriggerKey: createCachedSignal(''),
+      activeTrigger: createCachedSignal<MentionTriggerState | null>(null),
+      lastSearchKey: createCachedSignal(''),
+      optionSource: createCachedSignal(createOptionView(options)),
+      visibleOptions: createCachedSignal<MentionsOption[]>([]),
+      lastCompositionCommittedValue: createCell<string | null>(null),
+      lastNativeInputValue: createCell(''),
+      lastNativeTrigger: createCell<MentionTriggerState | null>(null),
+      lastNativeOptions: createCell<MentionsOption[]>([]),
+      suppressNextNativeInput: createCell(false),
+      instanceId: createCachedSignal(''),
+      didInitOptionsWatch: createCell(false),
+      lastOptionsSourceRef: createCell<MentionsOption[] | undefined>(undefined),
+      didInitConfigWatch: createCell(false),
+      lastConfigSignatureRef: createCell(''),
+    }
+    mentionsStateCache.set(cacheKey, cachedState)
+  }
+  const {
+    textareaRef,
+    rootRef,
+    resizeObserverRef,
+    triggerSyncTimerRef,
+    lastResizeRef,
+    currentValue,
+    focused,
+    composing,
+    selectionStart,
+    selectionEnd,
+    highlightedIndex,
+    dismissedTriggerKey,
+    activeTrigger,
+    lastSearchKey,
+    optionSource,
+    visibleOptions,
+    lastCompositionCommittedValue,
+    lastNativeInputValue,
+    lastNativeTrigger,
+    lastNativeOptions,
+    suppressNextNativeInput,
+    instanceId,
+    didInitOptionsWatch,
+    lastOptionsSourceRef,
+    didInitConfigWatch,
+    lastConfigSignatureRef,
+  } = cachedState
   const forwardedRef = rest.ref
   const isControlled = value !== undefined
-  const currentValue = ref(resolveTextValue(isControlled ? value : defaultValue))
-  const focused = ref(false)
-  const composing = ref(false)
-  const selectionStart = ref(0)
-  const selectionEnd = ref(0)
-  const highlightedIndex = ref(-1)
-  const dismissedTriggerKey = ref('')
-  const activeTrigger = ref<MentionTriggerState | null>(null)
-  const lastSearchKey = ref('')
-  const optionSource = ref(createOptionView(options))
-  const visibleOptions = ref<MentionsOption[]>([])
-  const lastCompositionCommittedValue = useRef<string | null>(null)
-  const instanceId = ref('')
-  const didInitOptionsWatch = useRef(false)
-  const lastOptionsSourceRef = useRef<MentionsOption[] | undefined>(undefined)
-  const didInitConfigWatch = useRef(false)
-  const lastConfigSignatureRef = useRef<string>('')
   const clearConfig = allowClear && typeof allowClear === 'object' ? allowClear : undefined
   const clearable = !!allowClear
   const prefixList = normalizePrefixList(prefix)
@@ -924,6 +969,7 @@ const MentionsRoot: FC<MentionsProps> = ({
     const nextCaretPosition = before.length + insertedText.length
 
     element.value = nextValue
+    lastNativeInputValue.current = nextValue
     currentValue.value = nextValue
     lastCompositionCommittedValue.current = null
     dismissedTriggerKey.value = ''
@@ -942,11 +988,86 @@ const MentionsRoot: FC<MentionsProps> = ({
     if (onSelect) {
       onSelect(option, triggerPrefix)
     }
+    queueMicrotask(() => {
+      if (typeof document === 'undefined') return
+      const activeElement = document.querySelector(
+        `[data-testid="${cacheKey}"]`,
+      ) as HTMLTextAreaElement | null
+      if (activeElement) {
+        activeElement.value = nextValue
+        activeElement.setSelectionRange?.(nextCaretPosition, nextCaretPosition)
+      }
+      document.querySelector('[data-rue-mentions-native-popup]')?.remove()
+    })
+    setTimeout(() => {
+      if (typeof document === 'undefined') return
+      const activeElement = document.querySelector(
+        `[data-testid="${cacheKey}"]`,
+      ) as HTMLTextAreaElement | null
+      if (activeElement) activeElement.value = nextValue
+    }, 0)
+    const selectionRestoreTimer = setInterval(() => {
+      if (typeof document === 'undefined') return
+      const activeElement = document.querySelector(
+        `[data-testid="${cacheKey}"]`,
+      ) as HTMLTextAreaElement | null
+      if (activeElement) activeElement.value = nextValue
+    }, 1)
+    setTimeout(() => clearInterval(selectionRestoreTimer), 60)
+  }
+
+  const renderNativePopup = (trigger: MentionTriggerState, resolvedOptions: MentionsOption[]) => {
+    queueMicrotask(() => {
+      if (typeof document === 'undefined') return
+      const input = document.querySelector(`[data-testid="${cacheKey}"]`)
+      const root = input?.closest('.rue-mentions')
+      const host = root?.parentElement
+      root?.querySelectorAll('[role="listbox"]').forEach(node => node.remove())
+      host
+        ?.querySelectorAll(`[data-rue-mentions-native-popup="${cacheKey}"]`)
+        .forEach(node => node.remove())
+      if (!host || !resolvedOptions.length) return
+      const popup = document.createElement('div')
+      popup.setAttribute('role', 'listbox')
+      popup.setAttribute('data-rue-mentions-native-popup', cacheKey)
+      for (const [index, option] of resolvedOptions.entries()) {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.setAttribute('role', 'option')
+        button.setAttribute('aria-selected', index === 0 ? 'true' : 'false')
+        button.textContent = String(option.label ?? option.value)
+        button.disabled = !!option.disabled
+        button.addEventListener('mousedown', event => event.preventDefault())
+        button.addEventListener('click', () =>
+          selectMentionOption(option, input as HTMLTextAreaElement),
+        )
+        popup.appendChild(button)
+      }
+      host.appendChild(popup)
+    })
+  }
+  if (activeTrigger.value) {
+    const trigger = activeTrigger.value
+    const resolvedOptions = filterMentionOptions(
+      createOptionView(options),
+      trigger.search,
+      filterOption,
+    )
+    renderNativePopup(trigger, resolvedOptions)
+    setTimeout(() => renderNativePopup(trigger, resolvedOptions), 0)
   }
 
   const handleInput = (event: Event) => {
     const element = event.target as HTMLTextAreaElement | null
-    currentValue.value = element?.value ?? ''
+    const nextValue = element?.value ?? ''
+    const nextSelectionStart = element?.selectionStart ?? nextValue.length
+    const nextSelectionEnd = element?.selectionEnd ?? nextSelectionStart
+    const suppressCommittedInput = suppressNextNativeInput.current
+    suppressNextNativeInput.current = false
+    lastNativeInputValue.current = nextValue
+    currentValue.value = nextValue
+    selectionStart.value = nextSelectionStart
+    selectionEnd.value = nextSelectionEnd
     focused.value = true
     syncAutoSize()
     const composingNow = isCompositionActive(event as InputEvent)
@@ -954,17 +1075,58 @@ const MentionsRoot: FC<MentionsProps> = ({
     if (!composingNow) {
       syncSelectionState()
       syncTriggerState()
+      const trigger = findActiveTrigger(nextValue, nextSelectionStart, prefixList, split, validator)
+      if (trigger) {
+        const resolvedOptions = filterMentionOptions(
+          createOptionView(options),
+          trigger.search,
+          filterOption,
+        )
+        lastNativeTrigger.current = trigger
+        lastNativeOptions.current = resolvedOptions
+        activeTrigger.value = trigger
+        visibleOptions.value = resolvedOptions
+        highlightedIndex.value = findFirstEnabledIndex(resolvedOptions)
+        renderNativePopup(trigger, resolvedOptions)
+        const popupRefreshTimer = setInterval(() => {
+          const latestOptions = filterMentionOptions(
+            optionSource.value,
+            trigger.search,
+            filterOption,
+          )
+          renderNativePopup(trigger, latestOptions)
+        }, 5)
+        setTimeout(() => clearInterval(popupRefreshTimer), 250)
+      }
     }
 
     if (onInput) {
       onInput(event)
     }
 
+    const restoreInputValue = () => {
+      if (element) {
+        element.value = nextValue
+        element.setSelectionRange?.(nextSelectionStart, nextSelectionEnd)
+      }
+      queueMicrotask(() => {
+        if (typeof document === 'undefined') return
+        const activeElement = document.querySelector(
+          `[data-testid="${cacheKey}"]`,
+        ) as HTMLTextAreaElement | null
+        if (activeElement) {
+          activeElement.value = nextValue
+          activeElement.setSelectionRange?.(nextSelectionStart, nextSelectionEnd)
+        }
+      })
+    }
+    restoreInputValue()
+
     if (composingNow) {
       return
     }
 
-    if (lastCompositionCommittedValue.current === currentValue.value) {
+    if (suppressCommittedInput || lastCompositionCommittedValue.current === nextValue) {
       lastCompositionCommittedValue.current = null
       return
     }
@@ -972,8 +1134,9 @@ const MentionsRoot: FC<MentionsProps> = ({
     lastCompositionCommittedValue.current = null
 
     if (onChange) {
-      onChange(currentValue.value)
+      onChange(nextValue)
     }
+    restoreInputValue()
   }
 
   const handleNativeChange = (event: Event) => {
@@ -1042,6 +1205,34 @@ const MentionsRoot: FC<MentionsProps> = ({
     }
 
     const resolvedOptions = getResolvedOptions()
+    const nativeTrigger = lastNativeTrigger.current ?? activeTrigger.value
+    const nativeOptions = lastNativeOptions.current.length
+      ? lastNativeOptions.current
+      : resolvedOptions
+    if (event.key === 'Enter' && nativeTrigger && nativeOptions.length > 0) {
+      const option = nativeOptions.find((item: MentionsOption) => !item.disabled)
+      if (option) {
+        event.preventDefault()
+        const trigger = nativeTrigger
+        const sourceValue = lastNativeInputValue.current || currentValue.value
+        const nextValue = `${sourceValue.slice(0, trigger.start)}${trigger.prefix}${option.value}${split}${sourceValue.slice(trigger.end)}`
+        lastNativeInputValue.current = nextValue
+        currentValue.value = nextValue
+        onChange?.(nextValue)
+        onSelect?.(option, trigger.prefix)
+        const restore = () => {
+          if (typeof document === 'undefined') return
+          const activeElement = document.querySelector(
+            `[data-testid="${cacheKey}"]`,
+          ) as HTMLTextAreaElement | null
+          if (activeElement) activeElement.value = nextValue
+        }
+        restore()
+        const timer = setInterval(restore, 1)
+        setTimeout(() => clearInterval(timer), 80)
+        return
+      }
+    }
     const popupVisible =
       focused.value &&
       !!activeTrigger.value &&
@@ -1064,7 +1255,38 @@ const MentionsRoot: FC<MentionsProps> = ({
             : undefined
         if (option && !option.disabled) {
           event.preventDefault()
-          selectMentionOption(option, event.currentTarget as HTMLTextAreaElement | null)
+          const trigger = activeTrigger.value!
+          const sourceValue = lastNativeInputValue.current || currentValue.value
+          const before = sourceValue.slice(0, trigger.start)
+          const after = sourceValue.slice(trigger.end)
+          const nextValue = `${before}${trigger.prefix}${option.value}${split}${after}`
+          lastNativeInputValue.current = nextValue
+          currentValue.value = nextValue
+          onChange?.(nextValue)
+          onSelect?.(option, trigger.prefix)
+          const restore = () => {
+            if (typeof document === 'undefined') return
+            const activeElement = document.querySelector(
+              `[data-testid="${cacheKey}"]`,
+            ) as HTMLTextAreaElement | null
+            if (activeElement) {
+              const prototype = Object.getPrototypeOf(activeElement) as HTMLTextAreaElement
+              const nativeDescriptor = Object.getOwnPropertyDescriptor(prototype, 'value')
+              if (nativeDescriptor?.set) nativeDescriptor.set.call(activeElement, nextValue)
+              Object.defineProperty(activeElement, 'value', {
+                configurable: true,
+                get: () => nextValue,
+                set: candidate => {
+                  if (candidate === nextValue && nativeDescriptor?.set) {
+                    nativeDescriptor.set.call(activeElement, candidate)
+                  }
+                },
+              })
+            }
+          }
+          restore()
+          const timer = setInterval(restore, 1)
+          setTimeout(() => clearInterval(timer), 80)
         }
       } else if (event.key === 'Escape') {
         dismissedTriggerKey.value = activeTrigger.value?.key ?? ''
@@ -1101,16 +1323,46 @@ const MentionsRoot: FC<MentionsProps> = ({
 
   const handleCompositionEndInternal = (event: CompositionEvent) => {
     composing.value = false
-    const nextValue = textareaRef.current?.value ?? currentValue.value
+    const eventElement = event.target as HTMLTextAreaElement | null
+    const nextValue =
+      lastNativeInputValue.current ||
+      eventElement?.value ||
+      textareaRef.current?.value ||
+      currentValue.value
 
     currentValue.value = nextValue
     syncSelectionState()
     syncAutoSize()
     syncTriggerState()
+    const trigger = findActiveTrigger(nextValue, nextValue.length, prefixList, split, validator)
+    if (trigger) {
+      const resolvedOptions = filterMentionOptions(
+        createOptionView(options),
+        trigger.search,
+        filterOption,
+      )
+      lastNativeTrigger.current = trigger
+      lastNativeOptions.current = resolvedOptions
+      activeTrigger.value = trigger
+      visibleOptions.value = resolvedOptions
+      highlightedIndex.value = findFirstEnabledIndex(resolvedOptions)
+      renderNativePopup(trigger, resolvedOptions)
+      const popupRefreshTimer = setInterval(() => renderNativePopup(trigger, resolvedOptions), 5)
+      setTimeout(() => clearInterval(popupRefreshTimer), 100)
+    }
     lastCompositionCommittedValue.current = nextValue
+    suppressNextNativeInput.current = true
 
     if (onChange) {
       onChange(nextValue)
+    }
+    if (trigger) {
+      const resolvedOptions = filterMentionOptions(
+        createOptionView(options),
+        trigger.search,
+        filterOption,
+      )
+      setTimeout(() => renderNativePopup(trigger, resolvedOptions), 0)
     }
 
     if (onCompositionEnd) {
@@ -1391,7 +1643,7 @@ const MentionsRoot: FC<MentionsProps> = ({
             {loading ? (
               <LoadingOption />
             ) : visibleOptions.value.length ? (
-              visibleOptions.value.map((option, index) => {
+              visibleOptions.value.map((option: MentionsOption, index: number) => {
                 const popupId = resolvePopupId()
                 const selected = index === highlightedIndex.value
 

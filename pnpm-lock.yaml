@@ -65,9 +65,6 @@ importers:
       '@rue-js/i18n':
         specifier: workspace:*
         version: link:packages/i18n
-      '@rue-js/jsx-runtime':
-        specifier: workspace:*
-        version: link:packages/jsx-runtime
       '@rue-js/router':
         specifier: workspace:*
         version: link:packages/router
@@ -80,9 +77,6 @@ importers:
       '@rue-js/runtime':
         specifier: workspace:*
         version: link:packages/runtime
-      '@rue-js/runtime-vapor':
-        specifier: workspace:*
-        version: link:packages/runtime-vapor
       '@rue-js/server-renderer':
         specifier: workspace:*
         version: link:packages/server-renderer
@@ -126,9 +120,6 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
-      '@rue-js/jsx-dev-runtime':
-        specifier: workspace:*
-        version: link:packages/jsx-dev-runtime
       '@swc/cli':
         specifier: ^0.8.1
         version: 0.8.1(@swc/core@1.15.43)
@@ -255,9 +246,6 @@ importers:
 
   examples/server-islands:
     dependencies:
-      '@rue-js/jsx-runtime':
-        specifier: workspace:*
-        version: link:../../packages/jsx-runtime
       '@rue-js/rue':
         specifier: workspace:*
         version: link:../../packages/rue
@@ -276,9 +264,6 @@ importers:
 
   examples/text-blog-ssr:
     dependencies:
-      '@rue-js/jsx-runtime':
-        specifier: workspace:*
-        version: link:../../packages/jsx-runtime
       '@rue-js/rue':
         specifier: workspace:*
         version: link:../../packages/rue
@@ -301,9 +286,6 @@ importers:
 
   examples/text-static-export:
     dependencies:
-      '@rue-js/jsx-runtime':
-        specifier: workspace:*
-        version: link:../../packages/jsx-runtime
       '@rue-js/rue':
         specifier: workspace:*
         version: link:../../packages/rue
@@ -322,18 +304,6 @@ importers:
         version: 25.9.5
 
   packages/i18n:
-    dependencies:
-      '@rue-js/rue':
-        specifier: workspace:*
-        version: link:../rue
-
-  packages/jsx-dev-runtime:
-    dependencies:
-      '@rue-js/rue':
-        specifier: workspace:*
-        version: link:../rue
-
-  packages/jsx-runtime:
     dependencies:
       '@rue-js/rue':
         specifier: workspace:*
@@ -458,9 +428,6 @@ importers:
 
   packages/runtime:
     dependencies:
-      '@rue-js/runtime-vapor':
-        specifier: workspace:*
-        version: link:../runtime-vapor
       '@rue-js/shared':
         specifier: workspace:*
         version: link:../shared
@@ -471,12 +438,6 @@ importers:
       '@types/trusted-types':
         specifier: ^2.0.7
         version: 2.0.7
-
-  packages/runtime-vapor:
-    devDependencies:
-      c8:
-        specifier: ^11.0.0
-        version: 11.0.0
 
   packages/server-renderer:
     dependencies:
@@ -496,12 +457,6 @@ importers:
 
   packages/text:
     dependencies:
-      '@rue-js/jsx-dev-runtime':
-        specifier: workspace:*
-        version: link:../jsx-dev-runtime
-      '@rue-js/jsx-runtime':
-        specifier: workspace:*
-        version: link:../jsx-runtime
       '@rue-js/rsc':
         specifier: workspace:*
         version: link:../rue-rsc
@@ -511,9 +466,6 @@ importers:
       '@rue-js/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@rue-js/runtime-vapor':
-        specifier: workspace:*
-        version: link:../runtime-vapor
       '@rue-js/server-renderer':
         specifier: workspace:*
         version: link:../server-renderer

@@ -112,31 +112,118 @@ export const View = () => {
     );
     let out = normalize(&output);
 
-    assert!(!out.contains("from \"@rue-js/rue/compiled\""), "{output}");
-    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
+    assert!(out.contains("from \"@rue-js/rue/internal"), "{output}");
+    assert!(!out.contains("from \"@rue-js/rue/internal\""), "{output}");
     assert!(out.contains("_$compiledRoot"), "{output}");
     assert!(out.contains("effect(()=>"), "{output}");
-    assert!(out.contains("_$compiledCreateElement(\"section\""), "{output}");
-    assert!(out.contains("_$compiledAppendChild(_root, _el1)"), "{output}");
+    assert!(out.contains("_$template(\"<section><input></section>\")"), "{output}");
+    assert!(out.contains(".content.cloneNode(true)"), "{output}");
+    assert!(out.contains("const _el1 = _root"), "{output}");
+    assert!(out.contains("const _el2 = _root.childNodes[0]"), "{output}");
+    assert!(!out.contains("_$compiledCreateElement"), "{output}");
+    assert!(!out.contains("_$compiledAppendChild"), "{output}");
     assert!(!out.contains("document.createElement"), "{output}");
-    assert!(out.contains("_root.className"), "{output}");
-    assert!(out.contains("_root.style.cssText"), "{output}");
-    assert!(out.contains("_root.removeAttribute(\"title\")"), "{output}");
-    assert!(out.contains(".value ="), "{output}");
+    assert!(out.contains("_el1.className"), "{output}");
+    assert!(out.contains("_$setStyle(_el1"), "{output}");
+    assert!(out.contains("_el1.removeAttribute(\"title\")"), "{output}");
+    assert!(out.contains("_$setValue(_el2"), "{output}");
     assert!(out.contains(".checked ="), "{output}");
     assert!(out.contains(".disabled ="), "{output}");
     assert!(out.contains(".multiple ="), "{output}");
     assert!(!out.contains("watchEffect"), "{output}");
     assert!(!out.contains("_$setClassName"), "{output}");
-    assert!(!out.contains("_$setStyle"), "{output}");
+    assert!(out.contains("_$setStyle"), "{output}");
     assert!(!out.contains("_$setAttribute"), "{output}");
-    assert!(!out.contains("_$setValue"), "{output}");
+    assert!(out.contains("_$setValue"), "{output}");
     assert!(!out.contains("_$setChecked"), "{output}");
     assert!(!out.contains("_$setDisabled"), "{output}");
 }
 
 #[test]
-fn keeps_unproven_attr_values_on_the_vapor_fallback() {
+fn compiles_proven_rue_reactive_members_in_native_attrs() {
+    let output = transform_module(
+        r#"
+import { ref, reactive } from '@rue-js/rue';
+export const View = () => {
+  const label = ref('ready');
+  const form = reactive({ className: 'active', style: 'color:red', checked: true });
+  return <input className={form.className} style={form.style} title={label.value}
+    value={label.value} checked={form.checked} disabled={form.checked} />;
+};
+"#,
+    );
+    let out = normalize(&output);
+
+    assert!(out.contains("_$compiledRoot"), "{output}");
+    assert!(out.contains("effect(()=>"), "{output}");
+    assert!(out.contains("form.className"), "{output}");
+    assert!(out.contains("form.style"), "{output}");
+    assert!(out.contains("label.value"), "{output}");
+    assert!(!out.contains("watchEffect"), "{output}");
+    assert!(!out.contains("vapor("), "{output}");
+}
+
+#[test]
+fn compiles_static_key_reactive_style_records_without_vapor() {
+    let output = transform_module(
+        r#"
+import { ref } from '@rue-js/rue';
+export const View = () => {
+  const color = ref('green');
+  return <p style={{ color: color.value, opacity: 0.75, 'background-color': color.value }} />;
+};
+"#,
+    );
+    let out = normalize(&output);
+
+    assert!(out.contains("_$compiledRoot"), "{output}");
+    assert!(out.contains("effect(()=>"), "{output}");
+    assert!(out.contains("color.value"), "{output}");
+    assert!(out.contains("Object.is"), "{output}");
+    assert!(out.contains(".style.color"), "{output}");
+    assert!(out.contains(".style.opacity"), "{output}");
+    assert!(out.contains(".style.setProperty(\"background-color\""), "{output}");
+    assert!(!out.contains("watchEffect"), "{output}");
+    assert!(!out.contains("_$setStyle"), "{output}");
+    assert!(!out.contains("vapor("), "{output}");
+}
+
+#[test]
+fn compiles_unsafe_style_records_with_the_shared_style_helper() {
+    for source in [
+        r#"
+import { ref } from '@rue-js/rue';
+export const View = () => {
+  const color = ref('green');
+  const base = { opacity: 0.75 };
+  return <p style={{ ...base, color: color.value }} />;
+};
+"#,
+        r#"
+import { ref } from '@rue-js/rue';
+export const View = () => {
+  const color = ref('green');
+  const property = 'color';
+  return <p style={{ [property]: color.value }} />;
+};
+"#,
+        r#"
+export const View = () => <p style={{ color: loadColor() }} />;
+"#,
+    ] {
+        let output = transform_module(source);
+        let out = normalize(&output);
+
+        assert!(out.contains("from \"@rue-js/rue/internal"), "{output}");
+        assert!(out.contains("effect"), "{output}");
+        assert!(out.contains("_$setStyle"), "{output}");
+        assert!(out.contains("_$compiledRoot"), "{output}");
+        assert!(!out.contains("vapor("), "{output}");
+    }
+}
+
+#[test]
+fn compiles_unproven_attr_values_with_guarded_dom_effects() {
     let output = transform_module(
         r#"
 const makeStyle = () => ({ color: 'red' });
@@ -145,15 +232,15 @@ export const View = () => <div style={makeStyle()} title={loadValue()} />;
     );
     let out = normalize(&output);
 
-    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
-    assert!(out.contains("watchEffect"), "{output}");
+    assert!(out.contains("from \"@rue-js/rue/internal"), "{output}");
+    assert!(out.contains("effect"), "{output}");
     assert!(out.contains("_$setStyle"), "{output}");
-    assert!(out.contains("_$setAttribute"), "{output}");
-    assert!(!out.contains("_$compiledRoot"), "{output}");
+    assert!(out.contains(".setAttribute(\"title\""), "{output}");
+    assert!(out.contains("_$compiledRoot"), "{output}");
 }
 
 #[test]
-fn keeps_shadowed_scalar_constructors_on_the_vapor_fallback() {
+fn compiles_shadowed_scalar_constructors_without_assuming_scalar_results() {
     let output = transform_module(
         r#"
 import { signal } from '@rue-js/rue';
@@ -166,9 +253,9 @@ export const View = () => {
     );
     let out = normalize(&output);
 
-    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
-    assert!(out.contains("_$setAttribute"), "{output}");
-    assert!(!out.contains("_$compiledRoot"), "{output}");
+    assert!(out.contains("from \"@rue-js/rue/internal"), "{output}");
+    assert!(out.contains(".setAttribute(\"title\""), "{output}");
+    assert!(out.contains("_$compiledRoot"), "{output}");
 }
 
 #[test]
@@ -187,13 +274,13 @@ export const View = (props) => (
     let out = normalize(&output);
     let compiled_import = output
         .lines()
-        .find(|line| line.contains("@rue-js/rue/compiled"))
+        .find(|line| line.contains("@rue-js/rue/internal"))
         .expect("compiled runtime import");
 
-    assert!(out.contains("from \"@rue-js/rue/compiled\""), "{output}");
-    assert!(compiled_import.contains("onCleanup"), "{output}");
+    assert!(out.contains("from \"@rue-js/rue/internal"), "{output}");
+    assert!(compiled_import.contains("onOwnerCleanup"), "{output}");
     assert!(out.contains("_$compiledRoot"), "{output}");
-    assert!(out.contains("onCleanup"), "{output}");
+    assert!(out.contains("onOwnerCleanup"), "{output}");
     assert!(out.contains(".addEventListener(\"click\", __event"), "{output}");
     assert!(out.contains(".removeEventListener(\"click\", __event"), "{output}");
     assert!(out.contains(".addEventListener(\"focus\", __event"), "{output}");
@@ -204,8 +291,8 @@ export const View = (props) => (
     assert!(out.contains(".current ="), "{output}");
     assert!(out.contains("null"), "{output}");
     assert!(!out.contains("_$addEventListener"), "{output}");
-    assert!(!out.contains("_$vaporBindUseRef"), "{output}");
-    assert!(!out.contains("from \"@rue-js/rue/vapor\""), "{output}");
+    assert!(!out.contains("_$compiledBindUseRef"), "{output}");
+    assert!(!out.contains("from \"@rue-js/rue/internal\""), "{output}");
 }
 
 #[test]
@@ -221,13 +308,13 @@ export const NativeBridge = () => <Panel r-on:click-native={handleClick} />;
     );
     let out = normalize(&output);
 
-    assert!(out.contains("from \"@rue-js/rue/vapor\""), "{output}");
-    assert!(out.contains("_$vaporWithEventModifiers"), "{output}");
-    assert!(out.contains("_$spreadAttributes"), "{output}");
-    assert!(out.contains("_$vaporBindUseRef"), "{output}");
+    assert!(out.contains("from \"@rue-js/rue/internal"), "{output}");
+    assert!(out.contains("_$compiledWithEventModifiers"), "{output}");
+    assert!(out.contains("_$compiledSpreadAttributes"), "{output}");
+    assert!(out.contains("_$compiledBindUseRef"), "{output}");
     assert!(out.contains("_$createComponent"), "{output}");
-    assert!(out.contains("_$vaporWithNativeEvents"), "{output}");
-    assert!(!out.contains("_$compiledRoot"), "{output}");
+    assert!(out.contains("_$compiledWithNativeEvents"), "{output}");
+    assert!(out.contains("_$compiledRoot"), "{output}");
 }
 
 #[test]
@@ -426,7 +513,7 @@ fn emits_dynamic_attrs_events_and_skips_unsupported_attr_shapes() {
     emit_attrs_for(&mut stmts, &target, &opening);
 
     let out = normalize(&emit_stmts(stmts));
-    assert!(out.contains(&normalize("watchEffect(()=>{ _$setValue(el, selected); })")));
+    assert!(out.contains(&normalize("effect(()=>{ _$setValue(el, selected); })")));
     assert!(out.contains(&normalize("el.multiple = !!(isMulti)")));
     assert!(out.contains(&normalize("_$setClassName(el, (klass))")));
     assert!(out.contains(&normalize("const el_style = (styleObj); _$setStyle(el, el_style);")));
@@ -434,10 +521,23 @@ fn emits_dynamic_attrs_events_and_skips_unsupported_attr_shapes() {
     assert!(out.contains(&normalize(
         "_$setInnerHTML(el, __obj && \"__html\" in __obj ? __obj.__html : \"\")"
     )));
-    assert!(out.contains(&normalize("_$addEventListener(el, \"click\", (handleClick))")));
+    assert!(out.contains(".addEventListener(\"click\""), "{out}");
+    assert!(out.contains("onScopeDispose"), "{out}");
     assert!(out.contains(&normalize("_$setAttribute(el, \"data-id\", String((id)))")));
     assert!(!out.contains("ns:name"));
-    assert!(out.contains(&normalize("watchEffect(()=>{ _$spreadAttributes(el, (spread)); })")));
+    assert!(out.contains(&normalize("effect(()=>{ _$spreadAttributes(el, (spread), []); })")));
+}
+
+#[test]
+fn emits_dynamic_open_as_a_boolean_dom_property() {
+    let target = ident("el");
+    let opening = parse_jsx_opening("<details open={expanded} />");
+    let mut stmts = Vec::new();
+    emit_attrs_for(&mut stmts, &target, &opening);
+
+    let out = normalize(&emit_stmts(stmts));
+    assert!(out.contains(&normalize("effect(()=>{ el.open = !!(expanded); })")));
+    assert!(!out.contains("_$setAttribute"));
 }
 
 #[test]
@@ -450,11 +550,11 @@ fn emits_dynamic_ref_and_controlled_input_attrs() {
     emit_attrs_for(&mut stmts, &target, &opening);
 
     let out = normalize(&emit_stmts(stmts));
-    assert!(out.contains(&normalize("_$vaporBindUseRef(el, ()=>(inputRef));")));
+    assert!(out.contains(&normalize("_$compiledBindUseRef(el, ()=>(inputRef));")));
     assert!(!out.contains("onBeforeUnmount"));
-    assert!(out.contains(&normalize("watchEffect(()=>{ _$setValue(el, form.value); })")));
-    assert!(out.contains(&normalize("watchEffect(()=>{ _$setDisabled(el, form.disabled); })")));
-    assert!(out.contains(&normalize("watchEffect(()=>{ _$setChecked(el, !!(form.checked)); })")));
+    assert!(out.contains(&normalize("effect(()=>{ _$setValue(el, form.value); })")));
+    assert!(out.contains(&normalize("effect(()=>{ _$setDisabled(el, form.disabled); })")));
+    assert!(out.contains(&normalize("effect(()=>{ _$setChecked(el, !!(form.checked)); })")));
 }
 
 #[test]
@@ -465,7 +565,7 @@ fn covers_dynamic_attr_false_edges_for_member_roots_and_non_ident_attrs() {
     let mut member_stmts = Vec::new();
     emit_attrs_for(&mut member_stmts, &target, &member_opening);
     let member_out = normalize(&emit_stmts(member_stmts));
-    assert!(member_out.contains(&normalize("watchEffect(()=>{ _$setValue(el, form.value); })")));
+    assert!(member_out.contains(&normalize("effect(()=>{ _$setValue(el, form.value); })")));
 
     let mixed_opening = parse_jsx_opening(
         "<select className={klass + suffix} value={selected} data:track={id} {...spread} />",
@@ -473,13 +573,11 @@ fn covers_dynamic_attr_false_edges_for_member_roots_and_non_ident_attrs() {
     let mut mixed_stmts = Vec::new();
     emit_attrs_for(&mut mixed_stmts, &target, &mixed_opening);
     let mixed_out = normalize(&emit_stmts(mixed_stmts));
-    assert!(
-        mixed_out.contains(&normalize("watchEffect(()=>{ _$setClassName(el, klass + suffix); })",))
-    );
-    assert!(mixed_out.contains(&normalize("watchEffect(()=>{ _$setValue(el, selected); })")));
+    assert!(mixed_out.contains(&normalize("effect(()=>{ _$setClassName(el, klass + suffix); })",)));
+    assert!(mixed_out.contains(&normalize("effect(()=>{ _$setValue(el, selected); })")));
     assert!(!mixed_out.contains("data:track"));
     assert!(
-        mixed_out.contains(&normalize("watchEffect(()=>{ _$spreadAttributes(el, (spread)); })"))
+        mixed_out.contains(&normalize("effect(()=>{ _$spreadAttributes(el, (spread), []); })"))
     );
 }
 
@@ -517,7 +615,7 @@ fn native_key_is_structural_metadata_only() {
     assert!(!out.contains("\"key\""), "native key must not become a DOM attribute: {out}");
     assert!(
         out.contains(&normalize(
-            "watchEffect(()=>{ _$setAttribute(el, \"title\", String((row.title))); })"
+            "effect(()=>{ _$setAttribute(el, \"title\", String((row.title))); })"
         )),
         "ordinary native attributes must still be emitted: {out}"
     );

@@ -19,7 +19,7 @@ describe('onRenderTriggered gating', () => {
     const button = container.querySelector('button') as HTMLButtonElement
     expect(button.textContent).toBe('0')
 
-    const bridge = (globalThis as any).__rue_runtime_vapor_shared_bridge
+    const bridge = (globalThis as any).__rue_compiled_runtime_bridge
     const dispatch = vi.spyOn(bridge, 'dispatchRenderTriggeredForEffect')
 
     button.click()

@@ -44,48 +44,50 @@ export default HelloWorld
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$appendChild, watchEffect, _$createTextWrapper } from "@rue-js/rue/vapor";
+    let _legacy_expected_fragment = r##"
+import { ref, _$compiledWithHookId, useSetup, vapor, _$createComponent, renderAnchor, _$template, untrack, watchEffect } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
+const _$getTemplate1 = _$template("<div><div>我是World <!--rue:text-hole:0--></div></div>");
+const _$getTemplate2 = _$template("<div><div>我是goods <!--rue:text-hole:0--></div></div>");
+const _$getTemplate3 = _$template("<div><!--rue:opaque-hole:0--><!--rue:opaque-hole:1--></div>");
 const HelloWorld: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup2", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0:dup2", ()=>useSetup(()=>{
             const World: FC = ()=>{
-                const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-                        const x = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+                const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+                        const x = ref(0);
                         return {
                             x: x
                         };
                     }));
                 const { x: x } = _$useSetup;
-                return vapor(()=>{
-                    const _root = _$createElement("div");
-                    const _el1 = _$createElement("div");
-                    _$appendChild(_root, _el1);
-                    _$appendChild(_el1, _$createTextNode("我是World "));
-                    const _el2 = _$createTextWrapper(_el1);
-                    _$appendChild(_el1, _el2);
+                return vapor((__rue_parent_context)=>{
+                    const _fragment = _$getTemplate1().content.cloneNode(true);
+                    const _root = _fragment.firstChild;
+                    const _el1 = _root.childNodes[0].childNodes[1];
+                    const _el2 = _el1.parentNode;
                     watchEffect(()=>{
-                        _$settextContent(_el2, x.value);
+                        const __slot = (x.value);
+                        untrack(()=>renderAnchor(__slot, _el2, _el1));
                     });
                     return _root;
                 });
             };
             const Goods: FC = ()=>{
-                const _$useSetup = _$vaporWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
-                        const y = _$vaporWithHookId("ref:1:1", ()=>ref(10));
+                const _$useSetup = _$compiledWithHookId("useSetup:0:0:dup1", ()=>useSetup(()=>{
+                        const y = ref(10);
                         return {
                             y: y
                         };
                     }));
                 const { y: y } = _$useSetup;
-                return vapor(()=>{
-                    const _root = _$createElement("div");
-                    const _el3 = _$createElement("div");
-                    _$appendChild(_root, _el3);
-                    _$appendChild(_el3, _$createTextNode("我是goods "));
-                    const _el4 = _$createTextWrapper(_el3);
-                    _$appendChild(_el3, _el4);
+                return vapor((__rue_parent_context)=>{
+                    const _fragment = _$getTemplate2().content.cloneNode(true);
+                    const _root = _fragment.firstChild;
+                    const _el3 = _root.childNodes[0].childNodes[1];
+                    const _el4 = _el3.parentNode;
                     watchEffect(()=>{
-                        _$settextContent(_el4, y.value);
+                        const __slot = (y.value);
+                        untrack(()=>renderAnchor(__slot, _el4, _el3));
                     });
                     return _root;
                 });
@@ -96,16 +98,17 @@ const HelloWorld: FC = ()=>{
             };
         }));
     const { World: World, Goods: Goods } = _$useSetup;
-    return vapor(()=>{
-        const _root = _$createElement("div");
-        const _list1 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list1);
-        const __slot2 = _$createComponent(World, {});
-        renderAnchor(__slot2, _root, _list1);
-        const _list3 = _$createComment("rue:component:anchor");
-        _$appendChild(_root, _list3);
-        const __slot4 = _$createComponent(Goods, {});
-        renderAnchor(__slot4, _root, _list3);
+    return vapor((__rue_parent_context)=>{
+        const _fragment = _$getTemplate3().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el5 = _root.childNodes[0];
+        const _el6 = _el5.parentNode;
+        const _el7 = _root.childNodes[1];
+        const _el8 = _el7.parentNode;
+        const __slot1 = _$createComponent(World, {});
+        renderAnchor(__slot1, _el6, _el5);
+        const __slot2 = _$createComponent(Goods, {});
+        renderAnchor(__slot2, _el8, _el7);
         return _root;
     });
 };
@@ -115,5 +118,12 @@ export default HelloWorld;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec43.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let output = normalize(&strip_marker(&out));
+    assert_eq!(output.matches("_$compiledRoot(").count(), 3, "{output}");
+    assert_eq!(output.matches("_$compiledText(").count(), 2, "{output}");
+    assert_eq!(output.matches("_$createComponent(").count(), 2, "{output}");
+    assert_eq!(output.matches("__rue_compiled_explicit_roots: true").count(), 3, "{output}");
+    assert!(!output.contains("return vapor("), "{output}");
+    assert!(!output.contains("watchEffect"), "{output}");
+    assert!(!output.contains("untrack"), "{output}");
 }

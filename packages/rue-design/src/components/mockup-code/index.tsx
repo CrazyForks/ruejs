@@ -174,15 +174,12 @@ const renderMockupCodeItem = (
   start: number,
   codeClassName: string | undefined,
 ) => {
-  const itemPrefix = hasContent(item.prefix) ? item.prefix : prefix
-  const lineNumber = lineNumbers ? start + index : undefined
-
   return (
     <Line
       key={item.key ?? index}
       {...item}
-      prefix={itemPrefix}
-      lineNumber={lineNumber}
+      prefix={hasContent(item.prefix) ? item.prefix : prefix}
+      lineNumber={lineNumbers ? start + index : undefined}
       codeClassName={item.codeClassName ?? codeClassName}
     />
   )
@@ -201,23 +198,23 @@ const Line: FC<MockupCodeLineProps> = ({
   tone,
   ...rest
 }) => {
-  const resolvedPrefix = hasContent(prefix) ? prefix : lineNumber
-  const lineProps = createLineProps({
-    rest,
-    resolvedPrefix,
-    tone,
-    highlight,
-    className,
-  })
-  const hasChildren = hasContent(children)
-  const hasLineCode = hasContent(lineCode)
+  const lineProps = () =>
+    createLineProps({
+      rest,
+      resolvedPrefix: hasContent(prefix) ? prefix : lineNumber,
+      tone,
+      highlight,
+      className,
+    })
+  const hasChildren = () => hasContent(children)
+  const hasLineCode = () => hasContent(lineCode)
 
   if (as === 'div') {
     return (
-      <div {...lineProps}>
-        {hasChildren ? (
+      <div {...lineProps()}>
+        {hasChildren() ? (
           children
-        ) : hasLineCode ? (
+        ) : hasLineCode() ? (
           <code className={codeClassName}>{lineCode}</code>
         ) : null}
       </div>
@@ -226,10 +223,10 @@ const Line: FC<MockupCodeLineProps> = ({
 
   if (as === 'li') {
     return (
-      <li {...lineProps}>
-        {hasChildren ? (
+      <li {...lineProps()}>
+        {hasChildren() ? (
           children
-        ) : hasLineCode ? (
+        ) : hasLineCode() ? (
           <code className={codeClassName}>{lineCode}</code>
         ) : null}
       </li>
@@ -239,10 +236,10 @@ const Line: FC<MockupCodeLineProps> = ({
   if (typeof as === 'function') {
     const Component = as as any
     return (
-      <Component {...lineProps}>
-        {hasChildren ? (
+      <Component {...lineProps()}>
+        {hasChildren() ? (
           children
-        ) : hasLineCode ? (
+        ) : hasLineCode() ? (
           <code className={codeClassName}>{lineCode}</code>
         ) : null}
       </Component>
@@ -250,10 +247,10 @@ const Line: FC<MockupCodeLineProps> = ({
   }
 
   return (
-    <pre {...lineProps}>
-      {hasChildren ? (
+    <pre {...lineProps()}>
+      {hasChildren() ? (
         children
-      ) : hasLineCode ? (
+      ) : hasLineCode() ? (
         <code className={codeClassName}>{lineCode}</code>
       ) : null}
     </pre>
@@ -272,11 +269,11 @@ const Root: FC<MockupCodeProps> = ({
   codeClassName,
   ...rest
 }) => {
-  const rootProps = createRootProps({ rest, className })
+  const rootProps = () => createRootProps({ rest, className })
 
   if (as === 'section') {
     return (
-      <section {...rootProps}>
+      <section {...rootProps()}>
         {(items ?? []).map((item, index) =>
           renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
         )}
@@ -287,7 +284,7 @@ const Root: FC<MockupCodeProps> = ({
 
   if (as === 'article') {
     return (
-      <article {...rootProps}>
+      <article {...rootProps()}>
         {(items ?? []).map((item, index) =>
           renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
         )}
@@ -299,7 +296,7 @@ const Root: FC<MockupCodeProps> = ({
   if (typeof as === 'function') {
     const Component = as as any
     return (
-      <Component {...rootProps}>
+      <Component {...rootProps()}>
         {(items ?? []).map((item, index) =>
           renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
         )}
@@ -309,7 +306,7 @@ const Root: FC<MockupCodeProps> = ({
   }
 
   return (
-    <div {...rootProps}>
+    <div {...rootProps()}>
       {(items ?? []).map((item, index) =>
         renderMockupCodeItem(item, index, prefix, lineNumbers, start, codeClassName),
       )}
@@ -322,7 +319,7 @@ type MockupCodeCompound = FC<MockupCodeProps> & {
   Line: FC<MockupCodeLineProps>
 }
 
-const MockupCode: MockupCodeCompound = Object.assign(Root, {
+const MockupCode: MockupCodeCompound = /*#__PURE__*/ Object.assign(Root, {
   Line,
 })
 

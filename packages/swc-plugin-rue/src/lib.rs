@@ -1,7 +1,8 @@
 // SWC ECMAScript AST 节点类型集合（Program/Module/Stmt/Expr/JSX* 等）
 use swc_core::ecma::ast::*;
 // SWC 访问器扩展方法：在 AST 上运行可变访问器（VisitMut 实现者）
-use swc_core::ecma::visit::VisitMutWith;
+use swc_core::common::Span;
+use swc_core::ecma::visit::{Visit, VisitMutWith, VisitWith};
 // 标记函数为 SWC 插件入口：供编译器在转换阶段调用
 use swc_core::plugin::plugin_transform;
 // 插件上下文类型：保持 SWC 插件入口签名一致
@@ -14,7 +15,9 @@ mod vapor;
 // 功能拆分模块
 mod attrs;
 mod compiled_capabilities;
+mod compiled_component;
 mod custom_element;
+mod diagnostics;
 mod element_children;
 mod element_component;
 mod element_expr;
@@ -24,16 +27,23 @@ mod element_node;
 mod element_slot;
 mod element_text;
 mod elements;
+mod hydrate;
 mod imports;
 pub mod log;
 mod pre;
+mod reactive_provenance;
 mod router_link;
+mod server;
 mod text;
 mod utils;
 
 #[cfg(test)]
 #[path = "compiled_capabilities_tests.rs"]
 mod compiled_capabilities_tests;
+
+#[cfg(test)]
+#[path = "reactive_provenance_tests.rs"]
+mod reactive_provenance_tests;
 
 /*
 总体架构与设计说明：
@@ -42,11 +52,11 @@ mod compiled_capabilities_tests;
   1) 预处理阶段（PreTransform）：
     - 指令改写：`v-show/r-show` → 改写 `style`，`v-if/v-else-if/v-else` 与 `r-if/r-else-if/r-else` → 条件表达式
      - 组件 useSetup 注入：收集安全的声明与副作用，注入到返回 JSX 之前的块体中
-     - Hook 包装：对 `useEffect/useMemo/useRef/reactive/ref/useState/watchEffect` 进行 `_$vaporWithHookId` 包装，注入可追踪的作用域与索引
+     - Hook 包装：对 `useEffect/useMemo/useRef/reactive/ref/useState/watchEffect` 进行 `_$compiledWithHookId` 包装，注入可追踪的作用域与索引
   2) Vapor 深编译：
      - 将 `() => <JSX/>` 或 `return <JSX/>` 改写为 `vapor(() => { ... })`，在块体中生成原生 `createElement/appendChild` 等调用
      - 动态表达式与属性用 `watchEffect` 包裹，以微任务批量更新
-     - 列表渲染使用 `_$vaporKeyedList` + `renderBetween`，通过注释锚点实现片段插入与复用
+     - 列表渲染使用 `_$reconcileKeyed` 与 closed row factory，复用并移动显式 DOM range
 - Import 注入策略：仅在发生 Vapor 转换或预处理使用到运行时符号时，按需向模块顶部插入或合并来自 `@rue-js/rue` 的导入。
 - 关键命名约定：
   - `_elX` 原生元素，`_listX` 注释锚点，`__childX` 组件 children 片段，`_mapX_*` 列表内部标识符
@@ -65,22 +75,26 @@ mod compiled_capabilities_tests;
 // - 主要转换路径包括：顶层 `() => <JSX />` 包裹为 `vapor(() => { ... })`，并在块内生成：
 //   - `_$createElement` / `_$createTextNode` / `_$appendChild` 等原生 DOM 创建与插入
 //   - `watchEffect` 对动态表达式建立响应更新
-//   - 列表渲染使用 `_$vaporKeyedList` 与 `renderBetween` 进行片段插入与复用
+//   - 列表渲染使用 `_$reconcileKeyed` 与 closed row factory 复用显式 DOM range
 // 参考测试：`tests/spec14.rs`（GitHub commits 列表）、`tests/lists_and_keys*.rs`（列表与 key）
 
 #[plugin_transform]
 // 插件入口：供 SWC 在编译时调用
 pub fn transform(program: Program, metadata: TransformPluginProgramMetadata) -> Program {
-    let static_templates = metadata
+    let config = metadata
         .get_transform_plugin_config()
-        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
-        .and_then(|config| config.get("staticTemplates").and_then(serde_json::Value::as_bool))
-        .unwrap_or(false);
-    run_full_transform(
-        program,
-        static_templates,
-        metadata.comments.or(Some(swc_core::plugin::proxies::PluginCommentsProxy)),
-    )
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok());
+    let target = config
+        .as_ref()
+        .and_then(|config| config.get("target").and_then(serde_json::Value::as_str))
+        .unwrap_or("client");
+    match target {
+        "server" => return run_server_transform(program),
+        "hydrate" => return hydrate::run(program, metadata.comments),
+        "client" => {}
+        unknown => panic!("Unknown Rue JSX compiler target: {unknown}"),
+    }
+    run_full_transform_with_options(program, true, true, metadata.comments)
 }
 
 // 测试入口：在单元测试中直接复用同样的转换逻辑
@@ -88,15 +102,68 @@ pub fn apply(program: Program) -> Program {
     run_full_transform(program, true, None)
 }
 
+/// Test/static entry for the server JSX target.
+pub fn apply_server(program: Program) -> Program {
+    run_server_transform(program)
+}
+
+/// Test/static entry for the hydration JSX target.
+pub fn apply_hydrate(program: Program) -> Program {
+    hydrate::run(program, None)
+}
+
+fn run_server_transform(program: Program) -> Program {
+    let mut program = program;
+    let mut transform = server::ServerTransform { did_transform: false };
+    program.visit_mut_with(&mut transform);
+    if transform.did_transform
+        && let Program::Module(module) = &mut program
+    {
+        imports::ensure_server_runtime_imports(module);
+    }
+    assert_no_residual_jsx(&program);
+    program
+}
+
 fn run_full_transform(
     program: Program,
     static_templates: bool,
     comments: Option<swc_core::plugin::proxies::PluginCommentsProxy>,
 ) -> Program {
+    run_full_transform_with_options(program, static_templates, false, comments)
+}
+
+fn run_full_transform_with_options(
+    program: Program,
+    static_templates: bool,
+    static_component_props: bool,
+    comments: Option<swc_core::plugin::proxies::PluginCommentsProxy>,
+) -> Program {
     let mut p = program;
     log::info("rue-swc: apply(pre+vapor) start");
-    p.visit_mut_with(&mut pre::PreTransform::with_comments(comments));
-    p.visit_mut_with(&mut vapor::VaporTransform {
+    element_children::reset_compiled_list_safety_cache();
+    let compiled_components = if static_component_props {
+        match &p {
+            Program::Module(module) => compiled_component::analyze_module(module),
+            Program::Script(_) => Default::default(),
+        }
+    } else {
+        Default::default()
+    };
+    let mut compiled_component_names =
+        compiled_components.keys().cloned().collect::<std::collections::HashSet<_>>();
+    if static_component_props && let Program::Module(module) = &p {
+        compiled_component_names.extend(compiled_component::imported_component_names(module));
+    }
+    let strict_diagnostics = if static_component_props { diagnostics::collect(&p) } else { vec![] };
+    p.visit_mut_with(&mut pre::PreTransform::with_compiled_components(
+        comments,
+        compiled_component_names.clone(),
+    ));
+    if let Program::Module(module) = &mut p {
+        compiled_component::transform_module(module, &compiled_components);
+    }
+    let mut vapor_transform = vapor::VaporTransform {
         next_el: 0,
         next_list: 0,
         next_map: 0,
@@ -107,9 +174,56 @@ fn run_full_transform(
         el_tag_by_ident: std::collections::HashMap::new(),
         renderable_local_scopes: Vec::new(),
         plain_local_scopes: Vec::new(),
-    });
+    };
+    let mut compiled_scope = std::collections::HashSet::new();
+    vapor::VaporTransform::register_compiled_components(
+        &mut compiled_scope,
+        compiled_component_names,
+    );
+    vapor_transform.plain_local_scopes.push(compiled_scope);
+    // Preprocessing and slot lowering can synthesize render closures containing JSX after the
+    // visitor has already passed their parent. Reuse the same allocator/state until the AST is
+    // closed, so generated identifiers remain unique across rounds.
+    for _ in 0..4 {
+        p.visit_mut_with(&mut vapor_transform);
+        if first_residual_jsx_span(&p).is_none() {
+            break;
+        }
+    }
+    if let Program::Module(module) = &mut p {
+        imports::ensure_runtime_imports(module);
+    }
+    assert_no_residual_jsx(&p);
+    diagnostics::append_markers(&mut p, &strict_diagnostics);
     log::info("rue-swc: apply(pre+vapor) done");
     p
+}
+
+#[derive(Default)]
+struct ResidualJsxDetector {
+    first_span: Option<Span>,
+}
+
+impl Visit for ResidualJsxDetector {
+    fn visit_jsx_element(&mut self, element: &JSXElement) {
+        self.first_span.get_or_insert(element.span);
+    }
+
+    fn visit_jsx_fragment(&mut self, fragment: &JSXFragment) {
+        self.first_span.get_or_insert(fragment.span);
+    }
+}
+
+fn assert_no_residual_jsx(program: &Program) {
+    if let Some(span) = first_residual_jsx_span(program) {
+        panic!("Rue compiler left residual JSX at source span {span:?}");
+    }
+}
+
+fn first_residual_jsx_span(program: &Program) -> Option<Span> {
+    let mut detector = ResidualJsxDetector::default();
+    program.visit_with(&mut detector);
+    detector.first_span
 }
 
 /// 仅运行浅编译预处理（v-show/r-show、v-if/r-if），不进入 Vapor 深编译

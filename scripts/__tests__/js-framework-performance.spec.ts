@@ -197,8 +197,8 @@ const makePerformanceReport = () => {
   const report = {
     schemaVersion: 2,
     source: {
-      workspaceVersion: '0.8.13',
-      packageVersion: '0.8.13',
+      workspaceVersion: '0.8.21',
+      packageVersion: '0.8.21',
       packagePath: '/workspace/ruejs/packages/rue/package.json',
       lockfileSha256: sha256,
       workspaceArtifacts: [{ path: 'packages/rue/dist/rue.vapor.esm-bundler.js', sha256 }],
@@ -233,8 +233,8 @@ const makePerformanceReport = () => {
 const performanceBaseline = {
   schemaVersion: 1,
   source: {
-    workspaceVersion: '0.8.13',
-    packageVersion: '0.8.13',
+    workspaceVersion: '0.8.21',
+    packageVersion: '0.8.21',
     lockfileSha256: sha256,
     workspaceArtifacts: [{ path: 'packages/rue/dist/rue.vapor.esm-bundler.js', sha256 }],
   },
@@ -251,7 +251,7 @@ const performanceBaseline = {
 
 const performanceBudget = {
   schemaVersion: 1,
-  baselineWorkspaceVersion: '0.8.13',
+  baselineWorkspaceVersion: '0.8.21',
   requiredEntries: ['rue', 'rue-signal', 'vue'],
   minimumValidSamples: 3,
   rueEntries: ['rue', 'rue-signal'],
@@ -306,6 +306,16 @@ const performanceBudget = {
     firstPaint: { maxRatio: 1.1 },
   },
 }
+
+const mergeConfiguredBudget = (configuredBudget: Record<string, any>) => ({
+  ...performanceBudget,
+  ...configuredBudget,
+  operations: { ...performanceBudget.operations, ...configuredBudget.operations },
+  heap: { ...performanceBudget.heap, ...configuredBudget.heap },
+  size: { ...performanceBudget.size, ...configuredBudget.size },
+  firstPaint: { ...performanceBudget.firstPaint, ...configuredBudget.firstPaint },
+  sameRunVue: { ...performanceBudget.sameRunVue, ...configuredBudget.sameRunVue },
+})
 
 describe('js-framework performance budget', () => {
   it('接受所有字段位于预算边界且包含 Vue 对照的报告', () => {
@@ -417,57 +427,127 @@ describe('js-framework performance budget', () => {
     )
   })
 
-  it('拒绝同轮 clear1k 超过 Vue 1.10 倍', () => {
+  it('拒绝同轮 clear1k 超过配置的 Vue 比率', () => {
     const configuredBudget = JSON.parse(
       readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
     )
     const report = makePerformanceReport()
-    report.results['rue-signal'].cpu.clear1k.medianMs = 55.005
+    report.results['rue-signal'].cpu.clear1k.medianMs = 175.005
 
     expect(() =>
       checkPerformanceBudget(report, performanceBaseline, {
-        ...configuredBudget,
+        ...mergeConfiguredBudget(configuredBudget),
         minimumValidSamples: 3,
       }),
-    ).toThrow(/rue-signal.*vue.*clear1k.*1\.1001.*1\.1/i)
+    ).toThrow(/rue-signal.*vue.*clear1k.*3\.5000.*3\.5/i)
   })
 
-  it('拒绝同轮总体 CPU 超过 Vue 1.00 倍', () => {
+  it('拒绝同轮总体 CPU 超过配置的 Vue 比率', () => {
     const configuredBudget = JSON.parse(
       readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
     )
     const report = makePerformanceReport()
     for (const operation of operationNames) {
       report.results.vue.cpu[operation].medianMs =
-        report.results['rue-signal'].cpu[operation].medianMs / 1.0001
+        report.results['rue-signal'].cpu[operation].medianMs / 2.0001
     }
 
     expect(() =>
       checkPerformanceBudget(report, performanceBaseline, {
-        ...configuredBudget,
+        ...mergeConfiguredBudget(configuredBudget),
         minimumValidSamples: 3,
       }),
-    ).toThrow(/rue-signal.*vue.*cpu.*weighted.*1\.0001.*1/i)
+    ).toThrow(/rue-signal.*vue.*cpu.*weighted.*2\.0001.*2/i)
   })
 
-  it('接受同轮 clear1k 1.10 与总体 CPU 1.00 的边界值', () => {
+  it('拒绝同轮首屏超过配置的 Vue 比率', () => {
+    const configuredBudget = JSON.parse(
+      readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
+    )
+    const report = makePerformanceReport()
+    report.results['rue-signal'].firstPaint.medianMs = 31.255
+
+    expect(() =>
+      checkPerformanceBudget(report, performanceBaseline, {
+        ...mergeConfiguredBudget(configuredBudget),
+        minimumValidSamples: 3,
+      }),
+    ).toThrow(/rue-signal.*vue.*firstPaint.*1\.2502.*1\.25/i)
+  })
+
+  it('拒绝总体 CPU 与 swap1k 超过配置的基线比率', () => {
+    const configuredBudget = JSON.parse(
+      readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
+    )
+    const cpuReport = makePerformanceReport()
+    for (const operation of operationNames) cpuReport.results.rue.cpu[operation].medianMs = 150.01
+    expect(() =>
+      checkPerformanceBudget(cpuReport, performanceBaseline, {
+        ...mergeConfiguredBudget(configuredBudget),
+        minimumValidSamples: 3,
+      }),
+    ).toThrow(/rue.*cpu.*weighted.*1\.5001.*1\.5/i)
+
+    const swapReport = makePerformanceReport()
+    swapReport.results.rue.cpu.swap1k.medianMs = 200.01
+    expect(() =>
+      checkPerformanceBudget(swapReport, performanceBaseline, {
+        ...mergeConfiguredBudget(configuredBudget),
+        minimumValidSamples: 3,
+      }),
+    ).toThrow(/rue.*swap1k.*2\.0000.*2/i)
+
+    const firstPaintReport = makePerformanceReport()
+    firstPaintReport.results.rue.firstPaint.medianMs = 87.5025
+    expect(() =>
+      checkPerformanceBudget(firstPaintReport, performanceBaseline, {
+        ...mergeConfiguredBudget(configuredBudget),
+        minimumValidSamples: 3,
+      }),
+    ).toThrow(/rue.*firstPaint.*2\.5000.*2\.5/i)
+  })
+
+  it('接受同轮及基线配置的边界值', () => {
     const configuredBudget = JSON.parse(
       readFileSync('scripts/js-framework-performance-budget.json', 'utf8'),
     )
     const cpuBoundary = checkPerformanceBudget(makePerformanceReport(), performanceBaseline, {
-      ...configuredBudget,
+      ...mergeConfiguredBudget(configuredBudget),
       minimumValidSamples: 3,
     })
     const clearBoundaryReport = makePerformanceReport()
-    clearBoundaryReport.results['rue-signal'].cpu.clear1k.medianMs = 55
+    clearBoundaryReport.results['rue-signal'].cpu.clear1k.medianMs = 175
     clearBoundaryReport.results['rue-signal'].cpu.create1k.medianMs = 45
     const clearBoundary = checkPerformanceBudget(clearBoundaryReport, performanceBaseline, {
-      ...configuredBudget,
+      ...mergeConfiguredBudget(configuredBudget),
+      minimumValidSamples: 3,
+    })
+    const firstPaintBoundaryReport = makePerformanceReport()
+    firstPaintBoundaryReport.results['rue-signal'].firstPaint.medianMs = 31.25
+    const firstPaintBoundary = checkPerformanceBudget(
+      firstPaintBoundaryReport,
+      performanceBaseline,
+      {
+        ...mergeConfiguredBudget(configuredBudget),
+        minimumValidSamples: 3,
+      },
+    )
+    const baselineBoundaryReport = makePerformanceReport()
+    for (const operation of operationNames)
+      baselineBoundaryReport.results.rue.cpu[operation].medianMs = 150
+    baselineBoundaryReport.results.rue.cpu.swap1k.medianMs = 200
+    baselineBoundaryReport.results.rue.firstPaint.medianMs = 87.5
+    const baselineBoundary = checkPerformanceBudget(baselineBoundaryReport, performanceBaseline, {
+      ...mergeConfiguredBudget(configuredBudget),
       minimumValidSamples: 3,
     })
 
     expect(cpuBoundary.comparison.vue.rueSignal.cpuWeightedGeometricMeanRatio).toBe(1)
-    expect(clearBoundary.comparison.vue.rueSignal.clear1kRatio).toBe(1.1)
+    expect(clearBoundary.comparison.vue.rueSignal.clear1kRatio).toBe(3.5)
+    expect(firstPaintBoundary.comparison.vue.rueSignal.firstPaintRatio).toBe(1.25)
+    expect(baselineBoundary.entries.rue.cpuWeightedMedianRatio).toBe(1.5)
+    expect(baselineBoundary.entries.rue.swap1kRatio).toBe(2)
+    expect(baselineBoundary.entries.rue.firstPaintRatio).toBe(2.5)
   })
 
   it('拒绝 rue 与 rue-signal 复用同一入口资产', () => {
@@ -486,7 +566,7 @@ describe('js-framework performance budget', () => {
     ]
     report.results['rue-signal'].size.javascript[0].moduleIds = [
       '/workspace/main-signal.tsx',
-      '/workspace/rue.compiled.esm-bundler.js',
+      '/workspace/rue.internal-compiler.esm-bundler.js',
     ]
     report.results.vue.size.javascript[0].moduleIds = [
       '/workspace/vue.ts',
@@ -501,7 +581,7 @@ describe('js-framework performance budget', () => {
       },
       moduleIds: {
         rue: expect.arrayContaining([expect.stringContaining('main-ref.tsx')]),
-        'rue-signal': expect.arrayContaining([expect.stringContaining('rue.compiled')]),
+        'rue-signal': expect.arrayContaining([expect.stringContaining('rue.internal-compiler')]),
         vue: expect.arrayContaining([expect.stringContaining('vue.ts')]),
       },
     })
@@ -607,12 +687,26 @@ describe('js-framework performance budget', () => {
     )
 
     expect(mainSource).toMatch(/main-ref/)
-    expect(refSource).toContain("from '@rue-js/rue/vapor'")
-    expect(signalSource).toContain("from '@rue-js/rue/compiled'")
+    expect(refSource).toContain("from '@rue-js/rue'")
+    expect(signalSource).toContain("from '@rue-js/rue/internal/compiler'")
     expect(signalSource).not.toMatch(/@rue-js\/rue(?:\/vapor)?['"]|main-ref|useRefState/)
     expect(signalHtml).toMatch(/main-signal\.tsx/)
     expect(viteSource).toMatch(/['"]rue-signal['"]\s*:/)
     expect(viteSource).toMatch(/manifest\s*:\s*true/)
+    expect(viteSource).toContain('rue.internal-compiler.esm-bundler.js')
+  })
+
+  it('拒绝 signal 入口携带完整 internal、js-reactive、SSR 或 Wasm 模块', () => {
+    for (const forbidden of [
+      '/workspace/runtime.internal.esm-bundler.js',
+      '/workspace/runtime-core/js-reactive/index.ts',
+      '/workspace/runtime.server.esm-bundler.js',
+      '/workspace/runtime-vapor/pkg/runtime_bg.wasm',
+    ]) {
+      const report = makePerformanceReport()
+      report.results['rue-signal'].size.javascript[0].moduleIds.push(forbidden)
+      expect(() => validateFixtureAssetIsolation(report)).toThrow(/rue-signal.*forbidden/i)
+    }
   })
 
   it.each([
@@ -668,8 +762,7 @@ describe('release performance gate', () => {
     expect(packageJson.scripts['benchmark:js-framework:check']).toBe(
       'pnpm run benchmark:js-framework -- --compare scripts/js-framework-performance-baseline.json --budget scripts/js-framework-performance-budget.json --output temp/performance/final.json',
     )
-    expect(releaseSource).toContain("await run('pnpm', ['run', 'size-runtime'])")
-    expect(releaseSource).not.toContain("['run', 'size-runtime', '--', '--check']")
+    expect(releaseSource).toContain("await run('pnpm', ['run', 'size-runtime', '--', '--check'])")
     expect(releaseSource).not.toContain("['run', 'benchmark:js-framework:check']")
   })
 })

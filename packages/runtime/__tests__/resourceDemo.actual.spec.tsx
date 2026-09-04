@@ -44,6 +44,11 @@ afterEach(() => {
 
 describe('ResourceDemo actual page', () => {
   it('uses the loading state for pending resources and renders the resolved data after completion', async () => {
+    const uncaughtErrors: unknown[] = []
+    const onError = (event: ErrorEvent) => uncaughtErrors.push(event.error ?? event.message)
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => uncaughtErrors.push(event.reason)
+    window.addEventListener('error', onError)
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
     const mainRequest = deferred<any>()
     const betaRequest = deferred<any>()
 
@@ -147,5 +152,8 @@ describe('ResourceDemo actual page', () => {
     await click(findTab(container, '代码'))
 
     expect(container.textContent).not.toContain('beta commit title')
+    expect(uncaughtErrors).toEqual([])
+    window.removeEventListener('error', onError)
+    window.removeEventListener('unhandledrejection', onUnhandledRejection)
   })
 })

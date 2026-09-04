@@ -1607,7 +1607,7 @@ function isRueRenderableHandle(value: unknown): boolean {
     !Array.isArray(value) &&
     ('__rue_mount_id' in value ||
       '__rue_component_type' in value ||
-      '__rue_vapor_setup' in value ||
+      '__rue_compiled_mount' in value ||
       '__rue_repeatable_mount_factory__' in value)
   )
 }

@@ -101,7 +101,7 @@ export default TodoApp
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let _expected_fragment = r##"import { computed, reactive, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { computed, reactive, _$compiledWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, untrack, watchEffect, _$compiledKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 interface Todo {
     id: number;
@@ -109,8 +109,8 @@ interface Todo {
     completed: boolean;
 }
 const TodoApp: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const state = _$vaporWithHookId("reactive:1:0", ()=>reactive({
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const state = _$compiledWithHookId("reactive:1:0", ()=>reactive({
                     todos: [
                         {
                             id: 1,
@@ -148,7 +148,7 @@ const TodoApp: FC = ()=>{
                 const index = state.todos.findIndex((t)=>t.id === id);
                 if (index !== -1) state.todos.splice(index, 1);
             }
-            const completedCount = _$vaporWithHookId("computed:1:1", ()=>computed(()=>state.todos.filter((t)=>t.completed).length));
+            const completedCount = _$compiledWithHookId("computed:1:1", ()=>computed(()=>state.todos.filter((t)=>t.completed).length));
             return {
                 state: state,
                 addTodo: addTodo,
@@ -195,7 +195,7 @@ const TodoApp: FC = ()=>{
         let _map1_elements = new Map;
         watchEffect(()=>{
             const _map1_current = state.todos || [];
-            const _map1_newElements = _$vaporKeyedList({
+            const _map1_newElements = _$compiledKeyedList({
                 items: _map1_current,
                 getKey: (todo, _idx)=>todo.id,
                 elements: _map1_elements,
@@ -262,8 +262,8 @@ export default TodoApp;
     std::fs::write("target/vapor_outputs/lists_and_keys3.out.js", utils::strip_marker(&out)).ok();
     let normalized = utils::normalize(&utils::strip_marker(&out));
     assert!(normalized.contains("_$reconcileKeyed"));
-    assert!(!normalized.contains("_$vaporKeyedList"));
-    assert!(normalized.contains("_$rowBindingNext0 = todo.id"));
-    assert!(normalized.contains("_$rowBindingNext3 = todo.text"));
+    assert!(!normalized.contains("_$compiledKeyedList"));
+    assert!(normalized.contains("_$compiledText(_el8, ()=>_$rowItem.get().id)"), "{normalized}");
+    assert!(normalized.contains("_$compiledText(_el11, ()=>_$rowItem.get().text)"), "{normalized}");
     assert!(!normalized.contains("_$setAttribute(_el8, \"key\""));
 }

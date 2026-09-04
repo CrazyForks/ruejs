@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import * as runtimeMain from '@rue-js/runtime'
 import * as rueMain from '@rue-js/rue'
 import type { FC } from '../src'
 import { RUE_SLOT_BAG_PROP } from '../src/components/Slot'
 import { waitForContent } from './page-test-utils'
+
+import { createTestRenderable } from './legacy-test-render'
+import { _$compiledMarkComponentRenderReactive } from '../src/internal'
 
 runtimeMain.setReactiveScheduling('sync')
 
@@ -104,6 +109,13 @@ const PropertyProbe: FC<Record<string, unknown>> = props => {
 }
 
 describe('useCustomElement', () => {
+  it('uses only the compiled runtime ABI in production', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'packages/runtime/src/custom-elements.ts'),
+      'utf8',
+    )
+    expect(source).not.toMatch(/@rue-js\/runtime-vapor|runtime\.vapor|\brenderAnchor\b/)
+  })
   it('is exported from the runtime and rue public entries', () => {
     expect(runtimeMain).toHaveProperty('useCustomElement')
     expect(rueMain).toHaveProperty('useCustomElement')
@@ -280,7 +292,7 @@ describe('useCustomElement', () => {
     const Parent: FC = () => (
       <ThemeContext.Provider value="outer-theme">
         {
-          runtimeMain.h(tag as any, {
+          createTestRenderable(tag as any, {
             props: {
               [RUE_SLOT_BAG_PROP]: {
                 default: <i data-testid="default-slot">default from parent</i>,
@@ -292,7 +304,7 @@ describe('useCustomElement', () => {
       </ThemeContext.Provider>
     )
 
-    runtimeMain.render(runtimeMain.h(Parent, null) as any, container as any)
+    runtimeMain.render(createTestRenderable(Parent, null) as any, container as any)
     await flush()
 
     const host = container.querySelector(tag)
@@ -387,7 +399,7 @@ describe('useCustomElement', () => {
         </button>
         <ThemeContext.Provider value={theme.value}>
           {
-            runtimeMain.h(tag as any, {
+            createTestRenderable(tag as any, {
               props: {
                 [RUE_SLOT_BAG_PROP]: {
                   default: <i data-testid="default-slot">default:{theme.value}</i>,
@@ -445,11 +457,11 @@ describe('useCustomElement', () => {
     const tag = defineTag(runtimeMain.useCustomElement(Message, { shadowRoot: false }))
     const container = document.createElement('div')
     const label = runtimeMain.signal('one')
-    const CompatHost = runtimeMain._$vaporMarkComponentRenderReactive((() =>
-      runtimeMain.h(tag as any, { key: 'stable-host', label: label.get() })) as FC)
+    const CompatHost = _$compiledMarkComponentRenderReactive((() =>
+      createTestRenderable(tag as any, { key: 'stable-host', label: label.get() })) as FC)
 
     document.body.appendChild(container)
-    runtimeMain.render(runtimeMain.h(CompatHost, null) as any, container as any)
+    runtimeMain.render(createTestRenderable(CompatHost, null) as any, container as any)
     await flush()
 
     const firstHost = container.querySelector(tag)
@@ -473,7 +485,7 @@ describe('useCustomElement', () => {
         <section data-testid="outer-bridge">
           <p data-testid="outer-theme">{theme}</p>
           {
-            runtimeMain.h(innerTag as any, {
+            createTestRenderable(innerTag as any, {
               props: {
                 [RUE_SLOT_BAG_PROP]: {
                   row: ({ label }: { label: string }) => (
@@ -492,7 +504,7 @@ describe('useCustomElement', () => {
 
     const Parent: FC = () => (
       <ThemeContext.Provider value="deep-theme">
-        {runtimeMain.h(outerTag as any, null) as any}
+        {createTestRenderable(outerTag as any, null) as any}
       </ThemeContext.Provider>
     )
 
@@ -513,10 +525,10 @@ describe('useCustomElement', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    const Parent: FC = () => runtimeMain.h(tag as any, { label: 'nested-host' }) as any
+    const Parent: FC = () => createTestRenderable(tag as any, { label: 'nested-host' }) as any
 
     expect(() => {
-      runtimeMain.render(runtimeMain.h(Parent, null) as any, container as any)
+      runtimeMain.render(createTestRenderable(Parent, null) as any, container as any)
     }).not.toThrow()
 
     await flush()
@@ -534,7 +546,7 @@ describe('useCustomElement', () => {
     const Parent: FC = () => (
       <section>
         <p>outer-app</p>
-        {runtimeMain.h(tag as any, { label: 'mounted-host' }) as any}
+        {createTestRenderable(tag as any, { label: 'mounted-host' }) as any}
       </section>
     )
 

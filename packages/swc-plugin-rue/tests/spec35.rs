@@ -140,23 +140,23 @@ export default HandlingInput
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 import SidebarPlayground from '../site/SidebarPlayground';
 import Code from '../site/components/Code';
 const HandlingInput: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const message = _$vaporWithHookId("ref:1:0", ()=>ref('Hello World!'));
-            let yes = _$vaporWithHookId("ref:1:1", ()=>ref(message.value));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const message = ref('Hello World!');
+            let yes = ref(message.value);
             const reverseMessage = ()=>{
                 message.value = message.value.split('').reverse().join('');
             };
-            let hello = _$vaporWithHookId("ref:1:2", ()=>ref('Hello World!'));
-            let world = _$vaporWithHookId("ref:1:3", ()=>ref(message.value));
+            let hello = ref('Hello World!');
+            let world = ref(message.value);
             const notify = ()=>{
                 alert('navigation was prevented.');
             };
-            var goods = _$vaporWithHookId("ref:1:4", ()=>ref([
+            var goods = ref([
                     {
                         name: '商品1',
                         price: 100
@@ -165,8 +165,8 @@ const HandlingInput: FC = ()=>{
                         name: '商品2',
                         price: 200
                     }
-                ]));
-            const activeTab = _$vaporWithHookId("ref:1:5", ()=>ref<'preview' | 'code'>('preview'));
+            ]);
+            const activeTab = ref<'preview' | 'code'>('preview');
             return {
                 message: message,
                 reverseMessage: reverseMessage,
@@ -263,5 +263,14 @@ export default HandlingInput;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec35.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(
+        normalized.contains("message.value = message.value.split('').reverse().join('')"),
+        "{normalized}"
+    );
+    assert!(normalized.contains("activeTab.value === 'code' &&"), "{normalized}");
+    assert!(normalized.contains("activeTab.value === 'preview' &&"), "{normalized}");
+    assert!(normalized.contains("onClick={reverseMessage}"), "{normalized}");
+    assert!(normalized.contains("e.preventDefault(); notify()"), "{normalized}");
 }

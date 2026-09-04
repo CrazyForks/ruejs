@@ -8,7 +8,7 @@ import {
   RUE_PORTABLE_COMPONENT_TYPE_KEY,
   RUE_PORTABLE_VAPOR_SETUP_KEY,
   RUE_REPEATABLE_MOUNT_FACTORY_KEY,
-} from '@rue-js/runtime-vapor/protocol'
+} from './runtime-core/protocol'
 import {
   CUSTOM_ELEMENT_EMIT_BRIDGE_KEY,
   type CustomElementEmitBridge,
@@ -23,8 +23,8 @@ import type {
   OwnedMountContinuation,
   OwnedMountProtocol,
   PropsWithChildren,
-  RenderableOutput,
-  RueMountHandle,
+  RenderOutput,
+  RuntimeHandle,
 } from './runtime-types'
 
 type OwnedMountContinuationContext = { protocol: OwnedMountProtocol; token: unknown }
@@ -111,7 +111,7 @@ export const RUE_COMPONENT_CHILDREN_KEY = '__rue_component_children'
 
 type MountReplayCoreOptions = {
   isRef(value: unknown): boolean
-  replayMountHandle(value: RueMountHandle): unknown
+  replayMountHandle(value: RuntimeHandle): unknown
   resolveKeepAliveHookTargetComponent<P>(
     componentType: ComponentInstance<P> & Record<string, unknown>,
     target: unknown,
@@ -119,7 +119,7 @@ type MountReplayCoreOptions = {
 }
 
 export const createMountReplayCore = (options: MountReplayCoreOptions) => {
-  const isMountHandle = (value: unknown): value is RueMountHandle =>
+  const isMountHandle = (value: unknown): value is RuntimeHandle =>
     !!value &&
     typeof value === 'object' &&
     (RUE_MOUNT_ID_KEY in (value as Record<string, unknown>) ||
@@ -262,7 +262,7 @@ export const createMountReplayCore = (options: MountReplayCoreOptions) => {
 
 type ComponentAdapterCoreOptions = {
   captureComponentRenderError?(error: unknown, props: ComponentProps): boolean
-  createFragmentHandle(children: unknown[]): RenderableOutput
+  createFragmentHandle(children: unknown[]): RenderOutput
   getClientReferenceResolver(): unknown
   getKeepAliveHookTarget(): unknown
   setKeepAliveHookTarget(value: unknown): void
@@ -274,7 +274,7 @@ type ComponentAdapterCoreOptions = {
 type ClassComponentInstance<P = ComponentProps> = {
   props: Readonly<P>
   state?: unknown
-  render: () => RenderableOutput
+  render: () => RenderOutput
   componentDidCatch?: (error: unknown, errorInfo: { componentStack: string }) => void
 }
 
@@ -447,7 +447,7 @@ export const createComponentAdapterCore = (options: ComponentAdapterCoreOptions)
     return adapter
   }
 
-  const normalizeComponentRenderOutput = (value: RenderableOutput): RenderableOutput => {
+  const normalizeComponentOutput = (value: RenderOutput): RenderOutput => {
     if (Array.isArray(value)) return options.createFragmentHandle(value as unknown[])
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
       return options.createFragmentHandle([value])
@@ -463,7 +463,7 @@ export const createComponentAdapterCore = (options: ComponentAdapterCoreOptions)
     const adapter = ((props: PropsWithChildren<P>) => {
       options.prepareComponentProps?.(props)
       try {
-        return normalizeComponentRenderOutput(component(props))
+        return normalizeComponentOutput(component(props))
       } catch (error) {
         if (options.captureComponentRenderError?.(error, props)) return null
         throw error
@@ -497,25 +497,25 @@ export const createComponentAdapterCore = (options: ComponentAdapterCoreOptions)
     !!(type as { prototype?: { render?: unknown } }).prototype &&
     typeof (type as { prototype?: { render?: unknown } }).prototype?.render === 'function'
 
-  const resolveRenderableComponent = <P = {}>(type: ComponentInstance<P>): ComponentInstance<P> => {
+  const resolveComponentType = <P = {}>(type: ComponentInstance<P>): ComponentInstance<P> => {
     const resolvedType = resolveClientReferenceComponentType(type)
-    const renderableType = isClassComponentType<P>(resolvedType)
+    const componentType = isClassComponentType<P>(resolvedType)
       ? createClassComponentAdapter(resolvedType)
       : resolvedType
-    if (typeof renderableType !== 'function') {
+    if (typeof componentType !== 'function') {
       const detail =
-        renderableType && typeof renderableType === 'object'
-          ? `object keys: ${Reflect.ownKeys(renderableType).map(String).join(', ')}`
-          : String(renderableType)
+        componentType && typeof componentType === 'object'
+          ? `object keys: ${Reflect.ownKeys(componentType).map(String).join(', ')}`
+          : String(componentType)
       throw new TypeError(`Rue runtime: component type must be a function (${detail})`)
     }
-    return createComponentReturnAdapter(renderableType)
+    return createComponentReturnAdapter(componentType)
   }
 
   return {
     readKeepAliveHookTarget,
     resolveKeepAliveHookTargetComponent,
-    resolveRenderableComponent,
+    resolveComponentType,
     runWithKeepAliveHookTarget,
     withActiveKeepAliveHookTargetMetadata,
   }
@@ -635,7 +635,8 @@ export const createDOMPropsCore = (operations: DOMPropsOperations) => {
         continue
       }
       if (key === 'style') {
-        operations.setStyle(el, value)
+        if (typeof value === 'string') operations.setAttribute(el, 'style', value)
+        else operations.setStyle(el, value)
         continue
       }
       if (key === 'dangerouslySetInnerHTML') {

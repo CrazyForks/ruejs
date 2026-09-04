@@ -101,7 +101,7 @@ fn dispatches_components_and_member_components_to_component_builder() {
 
     let out = compact(&emit_stmts(stmts));
     assert!(out.contains("_$createComment(\"rue:component:anchor\")"));
-    assert!(out.contains("_$createComponent(UI.Panel,{title:title})"));
+    assert!(out.contains("_$createComponent(UI.Panel,()=>({title:title}))"));
     assert!(out.contains("renderAnchor(__slot2,root,_list1)"));
     assert!(!out.contains("_$createElement(\"UI.Panel\""));
 }

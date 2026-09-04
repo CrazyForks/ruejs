@@ -211,7 +211,7 @@ const sizeCode = `<div className="space-y-4">
 
 const wrapCode = `<Space wrap size={[16, 12]} className="max-w-2xl rounded-box border border-dashed border-base-300 bg-base-100 p-4">
   <Badge color="primary">router</Badge>
-  <Badge color="secondary">runtime-vapor</Badge>
+  <Badge color="secondary">runtime-core</Badge>
   <Badge color="accent">design-system</Badge>
   <Badge color="neutral">sfc playground</Badge>
   <Badge color="info">bench</Badge>
@@ -467,7 +467,7 @@ const SpacePage: FC = () => {
               className="max-w-2xl rounded-[1.5rem] border border-dashed border-base-300 bg-base-100 p-4 shadow-sm"
             >
               <Badge color="primary">router</Badge>
-              <Badge color="secondary">runtime-vapor</Badge>
+              <Badge color="secondary">runtime-core</Badge>
               <Badge color="accent">design-system</Badge>
               <Badge color="neutral">sfc playground</Badge>
               <Badge color="info">bench</Badge>

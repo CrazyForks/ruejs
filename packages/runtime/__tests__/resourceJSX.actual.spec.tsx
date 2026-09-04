@@ -45,15 +45,23 @@ afterEach(() => {
 describe('ResourceJSX actual page', () => {
   it('renders createResource state in a plain JSX page without vapor or renderAnchor', async () => {
     const mainRequest = deferred<any>()
+    const mainReloadRequest = deferred<any>()
     const betaRequest = deferred<any>()
+    const stableRequest = deferred<any>()
+    let mainRequests = 0
 
     const fetchMock = vi.fn((url: string) => {
       if (url.endsWith('main')) {
-        return mainRequest.promise
+        mainRequests += 1
+        return mainRequests === 1 ? mainRequest.promise : mainReloadRequest.promise
       }
 
       if (url.endsWith('beta')) {
         return betaRequest.promise
+      }
+
+      if (url.endsWith('stable')) {
+        return stableRequest.promise
       }
 
       return Promise.resolve({
@@ -144,8 +152,92 @@ describe('ResourceJSX actual page', () => {
       expect(container.textContent).not.toContain('Loading...')
     })
 
+    const stableRadio = container.querySelector('#resource-jsx-stable') as HTMLInputElement | null
+    expect(stableRadio).not.toBeNull()
+    stableRadio!.checked = true
+    stableRadio!.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }))
+
+    await waitForContent(() => {
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=main',
+        'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=beta',
+        'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=stable',
+      ])
+      expect(container.textContent).toContain('rust@stable')
+      expect(container.textContent).toContain('Loading...')
+      expect(container.textContent).not.toContain('plain jsx beta commit')
+    })
+
+    stableRequest.resolve({
+      ok: true,
+      json: async () => [
+        {
+          sha: '3333333stable',
+          html_url: 'https://example.com/stable',
+          author: { html_url: 'https://example.com/authors/stable' },
+          commit: {
+            message: 'plain jsx stable commit',
+            author: {
+              name: 'JSX Stable',
+              date: '2026-05-21T04:05:06Z',
+            },
+          },
+        },
+      ],
+    })
+
+    await waitForContent(() => {
+      expect(container.textContent).toContain('rust@stable')
+      expect(container.textContent).toContain('plain jsx stable commit')
+      expect(container.textContent).toContain('JSX Stable')
+      expect(container.textContent).not.toContain('plain jsx main commit')
+      expect(container.textContent).not.toContain('Loading...')
+    })
+
+    const mainRadio = container.querySelector('#resource-jsx-main') as HTMLInputElement | null
+    expect(mainRadio).not.toBeNull()
+    mainRadio!.checked = true
+    mainRadio!.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }))
+
+    await waitForContent(() => {
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=main',
+        'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=beta',
+        'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=stable',
+        'https://api.github.com/repos/rust-lang/rust/commits?per_page=3&sha=main',
+      ])
+      expect(container.textContent).toContain('rust@main')
+      expect(container.textContent).toContain('Loading...')
+      expect(container.textContent).not.toContain('plain jsx stable commit')
+    })
+
+    mainReloadRequest.resolve({
+      ok: true,
+      json: async () => [
+        {
+          sha: '4444444main',
+          html_url: 'https://example.com/main-reload',
+          author: { html_url: 'https://example.com/authors/main-reload' },
+          commit: {
+            message: 'plain jsx main reload commit',
+            author: {
+              name: 'JSX Main Reload',
+              date: '2026-05-21T07:08:09Z',
+            },
+          },
+        },
+      ],
+    })
+
+    await waitForContent(() => {
+      expect(container.textContent).toContain('plain jsx main reload commit')
+      expect(container.textContent).toContain('JSX Main Reload')
+      expect(container.textContent).not.toContain('plain jsx stable commit')
+      expect(container.textContent).not.toContain('Loading...')
+    })
+
     await click(findTab(container, '代码'))
 
-    expect(container.textContent).not.toContain('plain jsx beta commit')
+    expect(container.textContent).not.toContain('plain jsx main reload commit')
   })
 })

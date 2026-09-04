@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { h, render, setReactiveScheduling, useComponent } from '../src'
+import { render, setReactiveScheduling, useComponent } from '../src'
+import { createTestRenderable } from './legacy-test-render'
 
 vi.mock('../../../app/pages/site/SidebarPlaygroundExample', () => ({
   default: (props: { children?: unknown }) => (
@@ -86,7 +87,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
     await flush()
 
     expect(container.textContent).toContain('Todo 应用（完整实战示例）')
@@ -102,7 +103,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(container.textContent).toContain('补充 Todo App 的交互与视觉细节')
@@ -126,7 +127,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(container.textContent).toContain('整理 Rue 3.0 示例文档结构')
@@ -156,7 +157,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -193,7 +194,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -241,7 +242,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -292,7 +293,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -335,7 +336,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -405,7 +406,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual(['遗留刚刚任务', '遗留昨天任务'])
@@ -485,7 +486,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -502,7 +503,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -552,7 +553,7 @@ describe('TodoApp actual page', () => {
     const restoredContainer = document.createElement('div')
     document.body.appendChild(restoredContainer)
 
-    render(h(TodoApp as any, null), restoredContainer)
+    render(createTestRenderable(TodoApp as any, null), restoredContainer)
 
     await waitForContent(() => {
       expect(readTaskTitles(restoredContainer)[0]).toBe('localStorage 记住的新任务')
@@ -585,7 +586,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toEqual([
@@ -616,7 +617,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toContain('补充 Todo App 的交互与视觉细节')
@@ -656,10 +657,47 @@ describe('TodoApp actual page', () => {
       return
     }
 
-    editInput.value = renamedTitle
-    editInput.dispatchEvent(new Event('input', { bubbles: true }))
+    editInput.focus()
+    editInput.setSelectionRange(0, editInput.value.length)
+    const stableCards = [
+      '补充 Todo App 的交互与视觉细节',
+      '整理 Rue 3.0 示例文档结构',
+      '复查按钮、输入框与卡片层级样式',
+    ].map(title => findTodoCard(container, title))
 
-    await flush()
+    expect(stableCards.every(Boolean)).toBe(true)
+
+    for (const [index, character] of Array.from(renamedTitle).entries()) {
+      const nextValue = renamedTitle.slice(0, index + 1)
+      editInput.value = nextValue
+      editInput.setSelectionRange(nextValue.length, nextValue.length)
+      editInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+      await flush()
+
+      const currentInput = (
+        findTodoCard(container, '补充 Todo App 的交互与视觉细节') ?? originalCard
+      ).querySelector('input:not([placeholder])') as HTMLInputElement | null
+
+      expect(currentInput, `input after typing ${character}`).toBe(editInput)
+      expect(document.activeElement, `focus after typing ${character}`).toBe(editInput)
+      expect(editInput.selectionStart, `selection start after typing ${character}`).toBe(
+        nextValue.length,
+      )
+      expect(editInput.selectionEnd, `selection end after typing ${character}`).toBe(
+        nextValue.length,
+      )
+      ;[
+        '补充 Todo App 的交互与视觉细节',
+        '整理 Rue 3.0 示例文档结构',
+        '复查按钮、输入框与卡片层级样式',
+      ].forEach((title, cardIndex) => {
+        expect(
+          findTodoCard(container, title),
+          `${title} card identity after typing ${character}`,
+        ).toBe(stableCards[cardIndex])
+      })
+    }
 
     const currentSaveButton = findButtonByText(
       findTodoCard(container, '补充 Todo App 的交互与视觉细节') ?? originalCard,
@@ -681,7 +719,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     const targetTitle = '补充 Todo App 的交互与视觉细节'
 
@@ -742,7 +780,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     await waitForContent(() => {
       expect(readTaskTitles(container)).toContain(targetTitle)
@@ -785,7 +823,7 @@ describe('TodoApp actual page', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(TodoApp as any, null), container)
+    render(createTestRenderable(TodoApp as any, null), container)
 
     const targetTitle = '复查按钮、输入框与卡片层级样式'
 

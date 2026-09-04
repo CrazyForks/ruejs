@@ -113,7 +113,7 @@ const BREAKPOINT_MIN_WIDTH: Record<GridBreakpoint, number> = {
   xl: 1200,
   xxl: 1600,
 }
-const viewportSubscribers = new Set<() => void>()
+const viewportSubscribers = /*#__PURE__*/ new Set<() => void>()
 
 /** append Class Name 的内部工具函数。 */
 const appendClassName = (base?: string, className?: string) => {
@@ -557,7 +557,7 @@ const Col: FC<GridColProps> = ({
   )
 }
 
-const GridCompound: GridCompound = Object.assign(Row, {
+const GridCompound: GridCompound = /*#__PURE__*/ Object.assign(Row, {
   Row,
   Col,
 })

@@ -215,7 +215,7 @@ fn is_static_literal_expr(e: &Expr) -> bool {
             | Expr::Lit(Lit::Num(_))
             | Expr::Lit(Lit::Bool(_))
             | Expr::Lit(Lit::Null(_))
-    )
+    ) || matches!(x, Expr::Tpl(template) if template.exprs.is_empty())
 }
 
 fn is_function_literal_expr(e: &Expr) -> bool {

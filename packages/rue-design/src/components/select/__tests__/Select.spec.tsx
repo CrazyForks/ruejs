@@ -10,6 +10,7 @@ const resetActiveRuntime = () => {
 }
 
 afterEach(() => {
+  vi.useRealTimers()
   document.body.innerHTML = ''
 })
 
@@ -415,6 +416,73 @@ describe('Select', () => {
       expect(popup.hidden).toBe(true)
       expect(popup.getAttribute('aria-hidden')).toBe('true')
     })
+  })
+
+  it('keeps consecutive compact selections stable while controlled value echo is delayed', async () => {
+    vi.useFakeTimers()
+    const container = mountContainer()
+    resetActiveRuntime()
+    const handleValueChange = vi.fn()
+    const renderControlled = (currentValue: string[]) => {
+      render(
+        <Select
+          mode="multiple"
+          value={currentValue}
+          options={[
+            { label: 'Jack', value: 'jack' },
+            { label: 'Lucy', value: 'lucy' },
+            { label: 'yiminghe', value: 'yiminghe' },
+          ]}
+          onValueChange={nextValue => {
+            const nextValues = nextValue as string[]
+            handleValueChange(nextValues)
+            setTimeout(() => renderControlled(nextValues), 20)
+          }}
+          data-testid="select-delayed-controlled-compact-multiple"
+        />,
+        container,
+      )
+    }
+
+    renderControlled(['jack'])
+    await vi.runAllTicks()
+    vi.runOnlyPendingTimers()
+
+    const trigger = container.querySelector('[data-rue-select-trigger="true"]') as HTMLDivElement
+    trigger.click()
+    const lucyButton = container.querySelector(
+      'button[data-rue-select-option="lucy"]',
+    ) as HTMLButtonElement
+    const yimingheButton = container.querySelector(
+      'button[data-rue-select-option="yiminghe"]',
+    ) as HTMLButtonElement
+    lucyButton.click()
+    yimingheButton.click()
+    await vi.runAllTicks()
+
+    expect(handleValueChange.mock.calls.map(call => call[0])).toEqual([
+      ['jack', 'lucy'],
+      ['jack', 'lucy', 'yiminghe'],
+    ])
+    expect(vi.getTimerCount()).toBe(2)
+
+    vi.runAllTimers()
+    await vi.runAllTicks()
+
+    const element = container.querySelector(
+      '[data-testid="select-delayed-controlled-compact-multiple"]',
+    ) as HTMLSelectElement
+    const currentTrigger = container.querySelector(
+      '[data-rue-select-trigger="true"]',
+    ) as HTMLDivElement
+    expect(Array.from(element.selectedOptions).map(option => option.value)).toEqual([
+      'jack',
+      'lucy',
+      'yiminghe',
+    ])
+    expect(currentTrigger.textContent).toContain('Lucy')
+    expect(currentTrigger.textContent).toContain('yiminghe')
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('falls back to native listbox when nativeSize is provided in multiple mode', async () => {

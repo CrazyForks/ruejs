@@ -94,6 +94,10 @@ export interface DockItemProps {
   as?: DockItemAs
   /** 是否处于激活态。 */
   active?: boolean
+  /** @internal 数据模式下用于让单个 keyed item 直接订阅选中态。 */
+  activeKeySource?: { get(): DockItemKey | null }
+  /** @internal 与 activeKeySource 配对的当前 item key。 */
+  itemKey?: DockItemKey
   /** 是否禁用交互。 */
   disabled?: boolean
   /** 根节点附加类名。 */
@@ -189,6 +193,8 @@ const buildItemClassName = (active?: boolean, disabled?: boolean, className?: st
 const Item: FC<DockItemProps> = ({
   as,
   active,
+  activeKeySource,
+  itemKey,
   disabled,
   className,
   href,
@@ -200,7 +206,13 @@ const Item: FC<DockItemProps> = ({
   children,
 }) => {
   const renderAs = as ?? (href ? 'a' : 'button')
-  const clsTrim = buildItemClassName(active, disabled, className)
+  const getActive = () =>
+    activeKeySource
+      ? activeKeySource.get() != null
+        ? activeKeySource.get() === itemKey
+        : active
+      : active
+  const getClassName = () => buildItemClassName(getActive(), disabled, className)
 
   const handleClick = (event: MouseEvent) => {
     if (disabled) {
@@ -221,9 +233,9 @@ const Item: FC<DockItemProps> = ({
         href={disabled ? undefined : href}
         target={target}
         rel={resolveAnchorRel(target, rel)}
-        className={clsTrim}
+        className={getClassName()}
         aria-label={ariaLabel}
-        aria-current={active ? 'page' : undefined}
+        aria-current={getActive() ? 'page' : undefined}
         aria-disabled={disabled ? 'true' : undefined}
         onClick={handleClick}
       >
@@ -237,9 +249,9 @@ const Item: FC<DockItemProps> = ({
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        className={clsTrim}
+        className={getClassName()}
         aria-label={ariaLabel}
-        aria-current={active ? 'page' : undefined}
+        aria-current={getActive() ? 'page' : undefined}
         aria-disabled={disabled ? 'true' : undefined}
         onClick={handleClick}
       >
@@ -250,11 +262,11 @@ const Item: FC<DockItemProps> = ({
 
   return (
     <button
-      className={clsTrim}
+      className={getClassName()}
       type={htmlType ?? 'button'}
       disabled={disabled}
       aria-label={ariaLabel}
-      aria-current={active ? 'page' : undefined}
+      aria-current={getActive() ? 'page' : undefined}
       onClick={handleClick}
     >
       {children}
@@ -282,26 +294,20 @@ const Dock: FC<DockProps> = ({
   if (resolvedSize) cls += ` dock-${resolvedSize}`
   if (className) cls += ` ${className}`
 
-  if (items && items.length) {
-    const normalizedItems: NormalizedDockItem[] = items.map((item, index) => ({
-      ...item,
-      key: item.key ?? index,
-      index,
-    }))
-    const uncontrolledActiveKey = ref(
-      resolveInitialSelectedKey(normalizedItems, defaultActiveKey, defaultActiveIndex),
-    )
-    const currentSelectedKey = computed(() =>
-      resolveSelectedKey(normalizedItems, activeKey, activeIndex, uncontrolledActiveKey.value),
-    )
-    const getEffectiveSelectedKey = () => currentSelectedKey.get()
-    const isControlled = activeKey !== undefined || activeIndex !== undefined
-    const isItemActive = (item: NormalizedDockItem) =>
-      getEffectiveSelectedKey() != null
-        ? getEffectiveSelectedKey() === item.key
-        : activeIndex != null
-          ? activeIndex === item.index
-          : !!item.active
+  const normalizedItems: NormalizedDockItem[] = (items ?? []).map((item, index) => ({
+    ...item,
+    key: item.key ?? index,
+    index,
+  }))
+  const uncontrolledActiveKey = ref(
+    resolveInitialSelectedKey(normalizedItems, defaultActiveKey, defaultActiveIndex),
+  )
+  const currentSelectedKey = computed(() =>
+    resolveSelectedKey(normalizedItems, activeKey, activeIndex, uncontrolledActiveKey.value),
+  )
+  const isControlled = activeKey !== undefined || activeIndex !== undefined
+
+  if (normalizedItems.length) {
     const handleItemClick = (
       event: MouseEvent,
       item: NormalizedDockItem,
@@ -347,7 +353,9 @@ const Dock: FC<DockProps> = ({
         <Item
           key={item.key}
           as={item.as}
-          active={isItemActive(item)}
+          active={item.active}
+          activeKeySource={currentSelectedKey}
+          itemKey={item.key}
           disabled={item.disabled}
           className={item.className}
           href={item.href}
@@ -400,7 +408,7 @@ type DockCompound = FC<DockProps> & {
   Label: FC<DockLabelProps>
 }
 
-const DockCompound: DockCompound = Object.assign(Dock, {
+const DockCompound: DockCompound = /*#__PURE__*/ Object.assign(Dock, {
   Item,
   Label,
 })

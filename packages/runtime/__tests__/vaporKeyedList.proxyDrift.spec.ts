@@ -1,15 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import {
-  _$vaporKeyedList,
-  computed,
-  reactive,
-  renderAnchor,
-  renderBetween,
-  setReactiveScheduling,
-  vapor,
-  watchEffect,
-} from '../src'
+import { computed, reactive, renderAnchor, setReactiveScheduling, watchEffect } from '../src'
+import { renderBetween, vapor } from './legacy-test-render'
+import { vaporKeyedList as _$compiledKeyedList } from './legacy-test-render'
 
 setReactiveScheduling('sync')
 
@@ -37,7 +30,7 @@ describe('vaporKeyedList', () => {
 
       let elements = new Map<any, any>()
       watchEffect(() => {
-        elements = _$vaporKeyedList({
+        elements = _$compiledKeyedList({
           items: items.map((item: any) => item),
           getKey: (item: any) => item.id,
           elements,
@@ -89,7 +82,7 @@ describe('vaporKeyedList', () => {
 
     let elements = new Map<any, any>()
     watchEffect(() => {
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: items || [],
         getKey: (item: any) => item.label,
         elements,
@@ -145,7 +138,7 @@ describe('vaporKeyedList', () => {
     let elements = new Map<any, any>()
     watchEffect(() => {
       listRuns += 1
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: items || [],
         getKey: (item: any) => item.label,
         elements,
@@ -221,7 +214,7 @@ describe('vaporKeyedList', () => {
     const counts = new Map<string, number>()
     let elements = new Map<any, any>()
     watchEffect(() => {
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: todoViews.get() || [],
         getKey: (item: any) => item.id,
         elements,
@@ -313,7 +306,7 @@ describe('vaporKeyedList', () => {
     const counts = new Map<number, number>()
     let elements = new Map<any, any>()
     watchEffect(() => {
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: todoViews.get() || [],
         getKey: (item: any) => item.id,
         elements,
@@ -424,7 +417,7 @@ describe('vaporKeyedList', () => {
     const counts = new Map<number, number>()
     let elements = new Map<any, any>()
     watchEffect(() => {
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: todoViews.get() || [],
         getKey: (item: any) => item.id,
         elements,
@@ -530,7 +523,7 @@ describe('vaporKeyedList', () => {
     const counts = new Map<number, number>()
     let elements = new Map<any, any>()
     watchEffect(() => {
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: todoViews.get() || [],
         getKey: (item: any) => item.id,
         elements,
@@ -640,7 +633,7 @@ describe('vaporKeyedList', () => {
     const counts = new Map<number, number>()
     let elements = new Map<any, any>()
     watchEffect(() => {
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: todoViews.get() || [],
         getKey: (item: any) => item.id,
         elements,
@@ -741,7 +734,7 @@ describe('vaporKeyedList', () => {
     const counts = new Map<string, number>()
     let elements = new Map<any, any>()
     watchEffect(() => {
-      elements = _$vaporKeyedList({
+      elements = _$compiledKeyedList({
         items: items || [],
         getKey: (item: any) => item.label,
         elements,

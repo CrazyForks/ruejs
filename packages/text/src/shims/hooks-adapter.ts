@@ -1,6 +1,5 @@
 import {
   createContext as createNativeTextContext,
-  createElement as createNativeTextElement,
   useCallback as useNativeTextCallback,
   useContext as useNativeTextContext,
   useEffect as useNativeTextEffect,
@@ -8,6 +7,7 @@ import {
   useRef as useNativeTextRef,
   useState as useNativeTextState,
 } from '@rue-js/rue'
+import { createTextElement } from '../runtime/render-protocol.js'
 import {
   createSafeTextElement,
   isTextCompatRendererActive,
@@ -296,7 +296,7 @@ export function createContext<T>(defaultValue: T): HookCompatContext<T> {
         )
       }
       return createSafeTextElement(
-        createNativeTextElement as never,
+        createTextElement as never,
         nativeTextContext.Provider,
         { value: props.value },
         props.children,
@@ -314,12 +314,7 @@ export function createElement(
 ): unknown {
   const runtime = getActiveTextCompatElementRuntime()
   if (runtime) return createSafeTextElement(runtime.createElement, type, props, ...children)
-  return createSafeTextElement(
-    createNativeTextElement as never,
-    type,
-    props,
-    ...(children as never[]),
-  )
+  return createSafeTextElement(createTextElement as never, type, props, ...(children as never[]))
 }
 
 export function useContext<T>(context: HookCompatContext<T> | unknown): T {

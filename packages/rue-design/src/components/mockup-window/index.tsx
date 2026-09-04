@@ -267,7 +267,7 @@ type MockupWindowCompound = FC<MockupWindowProps> & {
   Actions: FC<MockupWindowPartProps>
 }
 
-const MockupWindow: MockupWindowCompound = Object.assign(Root, {
+const MockupWindow: MockupWindowCompound = /*#__PURE__*/ Object.assign(Root, {
   Header,
   Body,
   Toolbar,

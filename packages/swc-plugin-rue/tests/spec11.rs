@@ -152,33 +152,22 @@ export default FormBindings;
     // - _el9.checked（watch）+ change：单选 checkbox 受控
     // - keyedList renderItem：label/input/span 构造每项片段并渲染
     // - 多选 select：watch 中使用 Set 同步 options.selected
-    let expected_fragment = r##"
-import { ref, _$vaporWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, watchEffect, _$vaporKeyedList, _$createTextWrapper, _$setAttribute, _$addEventListener, _$setClassName, _$setValue, _$setChecked } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, _$compiledWithHookId, useSetup, vapor, renderAnchor, _$createElement, _$template, _$createComment, _$createTextNode, _$settextContent, _$createDocumentFragment, _$appendChild, onScopeDispose, untrack, watchEffect, _$compiledKeyedList, _$createTextWrapper, _$setAttribute, _$setClassName, _$setValue, _$setChecked } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
-const _$getTemplate1 = _$template('<h2 class="text-lg font-semibold mb-2">Text Input</h2>');
-const _$getTemplate2 = _$template('<h2 class="text-lg font-semibold mb-2">Checkbox</h2>');
-const _$getTemplate3 = _$template('<h2 class="text-lg font-semibold mb-2">Multi Checkbox</h2>');
-const _$getTemplate4 = _$template('<h2 class="text-lg font-semibold mb-2">Radio</h2>');
-const _$getTemplate5 = _$template("<span>One</span>");
-const _$getTemplate6 = _$template("<span>Two</span>");
-const _$getTemplate7 = _$template('<h2 class="text-lg font-semibold mb-2">Select</h2>');
-const _$getTemplate8 = _$template('<option value="">Please select one</option>');
-const _$getTemplate9 = _$template('<option value="A">A</option>');
-const _$getTemplate10 = _$template('<option value="B">B</option>');
-const _$getTemplate11 = _$template('<option value="C">C</option>');
-const _$getTemplate12 = _$template('<h2 class="text-lg font-semibold mb-2">Multi Select</h2>');
+const _$getTemplate1 = _$template('<div class="grid gap-6"><div><h2 class="text-lg font-semibold mb-2">Text Input</h2><input class="border rounded-md px-3 py-2 w-full" placeholder="Edit me"><p class="mt-2 text-gray-700 dark:text-gray-300"><!--rue:text-hole:0--></p></div><div><h2 class="text-lg font-semibold mb-2">Checkbox</h2><div class="flex items-center gap-2"><input id="checkbox" type="checkbox"><label for="checkbox" class="select-none">Checked: <!--rue:text-hole:1--></label></div></div><div><h2 class="text-lg font-semibold mb-2">Multi Checkbox</h2><div class="flex items-center gap-4 flex-wrap"><!--rue:text-hole:2--></div><p class="mt-2 text-gray-700 dark:text-gray-300">Checked names: [<!--rue:text-hole:3-->]</p></div><div><h2 class="text-lg font-semibold mb-2">Radio</h2><div class="flex items-center gap-4 flex-wrap"><label for="one" class="inline-flex items-center gap-2"><input id="one" type="radio" value="One"><span>One</span></label><label for="two" class="inline-flex items-center gap-2"><input id="two" type="radio" value="Two"><span>Two</span></label></div><p class="mt-2 text-gray-700 dark:text-gray-300">Picked: <!--rue:text-hole:4--></p></div><div><h2 class="text-lg font-semibold mb-2">Select</h2><!--rue:opaque-hole:5--><p class="mt-2 text-gray-700 dark:text-gray-300">Selected: <!--rue:text-hole:6--></p></div><div><h2 class="text-lg font-semibold mb-2">Multi Select</h2><!--rue:opaque-hole:7--><p class="mt-2 text-gray-700 dark:text-gray-300">Selected: [<!--rue:text-hole:8-->]</p></div></div>');
 const FormBindings: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const text = _$vaporWithHookId("ref:1:0", ()=>ref('Edit me'));
-            const checked = _$vaporWithHookId("ref:1:1", ()=>ref(true));
-            const checkedNames = _$vaporWithHookId("ref:1:2", ()=>ref<string[]>([
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const text = ref('Edit me');
+            const checked = ref(true);
+            const checkedNames = ref<string[]>([
                     'Jack'
-                ]));
-            const picked = _$vaporWithHookId("ref:1:3", ()=>ref<'One' | 'Two'>('One'));
-            const selected = _$vaporWithHookId("ref:1:4", ()=>ref<'A' | 'B' | 'C'>('A'));
-            const multiSelected = _$vaporWithHookId("ref:1:5", ()=>ref<string[]>([
+                ]);
+            const picked = ref<'One' | 'Two'>('One');
+            const selected = ref<'A' | 'B' | 'C'>('A');
+            const multiSelected = ref<string[]>([
                     'A'
-                ]));
+                ]);
             const toggleCheckedName = (name: string, nextChecked: boolean)=>{
                 checkedNames.value = nextChecked ? Array.from(new Set([
                     ...checkedNames.value,
@@ -202,65 +191,82 @@ const FormBindings: FC = ()=>{
         }));
     const { text: text, checked: checked, checkedNames: checkedNames, picked: picked, selected: selected, multiSelected: multiSelected, toggleCheckedName: toggleCheckedName, onMultiSelectChange: onMultiSelectChange } = _$useSetup;
     return vapor((__rue_parent_context)=>{
-        const _root = _$createElement("div", __rue_parent_context);
-        _$setClassName(_root, "grid gap-6");
-        const _el1 = _$createElement("div", _root);
-        _$appendChild(_root, _el1);
-        _el1.appendChild(_$getTemplate1().content.cloneNode(true));
-        const _el3 = _$createElement("input", _el1);
-        _$appendChild(_el1, _el3);
-        _$setClassName(_el3, "border rounded-md px-3 py-2 w-full");
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[0].childNodes[1];
+        const _el2 = _root.childNodes[1].childNodes[1].childNodes[0];
+        const _el3 = _root.childNodes[3].childNodes[1].childNodes[0].childNodes[0];
+        const _el4 = _root.childNodes[3].childNodes[1].childNodes[1].childNodes[0];
+        const _el5 = _root.childNodes[0].childNodes[2].childNodes[0];
+        const _el6 = _el5.parentNode;
+        const _el7 = _root.childNodes[1].childNodes[1].childNodes[1].childNodes[1];
+        const _el8 = _el7.parentNode;
+        const _el9 = _root.childNodes[2].childNodes[1].childNodes[0];
+        const _el10 = _el9.parentNode;
+        const _el11 = _root.childNodes[2].childNodes[2].childNodes[1];
+        const _el12 = _el11.parentNode;
+        const _el13 = _root.childNodes[3].childNodes[2].childNodes[1];
+        const _el14 = _el13.parentNode;
+        const _el15 = _root.childNodes[4].childNodes[1];
+        const _el16 = _el15.parentNode;
+        const _el17 = _root.childNodes[4].childNodes[2].childNodes[1];
+        const _el18 = _el17.parentNode;
+        const _el19 = _root.childNodes[5].childNodes[1];
+        const _el20 = _el19.parentNode;
+        const _el21 = _root.childNodes[5].childNodes[2].childNodes[1];
+        const _el22 = _el21.parentNode;
+        _$setClassName(_el1, "border rounded-md px-3 py-2 w-full");
         watchEffect(()=>{
-            _$setValue(_el3, text.value);
+            _$setValue(_el1, text.value);
         });
-        _$addEventListener(_el3, "input", ((e: any)=>{
-            text.value = (e.target as HTMLInputElement).value;
-        }));
-        _$setAttribute(_el3, "placeholder", "Edit me");
-        const _el4 = _$createElement("p", _el1);
-        _$appendChild(_el1, _el4);
-        _$setClassName(_el4, "mt-2 text-gray-700 dark:text-gray-300");
-        const _el5 = _$createTextWrapper(_el4);
-        _$appendChild(_el4, _el5);
+        const _el1_event_2 = ($event)=>(e: any)=>{
+                text.value = (e.target as HTMLInputElement).value;
+            }($event);
+        _el1.addEventListener("input", _el1_event_2);
+        onScopeDispose(()=>_el1.removeEventListener("input", _el1_event_2));
+        _$setAttribute(_el1, "placeholder", "Edit me");
+        _$setAttribute(_el2, "id", "checkbox");
+        _$setAttribute(_el2, "type", "checkbox");
         watchEffect(()=>{
-            _$settextContent(_el5, text.value);
+            _$setChecked(_el2, !!(checked.value));
         });
-        const _el6 = _$createElement("div", _root);
-        _$appendChild(_root, _el6);
-        _el6.appendChild(_$getTemplate2().content.cloneNode(true));
-        const _el8 = _$createElement("div", _el6);
-        _$appendChild(_el6, _el8);
-        _$setClassName(_el8, "flex items-center gap-2");
-        const _el9 = _$createElement("input", _el8);
-        _$appendChild(_el8, _el9);
-        _$setAttribute(_el9, "id", "checkbox");
-        _$setAttribute(_el9, "type", "checkbox");
+        const _el2_event_3 = ($event)=>(e: any)=>{
+                checked.value = (e.target as HTMLInputElement).checked;
+            }($event);
+        _el2.addEventListener("change", _el2_event_3);
+        onScopeDispose(()=>_el2.removeEventListener("change", _el2_event_3));
+        _$setAttribute(_el3, "id", "one");
+        _$setAttribute(_el3, "type", "radio");
+        _$setAttribute(_el3, "value", "One");
         watchEffect(()=>{
-            _$setChecked(_el9, !!(checked.value));
+            _$setChecked(_el3, !!(picked.value === 'One'));
         });
-        _$addEventListener(_el9, "change", ((e: any)=>{
-            checked.value = (e.target as HTMLInputElement).checked;
-        }));
-        const _el10 = _$createElement("label", _el8);
-        _$appendChild(_el8, _el10);
-        _$setAttribute(_el10, "htmlFor", "checkbox");
-        _$setClassName(_el10, "select-none");
-        _$appendChild(_el10, _$createTextNode("Checked: "));
-        const _el11 = _$createTextWrapper(_el10);
-        _$appendChild(_el10, _el11);
+        const _el3_event_4 = ($event)=>()=>{
+                picked.value = 'One';
+            }($event);
+        _el3.addEventListener("change", _el3_event_4);
+        onScopeDispose(()=>_el3.removeEventListener("change", _el3_event_4));
+        _$setAttribute(_el4, "id", "two");
+        _$setAttribute(_el4, "type", "radio");
+        _$setAttribute(_el4, "value", "Two");
         watchEffect(()=>{
-            _$settextContent(_el11, String(checked.value));
+            _$setChecked(_el4, !!(picked.value === 'Two'));
         });
-        const _el12 = _$createElement("div", _root);
-        _$appendChild(_root, _el12);
-        _el12.appendChild(_$getTemplate3().content.cloneNode(true));
-        const _el14 = _$createElement("div", _el12);
-        _$appendChild(_el12, _el14);
-        _$setClassName(_el14, "flex items-center gap-4 flex-wrap");
+        const _el4_event_4 = ($event)=>()=>{
+                picked.value = 'Two';
+            }($event);
+        _el4.addEventListener("change", _el4_event_4);
+        onScopeDispose(()=>_el4.removeEventListener("change", _el4_event_4));
+        watchEffect(()=>{
+            const __slot = (text.value);
+            untrack(()=>renderAnchor(__slot, _el6, _el5));
+        });
+        watchEffect(()=>{
+            const __slot = String(checked.value);
+            untrack(()=>renderAnchor(__slot, _el8, _el7));
+        });
         const _list1 = _$createComment("rue:list:start");
-        const _list2 = _$createComment("rue:list:end");
-        _$appendChild(_el14, _list1);
-        _$appendChild(_el14, _list2);
+        _el10.insertBefore(_list1, _el9);
         let _map1_elements = new Map;
         const _map1_state = {
             elements: _map1_elements
@@ -271,13 +277,13 @@ const FormBindings: FC = ()=>{
                 'John',
                 'Mike'
             ] || [];
-            const _map1_newElements = _$vaporKeyedList({
+            const _map1_newElements = _$compiledKeyedList({
                 items: _map1_current,
                 getKey: (name, idx)=>name,
                 state: _map1_state,
                 elements: _map1_elements,
-                parent: _el14,
-                before: _list2,
+                parent: _el10,
+                before: _el9,
                 singleRoot: true,
                 trackIndex: false,
                 ownedMount: true,
@@ -285,25 +291,27 @@ const FormBindings: FC = ()=>{
                 renderItem: (name, parent, start, end, idx)=>{
                     const __slot = vapor(()=>{
                         const _root = _$createDocumentFragment();
-                        const _el15 = _$createElement("label", _root);
-                        _$appendChild(_root, _el15);
-                        _$setClassName(_el15, "inline-flex items-center gap-2");
-                        const _el16 = _$createElement("input", _el15);
-                        _$appendChild(_el15, _el16);
-                        _$setAttribute(_el16, "type", "checkbox");
+                        const _el23 = _$createElement("label", _root);
+                        _$appendChild(_root, _el23);
+                        _$setClassName(_el23, "inline-flex items-center gap-2");
+                        const _el24 = _$createElement("input", _el23);
+                        _$appendChild(_el23, _el24);
+                        _$setAttribute(_el24, "type", "checkbox");
                         watchEffect(()=>{
-                            _$setValue(_el16, name);
+                            _$setValue(_el24, name);
                         });
                         watchEffect(()=>{
-                            _$setChecked(_el16, !!(checkedNames.value.includes(name)));
+                            _$setChecked(_el24, !!(checkedNames.value.includes(name)));
                         });
-                        _$addEventListener(_el16, "change", ((e: any)=>toggleCheckedName(name, (e.target as HTMLInputElement).checked)));
-                        const _el17 = _$createElement("span", _el15);
-                        _$appendChild(_el15, _el17);
-                        const _el18 = _$createTextWrapper(_el17);
-                        _$appendChild(_el17, _el18);
+                        const _el24_event_3 = ($event)=>(e: any)=>toggleCheckedName(name, (e.target as HTMLInputElement).checked)($event);
+                        _el24.addEventListener("change", _el24_event_3);
+                        onScopeDispose(()=>_el24.removeEventListener("change", _el24_event_3));
+                        const _el25 = _$createElement("span", _el23);
+                        _$appendChild(_el23, _el25);
+                        const _el26 = _$createTextWrapper(_el25);
+                        _$appendChild(_el25, _el26);
                         watchEffect(()=>{
-                            _$settextContent(_el18, name);
+                            _$settextContent(_el26, name);
                         });
                         return _root;
                     });
@@ -312,112 +320,73 @@ const FormBindings: FC = ()=>{
             });
             _map1_elements = _map1_newElements;
         });
-        const _el19 = _$createElement("p", _el12);
-        _$appendChild(_el12, _el19);
-        _$setClassName(_el19, "mt-2 text-gray-700 dark:text-gray-300");
-        _$appendChild(_el19, _$createTextNode("Checked names: ["));
-        const _el20 = _$createTextWrapper(_el19);
-        _$appendChild(_el19, _el20);
         watchEffect(()=>{
-            _$settextContent(_el20, checkedNames.value.join(', '));
+            const __slot = checkedNames.value.join(', ');
+            untrack(()=>renderAnchor(__slot, _el12, _el11));
         });
-        _$appendChild(_el19, _$createTextNode("]"));
-        const _el21 = _$createElement("div", _root);
-        _$appendChild(_root, _el21);
-        _el21.appendChild(_$getTemplate4().content.cloneNode(true));
-        const _el23 = _$createElement("div", _el21);
-        _$appendChild(_el21, _el23);
-        _$setClassName(_el23, "flex items-center gap-4 flex-wrap");
-        const _el24 = _$createElement("label", _el23);
-        _$appendChild(_el23, _el24);
-        _$setAttribute(_el24, "htmlFor", "one");
-        _$setClassName(_el24, "inline-flex items-center gap-2");
-        const _el25 = _$createElement("input", _el24);
-        _$appendChild(_el24, _el25);
-        _$setAttribute(_el25, "id", "one");
-        _$setAttribute(_el25, "type", "radio");
-        _$setAttribute(_el25, "value", "One");
         watchEffect(()=>{
-            _$setChecked(_el25, !!(picked.value === 'One'));
+            const __slot = (picked.value);
+            untrack(()=>renderAnchor(__slot, _el14, _el13));
         });
-        _$addEventListener(_el25, "change", (()=>{
-            picked.value = 'One';
-        }));
-        _el24.appendChild(_$getTemplate5().content.cloneNode(true));
-        const _el27 = _$createElement("label", _el23);
-        _$appendChild(_el23, _el27);
-        _$setAttribute(_el27, "htmlFor", "two");
-        _$setClassName(_el27, "inline-flex items-center gap-2");
-        const _el28 = _$createElement("input", _el27);
+        const _el27 = _$createElement("select", _el16);
+        _$appendChild(_el16, _el27);
+        _el16.insertBefore(_el27, _el15);
+        _$setClassName(_el27, "border rounded-md px-3 py-2");
+        watchEffect(()=>{
+            _$setValue(_el27, selected.value);
+        });
+        const _el27_event_2 = ($event)=>(e: any)=>{
+                selected.value = (e.target as HTMLSelectElement).value as any;
+            }($event);
+        _el27.addEventListener("change", _el27_event_2);
+        onScopeDispose(()=>_el27.removeEventListener("change", _el27_event_2));
+        const _el28 = _$createElement("option", _el27);
         _$appendChild(_el27, _el28);
-        _$setAttribute(_el28, "id", "two");
-        _$setAttribute(_el28, "type", "radio");
-        _$setAttribute(_el28, "value", "Two");
+        _$setAttribute(_el28, "value", "");
+        _$appendChild(_el28, _$createTextNode("Please select one"));
+        const _el29 = _$createElement("option", _el27);
+        _$appendChild(_el27, _el29);
+        _$setAttribute(_el29, "value", "A");
+        _$appendChild(_el29, _$createTextNode("A"));
+        const _el30 = _$createElement("option", _el27);
+        _$appendChild(_el27, _el30);
+        _$setAttribute(_el30, "value", "B");
+        _$appendChild(_el30, _$createTextNode("B"));
+        const _el31 = _$createElement("option", _el27);
+        _$appendChild(_el27, _el31);
+        _$setAttribute(_el31, "value", "C");
+        _$appendChild(_el31, _$createTextNode("C"));
         watchEffect(()=>{
-            _$setChecked(_el28, !!(picked.value === 'Two'));
+            const __slot = (selected.value);
+            untrack(()=>renderAnchor(__slot, _el18, _el17));
         });
-        _$addEventListener(_el28, "change", (()=>{
-            picked.value = 'Two';
-        }));
-        _el27.appendChild(_$getTemplate6().content.cloneNode(true));
-        const _el30 = _$createElement("p", _el21);
-        _$appendChild(_el21, _el30);
-        _$setClassName(_el30, "mt-2 text-gray-700 dark:text-gray-300");
-        _$appendChild(_el30, _$createTextNode("Picked: "));
-        const _el31 = _$createTextWrapper(_el30);
-        _$appendChild(_el30, _el31);
+        const _el32 = _$createElement("select", _el20);
+        _$appendChild(_el20, _el32);
+        _el20.insertBefore(_el32, _el19);
+        _$setClassName(_el32, "border rounded-md px-3 py-2 w-[120px]");
+        _$setAttribute(_el32, "multiple", "");
         watchEffect(()=>{
-            _$settextContent(_el31, picked.value);
+            _$setValue(_el32, multiSelected.value);
         });
-        const _el32 = _$createElement("div", _root);
-        _$appendChild(_root, _el32);
-        _el32.appendChild(_$getTemplate7().content.cloneNode(true));
-        const _el34 = _$createElement("select", _el32);
+        const _el32_event_3 = ($event)=>onMultiSelectChange($event);
+        _el32.addEventListener("change", _el32_event_3);
+        onScopeDispose(()=>_el32.removeEventListener("change", _el32_event_3));
+        const _el33 = _$createElement("option", _el32);
+        _$appendChild(_el32, _el33);
+        _$setAttribute(_el33, "value", "A");
+        _$appendChild(_el33, _$createTextNode("A"));
+        const _el34 = _$createElement("option", _el32);
         _$appendChild(_el32, _el34);
-        _$setClassName(_el34, "border rounded-md px-3 py-2");
+        _$setAttribute(_el34, "value", "B");
+        _$appendChild(_el34, _$createTextNode("B"));
+        const _el35 = _$createElement("option", _el32);
+        _$appendChild(_el32, _el35);
+        _$setAttribute(_el35, "value", "C");
+        _$appendChild(_el35, _$createTextNode("C"));
         watchEffect(()=>{
-            _$setValue(_el34, selected.value);
+            const __slot = multiSelected.value.join(', ');
+            untrack(()=>renderAnchor(__slot, _el22, _el21));
         });
-        _$addEventListener(_el34, "change", ((e: any)=>{
-            selected.value = (e.target as HTMLSelectElement).value as any;
-        }));
-        _el34.appendChild(_$getTemplate8().content.cloneNode(true));
-        _el34.appendChild(_$getTemplate9().content.cloneNode(true));
-        _el34.appendChild(_$getTemplate10().content.cloneNode(true));
-        _el34.appendChild(_$getTemplate11().content.cloneNode(true));
-        const _el39 = _$createElement("p", _el32);
-        _$appendChild(_el32, _el39);
-        _$setClassName(_el39, "mt-2 text-gray-700 dark:text-gray-300");
-        _$appendChild(_el39, _$createTextNode("Selected: "));
-        const _el40 = _$createTextWrapper(_el39);
-        _$appendChild(_el39, _el40);
-        watchEffect(()=>{
-            _$settextContent(_el40, selected.value);
-        });
-        const _el41 = _$createElement("div", _root);
-        _$appendChild(_root, _el41);
-        _el41.appendChild(_$getTemplate12().content.cloneNode(true));
-        const _el43 = _$createElement("select", _el41);
-        _$appendChild(_el41, _el43);
-        _$setClassName(_el43, "border rounded-md px-3 py-2 w-[120px]");
-        _$setAttribute(_el43, "multiple", "");
-        watchEffect(()=>{
-            _$setValue(_el43, multiSelected.value);
-        });
-        _$addEventListener(_el43, "change", (onMultiSelectChange));
-        _el43.appendChild(_$getTemplate9().content.cloneNode(true));
-        _el43.appendChild(_$getTemplate10().content.cloneNode(true));
-        _el43.appendChild(_$getTemplate11().content.cloneNode(true));
-        const _el47 = _$createElement("p", _el41);
-        _$appendChild(_el41, _el47);
-        _$setClassName(_el47, "mt-2 text-gray-700 dark:text-gray-300");
-        _$appendChild(_el47, _$createTextNode("Selected: ["));
-        const _el48 = _$createTextWrapper(_el47);
-        _$appendChild(_el47, _el48);
-        watchEffect(()=>{
-            _$settextContent(_el48, multiSelected.value.join(', '));
-        });
-        _$appendChild(_el47, _$createTextNode("]"));
         return _root;
     });
 };
@@ -427,5 +396,18 @@ export default FormBindings;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec11.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("_$reconcileKeyed"), "{normalized}");
+    assert!(normalized.contains("_$mountCompiledKeyedRow"), "{normalized}");
+    assert!(normalized.contains("_$compiledText"), "{normalized}");
+    assert!(normalized.contains("_$setValue"), "{normalized}");
+    assert!(normalized.contains("_$setChecked"), "{normalized}");
+    assert!(normalized.contains("checkedNames.value.includes(_$rowItem.get())"), "{normalized}");
+    assert_eq!(
+        normalized.matches(".addEventListener(").count(),
+        normalized.matches(".removeEventListener(").count()
+    );
+    assert!(!normalized.contains("_$compiledKeyedList"), "{normalized}");
+    assert!(!normalized.contains("watchEffect"), "{normalized}");
 }

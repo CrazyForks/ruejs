@@ -375,6 +375,37 @@ describe('text/dynamic shim', () => {
     expect(html).toContain('Hello from dynamic')
   })
 
+  it('uses an async component during the pure RSC compat pass', async () => {
+    const { default: dynamic } = await import('../src/shims/dynamic.js')
+    const { deleteContextRuntime, readContextRuntime, setContextRuntime } =
+      await import('../src/shims/context-runtime-global.js')
+    const { createRequestContext, runWithRequestContext } =
+      await import('../src/shims/unified-request-context.js')
+    const previousRuntime = readContextRuntime()
+    const RscComponent = ({ label }: { label: string }) => createElement('span', null, label)
+
+    setContextRuntime({
+      createElement: (type: unknown, props: Record<string, unknown> | null) => ({ type, props }),
+    })
+
+    try {
+      const DynamicComponent = dynamic(() => Promise.resolve({ default: RscComponent }))
+      const pendingElement = runWithRequestContext(
+        createRequestContext({ appRouterRenderPhase: 'rsc' }),
+        () => DynamicComponent({ label: 'RSC dynamic' }),
+      )
+
+      expect(pendingElement).toBeInstanceOf(Promise)
+      await expect(pendingElement).resolves.toMatchObject({
+        type: RscComponent,
+        props: { label: 'RSC dynamic' },
+      })
+    } finally {
+      if (previousRuntime === undefined) deleteContextRuntime()
+      else setContextRuntime(previousRuntime)
+    }
+  })
+
   it('renders loading state for ssr: false on server', async () => {
     const { default: dynamic } = await import('../src/shims/dynamic.js')
 

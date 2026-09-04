@@ -1,4 +1,4 @@
-import { computed, h, ref, type FC, useSetup } from '@rue-js/rue'
+import { computed, ref, type FC, useSetup } from '@rue-js/rue'
 import propsSetupBoundarySource from './PropsSetupBoundary.tsx?raw'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
@@ -62,12 +62,12 @@ const RenderPhaseChild: FC<DemoProps> = ({ query, count }) => {
   const normalized = query.trim().toUpperCase() || '(empty)'
   const summary = `${normalized} x ${count}`
 
-  return h(
-    'div',
-    { className: 'grid gap-2' },
-    <FieldRow label="normalized" value={normalized} tone="success" />,
-    <FieldRow label="summary" value={summary} tone="success" />,
-    <FieldRow label="mode" value="render 期直接读取解构 props" />,
+  return (
+    <div className="grid gap-2">
+      <FieldRow label="normalized" value={normalized} tone="success" />
+      <FieldRow label="summary" value={summary} tone="success" />
+      <FieldRow label="mode" value="render 期直接读取解构 props" />
+    </div>
   )
 }
 

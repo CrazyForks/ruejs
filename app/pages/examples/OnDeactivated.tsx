@@ -3,17 +3,7 @@
  *
  * 展示 KeepAlive 缓存组件离开活动 DOM 区间时的 deactivated 生命周期。
  */
-import {
-  Component,
-  KeepAlive,
-  onDeactivated,
-  ref,
-  renderAnchor,
-  useState,
-  vapor,
-  watchEffect,
-  type FC,
-} from '@rue-js/rue'
+import { Component, KeepAlive, onDeactivated, ref, useState, type FC } from '@rue-js/rue'
 import SidebarPlayground from '../site/SidebarPlaygroundExample'
 import Code from '../site/components/Code'
 
@@ -144,27 +134,15 @@ const KeepAliveViewport: FC<{
   activePanel: { value: PanelName }
   writeLog: (message: string) => void
 }> = props => {
-  return vapor(() => {
-    const root = document.createDocumentFragment()
-    const anchor = document.createComment('on-deactivated-anchor')
-    root.appendChild(anchor)
-
-    watchEffect(() => {
-      renderAnchor(
-        <KeepAlive>
-          <Component
-            is={panels[props.activePanel.value]}
-            key={props.activePanel.value}
-            writeLog={props.writeLog}
-          />
-        </KeepAlive>,
-        root as any,
-        anchor as any,
-      )
-    })
-
-    return root as any
-  }) as any
+  return (
+    <KeepAlive>
+      <Component
+        is={panels[props.activePanel.value]}
+        key={props.activePanel.value}
+        writeLog={props.writeLog}
+      />
+    </KeepAlive>
+  )
 }
 
 /** onDeactivated 交互示例入口。 */
@@ -236,8 +214,8 @@ const OnDeactivated: FC = () => {
                   {logs.value.length === 0 && (
                     <li className="opacity-60">切换面板后会出现日志。</li>
                   )}
-                  {logs.value.map(item => (
-                    <li className="rounded-box bg-base-100 px-3 py-2" key={item}>
+                  {logs.value.map((item, index) => (
+                    <li className="rounded-box bg-base-100 px-3 py-2" key={`${item}:${index}`}>
                       {item}
                     </li>
                   ))}

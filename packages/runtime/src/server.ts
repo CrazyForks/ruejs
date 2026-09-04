@@ -1,9 +1,9 @@
-import { nextTick } from '@rue-js/runtime-vapor/reactive'
+import { nextTick } from './runtime-core/reactive'
 import {
   RUE_PORTABLE_COMPONENT_TYPE_KEY,
   RUE_PORTABLE_VAPOR_SETUP_KEY,
   RUE_REPEATABLE_MOUNT_FACTORY_KEY,
-} from '@rue-js/runtime-vapor/protocol'
+} from './runtime-core/protocol'
 
 import {
   getDOMAdapter,
@@ -15,14 +15,14 @@ import {
   type DomTextLike,
 } from './dom'
 import {
-  createElement,
-  render,
+  createCompiledComponent,
   type ComponentInstance,
   type ComponentProps,
-  type RenderableInput,
+  type RenderInput,
 } from './rue'
 import {
   RUE_ISLAND_PROPS_SCRIPT_TYPE,
+  RUE_SERVER_COMPILED_VALUE_SNAPSHOT,
   RUE_SERVER_ISLAND_SSR_BRIDGE,
   escapeIslandJson,
   isRueIslandDescriptor,
@@ -31,6 +31,11 @@ import {
   type RueIslandDescriptor,
   type RueServerIslandDescriptor,
 } from './island-protocol'
+import {
+  RUE_COMPILED_COMPONENT_FACTORY_KEY,
+  RUE_COMPILED_COMPONENT_READ_PROPS_KEY,
+} from './compiled-component'
+import { _$compiledValue } from './compiled-render-anchor'
 
 type ServerNodeType = 1 | 3 | 8 | 11
 
@@ -54,12 +59,15 @@ const VOID_TAGS = new Set([
 const BOOLEAN_ATTRIBUTES = new Set(['checked', 'disabled', 'multiple', 'readonly', 'selected'])
 const SERVER_RENDERING_FLAG = '__rue_is_server_rendering__'
 const RUE_SSR_PENDING_ASYNC_COMPONENT_KEY = '__rue_ssr_pending_async_component__'
+const RUE_SSR_STREAM_PENDING_KEY = '__rue_ssr_stream_pending__'
 const SERVER_RENDERING_BASE_ADAPTER_KEY = '__rue_server_rendering_base_adapter__'
 const SERVER_RENDERING_ADAPTER_STACK_KEY = '__rue_server_rendering_adapter_stack__'
 const RUE_PORTABLE_PROPS_KEY = 'props'
 const SERVER_PROTOCOL_ELEMENT_SYMBOLS = new Set([
   Symbol.for('rue.transitional.element'),
   Symbol.for('rue.element'),
+  Symbol.for('react.transitional.element'),
+  Symbol.for('react.element'),
 ])
 const SERVER_PROTOCOL_FRAGMENT_SYMBOLS = new Set([
   Symbol.for('rue.fragment'),
@@ -68,9 +76,60 @@ const SERVER_PROTOCOL_FRAGMENT_SYMBOLS = new Set([
 const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
 const RUE_SUSPENSE_STAGING_KEY = '__rue_suspense_staging'
 const RUE_ELEMENT_HEAD_RECORD = Symbol.for('rue.element.head-record')
+const RUE_SERVER_PROTOCOL_NORMALIZER = Symbol.for('rue.server.protocol-normalizer')
 const TEXT_HEAD_RECORD = Symbol.for('text.head.record')
 const RUE_CLIENT_REFERENCE_SYMBOL = Symbol.for('rue.client.reference')
+const RUE_SERVER_OPERATION = Symbol.for('rue.server.operation')
 const TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY = '__TEXT_RESOLVE_CLIENT_REFERENCE_EXPORT__'
+const TEXT_CLIENT_REFERENCE_SSR_KEY = Symbol.for('text.clientReferenceSsr')
+
+type ServerAsyncComponentState =
+  | { status: 'pending'; promise: Promise<unknown> }
+  | { status: 'resolved'; value: unknown }
+  | { status: 'rejected'; reason: unknown }
+
+const serverAsyncComponentStates = new WeakMap<
+  DOMAdapter,
+  Map<object | string, ServerAsyncComponentState>
+>()
+
+const readServerComponentResult = (
+  identity: object,
+  stableIdentity: object | string | undefined,
+  render: () => unknown,
+): unknown => {
+  const adapter = getDOMAdapter()
+  let states = serverAsyncComponentStates.get(adapter)
+  if (!states) {
+    states = new Map()
+    serverAsyncComponentStates.set(adapter, states)
+  }
+  const key = stableIdentity ?? identity
+  const existing = states.get(key)
+  if (existing?.status === 'pending') throw existing.promise
+  if (existing?.status === 'resolved') return existing.value
+  if (existing?.status === 'rejected') throw existing.reason
+
+  const result = render()
+  if (
+    (typeof result === 'object' || typeof result === 'function') &&
+    result !== null &&
+    typeof (result as PromiseLike<unknown>).then === 'function'
+  ) {
+    const promise = Promise.resolve(result).then(
+      value => {
+        states.set(key, { status: 'resolved', value })
+        return value
+      },
+      reason => {
+        states.set(key, { status: 'rejected', reason })
+      },
+    )
+    states.set(key, { status: 'pending', promise })
+    throw promise
+  }
+  return result
+}
 
 const escapeText = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -90,6 +149,10 @@ class ServerNode implements DomNodeLike {
     return this.childNodes[0] ?? null
   }
 
+  get lastChild(): ServerNode | null {
+    return this.childNodes[this.childNodes.length - 1] ?? null
+  }
+
   get nextSibling(): ServerNode | null {
     if (!this.parentNode) {
       return null
@@ -97,6 +160,21 @@ class ServerNode implements DomNodeLike {
     const siblings = getMutableServerChildNodes(this.parentNode)
     const index = siblings.indexOf(this)
     return index === -1 ? null : (siblings[index + 1] ?? null)
+  }
+
+  appendChild<T extends ServerNode>(child: T): T {
+    insertServerChild(this, child, null)
+    return child
+  }
+
+  removeChild<T extends ServerNode>(child: T): T {
+    removeServerChild(this, child)
+    return child
+  }
+
+  insertBefore<T extends ServerNode>(child: T, reference: ServerNode | null): T {
+    insertServerChild(this, child, reference)
+    return child
   }
 }
 
@@ -167,6 +245,8 @@ export class ServerElementNode extends ServerNode implements DomElementLike {
 }
 
 export class ServerFragmentNode extends ServerNode implements DomFragmentLike {
+  externalSource?: Node
+
   constructor() {
     super(11)
   }
@@ -331,7 +411,19 @@ export class ServerDOMAdapter implements DOMAdapter {
   }
 
   setAttribute(el: DomElementLike, name: string, value: any) {
-    ;(el as ServerElementNode).attributes.set(name, String(value))
+    const canonicalName =
+      name === 'charset'
+        ? 'charSet'
+        : name === 'srcset'
+          ? 'srcSet'
+          : name === 'fetchpriority'
+            ? 'fetchPriority'
+            : name === 'imagesizes'
+              ? 'imageSizes'
+              : name === 'imagesrcset'
+                ? 'imageSrcSet'
+                : name
+    ;(el as ServerElementNode).attributes.set(canonicalName, String(value))
   }
 
   removeAttribute(el: DomElementLike, name: string) {
@@ -478,6 +570,22 @@ function isServerProtocolElement(value: unknown): value is {
   )
 }
 
+function isStructuralServerProtocolElement(value: unknown): value is {
+  type: unknown
+  props?: Record<string, unknown> | null
+  children: unknown
+} {
+  if (typeof value !== 'object' || value === null || !Object.hasOwn(value, 'children')) return false
+  const record = value as Record<string, unknown>
+  if (!Object.hasOwn(record, 'type')) return false
+  if (record.props != null && typeof record.props !== 'object') return false
+  return (
+    typeof record.type === 'string' ||
+    typeof record.type === 'function' ||
+    typeof record.type === 'symbol'
+  )
+}
+
 function isClassComponentType(value: unknown): value is new (props: Record<string, unknown>) => {
   render: () => unknown
 } {
@@ -520,6 +628,13 @@ function resolveClientReferenceComponentType(type: unknown): unknown {
   const reference = readClientReferenceExport(type)
   if (!reference) return type
 
+  // This dev-only component removes stylesheet links after hydration. It has
+  // no server output, and resolving its client module during SSR can leave a
+  // Vite module-runner import pending while the response is being rendered.
+  if (reference.referenceKey.includes('virtual:rue-rsc/remove-duplicate-server-css')) {
+    return () => null
+  }
+
   const resolver = (globalThis as Record<string, unknown>)[TEXT_CLIENT_REFERENCE_SSR_RESOLVER_KEY]
   if (typeof resolver !== 'function') return type
 
@@ -528,6 +643,28 @@ function resolveClientReferenceComponentType(type: unknown): unknown {
     reference.exportName,
   )
   return typeof resolved === 'function' ? resolved : type
+}
+
+function invokeServerProtocolComponent(
+  clientReference: ReturnType<typeof readClientReferenceExport>,
+  type: (props: Record<string, unknown>) => unknown,
+  props: Record<string, unknown>,
+): unknown {
+  if (!clientReference) return type(props)
+  const globalRecord = globalThis as Record<PropertyKey, unknown>
+  const previous = globalRecord[TEXT_CLIENT_REFERENCE_SSR_KEY]
+  const count = typeof previous === 'number' ? previous : 0
+  globalRecord[TEXT_CLIENT_REFERENCE_SSR_KEY] = count + 1
+  try {
+    const clientProps =
+      props.children !== null && typeof props.children === 'object'
+        ? { ...props, children: _$compiledValue(props.children) }
+        : props
+    return type(clientProps)
+  } finally {
+    if (previous === undefined) delete globalRecord[TEXT_CLIENT_REFERENCE_SSR_KEY]
+    else globalRecord[TEXT_CLIENT_REFERENCE_SSR_KEY] = previous
+  }
 }
 
 function isRuePortableComponentHandle(value: unknown): value is {
@@ -581,10 +718,18 @@ function createFreshServerRenderable(value: unknown): unknown {
   if (isRueIslandDescriptor(value) || isRueServerIslandDescriptor(value)) {
     return value
   }
+  if (RUE_SERVER_COMPILED_VALUE_SNAPSHOT in value) {
+    return value
+  }
 
   const factory = (value as Record<string, unknown>)[RUE_REPEATABLE_MOUNT_FACTORY_KEY]
   if (typeof factory === 'function') {
     return factory()
+  }
+
+  const cloneCompiledRoot = (value as Record<string, unknown>).__rue_compiled_clone
+  if (typeof cloneCompiledRoot === 'function') {
+    return (cloneCompiledRoot as () => unknown)()
   }
 
   const prototype = Object.getPrototypeOf(value)
@@ -608,11 +753,10 @@ function normalizeServerProtocolProps(rawProps: Record<string, unknown> | null |
 } {
   const source = rawProps ?? {}
   const { children, ...props } = source
-  const normalizedProps: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(props)) {
-    normalizedProps[key] = normalizeServerProtocolRenderable(value)
-  }
-  return { children, props: normalizedProps }
+  // Only `children` participates in the renderable protocol. Other props may
+  // legitimately be zero-argument callbacks (event handlers, server actions,
+  // loaders); recursively normalizing them would execute user code during SSR.
+  return { children, props }
 }
 
 function appendNormalizedServerChild(parent: ServerNode, child: unknown) {
@@ -642,7 +786,6 @@ function setServerElementProp(element: ServerElementNode, key: string, value: un
     key === 'ref' ||
     key === 'suppressHydrationWarning' ||
     value == null ||
-    (typeof value === 'boolean' && value === false) ||
     typeof value === 'function'
   ) {
     return
@@ -707,7 +850,9 @@ function createServerNodeFromProtocolElement(
 function createServerNodeFromIslandDescriptor(descriptor: RueIslandDescriptor): unknown {
   const hydrate = descriptor.metadata.hydrate ?? 'load'
   if (hydrate === 'none') {
-    return normalizeServerProtocolRenderable(createElement(descriptor.component, descriptor.props))
+    return normalizeServerProtocolRenderable(
+      createCompiledComponent(descriptor.component, descriptor.props),
+    )
   }
 
   const id = descriptor.metadata.id
@@ -736,7 +881,9 @@ function createServerNodeFromIslandDescriptor(descriptor: RueIslandDescriptor): 
   }
 
   const content =
-    hydrate === 'only' ? descriptor.fallback : createElement(descriptor.component, descriptor.props)
+    hydrate === 'only'
+      ? descriptor.fallback
+      : createCompiledComponent(descriptor.component, descriptor.props)
   if (content !== undefined) {
     appendNormalizedServerChild(node, content)
   }
@@ -753,8 +900,9 @@ const getUtf8ByteLength = (value: string) => new TextEncoder().encode(value).byt
 
 function createServerNodeFromServerIslandDescriptor(
   descriptor: RueServerIslandDescriptor,
+  explicitContext?: ServerIslandRenderContext,
 ): unknown {
-  const context = serverIslandRenderContexts.get(getDOMAdapter())
+  const context = explicitContext ?? serverIslandRenderContexts.get(getDOMAdapter())
   const options = context?.options
   if (!context || !options) {
     throw new Error(
@@ -793,7 +941,7 @@ function createServerNodeFromServerIslandDescriptor(
   const node = new ServerElementNode('rue-server-island')
   setServerElementProp(node, 'data-rue-server-island', descriptor.id)
   if (descriptor.fallback !== undefined) {
-    appendNormalizedServerChild(node, descriptor.fallback)
+    appendNormalizedServerChild(node, createFreshServerRenderable(descriptor.fallback))
   }
 
   if (state.status === 'pending') {
@@ -832,6 +980,33 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
     return value.map(item => normalizeServerProtocolRenderable(item))
   }
 
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    RUE_SERVER_OPERATION in (value as Record<PropertyKey, unknown>)
+  ) {
+    const operation = value as {
+      [RUE_SERVER_OPERATION]: 'element' | 'component' | 'fragment'
+      type?: unknown
+      props?: Record<string, unknown> | null
+      children?: unknown[]
+    }
+    const children = operation.children ?? []
+    if (operation[RUE_SERVER_OPERATION] === 'fragment') {
+      return normalizeServerProtocolRenderable(children)
+    }
+    return normalizeServerProtocolRenderable({
+      $$typeof: Symbol.for('rue.transitional.element'),
+      type: operation.type,
+      props: {
+        ...operation.props,
+        ...(children.length > 0
+          ? { children: children.length === 1 ? children[0] : children }
+          : null),
+      },
+    })
+  }
+
   if (isRueIslandDescriptor(value)) {
     return createServerNodeFromIslandDescriptor(value)
   }
@@ -840,13 +1015,74 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
     return createServerNodeFromServerIslandDescriptor(value)
   }
 
+  if (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    RUE_SERVER_COMPILED_VALUE_SNAPSHOT in value
+  ) {
+    return normalizeServerProtocolRenderable(
+      (value as Record<PropertyKey, unknown>)[RUE_SERVER_COMPILED_VALUE_SNAPSHOT],
+    )
+  }
+
+  if ((typeof value === 'object' || typeof value === 'function') && value !== null) {
+    const record = value as Record<PropertyKey, unknown>
+    const factory = record[RUE_COMPILED_COMPONENT_FACTORY_KEY]
+    const readProps = record[RUE_COMPILED_COMPONENT_READ_PROPS_KEY]
+    if (
+      (typeof factory === 'string' || typeof factory === 'function') &&
+      typeof readProps === 'function'
+    ) {
+      const props = (readProps as () => Record<string, unknown>)() ?? {}
+      const { children, props: normalizedProps } = normalizeServerProtocolProps(props)
+      if (typeof factory === 'string') {
+        return createServerNodeFromProtocolElement(factory, normalizedProps, children)
+      }
+      if (!(RUE_PORTABLE_VAPOR_SETUP_KEY in record)) {
+        const clientReference = readClientReferenceExport(factory)
+        const resolvedFactory = resolveClientReferenceComponentType(factory)
+        return normalizeServerProtocolRenderable(
+          readServerComponentResult(record, resolvedFactory as object, () =>
+            invokeServerProtocolComponent(
+              clientReference,
+              resolvedFactory as (props: Record<string, unknown>) => unknown,
+              {
+                ...normalizedProps,
+                ...(children !== undefined ? { children } : null),
+              },
+            ),
+          ),
+        )
+      }
+      // Function-backed compiler handles must mount through their compiled
+      // root below. Calling the factory here bypasses the active DOM host
+      // scope, so nested slot factories fall back to the browser `document`
+      // while rendering on the server.
+    }
+  }
+
   if (isRuePortableComponentHandle(value)) {
-    const type = resolveClientReferenceComponentType(value[RUE_PORTABLE_COMPONENT_TYPE_KEY])
+    const rawType = value[RUE_PORTABLE_COMPONENT_TYPE_KEY]
+    const clientReference = readClientReferenceExport(rawType)
+    const type = resolveClientReferenceComponentType(rawType)
     const rawProps =
       value[RUE_PORTABLE_PROPS_KEY] && typeof value[RUE_PORTABLE_PROPS_KEY] === 'object'
         ? (value[RUE_PORTABLE_PROPS_KEY] as Record<string, unknown>)
         : {}
     const { children, props } = normalizeServerProtocolProps(rawProps)
+
+    if (SERVER_PROTOCOL_FRAGMENT_SYMBOLS.has(type as symbol)) {
+      return normalizeServerProtocolRenderable(children)
+    }
+
+    if (typeof type === 'string') {
+      const childList = Array.isArray(children)
+        ? children.map(child => normalizeServerProtocolRenderable(child))
+        : children !== undefined
+          ? [normalizeServerProtocolRenderable(children)]
+          : []
+      return createServerNodeFromProtocolElement(type, props, childList)
+    }
 
     if (isClassComponentType(type)) {
       const instance = new type({
@@ -864,12 +1100,27 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
     }
 
     if (typeof type === 'function') {
-      return normalizeServerProtocolRenderable(
-        (type as (props: Record<string, unknown>) => unknown)({
-          ...props,
-          ...(children !== undefined ? { children } : null),
-        }),
-      )
+      try {
+        return normalizeServerProtocolRenderable(
+          invokeServerProtocolComponent(
+            clientReference,
+            type as (props: Record<string, unknown>) => unknown,
+            {
+              ...props,
+              ...(children !== undefined ? { children } : null),
+            },
+          ),
+        )
+      } catch (error) {
+        if (
+          clientReference &&
+          error instanceof Error &&
+          error.message.includes('only works in Client Components')
+        ) {
+          return null
+        }
+        throw error
+      }
     }
   }
 
@@ -890,7 +1141,63 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
   }
 
   if (isRuePortableVaporHandle(value)) {
-    return normalizeServerProtocolRenderable(value[RUE_PORTABLE_VAPOR_SETUP_KEY](null))
+    const isCompiledJsRoot =
+      (value as unknown as Record<string, unknown>).__rue_compiled_js_root === true
+    if (typeof document !== 'undefined' && !isCompiledJsRoot) {
+      const fragment = document.createDocumentFragment()
+      const globalRecord = globalThis as Record<string, unknown>
+      const globalSymbolRecord = globalThis as Record<PropertyKey, unknown>
+      const serverAdapter = getDOMAdapter()
+      const serverIslandContext = serverIslandRenderContexts.get(serverAdapter)
+      const browserAdapter = globalRecord[SERVER_RENDERING_BASE_ADAPTER_KEY] as
+        | DOMAdapter
+        | undefined
+      const previousServerIslandBridge = globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE]
+      if (browserAdapter) setDOMAdapter(browserAdapter)
+      globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = (descriptor: RueServerIslandDescriptor) =>
+        createServerNodeFromServerIslandDescriptor(descriptor, serverIslandContext)
+      try {
+        const result = value[RUE_PORTABLE_VAPOR_SETUP_KEY](fragment as unknown as DomElementLike)
+        if (result instanceof Node && result.parentNode !== fragment) {
+          fragment.appendChild(result)
+        }
+      } finally {
+        if (previousServerIslandBridge === undefined) {
+          delete globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE]
+        } else {
+          globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = previousServerIslandBridge
+        }
+        if (browserAdapter) setDOMAdapter(serverAdapter)
+      }
+      const liveFragment = new ServerFragmentNode()
+      liveFragment.externalSource = fragment
+      return liveFragment
+    }
+
+    const adapter = getDOMAdapter()
+    const fragment = adapter.createDocumentFragment()
+    const fragmentChildren = (fragment as unknown as { childNodes: ArrayLike<unknown> }).childNodes
+    const initialChildCount = fragmentChildren.length
+    const result = value[RUE_PORTABLE_VAPOR_SETUP_KEY](fragment as DomElementLike)
+    if (result != null && fragmentChildren.length === initialChildCount) {
+      adapter.appendChild(fragment, result as DomNodeLike)
+    }
+    return fragment
+  }
+
+  if (typeof value === 'function' && value.length === 0) {
+    return normalizeServerProtocolRenderable((value as () => unknown)())
+  }
+
+  if (isStructuralServerProtocolElement(value)) {
+    return normalizeServerProtocolRenderable({
+      $$typeof: Symbol.for('rue.transitional.element'),
+      type: value.type,
+      props: {
+        ...value.props,
+        children: value.children,
+      },
+    })
   }
 
   if (!isServerProtocolElement(value)) {
@@ -901,6 +1208,7 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
   const rawType = SERVER_PROTOCOL_FRAGMENT_SYMBOLS.has(value.type as symbol)
     ? 'fragment'
     : value.type
+  const clientReference = readClientReferenceExport(rawType)
   const type = resolveClientReferenceComponentType(rawType)
 
   if (isClassComponentType(type)) {
@@ -920,10 +1228,14 @@ function normalizeServerProtocolRenderable(value: unknown): unknown {
 
   if (typeof type === 'function') {
     return normalizeServerProtocolRenderable(
-      (type as (props: Record<string, unknown>) => unknown)({
-        ...props,
-        ...(children !== undefined ? { children } : null),
-      }),
+      invokeServerProtocolComponent(
+        clientReference,
+        type as (props: Record<string, unknown>) => unknown,
+        {
+          ...props,
+          ...(children !== undefined ? { children } : null),
+        },
+      ),
     )
   }
 
@@ -949,7 +1261,13 @@ const setBooleanAttribute = (node: ServerElementNode, name: string, value: boole
 
 const syncStyleAttribute = (node: ServerElementNode) => {
   const style = Object.entries(node.style)
-    .map(([key, value]) => `${key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}: ${value}`)
+    .map(
+      ([key, value]) =>
+        `${key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}: ${value.replace(
+          /url\((["'])(.*?)\1\)/g,
+          'url($2)',
+        )}`,
+    )
     .join('; ')
   if (style) {
     node.attributes.set('style', style)
@@ -969,11 +1287,28 @@ const removeServerChild = (parent: ServerNode, child: ServerNode) => {
 }
 
 const copyExternalAttributes = (source: unknown, target: ServerElementNode) => {
+  const normalizeExternalAttribute = (name: string, value: string) => {
+    const canonicalName =
+      name === 'charset'
+        ? 'charSet'
+        : name === 'srcset'
+          ? 'srcSet'
+          : name === 'fetchpriority'
+            ? 'fetchPriority'
+            : name === 'imagesizes'
+              ? 'imageSizes'
+              : name === 'imagesrcset'
+                ? 'imageSrcSet'
+                : name
+    const canonicalValue =
+      canonicalName === 'style' ? value.replace(/url\((["'])(.*?)\1\)/g, 'url($2)') : value
+    target.attributes.set(canonicalName, canonicalValue)
+  }
   const attributes = (source as { attributes?: unknown }).attributes
   if (!attributes) return
   if (attributes instanceof Map) {
     for (const [name, value] of attributes) {
-      target.attributes.set(String(name), String(value))
+      normalizeExternalAttribute(String(name), String(value))
     }
     return
   }
@@ -990,7 +1325,7 @@ const copyExternalAttributes = (source: unknown, target: ServerElementNode) => {
     for (let i = 0; i < list.length; i += 1) {
       const attr = typeof list.item === 'function' ? list.item(i) : list[i]
       if (!attr || attr.name == null) continue
-      target.attributes.set(String(attr.name), String(attr.value ?? ''))
+      normalizeExternalAttribute(String(attr.name), String(attr.value ?? ''))
     }
   }
 }
@@ -1023,7 +1358,26 @@ const cloneExternalDomNode = (node: unknown): ServerNode => {
   const tagName = String(domNode.tagName ?? domNode.nodeName ?? '').toLowerCase()
   const element = new ServerElementNode(tagName || 'span')
   copyExternalAttributes(node, element)
-  for (const child of Array.from(domNode.childNodes ?? [])) {
+  if (
+    tagName === 'input' &&
+    !element.attributes.has('value') &&
+    (node as { value?: unknown }).value !== undefined &&
+    (node as { value?: unknown }).value !== ''
+  ) {
+    element.attributes.set('value', String((node as { value?: unknown }).value))
+  }
+  const externalChildren = Array.from(domNode.childNodes ?? [])
+  if (
+    externalChildren.some(
+      child =>
+        (child as { nodeType?: unknown }).nodeType === 8 &&
+        String((child as { data?: unknown }).data ?? '').includes('__TEXT_SCRIPTS__'),
+    )
+  ) {
+    element.rawInnerHTML = String((node as { innerHTML?: unknown }).innerHTML ?? '')
+    return element
+  }
+  for (const child of externalChildren) {
     insertServerChild(element, child, null)
   }
   return element
@@ -1031,7 +1385,7 @@ const cloneExternalDomNode = (node: unknown): ServerNode => {
 
 const insertServerChild = (parent: ServerNode, child: unknown, ref: ServerNode | null) => {
   const serverChild = cloneExternalDomNode(child)
-  if (serverChild.nodeType === 11) {
+  if (serverChild.nodeType === 11 && !(serverChild as ServerFragmentNode).externalSource) {
     const moving = [...getMutableServerChildNodes(serverChild)]
     for (const fragmentChild of moving) {
       insertServerChild(parent, fragmentChild, ref)
@@ -1073,9 +1427,12 @@ const serializeServerNode = (node: ServerNode, options: RenderToStringOptions = 
     return escapeText((node as ServerTextNode).textContent)
   }
   if (node.nodeType === 8) {
-    return options.includeComments ? `<!--${(node as ServerCommentNode).data}-->` : ''
+    const data = (node as ServerCommentNode).data
+    return options.includeComments || data.includes('__TEXT_SCRIPTS__') ? `<!--${data}-->` : ''
   }
   if (node.nodeType === 11) {
+    const externalSource = (node as ServerFragmentNode).externalSource
+    if (externalSource) return serializeServerNode(cloneExternalDomNode(externalSource), options)
     return serializeServerNodeChildren(node, options)
   }
 
@@ -1105,15 +1462,23 @@ const flushServerRenderMicrotasks = async () => {
   await Promise.resolve()
 }
 
+const isServerThenable = (value: unknown): value is PromiseLike<unknown> =>
+  (typeof value === 'object' || typeof value === 'function') &&
+  value !== null &&
+  typeof (value as PromiseLike<unknown>).then === 'function'
+
 export const renderToString = async (
-  input: RenderableInput | ComponentInstance<any>,
+  input: RenderInput | ComponentInstance<any>,
   options: RenderToStringOptions = {},
 ) => {
   const adapter = new ServerDOMAdapter()
   const globalRecord = globalThis as Record<string, unknown>
   const globalSymbolRecord = globalThis as Record<PropertyKey, unknown>
   const previousServerIslandBridge = globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE]
-  globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = createServerNodeFromServerIslandDescriptor
+  const previousServerProtocolNormalizer = globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER]
+  globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = (descriptor: RueServerIslandDescriptor) =>
+    createServerNodeFromServerIslandDescriptor(descriptor, serverIslandContext)
+  globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER] = normalizeServerProtocolRenderable
   const leaveServerDOMAdapterScope = enterServerDOMAdapterScope(adapter)
   const serverIslandContext: ServerIslandRenderContext = {
     options: options.serverIslands,
@@ -1125,16 +1490,28 @@ export const renderToString = async (
     const createRenderValue = () => {
       const value =
         typeof input === 'function'
-          ? createElement(input as ComponentInstance<any>, options.props ?? null)
+          ? createCompiledComponent(input as ComponentInstance<any>, options.props ?? null)
           : input
       return normalizeServerProtocolRenderable(createFreshServerRenderable(value))
     }
     let shouldRender = true
     for (let i = 0; i < 8; i += 1) {
       if (shouldRender) {
-        render(null as RenderableInput, adapter.root)
-        const renderValue = createRenderValue()
-        render(renderValue as RenderableInput, adapter.root)
+        getMutableServerChildNodes(adapter.root).forEach(child => {
+          child.parentNode = null
+        })
+        adapter.root.childNodes = []
+        try {
+          const renderValue = createRenderValue()
+          appendNormalizedServerChild(adapter.root, renderValue)
+        } catch (error) {
+          if (!isServerThenable(error)) throw error
+          globalRecord[RUE_SSR_PENDING_ASYNC_COMPONENT_KEY] = []
+          await Promise.resolve(error)
+          await flushServerRenderMicrotasks()
+          shouldRender = true
+          continue
+        }
         shouldRender = false
       }
       const pendingAsyncComponents = globalRecord[RUE_SSR_PENDING_ASYNC_COMPONENT_KEY] as
@@ -1143,6 +1520,7 @@ export const renderToString = async (
       if (pendingAsyncComponents?.length) {
         globalRecord[RUE_SSR_PENDING_ASYNC_COMPONENT_KEY] = []
         await Promise.all(pendingAsyncComponents)
+        await flushServerRenderMicrotasks()
         shouldRender = true
         continue
       }
@@ -1151,7 +1529,10 @@ export const renderToString = async (
     return serializeServerNodeChildren(adapter.root, options)
   } finally {
     try {
-      render(null as RenderableInput, adapter.root)
+      getMutableServerChildNodes(adapter.root).forEach(child => {
+        child.parentNode = null
+      })
+      adapter.root.childNodes = []
       await flushServerRenderMicrotasks()
     } finally {
       serverIslandRenderContexts.delete(adapter)
@@ -1160,8 +1541,96 @@ export const renderToString = async (
       } else {
         globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = previousServerIslandBridge
       }
+      if (previousServerProtocolNormalizer === undefined) {
+        delete globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER]
+      } else {
+        globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER] = previousServerProtocolNormalizer
+      }
       leaveServerDOMAdapterScope()
     }
+  }
+}
+
+/** Render a compiled SSR shell immediately and keep the adapter alive for Suspense updates. */
+export const renderToReadableStream = async (
+  input: RenderInput | ComponentInstance<any>,
+  options: RenderToStringOptions = {},
+): Promise<ReadableStream<Uint8Array>> => {
+  const adapter = new ServerDOMAdapter()
+  const globalRecord = globalThis as Record<string, unknown>
+  const globalSymbolRecord = globalThis as Record<PropertyKey, unknown>
+  const previousServerIslandBridge = globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE]
+  const previousServerProtocolNormalizer = globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER]
+  const previousStreamPending = globalRecord[RUE_SSR_STREAM_PENDING_KEY]
+  const serverIslandContext: ServerIslandRenderContext = {
+    options: options.serverIslands,
+    tokens: new Map(),
+  }
+  globalRecord[RUE_SSR_STREAM_PENDING_KEY] = []
+  globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = (descriptor: RueServerIslandDescriptor) =>
+    createServerNodeFromServerIslandDescriptor(descriptor, serverIslandContext)
+  globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER] = normalizeServerProtocolRenderable
+  const leaveServerDOMAdapterScope = enterServerDOMAdapterScope(adapter)
+  serverIslandRenderContexts.set(adapter, serverIslandContext)
+
+  const cleanup = async () => {
+    getMutableServerChildNodes(adapter.root).forEach(child => {
+      child.parentNode = null
+    })
+    adapter.root.childNodes = []
+    await flushServerRenderMicrotasks()
+    serverIslandRenderContexts.delete(adapter)
+    if (previousServerIslandBridge === undefined)
+      delete globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE]
+    else globalSymbolRecord[RUE_SERVER_ISLAND_SSR_BRIDGE] = previousServerIslandBridge
+    if (previousServerProtocolNormalizer === undefined) {
+      delete globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER]
+    } else {
+      globalSymbolRecord[RUE_SERVER_PROTOCOL_NORMALIZER] = previousServerProtocolNormalizer
+    }
+    if (previousStreamPending === undefined) delete globalRecord[RUE_SSR_STREAM_PENDING_KEY]
+    else globalRecord[RUE_SSR_STREAM_PENDING_KEY] = previousStreamPending
+    leaveServerDOMAdapterScope()
+  }
+
+  try {
+    const value =
+      typeof input === 'function'
+        ? createCompiledComponent(input as ComponentInstance<any>, options.props ?? null)
+        : input
+    appendNormalizedServerChild(
+      adapter.root,
+      normalizeServerProtocolRenderable(createFreshServerRenderable(value)),
+    )
+    await flushServerRenderMicrotasks()
+    const shell = serializeServerNodeChildren(adapter.root, options)
+    const encoder = new TextEncoder()
+    return new ReadableStream<Uint8Array>({
+      async start(controller) {
+        controller.enqueue(encoder.encode(shell))
+        try {
+          for (let pass = 0; pass < 8; pass += 1) {
+            const pending = globalRecord[RUE_SSR_STREAM_PENDING_KEY] as
+              | PromiseLike<unknown>[]
+              | undefined
+            if (!pending?.length) break
+            globalRecord[RUE_SSR_STREAM_PENDING_KEY] = []
+            await Promise.all(pending)
+            await flushServerRenderMicrotasks()
+          }
+          const finalHtml = serializeServerNodeChildren(adapter.root, options)
+          if (finalHtml !== shell) controller.enqueue(encoder.encode(finalHtml))
+          controller.close()
+        } catch (error) {
+          controller.error(error)
+        } finally {
+          await cleanup()
+        }
+      },
+    })
+  } catch (error) {
+    await cleanup()
+    throw error
   }
 }
 

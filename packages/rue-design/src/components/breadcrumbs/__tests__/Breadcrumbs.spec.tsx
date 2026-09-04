@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import { Breadcrumbs } from '@rue-js/design'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
@@ -13,7 +13,12 @@ afterEach(() => {
 describe('Breadcrumbs', () => {
   it('renders with base class and ul', async () => {
     const c = mountContainer()
-    render(h(Breadcrumbs, null, h('li', null, 'Home')), c)
+    render(
+      <Breadcrumbs>
+        <li>{'Home'}</li>
+      </Breadcrumbs>,
+      c,
+    )
     await waitForContent(() => {
       const el = c.querySelector('.breadcrumbs') as HTMLElement
       expect(el).toBeTruthy()
@@ -26,7 +31,12 @@ describe('Breadcrumbs', () => {
 
   it('appends custom className', async () => {
     const c = mountContainer()
-    render(h(Breadcrumbs, { className: 'text-sm' }, h('li', null, 'x')), c)
+    render(
+      <Breadcrumbs className={'text-sm'}>
+        <li>{'x'}</li>
+      </Breadcrumbs>,
+      c,
+    )
     await waitForContent(() => {
       const el = c.querySelector('.breadcrumbs') as HTMLElement
       expect(el.classList.contains('text-sm')).toBe(true)
@@ -36,13 +46,15 @@ describe('Breadcrumbs', () => {
   it('renders children li items', async () => {
     const c = mountContainer()
     render(
-      h(
-        Breadcrumbs,
-        null,
-        h('li', null, h('a', null, 'Home')),
-        h('li', null, h('a', null, 'Documents')),
-        h('li', null, 'Add Document'),
-      ),
+      <Breadcrumbs>
+        <li>
+          <a>{'Home'}</a>
+        </li>
+        <li>
+          <a>{'Documents'}</a>
+        </li>
+        <li>{'Add Document'}</li>
+      </Breadcrumbs>,
       c,
     )
     await waitForContent(() => {
@@ -54,7 +66,11 @@ describe('Breadcrumbs', () => {
   it('renders Item subcomponent', async () => {
     const c = mountContainer()
     render(
-      h(Breadcrumbs, { className: 'text-sm' }, h(Breadcrumbs.Item, null, h('span', null, 'Home'))),
+      <Breadcrumbs className={'text-sm'}>
+        <Breadcrumbs.Item>
+          <span>{'Home'}</span>
+        </Breadcrumbs.Item>
+      </Breadcrumbs>,
       c,
     )
     await waitForContent(() => {
@@ -68,19 +84,12 @@ describe('Breadcrumbs', () => {
   it('renders Item subcomponent with href, icon and current state', async () => {
     const c = mountContainer()
     render(
-      h(
-        Breadcrumbs,
-        { className: 'text-sm' },
-        h(
-          Breadcrumbs.Item,
-          {
-            href: '/home',
-            icon: h('span', { className: 'crumb-icon' }, 'H'),
-          },
-          'Home',
-        ),
-        h(Breadcrumbs.Item, { current: true }, 'Library'),
-      ),
+      <Breadcrumbs className={'text-sm'}>
+        <Breadcrumbs.Item href={'/home'} icon={<span className={'crumb-icon'}>{'H'}</span>}>
+          {'Home'}
+        </Breadcrumbs.Item>
+        <Breadcrumbs.Item current={true}>{'Library'}</Breadcrumbs.Item>
+      </Breadcrumbs>,
       c,
     )
 
@@ -102,20 +111,20 @@ describe('Breadcrumbs', () => {
         label: 'Home',
         href: '/home',
         linkClassName: 'hover:underline cursor-pointer inline-flex gap-2 items-center',
-        icon: h(
-          'svg',
-          {
-            xmlns: 'http://www.w3.org/2000/svg',
-            fill: 'none',
-            viewBox: '0 0 24 24',
-            className: 'w-4 h-4 stroke-current',
-          },
-          h('path', {
-            'stroke-linecap': 'round',
-            'stroke-linejoin': 'round',
-            'stroke-width': '2',
-            d: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
-          }),
+        icon: (
+          <svg
+            xmlns={'http://www.w3.org/2000/svg'}
+            fill={'none'}
+            viewBox={'0 0 24 24'}
+            className={'w-4 h-4 stroke-current'}
+          >
+            <path
+              stroke-linecap={'round'}
+              stroke-linejoin={'round'}
+              stroke-width={'2'}
+              d={'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'}
+            />
+          </svg>
         ),
       },
       {
@@ -126,24 +135,26 @@ describe('Breadcrumbs', () => {
       {
         label: 'Add Document',
         className: 'last',
-        icon: h(
-          'svg',
-          {
-            xmlns: 'http://www.w3.org/2000/svg',
-            fill: 'none',
-            viewBox: '0 0 24 24',
-            className: 'w-4 h-4 stroke-current',
-          },
-          h('path', {
-            'stroke-linecap': 'round',
-            'stroke-linejoin': 'round',
-            'stroke-width': '2',
-            d: 'M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-          }),
+        icon: (
+          <svg
+            xmlns={'http://www.w3.org/2000/svg'}
+            fill={'none'}
+            viewBox={'0 0 24 24'}
+            className={'w-4 h-4 stroke-current'}
+          >
+            <path
+              stroke-linecap={'round'}
+              stroke-linejoin={'round'}
+              stroke-width={'2'}
+              d={
+                'M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+              }
+            />
+          </svg>
         ),
       },
     ]
-    render(h(Breadcrumbs, { className: 'text-sm', items }), c)
+    render(<Breadcrumbs className={'text-sm'} items={items} />, c)
     await waitForContent(() => {
       const el = c.querySelector('.breadcrumbs') as HTMLElement
       expect(el.classList.contains('text-sm')).toBe(true)
@@ -167,18 +178,28 @@ describe('Breadcrumbs', () => {
     ]
 
     render(
-      h(Breadcrumbs, {
-        items,
-        params: { projectId: 42 },
-        itemRender: (item: any, params: any, routes: any[], paths: string[], href?: string) => {
+      <Breadcrumbs
+        items={items}
+        params={{ projectId: 42 }}
+        itemRender={(
+          item: any,
+          params: any,
+          routes: readonly any[],
+          paths: string[],
+          href?: string,
+        ) => {
           const title = item.title ?? item.label
           const content = `${title}|${params.projectId}|${routes.length}|${paths.join('/')}`
           if (href) {
-            return h('a', { href, 'data-testid': title }, content)
+            return (
+              <a href={href} data-testid={title}>
+                {content}
+              </a>
+            )
           }
-          return h('span', { 'data-testid': title }, content)
-        },
-      }),
+          return <span data-testid={title}>{content}</span>
+        }}
+      />,
       c,
     )
 
@@ -201,10 +222,10 @@ describe('Breadcrumbs', () => {
     const c = mountContainer()
 
     render(
-      h(Breadcrumbs, {
-        separator: '/',
-        dropdownIcon: h('span', { className: 'custom-dropdown-icon' }, 'v'),
-        items: [
+      <Breadcrumbs
+        separator={'/'}
+        dropdownIcon={<span className={'custom-dropdown-icon'}>{'v'}</span>}
+        items={[
           { title: 'Home', href: '/home' },
           { type: 'separator', separator: '•' },
           {
@@ -217,8 +238,8 @@ describe('Breadcrumbs', () => {
             },
           },
           { title: 'Button' },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
 

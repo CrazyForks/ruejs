@@ -52,11 +52,10 @@ fn compact(src: &str) -> String {
 fn transforms_static_arrow_expr_body_with_shared_template_helper() {
     let out = compact(&transform_module("const View = () => <div className=\"a\" />;"));
 
-    assert!(out.contains("import{_$template}from\"@rue-js/rue/compiled\""));
-    assert!(out.contains("const_$getTemplate1=_$template('<divclass=\"a\"></div>')"));
-    assert!(out.contains("constView=()=>(()=>{"));
-    assert!(out.contains("__rue_vapor_setup:(__rue_parent_context)=>{"));
-    assert!(out.contains("_$getTemplate1().content.cloneNode(true)"));
+    assert!(out.contains("from\"@rue-js/rue/internal/compiler\""), "{out}");
+    assert!(out.contains("constView=()=>_$compiledRoot(Object.assign("), "{out}");
+    assert!(out.contains("_$compiledCreateElement(\"div\""), "{out}");
+    assert!(out.contains("_root.className=\"a\""), "{out}");
 }
 
 #[test]
@@ -65,13 +64,11 @@ fn transforms_arrow_fragment_expr_body_and_ignores_bare_returns() {
         "const Frag = () => <><i>A</i><b>B</b></>; function noop() { return; }",
     ));
 
-    assert!(out.contains("from\"@rue-js/rue/compiled\""));
-    assert!(out.contains("constFrag=()=>_$compiledRoot((__rue_parent_context)=>{"));
-    assert!(out.contains("document.createDocumentFragment()"));
-    assert!(out.contains("const_$getTemplate1=_$template(\"<i>A</i>\")"));
-    assert!(out.contains("const_$getTemplate2=_$template(\"<b>B</b>\")"));
-    assert!(out.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
-    assert!(out.contains("_root.appendChild(_$getTemplate2().content.cloneNode(true))"));
+    assert!(out.contains("from\"@rue-js/rue/internal"));
+    assert!(out.contains("constFrag=()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
+    assert!(out.contains("_$createDocumentFragment()"), "{out}");
+    assert!(out.contains("_$template(\"<i>A</i>\")"), "{out}");
+    assert!(out.contains("_$template(\"<b>B</b>\")"), "{out}");
     assert!(out.contains("functionnoop(){return;}"));
 }
 
@@ -81,13 +78,11 @@ fn transforms_block_returns_fragments_and_nested_arrow_returns() {
         "function View() { return <><span>A</span></>; } const outer = () => () => <em>B</em>;",
     ));
 
-    assert!(out.contains("return_$compiledRoot((__rue_parent_context)=>{"));
-    assert!(out.contains("document.createDocumentFragment()"));
-    assert!(out.contains("const_$getTemplate1=_$template(\"<span>A</span>\")"));
-    assert!(out.contains("_root.appendChild(_$getTemplate1().content.cloneNode(true))"));
-    assert!(out.contains("const_$getTemplate2=_$template(\"<em>B</em>\")"));
-    assert!(out.contains("()=>()=>(()=>{"), "{out}");
-    assert!(out.contains("__rue_vapor_setup:(__rue_parent_context)=>{"));
+    assert!(out.contains("return_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
+    assert!(out.contains("_$createDocumentFragment()"), "{out}");
+    assert!(out.contains("_$template(\"<span>A</span>\")"), "{out}");
+    assert!(out.contains("_$compiledCreateElement(\"em\""), "{out}");
+    assert!(out.contains("()=>()=>_$compiledRoot(Object.assign("), "{out}");
 }
 
 #[test]

@@ -22,6 +22,7 @@ export type HeadRecord = {
 
 type HeadElementLike = {
   __rue_component_type?: unknown
+  children?: unknown
   key?: string | number | null
   props?: Record<string, unknown> | null
   tagName?: string
@@ -93,7 +94,7 @@ function isRueRenderableHeadChild(value: unknown): boolean {
   if (Array.isArray(value)) return value.some(isRueRenderableHeadChild)
   if (typeof value !== 'object' || value === null) return false
   return (
-    Reflect.has(value, '__rue_vapor_setup') ||
+    Reflect.has(value, '__rue_compiled_mount') ||
     Reflect.has(value, '__rue_component_type') ||
     Reflect.has(value, '__rue_repeatable_mount_factory__')
   )
@@ -107,11 +108,25 @@ function isAllowedHeadHTML(html: string): boolean {
 
 export async function getSSRHeadHTMLAsync(): Promise<string> {
   const headChildren = _getSSRHeadChildren()
-  const parts = reduceHeadChildren(headChildren)
-    .map(child => headChildToHTML(child.type, child.props, { includeTextHeadMarker: true }))
-    .filter(Boolean)
-
   const renderer = getRueServerRenderer()
+  const parts: string[] = []
+  for (const child of reduceHeadChildren(headChildren)) {
+    let props = child.props
+    if (
+      renderer &&
+      props.children != null &&
+      typeof props.children !== 'string' &&
+      typeof props.children !== 'number' &&
+      (isRueRenderableHeadChild(props.children) ||
+        typeof props.children === 'object' ||
+        typeof props.children === 'function')
+    ) {
+      props = { ...props, children: await renderer(props.children) }
+    }
+    const html = headChildToHTML(child.type, props, { includeTextHeadMarker: true })
+    if (html) parts.push(html)
+  }
+
   if (!renderer) {
     return parts.join('\n  ')
   }
@@ -237,7 +252,10 @@ function collectHeadElements(list: HeadRecord[], child: unknown): HeadRecord[] {
   }
 
   const rawType = child.type ?? child.__rue_component_type ?? child.tagName?.toLowerCase()
-  const props = child.props ?? {}
+  const props =
+    child.children !== undefined && child.props?.children === undefined
+      ? { ...child.props, children: child.children }
+      : (child.props ?? {})
   if (isFragmentType(rawType)) {
     return flattenHeadChildren(props.children).reduce(collectHeadElements, list)
   }

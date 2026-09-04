@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render, setReactiveScheduling } from '@rue-js/rue'
 import Dock from '../index'
 
@@ -21,7 +21,7 @@ afterEach(() => {
 describe('Dock', () => {
   it('renders with base class', async () => {
     const c = document.createElement('div')
-    render(h(Dock, null, 'x'), c)
+    render(<Dock>{'x'}</Dock>, c)
     await flushDock()
     const el = c.querySelector('.dock') as HTMLElement
     expect(el).toBeTruthy()
@@ -31,7 +31,7 @@ describe('Dock', () => {
   it('applies size classes', async () => {
     for (const s of ['xs', 'sm', 'md', 'lg', 'xl'] as const) {
       const c = document.createElement('div')
-      render(h(Dock, { size: s }, 'x'), c)
+      render(<Dock size={s}>{'x'}</Dock>, c)
       await flushDock()
       const el = c.querySelector('.dock') as HTMLElement
       expect(el.classList.contains('dock')).toBe(true)
@@ -41,7 +41,7 @@ describe('Dock', () => {
 
   it('appends custom className', async () => {
     const c = document.createElement('div')
-    render(h(Dock, { className: 'relative border' }, 'x'), c)
+    render(<Dock className={'relative border'}>{'x'}</Dock>, c)
     await flushDock()
     const el = c.querySelector('.dock') as HTMLElement
     expect(el.classList.contains('relative')).toBe(true)
@@ -51,16 +51,12 @@ describe('Dock', () => {
   it('renders Item and Label subcomponents', async () => {
     const c = document.createElement('div')
     render(
-      h(
-        Dock,
-        null,
-        h(
-          Dock.Item,
-          { active: true },
-          h('svg', { className: 'size-[1.2em]' }),
-          h(Dock.Label, null, 'Home'),
-        ),
-      ),
+      <Dock>
+        <Dock.Item active={true}>
+          <svg className={'size-[1.2em]'} />
+          <Dock.Label>{'Home'}</Dock.Label>
+        </Dock.Item>
+      </Dock>,
       c,
     )
     await flushDock()
@@ -77,11 +73,11 @@ describe('Dock', () => {
     const c = document.createElement('div')
     let changedIndex = -1
     const items = [
-      { icon: h('svg', { className: 'size-[1.2em]' }), label: 'Home' },
-      { icon: h('svg', { className: 'size-[1.2em]' }), label: 'Inbox' },
-      { icon: h('svg', { className: 'size-[1.2em]' }), label: 'Settings' },
+      { icon: <svg className={'size-[1.2em]'} />, label: 'Home' },
+      { icon: <svg className={'size-[1.2em]'} />, label: 'Inbox' },
+      { icon: <svg className={'size-[1.2em]'} />, label: 'Settings' },
     ]
-    render(h(Dock, { items, activeIndex: 1, onChange: (i: number) => (changedIndex = i) }), c)
+    render(<Dock items={items} activeIndex={1} onChange={(i: number) => (changedIndex = i)} />, c)
     await flushDock()
     const el = c.querySelector('.dock') as HTMLElement
     const btns = el.querySelectorAll('button')
@@ -95,17 +91,17 @@ describe('Dock', () => {
     const c = document.createElement('div')
     let selectedKey: string | number | null = null
     const items = [
-      { key: 'home', icon: h('span', null, 'H'), label: 'Home' },
-      { key: 'inbox', icon: h('span', null, 'I'), label: 'Inbox' },
-      { key: 'settings', icon: h('span', null, 'S'), label: 'Settings' },
+      { key: 'home', icon: <span>{'H'}</span>, label: 'Home' },
+      { key: 'inbox', icon: <span>{'I'}</span>, label: 'Inbox' },
+      { key: 'settings', icon: <span>{'S'}</span>, label: 'Settings' },
     ]
     render(
-      h(Dock, {
-        as: 'nav',
-        items,
-        activeKey: 'inbox',
-        onSelect: (key: string | number | null) => (selectedKey = key),
-      }),
+      <Dock
+        as={'nav'}
+        items={items}
+        activeKey={'inbox'}
+        onSelect={(key: string | number | null) => (selectedKey = key)}
+      />,
       c,
     )
     await flushDock()
@@ -121,10 +117,10 @@ describe('Dock', () => {
     const c = document.createElement('div')
     resetActiveRuntime()
     const items = [
-      { key: 'home', icon: h('span', null, 'H'), label: 'Home' },
-      { key: 'inbox', icon: h('span', null, 'I'), label: 'Inbox' },
+      { key: 'home', icon: <span>{'H'}</span>, label: 'Home' },
+      { key: 'inbox', icon: <span>{'I'}</span>, label: 'Inbox' },
     ]
-    render(h(Dock, { items, defaultActiveKey: 'home' }), c)
+    render(<Dock items={items} defaultActiveKey={'home'} />, c)
     await flushDock()
     let buttons = c.querySelectorAll('button')
     expect(buttons[0].classList.contains('dock-active')).toBe(true)
@@ -139,11 +135,11 @@ describe('Dock', () => {
     const c = document.createElement('div')
     resetActiveRuntime()
     const items = [
-      { icon: h('span', null, 'H'), label: 'Home' },
-      { icon: h('span', null, 'I'), label: 'Inbox' },
-      { icon: h('span', null, 'S'), label: 'Settings' },
+      { icon: <span>{'H'}</span>, label: 'Home' },
+      { icon: <span>{'I'}</span>, label: 'Inbox' },
+      { icon: <span>{'S'}</span>, label: 'Settings' },
     ]
-    render(h(Dock, { items, defaultActiveIndex: 1 }), c)
+    render(<Dock items={items} defaultActiveIndex={1} />, c)
     await flushDock()
     let buttons = c.querySelectorAll('button')
     expect(buttons[1].classList.contains('dock-active')).toBe(true)
@@ -159,19 +155,19 @@ describe('Dock', () => {
     const itemClick = vi.fn()
     resetActiveRuntime()
     render(
-      h(Dock, {
-        items: [
-          { key: 'docs', href: '/docs', icon: h('span', null, 'D'), label: 'Docs' },
+      <Dock
+        items={[
+          { key: 'docs', href: '/docs', icon: <span>{'D'}</span>, label: 'Docs' },
           {
             key: 'locked',
             href: '/locked',
             disabled: true,
-            icon: h('span', null, 'L'),
+            icon: <span>{'L'}</span>,
             label: 'Locked',
             onClick: itemClick,
           },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
     await flushDock()
@@ -186,7 +182,7 @@ describe('Dock', () => {
 
   it('maps size aliases to dock size classes', async () => {
     const c = document.createElement('div')
-    render(h(Dock, { size: 'large' }, 'x'), c)
+    render(<Dock size={'large'}>{'x'}</Dock>, c)
     await flushDock()
     const el = c.querySelector('.dock') as HTMLElement
     expect(el.classList.contains('dock-lg')).toBe(true)
@@ -195,10 +191,10 @@ describe('Dock', () => {
   it('auto renders items when items prop is provided', async () => {
     const c = document.createElement('div')
     const items = [
-      { icon: h('span', null, 'I1'), label: 'L1' },
-      { icon: h('span', null, 'I2'), label: 'L2' },
+      { icon: <span>{'I1'}</span>, label: 'L1' },
+      { icon: <span>{'I2'}</span>, label: 'L2' },
     ]
-    render(h(Dock, { items, activeIndex: 0 }), c)
+    render(<Dock items={items} activeIndex={0} />, c)
     await flushDock()
     const el = c.querySelector('.dock') as HTMLElement
     const labels = el.querySelectorAll('.dock-label')

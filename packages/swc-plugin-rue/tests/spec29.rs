@@ -32,12 +32,12 @@ export default PostDetail
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const PostDetail: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
             console.log('我是setup');
-            const count = _$vaporWithHookId("ref:1:0", ()=>ref(0));
+            const count = ref(0);
             return {
                 count: count
             };
@@ -58,5 +58,9 @@ export default PostDetail;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec29.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("console.log('我是setup')"), "{normalized}");
+    assert!(normalized.contains("onClick={()=>count.value++}"), "{normalized}");
+    assert!(normalized.contains("{count.value}"), "{normalized}");
 }

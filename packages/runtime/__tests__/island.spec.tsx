@@ -3,18 +3,16 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
-  createComponent as createDefaultComponent,
-  h,
+  createCompiledComponent as createDefaultComponent,
   renderAnchor,
   signal,
-  vapor,
   type FC,
 } from '@rue-js/runtime'
 import {
   _$createComponent as createVaporComponent,
   renderAnchor as renderVaporAnchor,
   vapor as createVaporHandle,
-} from '@rue-js/runtime/vapor'
+} from './legacy-test-render'
 import {
   RUE_ISLAND_DESCRIPTOR,
   createIslandContainerHtml,
@@ -29,15 +27,17 @@ import {
 
 import { flush, waitForContent } from './page-test-utils'
 
+import { createTestRenderable, vapor } from './legacy-test-render'
+
 describe('Rue island runtime', () => {
   it('creates a shared island descriptor without executing its component', () => {
     const componentCalls: string[] = []
     const Component: FC<{ label: string }> = props => {
       componentCalls.push(props.label)
-      return h('p', null, props.label)
+      return createTestRenderable('p', null, props.label)
     }
     const props = { label: 'shared descriptor' }
-    const fallback = h('p', null, 'loading')
+    const fallback = createTestRenderable('p', null, 'loading')
 
     const descriptor = createRueIslandDescriptor({
       component: Component,
@@ -65,7 +65,8 @@ describe('Rue island runtime', () => {
   })
 
   it('mounts island descriptors produced inside default and Vapor subtrees', () => {
-    const Component: FC<{ label: string }> = props => h('button', null, props.label)
+    const Component: FC<{ label: string }> = props =>
+      createTestRenderable('button', null, props.label)
     const createDescriptor = (id: string) =>
       createRueIslandDescriptor({
         component: Component,
@@ -89,23 +90,29 @@ describe('Rue island runtime', () => {
         return root as any
       })
       renderHandle(handle as any, host as any, hostAnchor as any)
-      return host
+      return {
+        host,
+        dispose: () => renderHandle(null as any, host as any, hostAnchor as any),
+      }
     }
 
-    for (const host of [
+    for (const mounted of [
       mountDescriptor('default-descriptor', vapor, renderAnchor),
       mountDescriptor('vapor-descriptor', createVaporHandle, renderVaporAnchor),
     ]) {
+      const { host } = mounted
       const island = host.querySelector('rue-island')
       expect(island?.getAttribute('data-rue-hydrate')).toBe('load')
       expect(island?.querySelector('button')?.textContent).toBe(island?.getAttribute('data-rue-id'))
       expect(island?.querySelector('script[data-rue-props]')).not.toBeNull()
+      mounted.dispose()
+      expect(host.querySelector('rue-island')).toBeNull()
     }
   })
 
   it('accepts island descriptors as component children without accepting arbitrary objects', () => {
-    const IslandContent: FC<{ label: string }> = props => h('button', null, props.label)
-    const Frame: FC = props => h('section', { 'data-frame': true }, props.children)
+    const IslandContent: FC<{ label: string }> = props => <button>{props.label}</button>
+    const Frame: FC = props => <section data-frame>{props.children}</section>
     const createDescriptor = (id: string) =>
       createRueIslandDescriptor({
         component: IslandContent,
@@ -141,13 +148,15 @@ describe('Rue island runtime', () => {
       expect(() =>
         testCase.createComponent(Frame, { children: { arbitrary: true } as any }),
       ).toThrow(/Unsupported object inputs are no longer accepted/)
+      testCase.render(null as any, host as any, anchor as any)
+      expect(host.querySelector('rue-island')).toBeNull()
     }
   })
 
   it('renders component handles used as client:only fallbacks', () => {
-    const ClientContent: FC = () => h('button', null, 'client')
-    const Fallback: FC<{ label: string }> = props => h('p', null, props.label)
-    const Frame: FC = props => h('section', null, props.children)
+    const ClientContent: FC = () => <button>client</button>
+    const Fallback: FC<{ label: string }> = props => <p>{props.label}</p>
+    const Frame: FC = props => <section>{props.children}</section>
     const cases = [
       {
         id: 'default-only-fallback',
@@ -180,6 +189,8 @@ describe('Rue island runtime', () => {
       testCase.render(handle as any, host as any, anchor as any)
 
       expect(host.querySelector('rue-island p')?.textContent).toBe(testCase.id)
+      testCase.render(null as any, host as any, anchor as any)
+      expect(host.querySelector('rue-island')).toBeNull()
     }
   })
 
@@ -308,7 +319,8 @@ describe('Rue island runtime', () => {
       html: '<button>server</button>',
     })
 
-    const Counter: FC<{ count: number }> = props => h('button', null, `client ${props.count}`)
+    const Counter: FC<{ count: number }> = props =>
+      createTestRenderable('button', null, `client ${props.count}`)
 
     startRueIslandLoader({
       resolveModule: async () => ({ default: Counter }),
@@ -334,7 +346,7 @@ describe('Rue island runtime', () => {
 
     const handle = hydrateRoot(
       container,
-      h(
+      createTestRenderable(
         'button',
         {
           className: 'hydrated',
@@ -370,7 +382,7 @@ describe('Rue island runtime', () => {
     const serverRoot = container.firstElementChild
     const onMismatch = vi.fn()
 
-    hydrateRoot(container, h('button', { type: 'button' }, 'client'), {
+    hydrateRoot(container, createTestRenderable('button', { type: 'button' }, 'client'), {
       replace: false,
       onMismatch,
     })
@@ -393,9 +405,9 @@ describe('Rue island runtime', () => {
     const onClick = vi.fn()
 
     const StaticPanel: FC<{ label: string }> = props =>
-      h('section', { className: 'hydrated', onClick }, props.label)
+      createTestRenderable('section', { className: 'hydrated', onClick }, props.label)
 
-    hydrateRoot(container, h(StaticPanel, { label: 'client' }), {
+    hydrateRoot(container, createTestRenderable(StaticPanel, { label: 'client' }), {
       adoptComponents: true,
       replace: false,
     })
@@ -415,9 +427,10 @@ describe('Rue island runtime', () => {
     const serverRoot = container.firstElementChild
     const onMismatch = vi.fn()
 
-    const StaticPanel: FC<{ label: string }> = props => h('section', null, props.label)
+    const StaticPanel: FC<{ label: string }> = props =>
+      createTestRenderable('section', null, props.label)
 
-    hydrateRoot(container, h(StaticPanel, { label: 'client' }), {
+    hydrateRoot(container, createTestRenderable(StaticPanel, { label: 'client' }), {
       replace: false,
       onMismatch,
     })
@@ -435,7 +448,7 @@ describe('Rue island runtime', () => {
     const island = document.createElement('rue-island')
     island.setAttribute('data-rue-hydrate', 'load')
 
-    const Panel: FC = () => h('section', null, 'panel')
+    const Panel: FC = () => createTestRenderable('section', null, 'panel')
     const hydrateRootImpl = vi.fn()
 
     await mountRueIsland(
@@ -468,7 +481,7 @@ describe('Rue island runtime', () => {
     const serverPanel = document.querySelector('#server-panel')!
 
     const StaticPanel: FC<{ label: string }> = props =>
-      h('section', { className: 'hydrated' }, props.label)
+      createTestRenderable('section', { className: 'hydrated' }, props.label)
     const onMismatch = vi.fn()
 
     startRueIslandLoader({
@@ -507,11 +520,11 @@ describe('Rue island runtime', () => {
     const serverB = document.querySelector('#server-b')!
 
     const NestedList: FC = () =>
-      h(
+      createTestRenderable(
         'ul',
         { id: 'client-list', 'data-fresh': 'yes' },
-        h('li', { id: 'client-a', className: 'hydrated' }, 'client A'),
-        h('li', { id: 'client-b', className: 'hydrated' }, 'client B'),
+        createTestRenderable('li', { id: 'client-a', className: 'hydrated' }, 'client A'),
+        createTestRenderable('li', { id: 'client-b', className: 'hydrated' }, 'client B'),
       )
 
     startRueIslandLoader({
@@ -543,7 +556,7 @@ describe('Rue island runtime', () => {
     const ref = { current: null as HTMLInputElement | null }
 
     const Field: FC = () =>
-      h('input', {
+      createTestRenderable('input', {
         ref,
         id: 'client-input',
         className: 'hydrated',
@@ -552,7 +565,7 @@ describe('Rue island runtime', () => {
         'data-fresh': 'yes',
       })
 
-    hydrateRoot(container, h(Field, null), {
+    hydrateRoot(container, createTestRenderable(Field, null), {
       adoptComponents: true,
       replace: false,
     })
@@ -665,9 +678,13 @@ describe('Rue island runtime', () => {
       }) as any
 
     const Button: FC = () =>
-      h('button', { id: 'client-button', onClick, type: 'button' }, h(ButtonLabel, null))
+      createTestRenderable(
+        'button',
+        { id: 'client-button', onClick, type: 'button' },
+        createTestRenderable(ButtonLabel, null),
+      )
 
-    const handle = hydrateRoot(container, h(Button, null), {
+    const handle = hydrateRoot(container, createTestRenderable(Button, null), {
       adoptComponents: true,
       onMismatch,
       replace: false,
@@ -695,9 +712,9 @@ describe('Rue island runtime', () => {
     const container = document.querySelector('#root')!
     const onMismatch = vi.fn()
 
-    const Article: FC = () => h('article', { id: 'client-root' }, 'client')
+    const Article: FC = () => createTestRenderable('article', { id: 'client-root' }, 'client')
 
-    hydrateRoot(container, h(Article, null), {
+    hydrateRoot(container, createTestRenderable(Article, null), {
       adoptComponents: true,
       replace: false,
       onMismatch,
@@ -727,7 +744,7 @@ describe('Rue island runtime', () => {
       fallback: '<span>Loading map</span>',
     })
 
-    const Map: FC<{ label: string }> = props => h('strong', null, props.label)
+    const Map: FC<{ label: string }> = props => createTestRenderable('strong', null, props.label)
 
     expect(document.body.textContent).toContain('Loading map')
     startRueIslandLoader({
@@ -908,7 +925,8 @@ describe('Rue island runtime', () => {
     document.body.innerHTML =
       '<rue-island data-rue-id="manifest-only" data-rue-component="/src/Manifest.tsx" data-rue-hydrate="load"><span>server</span></rue-island>'
 
-    const ManifestPanel: FC<{ label: string }> = props => h('span', null, props.label)
+    const ManifestPanel: FC<{ label: string }> = props =>
+      createTestRenderable('span', null, props.label)
 
     startRueIslandLoader({
       manifest: {

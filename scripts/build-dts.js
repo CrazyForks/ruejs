@@ -17,8 +17,8 @@ if (!existsSync(tempDtsRoot)) {
   process.exit(1)
 }
 
-const packages = readdirSync(tempDtsRoot).filter(
-  pkg => pkg !== 'runtime-vapor' && existsSync(`./${tempDtsRoot}/${pkg}/src/index.d.ts`),
+const packages = readdirSync(tempDtsRoot).filter(pkg =>
+  existsSync(`./${tempDtsRoot}/${pkg}/src/index.d.ts`),
 )
 const targets = process.env.TARGETS ? process.env.TARGETS.split(',') : null
 const targetPackages = targets ? packages.filter(pkg => targets.includes(pkg)) : packages
@@ -69,10 +69,7 @@ function rewriteDeclarationImports(directory) {
       rewriteDeclarationImports(entryPath)
     } else if (entry.name.endsWith('.d.ts')) {
       const code = readFileSync(entryPath, 'utf-8')
-      const rewritten = rewriteRuntimeVaporImports(code)
-      if (rewritten !== code) {
-        writeFileSync(entryPath, rewritten)
-      }
+      writeFileSync(entryPath, code)
     }
   }
 }
@@ -147,15 +144,3 @@ function restorePackageEntryImports(pkg, code) {
  * @param {string} code
  * @returns {string}
  */
-function rewriteRuntimeVaporImports(code) {
-  return code
-    .replace(
-      /(['"])(?:\.\.\/)+runtime-vapor\/pkg\/rue_runtime_vapor\.js\1/g,
-      `'@rue-js/runtime-vapor'`,
-    )
-    .replace(
-      /(['"])(?:\.\.\/)+runtime-vapor\/dist\/reactive\.js\1/g,
-      `'@rue-js/runtime-vapor/reactive'`,
-    )
-    .replace(/(['"])(?:\.\.\/)+runtime-vapor\/dist\/vapor\.js\1/g, `'@rue-js/runtime-vapor/vapor'`)
-}

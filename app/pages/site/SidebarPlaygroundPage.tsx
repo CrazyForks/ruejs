@@ -1,12 +1,16 @@
-import { type FC } from '@rue-js/rue'
+import { Slot, type FC } from '@rue-js/rue'
 
 type SidebarPlaygroundPageProps = {
   currentPath?: string
   children?: any
 }
 
-const SidebarPlayground: FC<SidebarPlaygroundPageProps> = p => {
-  return <article>{p.children}</article>
+const SidebarPlayground: FC<SidebarPlaygroundPageProps> = props => {
+  return (
+    <article>
+      <Slot source={props} />
+    </article>
+  )
 }
 
 export default SidebarPlayground

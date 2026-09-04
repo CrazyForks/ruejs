@@ -59,6 +59,9 @@ describe('VMemoAndRMemo actual page', () => {
     await click(findTab(container, '效果'))
 
     await waitForContent(() => {
+      expect(container.textContent).toContain('每行的 v-memo 依赖是 [row.id === selectedId.value]')
+      expect(container.textContent).toContain('只有旧选中行和新选中行会刷新')
+      expect(container.textContent).toContain('r-memo 依赖 [selectedId.value]')
       expect(normalizeText(findRow(container, 'Alpha')?.textContent)).toContain('选中：是')
       expect(normalizeText(findRow(container, 'Alpha')?.textContent)).toContain('刷新：0')
       expect(normalizeText(findRow(container, 'Beta')?.textContent)).toContain('选中：否')
@@ -67,7 +70,7 @@ describe('VMemoAndRMemo actual page', () => {
       expect(memoBadgeText(container)).toContain('refresh: 0')
     })
 
-    await click(findButton(container, '刷新'))
+    await click(findButton(container, '无关刷新'))
 
     await waitForContent(() => {
       expect(normalizeText(findRow(container, 'Alpha')?.textContent)).toContain('刷新：0')
@@ -75,6 +78,19 @@ describe('VMemoAndRMemo actual page', () => {
       expect(normalizeText(findRow(container, 'Gamma')?.textContent)).toContain('刷新：0')
       expect(memoBadgeText(container)).toContain('selected id: 1')
       expect(memoBadgeText(container)).toContain('refresh: 0')
+    })
+
+    await click(findButton(container, 'Beta'))
+
+    await waitForContent(() => {
+      expect(normalizeText(findRow(container, 'Alpha')?.textContent)).toContain('选中：否')
+      expect(normalizeText(findRow(container, 'Alpha')?.textContent)).toContain('刷新：1')
+      expect(normalizeText(findRow(container, 'Beta')?.textContent)).toContain('选中：是')
+      expect(normalizeText(findRow(container, 'Beta')?.textContent)).toContain('刷新：1')
+      expect(normalizeText(findRow(container, 'Gamma')?.textContent)).toContain('选中：否')
+      expect(normalizeText(findRow(container, 'Gamma')?.textContent)).toContain('刷新：0')
+      expect(memoBadgeText(container)).toContain('selected id: 2')
+      expect(memoBadgeText(container)).toContain('refresh: 1')
     })
 
     await click(findTab(container, '代码'))

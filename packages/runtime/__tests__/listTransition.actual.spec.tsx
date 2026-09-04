@@ -38,6 +38,7 @@ const listItemByNumber = (root: ParentNode, label: string) =>
 afterEach(() => {
   document.body.innerHTML = ''
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 describe('ListTransitionExample actual page', () => {
@@ -105,5 +106,167 @@ describe('ListTransitionExample actual page', () => {
         Object.defineProperty(TransitionGroup, 'name', originalName)
       }
     }
+  })
+
+  it('supports delete, reset, and shuffle while a leave transition is active', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<ListTransitionExample />, container)
+    await waitForContent(() => {
+      expect(listNumbers(container)).toEqual(['1', '2', '3', '4', '5'])
+    })
+    await flush()
+    vi.useFakeTimers()
+    const stableItems = ['1', '3', '4', '5'].map(label => listItemByNumber(container, label)!)
+
+    listItemByNumber(container, '2')?.querySelector<HTMLButtonElement>('button')?.click()
+    await Promise.resolve()
+    expect(listItemByNumber(container, '2')?.classList.contains('list-leave-active')).toBe(true)
+
+    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>('button'))
+    buttons.find(button => button.textContent?.trim() === 'Reset')?.click()
+    buttons.find(button => button.textContent?.trim() === 'Shuffle')?.click()
+    await Promise.resolve()
+
+    expect(
+      listNumbers(container).filter((value, index, values) => values.indexOf(value) === index),
+    ).toEqual(['2', '3', '4', '5', '1'])
+    for (const item of stableItems) {
+      expect(item.classList.contains('list-enter-active')).toBe(false)
+      expect(item.classList.contains('list-leave-active')).toBe(false)
+    }
+    await vi.advanceTimersByTimeAsync(350)
+    expect(listNumbers(container)).toEqual(['2', '3', '4', '5', '1'])
+  })
+
+  it('animates keyed moves when shuffling without replaying them during reset', async () => {
+    vi.useFakeTimers()
+    let layoutOffset = 0
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        const isListItem = this.tagName === 'LI'
+        const siblings = Array.from(this.parentElement?.children ?? [])
+        const index = isListItem ? Math.max(0, siblings.indexOf(this)) : 0
+        return {
+          x: 0,
+          y: layoutOffset + index * 40,
+          top: layoutOffset + index * 40,
+          right: 100,
+          bottom: layoutOffset + index * 40 + 32,
+          left: 0,
+          width: 100,
+          height: 32,
+          toJSON: () => ({}),
+        } as DOMRect
+      },
+    )
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<ListTransitionExample />, container)
+    layoutOffset = 400
+    await flush()
+
+    const button = (label: string) =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+        candidate => candidate.textContent?.trim() === label,
+      )
+
+    button('Reset')?.click()
+    await flush()
+    expect(container.querySelectorAll('.list-shell li.list-move')).toHaveLength(0)
+    await vi.advanceTimersByTimeAsync(350)
+
+    button('Shuffle')?.click()
+    await flush()
+
+    expect(listNumbers(container)).toEqual(['2', '3', '4', '5', '1'])
+    expect(container.querySelectorAll('.list-shell li.list-move')).toHaveLength(5)
+
+    await vi.advanceTimersByTimeAsync(350)
+    button('Reset')?.click()
+    await flush()
+
+    expect(listNumbers(container)).toEqual(['1', '2', '3', '4', '5'])
+    expect(container.querySelector('.list-shell')?.classList.contains('is-resetting')).toBe(true)
+  })
+
+  it('keeps an extra item at its previous row while reset animates it out', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        const siblings = Array.from(this.parentElement?.children ?? [])
+        const index = this.tagName === 'LI' ? Math.max(0, siblings.indexOf(this)) : 0
+        return {
+          x: 0,
+          y: index * 40,
+          top: index * 40,
+          right: 100,
+          bottom: index * 40 + 32,
+          left: 0,
+          width: 100,
+          height: 32,
+          toJSON: () => ({}),
+        } as DOMRect
+      },
+    )
+    vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(
+      function (this: HTMLElement) {
+        const siblings = Array.from(this.parentElement?.children ?? [])
+        return this.tagName === 'LI' ? Math.max(0, siblings.indexOf(this)) * 40 : 0
+      },
+    )
+    vi.spyOn(Math, 'random').mockReturnValue(1)
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<ListTransitionExample />, container)
+    await flush()
+
+    const button = (label: string) =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+        candidate => candidate.textContent?.trim() === label,
+      )
+
+    button('Insert at random index')?.click()
+    await flush()
+    await vi.advanceTimersByTimeAsync(350)
+    expect(listNumbers(container)).toEqual(['1', '2', '3', '4', '5', '6'])
+
+    button('Reset')?.click()
+    await flush()
+
+    const leavingItem = listItemByNumber(container, '6')
+    expect(leavingItem?.classList.contains('list-leave-active')).toBe(true)
+    expect(leavingItem?.style.top).toBe('200px')
+  })
+
+  it('does not run a second move wave for stable items during reset', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+
+    const container = mountContainer()
+    resetActiveRuntime()
+    render(<ListTransitionExample />, container)
+    await flush()
+
+    const button = (label: string) =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+        candidate => candidate.textContent?.trim() === label,
+      )
+
+    button('Insert at random index')?.click()
+    await flush()
+    await vi.advanceTimersByTimeAsync(350)
+
+    button('Reset')?.click()
+    await flush()
+
+    expect(listNumbers(container).filter(label => label !== '6')).toEqual(['1', '2', '3', '4', '5'])
+    expect(container.querySelector('.list-shell')?.classList.contains('is-resetting')).toBe(true)
+    expect(listItemByNumber(container, '6')?.classList.contains('list-leave-active')).toBe(true)
   })
 })

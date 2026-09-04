@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 /// <reference types="vitest" />
 declare namespace JSX {
-  type Element = import('rue').RenderableOutput
+  type Element = import('rue').RenderOutput
   interface IntrinsicElements {
     [elemName: string]: any
   }

@@ -1,8 +1,19 @@
+import {
+  _$appendChild as _$compiledAppendChild,
+  _$createComment as _$compiledCreateComment,
+  _$createElement as _$compiledCreateElement,
+  _$spreadAttributes as _$compiledSpreadAttributes,
+  renderAnchor as _$compiledRenderAnchor,
+  vapor as _$compiledVapor,
+  watchEffect as _$compiledWatchEffect,
+} from './legacy-test-render'
+import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { Teleport, Transition, h, setReactiveScheduling, vapor, watchEffect } from '../src'
+import { Teleport, Transition, setReactiveScheduling, watchEffect } from '../src'
 import { render, renderAnchor } from '../src'
 import type { FC } from '../src'
+import { vapor } from './legacy-test-render'
 
 setReactiveScheduling('sync')
 
@@ -15,25 +26,38 @@ const flushEffects = async () => {
   await Promise.resolve()
 }
 
-const collectBodyCommentValues = () => {
+const collectBodySlotAnchors = () => {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT)
-  const values: string[] = []
+  const anchors: Comment[] = []
   let node = walker.nextNode()
   while (node) {
-    values.push((node as Comment).nodeValue ?? '')
+    if ((node as Comment).nodeValue === 'rue:slot:anchor') anchors.push(node as Comment)
     node = walker.nextNode()
   }
-  return values.filter(value => value.startsWith('rue-teleport') || value === 'rue:slot:anchor')
+  return anchors
 }
 
 describe('Teleport nested vapor anchor', () => {
   it('keeps nested vapor anchor inside teleport range and shows updated content', async () => {
     const ModalLike: FC<{ visible: boolean }> = props => {
-      const content = h(
-        'fragment',
-        null,
-        props.visible ? h('div', { className: 'modal-mask' }, 'OPEN') : null,
-      )
+      const content = _$createFragment([
+        props.visible
+          ? _$compiledVapor(_$parentContext => {
+              const _$root = _$compiledCreateElement('div', _$parentContext)
+              const _$anchor = _$compiledCreateComment('rue:children:anchor')
+              _$compiledAppendChild(_$root, _$anchor)
+              _$compiledWatchEffect(() => {
+                const { children: _$children, ..._$attributes } = {
+                  className: 'modal-mask',
+                  children: 'OPEN',
+                } as Record<string, any>
+                _$compiledSpreadAttributes(_$root, _$attributes)
+                _$compiledRenderAnchor(_$children, _$root, _$anchor)
+              })
+              return _$root
+            })
+          : null,
+      ])
 
       return vapor(() => {
         const root = document.createDocumentFragment()
@@ -45,16 +69,19 @@ describe('Teleport nested vapor anchor', () => {
           const slotAnchor = document.createComment('rue:slot:anchor')
           childRoot.appendChild(slotAnchor)
 
-          watchEffect(() => {
+          _$compiledWatchEffect(() => {
             renderAnchor(content as any, childRoot as any, slotAnchor as any)
           })
 
           return childRoot as any
         })
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(
-            h(Teleport, { to: 'body' }, child as any),
+            _$createDynamic(Teleport, {
+              to: 'body',
+              children: child as any,
+            }),
             root as any,
             componentAnchor as any,
           )
@@ -67,41 +94,52 @@ describe('Teleport nested vapor anchor', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(ModalLike, { visible: false }), container)
+    render(_$createDynamic(ModalLike, { visible: false }), container)
     await flushEffects()
 
-    const initialTeleportComments = collectBodyCommentValues()
+    const [teleportedSlotAnchor] = collectBodySlotAnchors()
 
-    expect(initialTeleportComments).toEqual([
-      'rue-teleport-start',
-      'rue:slot:anchor',
-      'rue-teleport-end',
-    ])
+    expect(collectBodySlotAnchors()).toHaveLength(1)
+    expect(teleportedSlotAnchor.parentNode).toBe(document.body)
+    expect(container.contains(teleportedSlotAnchor)).toBe(false)
+    expect(document.querySelector('.modal-mask')).toBeNull()
 
-    render(h(ModalLike, { visible: true }), container)
+    render(_$createDynamic(ModalLike, { visible: true }), container)
     await flushEffects()
 
     expect(document.querySelector('.modal-mask')?.textContent).toBe('OPEN')
+    expect(collectBodySlotAnchors()).toEqual([teleportedSlotAnchor])
   })
 
   it('shows updated content when nested vapor child contains Transition', async () => {
     const ModalLike: FC<{ visible: boolean }> = props => {
-      const content = h(
-        'fragment',
-        null,
+      const content = _$createFragment([
         props.visible
-          ? h(
-              Transition,
-              {
-                name: 'modal',
-                type: 'transition',
-                duration: { enter: 1, leave: 1 },
-                appear: true,
+          ? _$createDynamic(Transition, {
+              name: 'modal',
+              type: 'transition',
+              duration: {
+                enter: 1,
+                leave: 1,
               },
-              h('div', { className: 'modal-mask' }, 'OPEN'),
-            )
+              appear: true,
+              children: _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('div', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    className: 'modal-mask',
+                    children: 'OPEN',
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
+              }),
+            })
           : null,
-      )
+      ])
 
       return vapor(() => {
         const root = document.createDocumentFragment()
@@ -113,16 +151,19 @@ describe('Teleport nested vapor anchor', () => {
           const slotAnchor = document.createComment('rue:slot:anchor')
           childRoot.appendChild(slotAnchor)
 
-          watchEffect(() => {
+          _$compiledWatchEffect(() => {
             renderAnchor(content as any, childRoot as any, slotAnchor as any)
           })
 
           return childRoot as any
         })
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(
-            h(Teleport, { to: 'body' }, child as any),
+            _$createDynamic(Teleport, {
+              to: 'body',
+              children: child as any,
+            }),
             root as any,
             componentAnchor as any,
           )
@@ -135,10 +176,10 @@ describe('Teleport nested vapor anchor', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(ModalLike, { visible: false }), container)
+    render(_$createDynamic(ModalLike, { visible: false }), container)
     await flushEffects()
 
-    render(h(ModalLike, { visible: true }), container)
+    render(_$createDynamic(ModalLike, { visible: true }), container)
     await flushEffects()
 
     expect(document.querySelector('.modal-mask')?.textContent).toBe('OPEN')
@@ -146,23 +187,46 @@ describe('Teleport nested vapor anchor', () => {
 
   it('shows updated content when nested vapor content keeps a leading style node', async () => {
     const ModalLike: FC<{ visible: boolean }> = props => {
-      const content = h(
-        'fragment',
-        null,
-        h('style', null, '.modal-mask{display:block;}'),
+      const content = _$createFragment([
+        _$compiledVapor(_$parentContext => {
+          const _$root = _$compiledCreateElement('style', _$parentContext)
+          const _$anchor = _$compiledCreateComment('rue:children:anchor')
+          _$compiledAppendChild(_$root, _$anchor)
+          _$compiledWatchEffect(() => {
+            const { children: _$children, ..._$attributes } = {
+              children: '.modal-mask{display:block;}',
+            } as Record<string, any>
+            _$compiledSpreadAttributes(_$root, _$attributes)
+            _$compiledRenderAnchor(_$children, _$root, _$anchor)
+          })
+          return _$root
+        }),
         props.visible
-          ? h(
-              Transition,
-              {
-                name: 'modal',
-                type: 'transition',
-                duration: { enter: 1, leave: 1 },
-                appear: true,
+          ? _$createDynamic(Transition, {
+              name: 'modal',
+              type: 'transition',
+              duration: {
+                enter: 1,
+                leave: 1,
               },
-              h('div', { className: 'modal-mask' }, 'OPEN'),
-            )
+              appear: true,
+              children: _$compiledVapor(_$parentContext => {
+                const _$root = _$compiledCreateElement('div', _$parentContext)
+                const _$anchor = _$compiledCreateComment('rue:children:anchor')
+                _$compiledAppendChild(_$root, _$anchor)
+                _$compiledWatchEffect(() => {
+                  const { children: _$children, ..._$attributes } = {
+                    className: 'modal-mask',
+                    children: 'OPEN',
+                  } as Record<string, any>
+                  _$compiledSpreadAttributes(_$root, _$attributes)
+                  _$compiledRenderAnchor(_$children, _$root, _$anchor)
+                })
+                return _$root
+              }),
+            })
           : null,
-      )
+      ])
 
       return vapor(() => {
         const root = document.createDocumentFragment()
@@ -174,16 +238,19 @@ describe('Teleport nested vapor anchor', () => {
           const slotAnchor = document.createComment('rue:slot:anchor')
           childRoot.appendChild(slotAnchor)
 
-          watchEffect(() => {
+          _$compiledWatchEffect(() => {
             renderAnchor(content as any, childRoot as any, slotAnchor as any)
           })
 
           return childRoot as any
         })
 
-        watchEffect(() => {
+        _$compiledWatchEffect(() => {
           renderAnchor(
-            h(Teleport, { to: 'body' }, child as any),
+            _$createDynamic(Teleport, {
+              to: 'body',
+              children: child as any,
+            }),
             root as any,
             componentAnchor as any,
           )
@@ -196,10 +263,10 @@ describe('Teleport nested vapor anchor', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    render(h(ModalLike, { visible: false }), container)
+    render(_$createDynamic(ModalLike, { visible: false }), container)
     await flushEffects()
 
-    render(h(ModalLike, { visible: true }), container)
+    render(_$createDynamic(ModalLike, { visible: true }), container)
     await flushEffects()
 
     expect(document.querySelector('.modal-mask')?.textContent).toBe('OPEN')

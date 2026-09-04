@@ -4,6 +4,7 @@
 use swc_core::common::{DUMMY_SP, SyntaxContext};
 // SWC ECMAScript AST 节点类型集合（Expr/CondExpr/BinExpr/JSXElement 等）
 use swc_core::ecma::ast::*;
+use swc_core::ecma::visit::VisitMutWith;
 
 use crate::elements::build_element;
 use crate::emit::*;
@@ -38,13 +39,22 @@ fn make_vapor_slot_expr(child_body: Vec<Stmt>, compiled_anchor: bool) -> Expr {
 }
 
 fn jsx_element_to_slot_value_expr(this: &mut VaporTransform, jsx_el: &JSXElement) -> Expr {
+    if crate::utils::is_component(&jsx_el.opening.name) {
+        let mut component = jsx_el.clone();
+        let rewrite =
+            crate::element_component::rewrite_component_children_to_props(this, &mut component);
+        let mount_expr = rewrite
+            .direct_render_expr
+            .unwrap_or_else(|| crate::element_component::build_component_mount_expr(&component));
+        return crate::element_component::component_expr_with_prelude(rewrite.stmts, mount_expr);
+    }
     if !this.current_function_is_async()
         && crate::element_children::is_compiled_safe_element(this, jsx_el)
     {
         let block = crate::element_children::compiled_scalar_element_to_block(this, jsx_el);
         let compiled_expr = crate::element_children::compiled_block_to_root_expr(block);
         return match crate::element_expr::extract_reactive_jsx_key_expr(jsx_el) {
-            Some(key_expr) => call_ident("_$vaporWithKey", vec![compiled_expr, key_expr]),
+            Some(key_expr) => call_ident("_$compiledWithKey", vec![compiled_expr, key_expr]),
             None => compiled_expr,
         };
     }
@@ -66,7 +76,7 @@ fn jsx_element_to_slot_value_expr(this: &mut VaporTransform, jsx_el: &JSXElement
     let vapor_expr =
         make_vapor_slot_expr(child_body, !crate::utils::is_component(&jsx_el.opening.name));
     match crate::element_expr::extract_reactive_jsx_key_expr(jsx_el) {
-        Some(key_expr) => call_ident("_$vaporWithKey", vec![vapor_expr, key_expr]),
+        Some(key_expr) => call_ident("_$compiledWithKey", vec![vapor_expr, key_expr]),
         None => vapor_expr,
     }
 }
@@ -224,7 +234,7 @@ fn use_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
 }
 
 fn hook_wrapped_call_returns_jsx_renderable(call: &CallExpr) -> bool {
-    call_callee_ident_name(call) == Some("_$vaporWithHookId")
+    call_callee_ident_name(call) == Some("_$compiledWithHookId")
         && call
             .args
             .get(1)
@@ -257,7 +267,7 @@ fn arrow_contains_empty_deps_memo(expr: &Expr) -> bool {
 }
 
 fn hook_wrapped_call_has_empty_memo_deps(call: &CallExpr) -> bool {
-    call_callee_ident_name(call) == Some("_$vaporWithHookId")
+    call_callee_ident_name(call) == Some("_$compiledWithHookId")
         && call
             .args
             .get(1)
@@ -317,7 +327,7 @@ fn rewrite_use_memo_call_for_slot(this: &mut VaporTransform, call: &CallExpr) ->
 }
 
 fn rewrite_hook_wrapped_call_for_slot(this: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
-    if call_callee_ident_name(call) != Some("_$vaporWithHookId") {
+    if call_callee_ident_name(call) != Some("_$compiledWithHookId") {
         return None;
     }
 
@@ -352,6 +362,17 @@ fn rewrite_call_for_slot(this: &mut VaporTransform, call: &CallExpr) -> Option<E
     rewrite_use_memo_call_for_slot(this, call)
         .or_else(|| rewrite_hook_wrapped_call_for_slot(this, call))
         .or_else(|| rewrite_map_call_for_slot(this, call))
+        .or_else(|| {
+            let Callee::Expr(callee) = &call.callee else {
+                return None;
+            };
+            if !arrow_returns_jsx_renderable(callee.as_ref()) {
+                return None;
+            }
+            let mut next = call.clone();
+            next.visit_mut_with(this);
+            Some(Expr::Call(next))
+        })
 }
 
 pub(crate) fn build_slot_expr(this: &mut VaporTransform, inner: &Expr) -> Expr {

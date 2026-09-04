@@ -58,20 +58,21 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let expected_fragment = r##"import { onBeforeUnmount, watchEffect, ref, computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(0));
-            const pre = _$vaporWithHookId("computed:1:1", ()=>computed(()=>({
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(0);
+            const pre = computed(()=>({
                         t: `t=${a.value}`,
                         arr: [
                             a.value,
                             a.value > 0 ? 'X' : 'Y'
                         ]
-                    })));
+                }));
+            pre.get();
             const __rue_phase2_pre = pre;
-            _$vaporWithHookId("watchEffect:1:2", ()=>watchEffect(()=>console.log('setup', __rue_phase2_pre.get().t)));
+            watchEffect(()=>console.log('setup', __rue_phase2_pre.get().t));
             switch(a.value % 2){
                 case 0:
                     {
@@ -87,7 +88,7 @@ const Comp: FC = ()=>{
                                         switch(c % 2){
                                             case 0:
                                                 {
-                                                    _$vaporWithHookId("watchEffect:1:3", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('third', __rue_phase2_pre.get().arr[1]))));
+                                                    _$compiledWithHookId("watchEffect:1:3", ()=>watchEffect(()=>onBeforeUnmount(()=>console.log('third', __rue_phase2_pre.get().arr[1]))));
                                                     break;
                                                 }
                                             default:
@@ -110,27 +111,31 @@ const Comp: FC = ()=>{
                         try {
                             const d = a.value + 2;
                         } finally{
-                            _$vaporWithHookId("watchEffect:1:4", ()=>watchEffect(()=>console.log('fin', a.value)));
+                            _$compiledWithHookId("watchEffect:1:4", ()=>watchEffect(()=>console.log('fin', a.value)));
                         }
                         break;
                     }
             }
             return {
                 a: a,
-                pre: pre
+                pre: pre,
+                __rue_phase2_pre: __rue_phase2_pre
             };
         }));
-    const { a: a, pre: pre } = _$useSetup;
+    const { a: a, pre: pre, __rue_phase2_pre: __rue_phase2_pre } = _$useSetup;
     return <div>{pre.get().arr[0]}</div>;
 };
 "##;
 
-    use utils::{normalize, strip_marker};
+    use utils::{normalize_setup_snapshot, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write(
         "target/vapor_outputs/spec_on_setup_switch_nested_switch_third_level.out.js",
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    assert_eq!(
+        normalize_setup_snapshot(&strip_marker(&out)),
+        normalize_setup_snapshot(&strip_marker(expected_fragment))
+    );
 }

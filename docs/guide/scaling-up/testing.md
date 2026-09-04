@@ -343,20 +343,16 @@ describe('useCounter', () => {
 
 依赖于生命周期钩子或 Context API 的 composable 需要包装在宿主组件中才能进行测试。我们可以创建一个如下所示的辅助函数：
 
-```ts [test-utils.ts]
-import { h, useApp, type RenderableOutput } from '@rue-js/rue'
+```tsx [test-utils.tsx]
+import { useApp, type FC } from '@rue-js/rue'
 
 export function withSetup<T>(composable: () => T): [T, ReturnType<typeof useApp>] {
   let result!: T
-  const app = useApp({
-    setup() {
-      result = composable()
-      return {}
-    },
-    render(): RenderableOutput {
-      return h('div')
-    },
-  })
+  const Host: FC = () => {
+    result = composable()
+    return <div />
+  }
+  const app = useApp(Host)
   app.mount(document.createElement('div'))
   // 返回结果和应用实例
   // 用于测试 Context / unmount

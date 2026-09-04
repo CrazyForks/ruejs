@@ -181,7 +181,7 @@ type MockupPhoneCompound = FC<MockupPhoneRootProps> & {
   Display: FC<MockupPhonePartProps>
 }
 
-const MockupPhone: MockupPhoneCompound = Object.assign(Root, {
+const MockupPhone: MockupPhoneCompound = /*#__PURE__*/ Object.assign(Root, {
   Camera,
   Display,
 })

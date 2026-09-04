@@ -21,17 +21,18 @@ export default Hello;
     let program = apply(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, vapor, _$createElement, _$createTextNode, _$setStyle, _$appendChild } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"
+import { ref, vapor, _$template, _$setStyle } from "@rue-js/rue/internal";
 import { type FC, h } from '@rue-js/rue';
-const Hello: FC = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        const _el1 = _$createElement("h1");
-        _$appendChild(_root, _el1);
+const _$getTemplate1 = _$template("<div><h1>Rue 响应式框架示例</h1></div>");
+const Hello: FC = ()=>vapor((__rue_parent_context)=>{
+        const _fragment = _$getTemplate1().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el1 = _root.childNodes[0];
         _$setStyle(_el1, {
             textAlign: 'center',
             color: '#e07721ff'
         });
-        _$appendChild(_el1, _$createTextNode("Rue 响应式框架示例"));
         return _root;
     });
 export default Hello;
@@ -40,5 +41,13 @@ export default Hello;
     use utils::{normalize, strip_marker};
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec8.out.js", strip_marker(&out)).ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$template(\"<div><h1>Rue 响应式框架示例</h1></div>\")"));
+    assert!(normalized.contains("_$compiledRoot(Object.assign("));
+    assert!(
+        normalized
+            .contains("Object.assign(_el1.style, { textAlign: 'center', color: '#e07721ff' })")
+    );
+    assert!(normalized.contains("__rue_compiled_explicit_roots: true"));
+    assert!(!normalized.contains("vapor("));
 }

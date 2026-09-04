@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { h } from '@rue-js/rue'
+
 import { render } from '@rue-js/rue'
 import { Avatar, Button, Stat } from '@rue-js/design'
 
@@ -21,7 +21,7 @@ afterEach(() => {
 describe('Stat', () => {
   it('renders stats container with base class', async () => {
     const c = document.createElement('div')
-    await renderAndWait(h(Stat, null, 'hello'), c)
+    await renderAndWait(<Stat>{'hello'}</Stat>, c)
     const el = c.querySelector('.stats') as HTMLElement
     expect(el).toBeTruthy()
     expect(el.classList.contains('stats')).toBe(true)
@@ -30,17 +30,17 @@ describe('Stat', () => {
 
   it('applies direction classes', async () => {
     const c = document.createElement('div')
-    await renderAndWait(h(Stat, { direction: 'horizontal' }, 'x'), c)
+    await renderAndWait(<Stat direction={'horizontal'}>{'x'}</Stat>, c)
     let el = c.querySelector('.stats') as HTMLElement
     expect(el.classList.contains('stats-horizontal')).toBe(true)
-    await renderAndWait(h(Stat, { direction: 'vertical' }, 'x'), c)
+    await renderAndWait(<Stat direction={'vertical'}>{'x'}</Stat>, c)
     el = c.querySelector('.stats') as HTMLElement
     expect(el.classList.contains('stats-vertical')).toBe(true)
   })
 
   it('appends custom className on container', async () => {
     const c = document.createElement('div')
-    await renderAndWait(h(Stat, { className: 'shadow' }, 'x'), c)
+    await renderAndWait(<Stat className={'shadow'}>{'x'}</Stat>, c)
     const el = c.querySelector('.stats') as HTMLElement
     expect(el.classList.contains('shadow')).toBe(true)
   })
@@ -48,18 +48,16 @@ describe('Stat', () => {
   it('renders Item and subparts correctly', async () => {
     const c = document.createElement('div')
     await renderAndWait(
-      h(
-        Stat,
-        { className: 'shadow' },
-        h(
-          Stat.Item,
-          null,
-          h(Stat.Figure, { className: 'text-secondary' }, h('svg', { className: 'w-8 h-8' })),
-          h(Stat.Title, null, 'Downloads'),
-          h(Stat.Value, null, '31K'),
-          h(Stat.Desc, null, 'Jan 1st - Feb 1st'),
-        ),
-      ),
+      <Stat className={'shadow'}>
+        <Stat.Item>
+          <Stat.Figure className={'text-secondary'}>
+            <svg className={'w-8 h-8'} />
+          </Stat.Figure>
+          <Stat.Title>{'Downloads'}</Stat.Title>
+          <Stat.Value>{'31K'}</Stat.Value>
+          <Stat.Desc>{'Jan 1st - Feb 1st'}</Stat.Desc>
+        </Stat.Item>
+      </Stat>,
       c,
     )
     const item = c.querySelector('.stat') as HTMLElement
@@ -73,11 +71,9 @@ describe('Stat', () => {
   it('renders Item semantic props without manual children composition', async () => {
     const c = document.createElement('div')
     await renderAndWait(
-      h(
-        Stat,
-        null,
-        h(Stat.Item, { title: 'Active Users', value: 112893, prefix: '¥', suffix: '/月' }),
-      ),
+      <Stat>
+        <Stat.Item title={'Active Users'} value={112893} prefix={'¥'} suffix={'/月'} />
+      </Stat>,
       c,
     )
     const value = c.querySelector('.stat-value') as HTMLElement
@@ -89,7 +85,12 @@ describe('Stat', () => {
 
   it('applies center class on Item', async () => {
     const c = document.createElement('div')
-    await renderAndWait(h(Stat, null, h(Stat.Item, { center: true }, 'x')), c)
+    await renderAndWait(
+      <Stat>
+        <Stat.Item center={true}>{'x'}</Stat.Item>
+      </Stat>,
+      c,
+    )
     const el = c.querySelector('.stat') as HTMLElement
     expect(el.classList.contains('place-items-center')).toBe(true)
   })
@@ -97,27 +98,25 @@ describe('Stat', () => {
   it('renders actions and supports nested dynamic components', async () => {
     const c = document.createElement('div')
     await renderAndWait(
-      h(
-        Stat,
-        null,
-        h(
-          Stat.Item,
-          null,
-          h(Stat.Title, null, 'Account balance'),
-          h(Stat.Value, null, '$89,400'),
-          h(Stat.Actions, null, h(Button, { color: 'success', size: 'xs' }, 'Add funds')),
-        ),
-        h(
-          Stat.Item,
-          null,
-          h(Stat.Title, null, 'User'),
-          h(
-            Stat.Figure,
-            null,
-            h(Avatar, { status: 'online' }, h('div', { className: 'w-16 rounded-full' })),
-          ),
-        ),
-      ),
+      <Stat>
+        <Stat.Item>
+          <Stat.Title>{'Account balance'}</Stat.Title>
+          <Stat.Value>{'$89,400'}</Stat.Value>
+          <Stat.Actions>
+            <Button color={'success'} size={'xs'}>
+              {'Add funds'}
+            </Button>
+          </Stat.Actions>
+        </Stat.Item>
+        <Stat.Item>
+          <Stat.Title>{'User'}</Stat.Title>
+          <Stat.Figure>
+            <Avatar status={'online'}>
+              <div className={'w-16 rounded-full'} />
+            </Avatar>
+          </Stat.Figure>
+        </Stat.Item>
+      </Stat>,
       c,
     )
     const actions = c.querySelector('.stat-actions') as HTMLElement
@@ -133,7 +132,7 @@ describe('Stat', () => {
         title: 'Downloads',
         value: '31K',
         desc: 'Jan 1st - Feb 1st',
-        figure: h('svg', { className: 'w-8 h-8' }),
+        figure: <svg className={'w-8 h-8'} />,
         figureClassName: 'text-secondary',
       },
       {
@@ -146,10 +145,14 @@ describe('Stat', () => {
       {
         title: 'Account balance',
         value: '$89,400',
-        actions: h(Button, { size: 'xs', color: 'success' }, 'Add funds'),
+        actions: (
+          <Button size={'xs'} color={'success'}>
+            {'Add funds'}
+          </Button>
+        ),
       },
     ]
-    await renderAndWait(h(Stat, { items, className: 'shadow' }), c)
+    await renderAndWait(<Stat items={items} className={'shadow'} />, c)
     const container = c.querySelector('.stats') as HTMLElement
     expect(container).toBeTruthy()
     expect(container.classList.contains('shadow')).toBe(true)
@@ -167,8 +170,8 @@ describe('Stat', () => {
   it('supports numeric formatting options and keeps zero values', async () => {
     const c = document.createElement('div')
     await renderAndWait(
-      h(Stat, {
-        items: [
+      <Stat
+        items={[
           {
             title: 'Revenue',
             value: 12345.6,
@@ -181,8 +184,8 @@ describe('Stat', () => {
             value: 0,
             suffix: 'items',
           },
-        ],
-      }),
+        ]}
+      />,
       c,
     )
     const values = Array.from(c.querySelectorAll('.stat-value')).map(node => node.textContent ?? '')
@@ -196,19 +199,15 @@ describe('Stat', () => {
   it('supports custom formatter and valueRender on Stat.Value', async () => {
     const c = document.createElement('div')
     await renderAndWait(
-      h(
-        Stat,
-        null,
-        h(
-          Stat.Item,
-          null,
-          h(Stat.Value, {
-            value: 1280,
-            formatter: (value: number) => `${value} req/s`,
-            valueRender: (node: any) => h('strong', { className: 'value-strong' }, node),
-          }),
-        ),
-      ),
+      <Stat>
+        <Stat.Item>
+          <Stat.Value
+            value={1280}
+            formatter={(value: number) => `${value} req/s`}
+            valueRender={(node: any) => <strong className={'value-strong'}>{node}</strong>}
+          />
+        </Stat.Item>
+      </Stat>,
       c,
     )
     const strong = c.querySelector('.value-strong') as HTMLElement
@@ -218,7 +217,12 @@ describe('Stat', () => {
 
   it('shows loading placeholder in value area', async () => {
     const c = document.createElement('div')
-    await renderAndWait(h(Stat, null, h(Stat.Item, { title: 'Loading', loading: true })), c)
+    await renderAndWait(
+      <Stat>
+        <Stat.Item title={'Loading'} loading={true} />
+      </Stat>,
+      c,
+    )
     const loadingNode = c.querySelector('[data-stat-loading="true"]') as HTMLElement
     expect(loadingNode).toBeTruthy()
     expect(c.querySelector('.stat-value')).toBeTruthy()
@@ -229,18 +233,16 @@ describe('Stat', () => {
     const onFinish = vi.fn()
     const c = document.createElement('div')
     render(
-      h(
-        Stat,
-        null,
-        h(Stat.Timer, {
-          title: 'Launch',
-          value: Date.now() + 40,
-          format: 's.SSS',
-          interval: 10,
-          onChange,
-          onFinish,
-        }),
-      ),
+      <Stat>
+        <Stat.Timer
+          title={'Launch'}
+          value={Date.now() + 40}
+          format={'s.SSS'}
+          interval={10}
+          onChange={onChange}
+          onFinish={onFinish}
+        />
+      </Stat>,
       c,
     )
     await waitStatRender()
@@ -262,15 +264,13 @@ describe('Stat', () => {
 
     const c = document.createElement('div')
     render(
-      h(
-        Stat,
-        null,
-        h(Stat.Countdown, {
-          title: 'Campaign',
-          value: Date.now() + (2 * 24 * 60 * 60 + 3 * 60 * 60 + 4 * 60 + 5) * 1000,
-          format: 'D [days] H [hours] m [minutes] s [seconds]',
-        }),
-      ),
+      <Stat>
+        <Stat.Countdown
+          title={'Campaign'}
+          value={Date.now() + (2 * 24 * 60 * 60 + 3 * 60 * 60 + 4 * 60 + 5) * 1000}
+          format={'D [days] H [hours] m [minutes] s [seconds]'}
+        />
+      </Stat>,
       c,
     )
     await waitStatRender()

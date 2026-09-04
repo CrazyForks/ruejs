@@ -428,10 +428,14 @@ const Diff: FC<DiffProps> = ({
     const target = event.target as HTMLInputElement | null
     const nextValue = resolveValue(target?.value, bounds.min, bounds.max, currentValue)
     if (!controlled) {
-      uncontrolledValue.value = nextValue
       emitChange(nextValue, event)
     }
     syncQuickModeStyles(nextValue)
+    const liveRoot = target?.closest('[data-rue-diff-root="true"]') as HTMLElement | null
+    liveRoot?.style.setProperty(
+      '--rue-diff-position',
+      `${resolvePercent(nextValue, bounds.min, bounds.max)}%`,
+    )
   }
 
   const handleChange = (event: Event) => {
@@ -547,6 +551,10 @@ const Diff: FC<DiffProps> = ({
         className="absolute inset-0 z-30 h-full w-full cursor-col-resize opacity-0 disabled:cursor-not-allowed"
         ref={(element: HTMLInputElement | null) => {
           inputRef.current = element ?? undefined
+          if (element) {
+            element.oninput = handleInput
+            element.onchange = handleChange
+          }
         }}
         data-rue-diff-input="true"
         min={String(bounds.min)}
@@ -559,8 +567,6 @@ const Diff: FC<DiffProps> = ({
         aria-valuemin={String(bounds.min)}
         aria-valuemax={String(bounds.max)}
         aria-valuenow={String(currentValue)}
-        onInput={handleInput}
-        onChange={handleChange}
       />
     </figure>
   )
@@ -572,7 +578,7 @@ type DiffCompound = FC<DiffProps> & {
   Resizer: FC<DiffResizerProps>
 }
 
-const DiffCompound: DiffCompound = Object.assign(Diff, {
+const DiffCompound: DiffCompound = /*#__PURE__*/ Object.assign(Diff, {
   Item1,
   Item2,
   Resizer,

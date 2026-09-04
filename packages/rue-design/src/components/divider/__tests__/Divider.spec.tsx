@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { h, render, setReactiveScheduling } from '@rue-js/rue'
+import { render, setReactiveScheduling } from '@rue-js/rue'
+
 import { Divider } from '@rue-js/design'
 import { mountContainer, waitForContent } from '../../../../../runtime/__tests__/page-test-utils'
 
@@ -17,7 +18,7 @@ describe('Divider', () => {
   it('renders with base class and children', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Divider, null, 'OR'), c)
+    render(<Divider>{'OR'}</Divider>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
@@ -29,7 +30,7 @@ describe('Divider', () => {
   it('removes the center gap when rendered without content', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Divider, null), c)
+    render(<Divider />, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
@@ -37,7 +38,7 @@ describe('Divider', () => {
       expect(el.querySelector('span')).toBeNull()
     })
 
-    render(h(Divider, null, ''), c)
+    render(<Divider>{''}</Divider>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
@@ -49,14 +50,14 @@ describe('Divider', () => {
   it('applies direction classes', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Divider, { direction: 'vertical' }, 'x'), c)
+    render(<Divider direction={'vertical'}>{'x'}</Divider>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
       expect(el.classList.contains('divider-horizontal')).toBe(false)
     })
 
-    render(h(Divider, { direction: 'horizontal' }, 'x'), c)
+    render(<Divider direction={'horizontal'}>{'x'}</Divider>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
@@ -67,14 +68,14 @@ describe('Divider', () => {
   it('applies placement classes', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Divider, { placement: 'start' }, 'x'), c)
+    render(<Divider placement={'start'}>{'x'}</Divider>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
       expect(el.classList.contains('divider-start')).toBe(true)
     })
 
-    render(h(Divider, { placement: 'end' }, 'x'), c)
+    render(<Divider placement={'end'}>{'x'}</Divider>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement
@@ -88,7 +89,7 @@ describe('Divider', () => {
     ;(
       ['neutral', 'primary', 'secondary', 'accent', 'success', 'warning', 'info', 'error'] as const
     ).forEach(v => {
-      render(h(Divider, { variant: v }, 'x'), c)
+      render(<Divider variant={v}>{'x'}</Divider>, c)
     })
 
     await waitForContent(() => {
@@ -100,7 +101,7 @@ describe('Divider', () => {
   it('appends custom className', async () => {
     const c = mountContainer()
     resetActiveRuntime()
-    render(h(Divider, { className: 'w-full' }, 'x'), c)
+    render(<Divider className={'w-full'}>{'x'}</Divider>, c)
 
     await waitForContent(() => {
       const el = c.querySelector('.divider') as HTMLElement

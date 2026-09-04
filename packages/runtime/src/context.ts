@@ -7,16 +7,28 @@ Context 运行时架构
 */
 
 import { getCurrentInstance } from './reactivity'
-import { h } from './jsx'
-import type { ComponentProps } from './runtime-types'
 import {
-  RUE_PORTABLE_COMPONENT_TYPE_KEY,
-  RUE_REPEATABLE_MOUNT_FACTORY_KEY,
-} from '@rue-js/runtime-vapor/protocol'
+  effect,
+  getCurrentOwner,
+  getOwnerParent,
+  getOwnerValue,
+  signal,
+  setOwnerValue,
+} from './reactive-core'
+import { createCompiledDynamic, createCompiledFragment } from './compiled-dynamic'
+import { _$compiledBranch } from './compiled-component'
+import { _$compiledValue } from './compiled-render-anchor'
+import type { CompiledRootHandle } from './compiled-root'
+import { invokeCompiledComponent } from './compiled-runtime-bridge'
+import type { ComponentProps } from './runtime-types'
+const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
+const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
+const RUE_COMPILED_COMPONENT_FACTORY_KEY = '__rue_compiled_component_factory__'
 
 const RUE_CONTEXT_VALUE_STORE_PROP = '__rue_context_value_store__'
 const RUE_CONTEXT_LINKED_INSTANCE_PROP = '__rue_context_linked_instance__'
 const RUE_CONTEXT_OWNER_PARENT_PROP = '__rue_context_owner_parent__'
+const RUE_CONTEXT_EXPLICIT_OWNER_PARENT_PROP = '__rue_context_explicit_owner_parent__'
 const RUE_CONTEXT_PARENT_INSTANCE_PROP = '__rue_context_parent_instance__'
 const RUE_CONTEXT_PRESERVE_PARENT_INSTANCE_PROP = '__rue_context_preserve_parent_instance__'
 const RUE_CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'
@@ -24,6 +36,13 @@ const RUE_CONTEXT_PROVIDER_CONTEXT_PROP = '__rue_context_provider_context__'
 const RUE_CONTEXT_PROVIDER_PROPS_MARKER = '__rue_context_provider_props__'
 const RUE_PORTABLE_PROPS_PROP = 'props'
 const TEXT_CONTEXT_VALUE_STACK_KEY = Symbol.for('text.contextValueStack')
+const COMPILED_CONTEXT_STORE_KEY = Symbol('rue.compiledContextStore')
+const COMPILED_CONTEXT_VALUE_READER = Symbol('rue.compiledContextValueReader')
+
+type CompiledContextValue<T> = {
+  [COMPILED_CONTEXT_VALUE_READER]: () => T
+  set(value: T): void
+}
 
 type ContextualComponent = (props: Record<string, unknown>) => unknown
 
@@ -38,6 +57,7 @@ type ContextCarrier = {
   [RUE_CONTEXT_VALUE_STORE_PROP]?: Map<RueContext<unknown>, unknown>
   [RUE_CONTEXT_LINKED_INSTANCE_PROP]?: unknown
   [RUE_CONTEXT_OWNER_PARENT_PROP]?: unknown
+  [RUE_CONTEXT_EXPLICIT_OWNER_PARENT_PROP]?: unknown
   [RUE_CONTEXT_PARENT_INSTANCE_PROP]?: unknown
   [RUE_CONTEXT_PRESERVE_PARENT_INSTANCE_PROP]?: boolean
   [RUE_CONTEXT_PROVIDER_PROPS_MARKER]?: boolean
@@ -85,11 +105,22 @@ const resolveProviderChildren = (children: unknown) => {
     return children[0]
   }
 
-  return h('fragment', null, ...(children as any[]))
+  return createCompiledFragment(children)
 }
 
 const isObjectLike = (value: unknown): value is Record<string, unknown> =>
   (typeof value === 'object' || typeof value === 'function') && value != null
+
+const readStoredContextValue = <T>(value: unknown): T => {
+  if (
+    isObjectLike(value) &&
+    COMPILED_CONTEXT_VALUE_READER in value &&
+    typeof (value as CompiledContextValue<T>)[COMPILED_CONTEXT_VALUE_READER] === 'function'
+  ) {
+    return (value as CompiledContextValue<T>)[COMPILED_CONTEXT_VALUE_READER]()
+  }
+  return value as T
+}
 
 const asContextCarrier = (value: unknown): ContextCarrier | null => {
   if (!isObjectLike(value)) return null
@@ -178,6 +209,15 @@ export const preserveParentContextProps = <T extends Record<string, unknown>>(pr
   return props
 }
 
+/** Link a compiled owner to context carried across an independently mounted custom-element root. */
+export const linkCurrentOwnerToParentContextProps = (props: Record<string, unknown>): void => {
+  const owner = asContextCarrier(getCurrentOwner())
+  const parent = props[RUE_CONTEXT_PARENT_INSTANCE_PROP]
+  if (!owner || !isObjectLike(parent) || parent === owner) return
+  owner[RUE_CONTEXT_OWNER_PARENT_PROP] = parent
+  owner[RUE_CONTEXT_EXPLICIT_OWNER_PARENT_PROP] = parent
+}
+
 const getContextValueStore = (instance: unknown, createIfMissing = false) => {
   const carrier = asContextCarrier(instance)
   if (!carrier) return null
@@ -219,7 +259,7 @@ const getParentContextCandidates = (instance: unknown) => {
   }
 
   // 祖先优先级：
-  // 1. runtime-vapor bridge 维护的 owner parent；
+  // 1. 内部 runtime bridge 维护的 owner parent；
   // 2. JSX / repeatable handle 透传下来的 parent-instance；
   // 3. propsRO 上的兼容字段，给老路径和 portable handle 回放兜底。
   // 这里显式避开 self-loop，防止 bridge 或兼容 props 把自己再次指回自己。
@@ -239,6 +279,11 @@ export const withParentContextProps = <T extends Record<string, unknown> | null>
   props: T,
 ): T => {
   if (typeof type !== 'function' && !isCustomElementTag(type)) {
+    return props
+  }
+
+  if (getCurrentOwner() !== undefined) {
+    if (props && isContextProviderComponent(type)) markContextProviderProps(props)
     return props
   }
 
@@ -298,11 +343,27 @@ const refreshPortableComponentHandleReplayFactory = (handle: PortableComponentHa
   return handle
 }
 
-const bindProviderChildrenToCurrentInstance = (children: unknown): unknown => {
+const bindProviderChildrenToCurrentInstance = (
+  children: unknown,
+  explicitContextParent?: object,
+): unknown => {
   if (Array.isArray(children)) {
     children.forEach(child => {
-      bindProviderChildrenToCurrentInstance(child)
+      bindProviderChildrenToCurrentInstance(child, explicitContextParent)
     })
+    return children
+  }
+
+  const compiledHandle = asContextCarrier(children) as
+    | (ContextCarrier & { __rue_compiled_link_context_parent?: (parent: object) => void })
+    | null
+  const contextParent = explicitContextParent ?? getCurrentOwner() ?? getCurrentInstance()
+  if (
+    compiledHandle &&
+    typeof compiledHandle.__rue_compiled_link_context_parent === 'function' &&
+    isObjectLike(contextParent)
+  ) {
+    compiledHandle.__rue_compiled_link_context_parent(contextParent)
     return children
   }
 
@@ -325,7 +386,7 @@ const bindProviderChildrenToCurrentInstance = (children: unknown): unknown => {
   // 这里继续向下递归，确保“Provider 下的第一层可见 children 树”都会重新绑定到当前 boundary owner。
   const nestedChildren = nextProps?.children
   if (nestedChildren !== undefined) {
-    bindProviderChildrenToCurrentInstance(nestedChildren)
+    bindProviderChildrenToCurrentInstance(nestedChildren, explicitContextParent)
   }
 
   return children
@@ -335,6 +396,58 @@ const bindProviderChildrenToCurrentInstance = (children: unknown): unknown => {
 export const createContext = <T>(defaultValue: T): RueContext<T> => {
   const ProviderImpl = (props: ContextProviderProps<T>) => {
     const providerValue = props.value
+    const owner = getCurrentOwner()
+    if (owner !== undefined) {
+      const store =
+        getOwnerValue<Map<RueContext<unknown>, unknown>>(owner, COMPILED_CONTEXT_STORE_KEY) ??
+        new Map<RueContext<unknown>, unknown>()
+      const existing = store.get(context as RueContext<unknown>)
+      if (
+        isObjectLike(existing) &&
+        COMPILED_CONTEXT_VALUE_READER in existing &&
+        typeof (existing as CompiledContextValue<T>).set === 'function'
+      ) {
+        ;(existing as CompiledContextValue<T>).set(providerValue)
+      } else {
+        const currentValue = signal(providerValue)
+        const entry: CompiledContextValue<T> = {
+          [COMPILED_CONTEXT_VALUE_READER]: () => currentValue.get(),
+          set: value => currentValue.set(value),
+        }
+        store.set(context as RueContext<unknown>, entry)
+        effect(() => entry.set(props.value))
+      }
+      setOwnerValue(owner, COMPILED_CONTEXT_STORE_KEY, store)
+      const initialChildren = props.children
+      bindProviderChildrenToCurrentInstance(initialChildren, owner)
+      const initialResolved = resolveProviderChildren(initialChildren)
+      const initialFactory =
+        initialResolved != null && typeof initialResolved === 'object'
+          ? (initialResolved as Record<string, unknown>)[RUE_COMPILED_COMPONENT_FACTORY_KEY]
+          : undefined
+      if (typeof initialFactory !== 'string' || !initialFactory.includes('-')) {
+        return initialResolved
+      }
+      return _$compiledBranch(() => {
+        const children = props.children
+        bindProviderChildrenToCurrentInstance(children, owner)
+        const resolved = resolveProviderChildren(children)
+        return {
+          __rue_compiled_branch_key: resolved,
+          create: () => {
+            if (
+              resolved != null &&
+              typeof resolved === 'object' &&
+              typeof (resolved as CompiledRootHandle).__rue_compiled_mount === 'function'
+            ) {
+              const handle = resolved as CompiledRootHandle
+              return !handle.__rue_compiled_mountable() ? handle.__rue_compiled_clone() : handle
+            }
+            return _$compiledValue(resolved)
+          },
+        }
+      })
+    }
 
     // 外层 ProviderImpl 只保留 value 的闭包引用。
     // 真正的 store 写入推迟到内层 boundary 执行时完成，这样 store 一定挂在“当前这次 render 的 owner”上，
@@ -347,7 +460,7 @@ export const createContext = <T>(defaultValue: T): RueContext<T> => {
       return resolveProviderChildren(boundaryProps.children)
     }
 
-    return h(ProviderBoundary as any, null, props.children)
+    return invokeCompiledComponent(ProviderBoundary as any, { children: props.children })
   }
 
   Object.defineProperty(ProviderImpl, RUE_CONTEXT_PROVIDER_MARKER, {
@@ -379,6 +492,27 @@ export const useContext = <T>(context: RueContext<T>): T => {
     return textProvided.value
   }
 
+  let owner = getCurrentOwner()
+  const visitedOwners = new Set<unknown>()
+  while (owner !== undefined && !visitedOwners.has(owner)) {
+    visitedOwners.add(owner)
+    const store = getOwnerValue<Map<RueContext<unknown>, unknown>>(
+      owner,
+      COMPILED_CONTEXT_STORE_KEY,
+    )
+    if (store?.has(context as RueContext<unknown>)) {
+      return readStoredContextValue<T>(store.get(context as RueContext<unknown>))
+    }
+    const directParent = getOwnerParent(owner)
+    const carrier = asContextCarrier(owner)
+    const explicitParent = carrier?.[RUE_CONTEXT_EXPLICIT_OWNER_PARENT_PROP]
+    const bridgedParent = carrier?.[RUE_CONTEXT_OWNER_PARENT_PROP]
+    owner =
+      (isObjectLike(explicitParent) ? (explicitParent as typeof owner) : undefined) ??
+      directParent ??
+      (isObjectLike(bridgedParent) ? (bridgedParent as typeof owner) : undefined)
+  }
+
   const pendingInstances: unknown[] = [getCurrentInstance()]
   const visited = new Set<unknown>()
 
@@ -393,7 +527,7 @@ export const useContext = <T>(context: RueContext<T>): T => {
     const store = getContextValueStore(currentInstance)
 
     if (store?.has(context as RueContext<unknown>)) {
-      return store.get(context as RueContext<unknown>) as T
+      return readStoredContextValue<T>(store.get(context as RueContext<unknown>))
     }
 
     const parents = getParentContextCandidates(currentInstance)

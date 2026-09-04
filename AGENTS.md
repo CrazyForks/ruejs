@@ -17,7 +17,7 @@ Rue 是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发�
 
 ## Monorepo Overview
 
-- **Core Framework**: `packages/rue`, `packages/runtime`, `packages/shared`, `packages/jsx-runtime`, `packages/jsx-dev-runtime`
+- **Core Framework**: `packages/rue`, `packages/runtime`, `packages/shared`
 - **Rendering / Runtime**: `packages/runtime-vapor` 提供 Rust / Wasm 侧运行时实现
 - **Ecosystem**: `packages/router`, `packages/vite-plugin-rue`, `packages/swc-plugin-rue`, `packages/rue-design`
 - **Docs / App**: `docs/` 为文档内容，`app/` 为站点与示例页面

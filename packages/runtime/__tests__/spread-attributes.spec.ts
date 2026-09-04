@@ -53,4 +53,17 @@ describe('spreadAttributes', () => {
     expect(el.getAttribute('data-testid')).toBe('root')
     expect(el.hasAttribute('title')).toBe(false)
   })
+
+  it('does not let a spread update overwrite explicitly excluded later attributes', async () => {
+    const el = document.createElement('main')
+
+    spreadAttributes(el as any, { title: 'spread-one', 'data-phase': 'one' }, ['title'])
+    el.setAttribute('title', 'explicit')
+    await flush()
+
+    spreadAttributes(el as any, { title: 'spread-two', 'data-phase': 'two' }, ['title'])
+
+    expect(el.getAttribute('title')).toBe('explicit')
+    expect(el.getAttribute('data-phase')).toBe('two')
+  })
 })

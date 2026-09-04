@@ -317,15 +317,18 @@ const Item: FC<RatingItemProps> = ({
   ...rest
 }) => {
   const Component = as as any
-  const cls = appendClassName(hidden ? 'rating-hidden' : undefined, className).trim()
+  const resolvedClassName = () =>
+    appendClassName(hidden ? 'rating-hidden' : undefined, className).trim() || undefined
 
   if (Component === 'input') {
-    return <input {...rest} type={type ?? 'radio'} checked={checked} className={cls || undefined} />
+    return (
+      <input {...rest} type={type ?? 'radio'} checked={checked} className={resolvedClassName()} />
+    )
   }
 
   if (Component === 'div') {
     return (
-      <div {...rest} className={cls || undefined}>
+      <div {...rest} className={resolvedClassName()}>
         {children}
       </div>
     )
@@ -333,7 +336,7 @@ const Item: FC<RatingItemProps> = ({
 
   if (Component === 'span') {
     return (
-      <span {...rest} className={cls || undefined}>
+      <span {...rest} className={resolvedClassName()}>
         {children}
       </span>
     )
@@ -341,7 +344,7 @@ const Item: FC<RatingItemProps> = ({
 
   if (Component === 'button') {
     return (
-      <button {...rest} type={type ?? 'button'} className={cls || undefined}>
+      <button {...rest} type={type ?? 'button'} className={resolvedClassName()}>
         {children}
       </button>
     )
@@ -349,7 +352,7 @@ const Item: FC<RatingItemProps> = ({
 
   if (Component === 'label') {
     return (
-      <label {...rest} className={cls || undefined}>
+      <label {...rest} className={resolvedClassName()}>
         {children}
       </label>
     )
@@ -357,14 +360,14 @@ const Item: FC<RatingItemProps> = ({
 
   if (Component === 'a') {
     return (
-      <a {...rest} className={cls || undefined}>
+      <a {...rest} className={resolvedClassName()}>
         {children}
       </a>
     )
   }
 
   return (
-    <Component {...rest} className={cls || undefined}>
+    <Component {...rest} className={resolvedClassName()}>
       {children}
     </Component>
   )
@@ -411,6 +414,7 @@ const RatingRoot: FC<RatingProps> = ({
     normalizeRatingValue(defaultValue ?? value ?? 0, mergedAllowHalf.get(), mergedCount.get()),
   )
   const hoveredValue = ref<number | null>(null)
+  let hoverIntent: number | null = null
   const mergedValue = computed(() => {
     const nextControlledValue = controlledValue.get()
     if (nextControlledValue !== undefined) return nextControlledValue
@@ -436,8 +440,8 @@ const RatingRoot: FC<RatingProps> = ({
    * hover 态只用于预览分值；离开根节点后统一回落到真实值，避免每个 item 自己做清理导致闪烁。
    */
   const clearHover = () => {
-    if (hoveredValue.value !== null) {
-      hoveredValue.value = null
+    if (hoverIntent !== null) {
+      hoverIntent = null
       emitHoverChange(0)
     }
   }
@@ -533,6 +537,7 @@ const RatingRoot: FC<RatingProps> = ({
       data-rating-name={renderedName.get()}
       onMouseLeave={(event: MouseEvent) => {
         clearHover()
+        ;(event.currentTarget as HTMLElement | null)?.setAttribute('data-rating-hover', '')
         if (externalMouseLeave) externalMouseLeave(event as any)
       }}
     >
@@ -601,8 +606,11 @@ const RatingRoot: FC<RatingProps> = ({
             onMouseMove={(event: MouseEvent) => {
               if (!interactive.get()) return
               const nextValue = resolvePointerValue(event as any, index, mergedAllowHalf.get())
-              if (hoveredValue.value !== nextValue) {
-                hoveredValue.value = nextValue
+              if (hoverIntent !== nextValue) {
+                hoverIntent = nextValue
+                ;(event.currentTarget as HTMLElement | null)
+                  ?.closest('[data-rating-mode="auto"]')
+                  ?.setAttribute('data-rating-hover', String(nextValue))
                 emitHoverChange(nextValue)
               }
             }}
@@ -664,7 +672,7 @@ type RatingCompound = FC<RatingProps> & {
   Item: FC<RatingItemProps>
 }
 
-const RatingCompound: RatingCompound = Object.assign(RatingRoot, {
+const RatingCompound: RatingCompound = /*#__PURE__*/ Object.assign(RatingRoot, {
   Item,
 })
 

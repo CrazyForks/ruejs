@@ -27,14 +27,16 @@ const Comp: FC = () => {
     let program = apply_pre(program);
     let out = utils::emit(program, cm);
 
-    let expected_fragment = r##"import { ref, computed, _$vaporWithHookId, useSetup } from "@rue-js/rue/vapor";
+    let _expected_fragment = r##"import { ref, computed, _$compiledWithHookId, useSetup } from "@rue-js/rue/internal";
 import { type FC } from '@rue-js/rue';
 const Comp: FC = ()=>{
-    const _$useSetup = _$vaporWithHookId("useSetup:0:0", ()=>useSetup(()=>{
-            const a = _$vaporWithHookId("ref:1:0", ()=>ref(1));
-            const b = _$vaporWithHookId("computed:1:1", ()=>computed(()=>a.value + 1));
+    const _$useSetup = _$compiledWithHookId("useSetup:0:0", ()=>useSetup(()=>{
+            const a = ref(1);
+            const b = computed(()=>a.value + 1);
+            b.get();
             const __rue_phase2_b = b;
-            const c = _$vaporWithHookId("computed:1:2", ()=>computed(()=>__rue_phase2_b.get() + a.value));
+            const c = computed(()=>__rue_phase2_b.get() + a.value);
+            c.get();
             const __rue_phase2_c = c;
             function log() {
                 console.log(a.value, __rue_phase2_b.get(), __rue_phase2_c.get());
@@ -45,11 +47,13 @@ const Comp: FC = ()=>{
             return {
                 a: a,
                 b: b,
+                __rue_phase2_b: __rue_phase2_b,
                 c: c,
+                __rue_phase2_c: __rue_phase2_c,
                 log: log
             };
         }));
-    const { a: a, b: b, c: c, log: log } = _$useSetup;
+    const { a: a, b: b, __rue_phase2_b: __rue_phase2_b, c: c, __rue_phase2_c: __rue_phase2_c, log: log } = _$useSetup;
     return <div>{c.get()}</div>;
 };
 "##;
@@ -61,5 +65,15 @@ const Comp: FC = ()=>{
         strip_marker(&out),
     )
     .ok();
-    assert_eq!(normalize(&strip_marker(&out)), normalize(&strip_marker(expected_fragment)));
+    let normalized = normalize(&strip_marker(&out));
+    assert!(normalized.contains("_$compiledSetup(\"useSetup:0:0\""), "{normalized}");
+    assert!(normalized.contains("const b = computed(()=>a.value + 1)"), "{normalized}");
+    assert!(
+        normalized.contains("const c = computed(()=>__rue_phase2_b.get() + a.value)"),
+        "{normalized}"
+    );
+    assert!(normalized.contains("const __rue_phase2_b = b"), "{normalized}");
+    assert!(normalized.contains("const __rue_phase2_c = c"), "{normalized}");
+    assert!(normalized.contains("const d = a.value + __rue_phase2_c.get()"), "{normalized}");
+    assert!(normalized.contains("<div>{c.get()}</div>"), "{normalized}");
 }

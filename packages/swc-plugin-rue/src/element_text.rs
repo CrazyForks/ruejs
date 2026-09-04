@@ -138,7 +138,7 @@ pub fn render_text_between_with_watch(
         ctxt: SyntaxContext::empty(),
     });
     // 使用 watch 保证 textContent 随表达式变化更新
-    let watch = call_ident("watchEffect", vec![arrow]);
+    let watch = call_ident("effect", vec![arrow]);
     stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch) }));
 }
 

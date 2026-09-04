@@ -23,6 +23,19 @@ export interface RueIslandManifestEntry {
 
 export type RueIslandManifest = Record<string, RueIslandManifestEntry>
 
+export type RueJsxCompilerTarget = 'client' | 'hydrate' | 'server'
+
+export interface RueCompilerDiagnostic {
+  file: string
+  line: number
+  column: number
+  start: number
+  end: number
+  category: string
+  syntax: string
+  suggestion: string
+}
+
 /** Virtual module id that exposes the current Rue island manifest. */
 export const RUE_ISLAND_MANIFEST_ID: 'virtual:rue-island-manifest'
 
@@ -47,6 +60,8 @@ export interface RueTransformExecutorPayload {
   timeoutMs: number
   /** 是否按生产模式编译当前模块。 */
   isProduction?: boolean
+  /** JSX 编译目标。 */
+  target: RueJsxCompilerTarget
 }
 
 /** Rue Vite 插件配置项。 */
@@ -55,6 +70,8 @@ export interface RueVitePluginOptions {
   include?: string[]
   /** 跳过命中任一关键字的模块路径，优先级高于 include。 */
   exclude?: string[]
+  /** 需要编译的 JSX 源文件扩展名；默认 tsx、jsx。 */
+  includeExtensions?: string[]
   /** 是否在控制台输出已转换模块的调试日志。 */
   debug?: boolean
   /** SWC 转换超时时间，单位为毫秒；小于等于 0 时表示不启用超时保护。 */
@@ -63,6 +80,10 @@ export interface RueVitePluginOptions {
   transformConcurrency?: number
   /** 自定义转换执行器，主要用于测试或接入外部隔离执行环境。 */
   transformExecutor?: (payload: RueTransformExecutorPayload) => Promise<string> | string
+  /** JSX 编译目标；Vite SSR/RSC 图会自动选择 server，默认 client。 */
+  target?: RueJsxCompilerTarget
+  /** Receives the stable, sorted fallback inventory before strict client compilation fails. */
+  onCompilerDiagnostics?: (diagnostics: RueCompilerDiagnostic[]) => void
 }
 
 /** 静态编译 Rue TSX/JSX 的选项。 */
@@ -75,6 +96,10 @@ export interface RueStaticCompileOptions {
   production?: boolean
   /** 是否附加 Rue 转换头，默认 true。 */
   includeHeader?: boolean
+  /** JSX 编译目标，默认 client。 */
+  target?: RueJsxCompilerTarget
+  /** Receives the stable, sorted fallback inventory before strict client compilation fails. */
+  onCompilerDiagnostics?: (diagnostics: RueCompilerDiagnostic[]) => void
 }
 
 /** Rue Custom Element library build 配置项。 */

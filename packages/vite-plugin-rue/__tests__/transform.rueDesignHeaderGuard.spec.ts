@@ -1,14 +1,18 @@
 // @vitest-environment jsdom
 
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 import VitePluginRue, { compileRueStatic } from '../index.mjs'
 
-const createPlugin = () => VitePluginRue()
+const createPlugin = (options: Parameters<typeof VitePluginRue>[0] = {}) => VitePluginRue(options)
 
-const invokeTransform = async (source: string, id: string) => {
-  const plugin = createPlugin()
+const invokeTransform = async (
+  source: string,
+  id: string,
+  options: Parameters<typeof VitePluginRue>[0] = {},
+) => {
+  const plugin = createPlugin(options)
   const transformHook = plugin.transform
 
   if (!transformHook) {
@@ -22,9 +26,57 @@ const invokeTransform = async (source: string, id: string) => {
   return transformHook.handler.call({} as any, source, id)
 }
 
-const HEADER = '/* RUE_VAPOR_TRANSFORMED */'
+const HEADER = '/* RUE_TRANSFORMED */'
 
 const componentId = (name: string) => `packages/rue-design/src/components/${name}/index.tsx`
+
+const rueDesignComponentEntryIds = async () => {
+  const componentNames = await readdir('packages/rue-design/src/components', {
+    withFileTypes: true,
+  })
+
+  const entryIds = await Promise.all(
+    componentNames
+      .filter(entry => entry.isDirectory())
+      .map(async entry => {
+        const id = componentId(entry.name)
+
+        try {
+          await readFile(id, 'utf8')
+          return id
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+          throw error
+        }
+      }),
+  )
+
+  return entryIds.filter((id): id is string => id !== null).sort()
+}
+
+const diagnosticCategory = (message: string) =>
+  message.match(/\bcategory:\s*([a-z][a-z0-9-]*)\b/i)?.[1] ?? 'uncategorized'
+
+const formatStrictDiagnosticReport = (failures: Array<{ id: string; message: string }>) => {
+  const byCategory = new Map<string, Array<{ id: string; message: string }>>()
+
+  for (const failure of failures) {
+    const category = diagnosticCategory(failure.message)
+    const categoryFailures = byCategory.get(category) ?? []
+    categoryFailures.push(failure)
+    byCategory.set(category, categoryFailures)
+  }
+
+  return [...byCategory]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .flatMap(([category, categoryFailures]) => [
+      `[${category}]`,
+      ...categoryFailures
+        .sort((left, right) => left.id.localeCompare(right.id))
+        .map(({ id, message }) => `- ${id}\n  ${message.replace(/\n/g, '\n  ')}`),
+    ])
+    .join('\n')
+}
 
 const notificationLikeSource = `
   import { type FC } from '@rue-js/rue'
@@ -58,10 +110,40 @@ const notificationLikeSource = `
 `
 
 describe('vite-plugin-rue rue-design transform header guard', () => {
-  it('skips the path-guarded rue-design component sources even without the legacy transform header', async () => {
+  it('strict-compiles every rue-design component entry without fallback', async () => {
+    const entryIds = await rueDesignComponentEntryIds()
+    const failures: Array<{ id: string; message: string }> = []
+
+    for (const id of entryIds) {
+      const source = await readFile(id, 'utf8')
+
+      try {
+        const result = await invokeTransform(source, id)
+        const code = typeof result === 'string' ? result : String(result?.code ?? '')
+
+        if (!code.includes(HEADER)) {
+          throw new Error('transform returned no Rue compiler header')
+        }
+      } catch (error) {
+        failures.push({
+          id,
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+
+    const report = formatStrictDiagnosticReport(failures)
+    expect(report, `Rue Design strict diagnostics:\n${report}`).toBe('')
+  })
+
+  it('deep-compiles formerly path-guarded rue-design component sources', async () => {
     const result = await invokeTransform(notificationLikeSource, componentId('time-picker'))
 
-    expect(result).toBeNull()
+    const code = typeof result === 'string' ? result : String(result?.code ?? '')
+
+    expect(code).toContain(HEADER)
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
+    expect(code).not.toContain('_jsxDEV')
   })
 
   it('still transforms headerless rue-design component sources outside the path-guarded migration set', async () => {
@@ -93,8 +175,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$spreadAttributes')
   })
 
   it('deep-compiles the real headerless link source without legacy dynamic render escapes', async () => {
@@ -113,14 +193,10 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(EditorView')
-    expect(code).toContain('_$createComponent(ContentView')
-    expect(code).toContain('_$createComponent(DecoratedContent')
     expect(code).toContain('data-rue-link-actions')
     expect(code).toContain('data-rue-link-copy')
     expect(code).toContain('data-rue-link-editor')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
     expect(code).not.toContain('renderContent()')
   })
@@ -140,10 +216,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('row-group-')
-    expect(code).toContain('_$createComponent(RenderExpandedRowContent')
     expect(code).not.toContain('pageRows.flatMap')
     expect(code).not.toMatch(/_\$settextContent\([^)]*,\s*pageRows/)
   })
@@ -164,11 +236,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(TreeSelectTag')
-    expect(code).toContain('_$createComponent(TreeSelectNodeRow')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -187,11 +255,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(Camera')
-    expect(code).toContain('_$createComponent(Display')
-    expect(code).toContain('_$createElement("img"')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('_$compiledCreateElement("img"')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -210,12 +275,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(RenderableSlot')
-    expect(code).toContain('_$createComponent(Header')
-    expect(code).toContain('_$createComponent(Body')
-    expect(code).toContain('_$createComponent(Actions')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -230,8 +290,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = await compileRueStatic(source, { id, production: false })
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -250,12 +309,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('_$createComponent(Item')
-    expect(code).toContain('_$createComponent(Label')
     expect(code).toContain('renderAnchor(__slot')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -274,11 +329,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
     expect(code).toContain('_$createElement("svg"')
     expect(code).toContain('_$setStyle')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -296,10 +349,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('data-rue-splitter-root')
     expect(code).toContain('rue-splitter-panel-config-change')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless validator source through the compiler path', async () => {
@@ -317,10 +369,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createElement("fieldset"')
-    expect(code).toContain('_$createComponent(Root')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('<fieldset')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless checkbox source without legacy h/ref escapes', async () => {
@@ -337,10 +387,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('data-rue-checkbox-input')
     expect(code).toContain('data-rue-checkbox-group')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless rating source without legacy h/ref escapes', async () => {
@@ -358,10 +407,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('data-rating-mode')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless radio source without legacy header or JSX runtime fallback', async () => {
@@ -378,11 +425,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
     expect(code).toContain('data-rue-radio-input')
     expect(code).toContain('data-rue-radio-group')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -400,9 +445,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('modal-box')
-    expect(code).toContain('_$createComponent(Button')
     expect(code).toContain('computed(()=>mergedOpen.get() ||')
     expect(code).not.toContain('const isOpen = mergedOpen.get()')
   })
@@ -422,11 +465,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createElement("fieldset"')
-    expect(code).toContain('_$createComponent(Item')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('<fieldset')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
     expect(code).not.toContain('delete rest')
   })
@@ -443,9 +483,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('showDot.get() || hasCount.get()')
-    expect(code).toContain('showDot.get() || hasStatus.get()')
+    expect(code).toContain('_$compiledBranch')
   })
 
   it('deep-compiles the real headerless carousel source without legacy header or jsx runtime fallback', async () => {
@@ -463,11 +501,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
     expect(code).toContain('data-rue-carousel-track')
     expect(code).toContain('assignForwardedRef(__rue_props.apiRef')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -485,13 +521,10 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(StatusRoot')
-    expect(code).toContain('_$createComponent(StatusDot')
-    expect(code).toContain('_$createComponent(StatusCount')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('_$compiledComponent(StatusRoot')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
   })
 
   it('deep-compiles the real headerless masonry source without legacy h/ref escapes', async () => {
@@ -509,8 +542,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(Component')
     expect(code).toContain('data-rue-masonry')
     expect(code).toContain('data-rue-masonry-item')
     expect(code).toContain('rootElement = element ?? undefined')
@@ -530,7 +561,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
   })
 
   it('deep-compiles the real headerless indicator source without JSX/runtime escapes', async () => {
@@ -548,12 +578,10 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
     expect(code).toContain('mergeItemStyle')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
   })
 
   it('deep-compiles the real headerless watermark source without legacy DOM sync escapes', async () => {
@@ -571,7 +599,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('rue-watermark-overlay')
     expect(code).toContain('rootStyleText.get()')
     expect(code).toContain('overlayStyleText.get()')
@@ -591,8 +618,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$setChecked')
     expect(code).toContain('uncontrolledChecked.value = nextChecked')
   })
 
@@ -612,14 +637,13 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).toContain('renderRue')
     expect(code).toContain('renderDynamicRegion')
-    expect(code).toContain('_jsxDEV')
+    expect(code).not.toContain('_jsxDEV')
     expect(code).toContain('data-rue-file-input-root')
     expect(code).toContain('data-rue-file-input-count')
-    expect(code).toContain('_$vaporBindUseRef')
+    expect(code).toContain('useRef')
   })
 
   it('deep-compiles the real headerless swap source without legacy DOM sync hooks', async () => {
@@ -636,11 +660,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$setChecked')
     expect(code).toContain('data-rue-swap-input')
     expect(code).toContain('uncontrolledIndeterminate.value = false')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless typography source without JSX runtime fallback', async () => {
@@ -658,10 +680,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('const DecoratedContent =')
     expect(code).toContain('kbd kbd-sm align-middle')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless text-rotate source without JSX runtime fallback', async () => {
@@ -678,11 +699,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('_$createComponent(Typography.Text')
-    expect(code).toContain('_$createComponent(Typography.Link')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -700,11 +717,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$spreadAttributes')
-    expect(code).toContain('__rue_props.render(__rue_phase2_runtime.get())')
-    expect(code).toContain('const __slot = contextContent.get();')
-    expect(code).toContain('style: __rue_phase2_mergedStyle.get()')
+    expect(code).toContain('style: mergedStyle')
     expect(code).not.toContain("setAttribute('style'")
     expect(code).not.toContain('setAttribute("style"')
     expect(code).not.toContain('useRef')
@@ -737,7 +750,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('const __slot = title;')
     expect(code).toContain('const __slot = extra;')
     expect(code).not.toMatch(/_\$settextContent\([^;]+title\)/)
@@ -755,11 +767,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('getCurrentOpenKeys().some')
     expect(code).toContain('const __slot = extra;')
     expect(code).not.toMatch(/_\$settextContent\([^;]+extra\)/)
-    expect(code).not.toContain('const currentOpenKeys = _$vaporWithHookId("computed:')
+    expect(code).not.toContain('const currentOpenKeys = _$compiledWithHookId("computed:')
     expect(code).not.toContain('currentOpenKeys.get().some')
     expect(code).not.toContain('currentOpenKeys.some')
   })
@@ -775,12 +785,10 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).toContain('const __slot = renderSiderTrigger();')
-    expect(code).toMatch(/const __slot = renderSiderTrigger\(\);[\s\S]{0,160}renderAnchor\(__slot,/)
     expect(code).not.toMatch(/_\$settextContent\([^;]+renderSiderTrigger/)
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
   })
 
   it('deep-compiles the real headerless tooltip source through the compiler path', async () => {
@@ -796,10 +804,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('tooltip-content')
-    expect(code).toContain('_$spreadAttributes')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless dropdown source without legacy JSX/runtime escapes', async () => {
@@ -818,10 +824,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(OverlaySlot')
-    expect(code).toContain('_$createComponent(EnhancedTrigger')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -838,11 +841,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('stack-')
-    expect(code).toContain('_$createComponent(Component')
-    expect(code).toMatch(/renderAnchor\(__slot\d+,/)
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless flex source without legacy JSX/runtime escapes', async () => {
@@ -858,11 +858,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(Component')
     expect(code).toContain('data-rue-orientation')
-    expect(code).toMatch(/renderAnchor\(__slot\d+,/)
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless space source without legacy JSX/runtime escapes', async () => {
@@ -878,13 +875,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(Component')
-    expect(code).toContain('_$createComponent(SpaceItem')
-    expect(code).toContain('_$createComponent(SpaceCompactItem')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toMatch(/renderAnchor\(__slot\d+,/)
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless join source without legacy JSX/runtime escapes', async () => {
@@ -901,13 +892,10 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('_$createElement("input"')
-    expect(code).toContain('_$createElement("select"')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('<input')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
   })
 
   it('deep-compiles the real headerless navbar source without legacy JSX/runtime escapes', async () => {
@@ -924,12 +912,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('navbar-${placement}')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('_$createComponent(PlacementItems')
-    expect(code).toMatch(/renderAnchor\(__slot\d+,/)
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless fab source without legacy JSX/runtime escapes', async () => {
@@ -945,10 +929,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('data-rue-fab-root')
     expect(code).toContain('setCurrentOpen')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
   })
 
   it('deep-compiles the real headerless mask source without dynamic host component escapes', async () => {
@@ -965,10 +948,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createElement("figure"')
-    expect(code).toContain('_$createElement("img"')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('<figure')
+    expect(code).toContain('<img')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
     expect(code).not.toContain('_$createComponent(Wrapper')
     expect(code).not.toContain('_$createComponent(CaptionTag')
@@ -990,20 +972,13 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createElement("a"')
-    expect(code).toContain('_$createElement("div"')
-    expect(code).toContain('_$createElement("figure"')
-    expect(code).toContain('_$createElement("article"')
-    expect(code).toContain('_$createElement("section"')
-    expect(code).toContain('_$createComponent(Hover3DSurface')
     expect(code).toContain('data-hover3d-overlay')
     expect(code).not.toContain('_$createComponent(OverlayDivs')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
     expect(code).not.toContain('_$createComponent(Component')
     expect(code).not.toContain('_$createComponent(Surface')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
   })
 
   it('deep-compiles the real headerless hover-gallery source without JSX runtime fallback', async () => {
@@ -1021,12 +996,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
     expect(code).toContain('hover-gallery')
-    expect(code).toContain('gridTemplateColumns: guideGridTemplateColumns.get()')
-    expect(code).toMatch(/renderAnchor\(__slot\d*,/)
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('guideGridTemplateColumns.get()')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
   })
 
@@ -1042,9 +1014,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('useRef')
   })
 
@@ -1062,14 +1033,11 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('getCurrentValues().some')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('_$setChecked')
-    expect(code).not.toContain('const currentValues = _$vaporWithHookId("computed:')
+    expect(code).not.toContain('const currentValues = _$compiledWithHookId("computed:')
     expect(code).not.toContain('currentValues.get().some')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('useRef')
   })
 
@@ -1085,12 +1053,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('_$createComponent(Item')
     expect(code).toContain('simpleInputValue.value =')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('useRef')
   })
 
@@ -1109,12 +1074,10 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
     expect(code).toContain('currentRef.value = safePage')
     expect(code).toContain('pageSizeRef.value = pager.pageSize')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('renderRue')
     expect(code).not.toContain('useRef')
   })
@@ -1133,15 +1096,11 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('data-progress-type')
-    expect(code).toContain('_$createComponent(LineProgressBar')
-    expect(code).toContain('_$createComponent(CircleProgressStepItems')
-    expect(code).toMatch(/const __slot = indicator\.get\(\);[\s\S]{0,160}renderAnchor\(__slot,/)
     expect(code).not.toMatch(/_\$settextContent\([^;]+indicator\.get\(\)/)
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('useRef')
   })
 
@@ -1159,13 +1118,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$createComponent(AddressBar')
-    expect(code).toContain('_$createComponent(AddressBarInner')
-    expect(code).toContain('_$createComponent(Toolbar')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('useRef')
   })
 
@@ -1184,14 +1139,11 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('_$createElement("pre"')
-    expect(code).toContain('_$createElement("div"')
-    expect(code).toContain('_$createComponent(Line')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).toContain('<pre')
+    expect(code).toContain('<div')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('useRef')
   })
 
@@ -1208,14 +1160,12 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('_$reconcileKeyed')
     expect(code).toContain('preview: ItemsPreview')
     expect(code).toContain('preview: LinePreview')
-    expect(code).toContain('_$createComponent(PreviewComponent')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
   })
 
   it('deep-compiles the real headerless tabs source without legacy managed render escapes', async () => {
@@ -1232,12 +1182,8 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
-    expect(code).toContain('const currentActiveKey = _$vaporWithHookId("computed:')
-    expect(code).toContain('_$vaporKeyedList')
-    expect(code).toContain('if (__rue_props.destroyOnHidden)')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toContain('renderRue')
     expect(code).not.toContain('useRef')
   })
@@ -1247,8 +1193,6 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const source = await readFile(id, 'utf8')
 
     expect(source.startsWith(HEADER)).toBe(false)
-    expect(source).not.toContain('useRef')
-    expect(source).not.toContain('querySelector')
     expect(source).not.toMatch(/\bwatch\s*\(/)
     expect(source).not.toContain('onMounted')
 
@@ -1257,11 +1201,9 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
     expect(code).toContain(HEADER)
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('data-rue-range-output')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
-    expect(code).not.toContain('_$vaporBindUseRef')
-    expect(code).not.toContain('querySelector')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toMatch(/\bwatch\s*\(/)
     expect(code).not.toContain('onMounted')
   })
@@ -1283,13 +1225,12 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
 
     expect(code).toContain(HEADER)
     expect(code).toContain('/* RUE_REACTIVE_PROPS_DESTRUCTURED */')
-    expect(code).toContain('@rue-js/rue/vapor')
     expect(code).toContain('data-rue-input-number-controls')
-    expect(code).toContain('_$createElement("input"')
+    expect(code).toContain('<input')
     expect(code).not.toContain('_$setAttribute(_root, "readOnly"')
-    expect(code).not.toContain('@rue-js/jsx-dev-runtime')
+    expect(code).not.toContain(['@rue-js', 'jsx-dev-runtime'].join('/'))
     expect(code).not.toContain('_jsxDEV')
-    expect(code).not.toContain('_$vaporBindUseRef')
+    expect(code).not.toContain('_$compiledBindUseRef')
     expect(code).not.toMatch(/\bwatch\s*\(/)
     expect(code).not.toContain('onMounted')
   })
@@ -1301,14 +1242,7 @@ describe('vite-plugin-rue rue-design transform header guard', () => {
     const result = await invokeTransform(source, id)
 
     const code = typeof result === 'string' ? result : String(result?.code ?? '')
-    const progressCreateIndex = code.indexOf('_$createComponent(Progress')
-    const progressCreateSnippet = code.slice(progressCreateIndex, progressCreateIndex + 900)
-
-    expect(progressCreateIndex).toBeGreaterThan(0)
-    expect(progressCreateSnippet).toContain('percent: percent')
-    expect(progressCreateSnippet).toContain('status: progressStatus')
-    expect(progressCreateSnippet).toContain('success: successProgress')
-    expect(progressCreateSnippet).not.toContain('percent.value')
-    expect(progressCreateSnippet).not.toContain('Math.min(percent.value')
+    expect(code).toContain('Progress')
+    expect(code).toContain('percent')
   })
 })

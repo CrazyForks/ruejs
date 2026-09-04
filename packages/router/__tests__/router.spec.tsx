@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { type FC, nextTick, onMounted, onUnmounted, ref, useApp } from '@rue-js/rue'
+import { createCompiledDynamic } from '@rue-js/runtime/internal'
 
 import {
   NavigationFailureType,
@@ -30,6 +33,10 @@ afterEach(() => {
 })
 
 describe('rue router', () => {
+  it('has no Vapor package or subpath imports in its production entry', () => {
+    const source = readFileSync(resolve(import.meta.dirname, '../src/index.tsx'), 'utf8')
+    expect(source).not.toMatch(/@rue-js\/runtime-vapor|@rue-js\/rue\/vapor|runtime\.vapor/)
+  })
   it('matches nested named routes, decodes params, and merges route meta', async () => {
     const router = createRouter({
       history: createMemoryHistory('/guide/router/overview'),
@@ -260,34 +267,40 @@ describe('rue router', () => {
 
   it('renders RouterView and navigates with RouterLink inside an app', async () => {
     const HomePage: FC = () => <p data-testid="page">Home</p>
-    const PostPage: FC<{ params: { id: string } }> = ({ params }) => (
-      <p data-testid="page">Post {params.id}</p>
-    )
+    const PostPage: FC<{ params: { id: string } }> = ({ params }) =>
+      createCompiledDynamic('p', { 'data-testid': 'page', children: `Post ${params.id}` }) as any
     const RouteReader: FC = () => {
       const route = useRoute()
       const router = useRouter()
 
-      return (
-        <p data-testid="current">
-          {route.get()?.path} / {router.currentPath.get()}
-        </p>
-      )
+      return createCompiledDynamic('p', {
+        'data-testid': 'current',
+        children: `${route.get()?.path} / ${router.currentPath.get()}`,
+      }) as any
     }
-    const App: FC = () => (
-      <main>
-        <RouteReader />
-        <RouterLink data-testid="post-link" to={{ name: 'post', params: { id: 7 } }}>
-          Open Post
-        </RouterLink>
-        <RouterLink data-testid="home-link" to="/" replace>
-          Home
-        </RouterLink>
-        <RouterLink data-testid="home-query-link" to="/?panel=search">
-          Home Query
-        </RouterLink>
-        <RouterView />
-      </main>
-    )
+    const App: FC = () =>
+      createCompiledDynamic('main', {
+        children: [
+          createCompiledDynamic(RouteReader, {}),
+          createCompiledDynamic(RouterLink, {
+            'data-testid': 'post-link',
+            to: { name: 'post', params: { id: 7 } },
+            children: 'Open Post',
+          }),
+          createCompiledDynamic(RouterLink, {
+            'data-testid': 'home-link',
+            to: '/',
+            replace: true,
+            children: 'Home',
+          }),
+          createCompiledDynamic(RouterLink, {
+            'data-testid': 'home-query-link',
+            to: '/?panel=search',
+            children: 'Home Query',
+          }),
+          createCompiledDynamic(RouterView, {}),
+        ],
+      }) as any
 
     const router = createRouter({
       history: createMemoryHistory('/'),
@@ -357,6 +370,33 @@ describe('rue router', () => {
     expect(container.querySelector('[data-testid="page"]')?.textContent).toBe('Home')
   })
 
+  it('switches RouterView between distinct compiled route component types', async () => {
+    const FirstPage: FC = () => <section data-testid="dynamic-route">First</section>
+    const SecondPage: FC = () => <article data-testid="dynamic-route">Second</article>
+    const router = createRouter({
+      history: createMemoryHistory('/first'),
+      routes: [
+        { path: '/first', component: FirstPage },
+        { path: '/second', component: SecondPage },
+      ],
+    })
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    useApp(RouterView).use(router).mount(container)
+    await flushRender()
+
+    expect(container.querySelector('[data-testid="dynamic-route"]')?.tagName).toBe('SECTION')
+    expect(container.textContent).toBe('First')
+
+    await router.push('/second')
+    await router.isReady()
+    await flushRender()
+
+    expect(container.querySelector('[data-testid="dynamic-route"]')?.tagName).toBe('ARTICLE')
+    expect(container.textContent).toBe('Second')
+  })
+
   it('keeps a rapid editor return single-mounted when the root mount is retried', async () => {
     let resolveEditorDelay: (() => void) | undefined
     const editorDelay = new Promise<void>(resolve => {
@@ -395,8 +435,8 @@ describe('rue router', () => {
     const router = createRouter({
       history: createMemoryHistory('/editor'),
       routes: [
-        { path: '/editor', component: () => <EditorPage /> },
-        { path: '/open', component: () => <OpenPage /> },
+        { path: '/editor', component: () => createCompiledDynamic(EditorPage, {}) as any },
+        { path: '/open', component: () => createCompiledDynamic(OpenPage, {}) as any },
       ],
     })
     const container = document.createElement('div')
