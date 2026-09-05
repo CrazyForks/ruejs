@@ -879,7 +879,7 @@ const runAppStaticBuild = async () => {
 
           if (ssrErrors.length) {
             console.warn(
-              `[app-static-build] ${ssrErrors.length} route(s) used the build-time static DOM snapshot after SSR failed:`,
+              `[app-static-build] ${ssrErrors.length} route(s) required a build-time static DOM snapshot after SSR failed (${snapshotted} recovered, ${fatalErrors.length} failed):`,
             )
             for (const { route, error } of ssrErrors.slice(0, 10)) {
               console.warn(`  ${route}: ${formatStaticError(error).split('\n')[0]}`)

@@ -2,6 +2,7 @@
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -49,6 +50,10 @@ describe('@rue-js/server-renderer/static client snapshots', () => {
       `
 const response = await fetch('/assets/message.json')
 const data = await response.json()
+// Vite's preload helper resolves a root-based asset against the file module URL.
+const preloadResponse = await fetch(new URL('/assets/message.json', ${JSON.stringify(pathToFileURL(path.join(outDir, 'assets/app.mjs')).href)}).href)
+const preloadData = await preloadResponse.json()
+if (preloadData.message !== data.message) throw new Error('Preloaded asset did not match')
 await new Promise(resolve => requestIdleCallback(resolve))
 
 document.querySelector('#app').innerHTML = [

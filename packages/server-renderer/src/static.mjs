@@ -187,6 +187,10 @@ const resolveStaticAssetFile = (outDir, input, baseUrl) => {
 
   if (parsed.protocol === 'file:') {
     const file = fileURLToPath(parsed)
+    // Bundled preload helpers resolve root-based assets against import.meta.url in Node.
+    if (!parsed.host && parsed.pathname.startsWith('/assets/')) {
+      return resolveOutDirFile(outDir, parsed.pathname)
+    }
     return isInsideDir(outDir, file) ? file : null
   }
 
