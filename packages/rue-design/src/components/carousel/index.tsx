@@ -612,6 +612,8 @@ const Carousel: FC<CarouselProps> = ({
   }
 
   const syncLayout = (dontAnimate = false) => {
+    // SSR refs point to server nodes without browser layout/query APIs.
+    if (typeof rootElement?.querySelector !== 'function') return
     syncRef()
     if (mergedEffect === 'fade') {
       syncFadeLayout(dontAnimate)
@@ -625,6 +627,7 @@ const Carousel: FC<CarouselProps> = ({
   }
 
   const requestLayoutSync = (dontAnimate = true) => {
+    if (typeof rootElement?.querySelector !== 'function') return
     const request = ++layoutSyncRequest
     const syncIfLatest = () => {
       if (request !== layoutSyncRequest) return

@@ -25,6 +25,11 @@ void onCleanup
 const COMPILED_OWNER = Symbol('rue.compiledOwner')
 const COMPILED_MOUNTED = Symbol('rue.compiledMounted')
 
+const isServerRendering = () => {
+  const count = (globalThis as Record<string, unknown>).__rue_is_server_rendering__
+  return typeof count === 'number' && count > 0
+}
+
 type OwnedCompiledRootHandle = CompiledRootHandle & { [COMPILED_OWNER]?: CompiledOwner }
 type StateOptions<T> = {
   equals?: (previous: T, next: T) => boolean
@@ -233,9 +238,11 @@ export const _$compiledUseEffect = (
 }
 
 export const onBeforeMount = (callback: () => void): void => {
+  if (isServerRendering()) return
   registerLifecycle('beforeMount', callback)
 }
 export const onMounted = (callback: () => void): void => {
+  if (isServerRendering()) return
   const owner = getCurrentOwner()
   if (owner === undefined) queueMicrotask(callback)
   else registerLifecycle('mounted', callback)

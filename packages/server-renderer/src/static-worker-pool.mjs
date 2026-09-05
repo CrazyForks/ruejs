@@ -2,9 +2,10 @@ import { fork } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, URL as NodeURL } from 'node:url'
 
-const defaultWorkerUrl = new URL('../src/static-worker.mjs', import.meta.url)
+// This is a Node entry point, not a browser asset for Vite to inline.
+const defaultWorkerUrl = new NodeURL('../src/static-worker.mjs', import.meta.url)
 const defaultWorkerPathname = decodeURIComponent(defaultWorkerUrl.pathname)
 const defaultWorkerFile = (() => {
   if (defaultWorkerUrl.protocol === 'file:') return fileURLToPath(defaultWorkerUrl)

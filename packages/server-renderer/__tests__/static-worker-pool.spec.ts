@@ -3,6 +3,8 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -67,6 +69,32 @@ afterEach(async () => {
 })
 
 describe('@rue-js/server-renderer/static server bundle render pool', () => {
+  it('starts the default worker from the built package in Node', async () => {
+    const { root, bundleFile } = await createFixture()
+    const runnerFile = path.join(root, 'runner.mjs')
+    const staticEntry = path.resolve(
+      'packages/server-renderer/dist/server-renderer.static.esm-bundler.js',
+    )
+    await writeFile(
+      runnerFile,
+      `
+import { pathToFileURL } from 'node:url'
+const { createServerBundleRenderPool } = await import(pathToFileURL(${JSON.stringify(staticEntry)}))
+const pool = createServerBundleRenderPool({ serverBundleFile: ${JSON.stringify(bundleFile)} })
+try {
+  console.log(await pool.render({ route: '/built', outputFile: ${JSON.stringify(path.join(root, 'built.html'))} }))
+} finally {
+  await pool.close()
+}
+`,
+    )
+    const { stdout } = await promisify(execFile)(process.execPath, [runnerFile], {
+      cwd: root,
+      timeout: 15000,
+    })
+    expect(stdout).toContain('data-route="/built"')
+  }, 20000)
+
   it('reuses one loaded server bundle without leaking task globals', async () => {
     const { root, bundleFile, loadLogFile } = await createFixture()
     const pool = createServerBundleRenderPool({
