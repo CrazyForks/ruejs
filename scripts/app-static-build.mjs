@@ -789,6 +789,8 @@ const runAppStaticBuild = async () => {
 
     await build({
       configFile: viteConfigFile,
+      // Route HTML shares one template at every depth, so assets must resolve from the site root.
+      base: '/',
       plugins: [
         createClientRuntimeAssetCollectorPlugin(
           { app: clientEntryFile, islands: islandClientEntryFile, docs: docsClientEntryFile },

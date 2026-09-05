@@ -737,100 +737,142 @@ export default HelloWorld`}
               className="h-full"
               lang="ts"
               code={`/* RUE_TRANSFORMED */
-import { vapor, renderBetween, _$createComponent, _$createElement, _$createComment, _$createTextNode, _$appendChild, _$setClassName } from "@rue-js/rue";
-const Hello = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        _$setClassName(_root, "card bg-primary text-primary-content shadow-sm");
-        const _el1 = _$createElement("div");
-        _$appendChild(_root, _el1);
-        _$setClassName(_el1, "card-body items-center text-center");
-        const _el2 = _$createElement("div");
-        _$appendChild(_el1, _el2);
-        _$setClassName(_el2, "text-3xl font-extrabold");
-        _$appendChild(_el2, _$createTextNode("Hello"));
-        const _el3 = _$createElement("div");
-        _$appendChild(_el1, _el3);
-        _$setClassName(_el3, "mt-2 text-sm opacity-90");
-        _$appendChild(_el3, _$createTextNode("Hello component"));
-        return _root;
-    });
-const World = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        _$setClassName(_root, "card bg-base-100 text-base-content border border-base-200 shadow-sm");
-        const _el4 = _$createElement("div");
-        _$appendChild(_root, _el4);
-        _$setClassName(_el4, "card-body items-center text-center");
-        const _el5 = _$createElement("div");
-        _$appendChild(_el4, _el5);
-        _$setClassName(_el5, "text-3xl font-extrabold");
-        _$appendChild(_el5, _$createTextNode("World"));
-        const _el6 = _$createElement("div");
-        _$appendChild(_el4, _el6);
-        _$setClassName(_el6, "mt-2 text-sm text-base-content/70");
-        _$appendChild(_el6, _$createTextNode("World component"));
-        return _root;
-    });
-const HelloRue = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        _$setClassName(_root, "card bg-accent text-accent-content shadow-sm");
-        const _el7 = _$createElement("div");
-        _$appendChild(_root, _el7);
-        _$setClassName(_el7, "card-body items-center text-center");
-        const _el8 = _$createElement("div");
-        _$appendChild(_el7, _el8);
-        _$setClassName(_el8, "text-3xl font-extrabold");
-        _$appendChild(_el8, _$createTextNode("Hi"));
-        const _el9 = _$createElement("div");
-        _$appendChild(_el7, _el9);
-        _$setClassName(_el9, "mt-2 text-sm opacity-90");
-        _$appendChild(_el9, _$createTextNode("Rue"));
-        return _root;
-    });
-const IAmRue = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        _$setClassName(_root, "card bg-base-100 text-base-content border border-base-200 shadow-sm");
-        const _el10 = _$createElement("div");
-        _$appendChild(_root, _el10);
-        _$setClassName(_el10, "card-body items-center text-center");
-        const _el11 = _$createElement("div");
-        _$appendChild(_el10, _el11);
-        _$setClassName(_el11, "text-3xl font-extrabold");
-        _$appendChild(_el11, _$createTextNode("Yes"));
-        const _el12 = _$createElement("div");
-        _$appendChild(_el10, _el12);
-        _$setClassName(_el12, "mt-2 text-sm text-base-content/70");
-        _$appendChild(_el12, _$createTextNode("My name is Rue"));
-        return _root;
-    });
-const HelloWorld = ()=>vapor(()=>{
-        const _root = _$createElement("div");
-        _$setClassName(_root, "grid gap-6");
-        const _list1 = _$createComment("rue:component:start");
-        const _list2 = _$createComment("rue:component:end");
-        _$appendChild(_root, _list1);
-        _$appendChild(_root, _list2);
-        const __slot3 = _$createComponent(Hello, {});
-        renderBetween(__slot3, _root, _list1, _list2);
-        const _list4 = _$createComment("rue:component:start");
-        const _list5 = _$createComment("rue:component:end");
-        _$appendChild(_root, _list4);
-        _$appendChild(_root, _list5);
-        const __slot6 = _$createComponent(World, {});
-        renderBetween(__slot6, _root, _list4, _list5);
-        const _list7 = _$createComment("rue:component:start");
-        const _list8 = _$createComment("rue:component:end");
-        _$appendChild(_root, _list7);
-        _$appendChild(_root, _list8);
-        const __slot9 = _$createComponent(HelloRue, {});
-        renderBetween(__slot9, _root, _list7, _list8);
-        const _list10 = _$createComment("rue:component:start");
-        const _list11 = _$createComment("rue:component:end");
-        _$appendChild(_root, _list10);
-        _$appendChild(_root, _list11);
-        const __slot12 = _$createComponent(IAmRue, {});
-        renderBetween(__slot12, _root, _list10, _list11);
-        return _root;
-    });
+import { _$template, _$compiledCreateDocumentFragment, _$compiledAppendChild, _$compiledBatch, _$compiledCreateElement, _$compiledCreateTextNode, _$compiledRoot, _$mountCompiledComponent, _$withCompiledPropsUpdater } from "@rue-js/rue/internal/compiler";
+const _$getTemplate5 = _$template('<div class="grid gap-6"><!--rue:opaque-hole:0--><!--rue:opaque-hole:1--><!--rue:opaque-hole:2--><!--rue:opaque-hole:3--></div>');
+const Hello = ()=>{
+    return _$withCompiledPropsUpdater(_$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _root = _$compiledCreateElement("div", __rue_parent_context);
+        _root.className = "card bg-primary text-primary-content shadow-sm";
+        const _el1 = _$compiledCreateElement("div", _root);
+        _$compiledAppendChild(_root, _el1);
+        _el1.className = "card-body items-center text-center";
+        const _el2 = _$compiledCreateElement("div", _el1);
+        _$compiledAppendChild(_el1, _el2);
+        _el2.className = "text-3xl font-extrabold";
+        _$compiledAppendChild(_el2, _$compiledCreateTextNode("Hello"));
+        const _el3 = _$compiledCreateElement("div", _el1);
+        _$compiledAppendChild(_el1, _el3);
+        _el3.className = "mt-2 text-sm opacity-90";
+        _$compiledAppendChild(_el3, _$compiledCreateTextNode("Hello component"));
+        return {
+            __rue_compiled_host: _root,
+            __rue_compiled_roots: [
+                _root
+            ]
+        };
+    }, {
+        __rue_compiled_explicit_roots: true
+    })), (_$rueNextProps)=>_$compiledBatch(()=>{}));
+};
+const World = ()=>{
+    return _$withCompiledPropsUpdater(_$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _root = _$compiledCreateElement("div", __rue_parent_context);
+        _root.className = "card bg-base-100 text-base-content border border-base-200 shadow-sm";
+        const _el4 = _$compiledCreateElement("div", _root);
+        _$compiledAppendChild(_root, _el4);
+        _el4.className = "card-body items-center text-center";
+        const _el5 = _$compiledCreateElement("div", _el4);
+        _$compiledAppendChild(_el4, _el5);
+        _el5.className = "text-3xl font-extrabold";
+        _$compiledAppendChild(_el5, _$compiledCreateTextNode("World"));
+        const _el6 = _$compiledCreateElement("div", _el4);
+        _$compiledAppendChild(_el4, _el6);
+        _el6.className = "mt-2 text-sm text-base-content/70";
+        _$compiledAppendChild(_el6, _$compiledCreateTextNode("World component"));
+        return {
+            __rue_compiled_host: _root,
+            __rue_compiled_roots: [
+                _root
+            ]
+        };
+    }, {
+        __rue_compiled_explicit_roots: true
+    })), (_$rueNextProps)=>_$compiledBatch(()=>{}));
+};
+const HelloRue = ()=>{
+    return _$withCompiledPropsUpdater(_$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _root = _$compiledCreateElement("div", __rue_parent_context);
+        _root.className = "card bg-accent text-accent-content shadow-sm";
+        const _el7 = _$compiledCreateElement("div", _root);
+        _$compiledAppendChild(_root, _el7);
+        _el7.className = "card-body items-center text-center";
+        const _el8 = _$compiledCreateElement("div", _el7);
+        _$compiledAppendChild(_el7, _el8);
+        _el8.className = "text-3xl font-extrabold";
+        _$compiledAppendChild(_el8, _$compiledCreateTextNode("Hi"));
+        const _el9 = _$compiledCreateElement("div", _el7);
+        _$compiledAppendChild(_el7, _el9);
+        _el9.className = "mt-2 text-sm opacity-90";
+        _$compiledAppendChild(_el9, _$compiledCreateTextNode("Rue"));
+        return {
+            __rue_compiled_host: _root,
+            __rue_compiled_roots: [
+                _root
+            ]
+        };
+    }, {
+        __rue_compiled_explicit_roots: true
+    })), (_$rueNextProps)=>_$compiledBatch(()=>{}));
+};
+const IAmRue = ()=>{
+    return _$withCompiledPropsUpdater(_$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _root = _$compiledCreateElement("div", __rue_parent_context);
+        _root.className = "card bg-base-100 text-base-content border border-base-200 shadow-sm";
+        const _el10 = _$compiledCreateElement("div", _root);
+        _$compiledAppendChild(_root, _el10);
+        _el10.className = "card-body items-center text-center";
+        const _el11 = _$compiledCreateElement("div", _el10);
+        _$compiledAppendChild(_el10, _el11);
+        _el11.className = "text-3xl font-extrabold";
+        _$compiledAppendChild(_el11, _$compiledCreateTextNode("Yes"));
+        const _el12 = _$compiledCreateElement("div", _el10);
+        _$compiledAppendChild(_el10, _el12);
+        _el12.className = "mt-2 text-sm text-base-content/70";
+        _$compiledAppendChild(_el12, _$compiledCreateTextNode("My name is Rue"));
+        return {
+            __rue_compiled_host: _root,
+            __rue_compiled_roots: [
+                _root
+            ]
+        };
+    }, {
+        __rue_compiled_explicit_roots: true
+    })), (_$rueNextProps)=>_$compiledBatch(()=>{}));
+};
+const HelloWorld = ()=>{
+    return _$withCompiledPropsUpdater(_$compiledRoot(Object.assign((__rue_parent_context)=>{
+        const _fragment = _$getTemplate5().content.cloneNode(true);
+        const _root = _fragment.firstChild;
+        const _el13 = _root.childNodes[0];
+        const _el14 = _el13.parentNode;
+        const _el15 = _root.childNodes[1];
+        const _el16 = _el15.parentNode;
+        const _el17 = _root.childNodes[2];
+        const _el18 = _el17.parentNode;
+        const _el19 = _root.childNodes[3];
+        const _el20 = _el19.parentNode;
+        const _el21 = _$compiledCreateDocumentFragment(_el14);
+        _$mountCompiledComponent(_el21, Hello, ()=>({}));
+        _el14.insertBefore(_el21, _el13);
+        const _el22 = _$compiledCreateDocumentFragment(_el16);
+        _$mountCompiledComponent(_el22, World, ()=>({}));
+        _el16.insertBefore(_el22, _el15);
+        const _el23 = _$compiledCreateDocumentFragment(_el18);
+        _$mountCompiledComponent(_el23, HelloRue, ()=>({}));
+        _el18.insertBefore(_el23, _el17);
+        const _el24 = _$compiledCreateDocumentFragment(_el20);
+        _$mountCompiledComponent(_el24, IAmRue, ()=>({}));
+        _el20.insertBefore(_el24, _el19);
+        return {
+            __rue_compiled_host: _root,
+            __rue_compiled_roots: [
+                _root
+            ]
+        };
+    }, {
+        __rue_compiled_explicit_roots: true
+    })), (_$rueNextProps)=>_$compiledBatch(()=>{}));
+};
 export default HelloWorld;`}
             />
           </div>

@@ -9,22 +9,18 @@
 [![Build and Test](https://github.com/hunzhiwange/ruejs/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/hunzhiwange/ruejs/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Rue.js（发音 /ruː/，中文名后悔药.js）是一个面向 JSX/TSX 的轻量前端框架，追求简单直观的开发体验，同时提供默认细粒度响应式渲染路径、路由、基于 Rust / WebAssembly 的运行时扩展，以及 Rust 实现的响应式系统与原生 DOM 编译能力。
+Rue.js（发音 /ruː/，中文名后悔药.js）是一个面向 JSX/TSX 的轻量前端框架。它将 JSX 编译为原生 DOM 操作，通过 JavaScript 运行时提供细粒度响应式更新。
 
-它适合希望保留 React 风格 JSX 开发方式，同时获得 Vue 式响应式 API 与更贴近真实 DOM 更新模型的项目。
+你可以使用熟悉的 JSX 语法编写界面，通过 `ref`、`reactive` 和 `computed` 管理状态，并按需接入路由、组件库和全栈应用工具。
 
 ## 特性
 
-- 轻量、直观的 API，适合渐进式接入
-- 默认细粒度响应式渲染路径，围绕真实 DOM 做最小更新
-- JSX / TSX 一等支持，无需额外模板语法
-- 类似 Vue 的响应式 API，支持 `ref`、`reactive`、`computed`
-- 提供基于 Rust / WebAssembly 的运行时，可扩展编译渲染能力
-- 提供 Rust 实现的响应式系统，覆盖信号、依赖追踪与调度能力
-- 提供 Rust / Wasm 原生 DOM 编译器，将 JSX 转换为更贴近真实 DOM 的产物
-- 官方路由、设计组件库与构建插件协同工作
-- 提供 Text.js 全栈应用框架，覆盖 App Router、SSR、API 路由与 Workers 部署
-- 提供 `@rue-js/runtime-vapor` 与 `@rue-js/swc-plugin-rue` Rust 侧核心能力
+- **原生 DOM 编译**：通过 SWC 编译插件将 JSX 转换为 DOM 创建与更新代码
+- **细粒度响应式**：由 JavaScript 运行时负责依赖追踪、调度与 DOM 更新
+- **熟悉的开发体验**：支持 JSX/TSX 与 Vue 风格的响应式 API，无需额外模板语法
+- **Vite 集成**：通过官方插件配置 JSX 编译与开发构建流程
+- **配套生态**：提供官方路由、设计系统与组件库
+- **全栈应用**：Text.js 提供文件系统路由、SSR、API 路由与 Cloudflare Workers 部署支持
 
 ## 快速开始
 
@@ -32,7 +28,7 @@ Rue 提供官方脚手架，也支持接入现有 Vite 项目。
 
 ### 创建新项目
 
-前置条件：Node.js >= 22.12.0
+前置条件：Node.js >= 22.22.0
 
 ```sh
 pnpm create rue@latest
@@ -52,7 +48,8 @@ pnpm run dev
 ### 接入现有项目
 
 ```sh
-pnpm add @rue-js/rue @rue-js/router
+pnpm add @rue-js/rue
+pnpm add -D vite @rue-js/vite-plugin-rue
 ```
 
 在 Vite 配置中通过编译器插件启用 Rue JSX：
@@ -84,7 +81,11 @@ useError({ overlay: true, console: true })
 useApp(Counter).mount('#app')
 ```
 
-如果你需要页面级路由，可以继续接入 `@rue-js/router`：
+需要页面级路由时，先安装 `@rue-js/router`：
+
+```sh
+pnpm add @rue-js/router
+```
 
 ```ts
 import { useComponent } from '@rue-js/rue'
@@ -116,25 +117,25 @@ Text.js 是 Rue 生态中的全栈应用框架。它基于 Vite、Rue、RSC 与�
 
 仓库中也包含可直接运行的文档站与示例页面，位于 [app](./app) 和 [app/pages](./app/pages) 下。
 
-## Packages
+## 主要包
 
 这是一个基于 pnpm workspace 的 monorepo，主要包包括：
 
 - `@rue-js/rue`：框架核心与 JSX 入口
 - `@rue-js/router`：官方路由
 - `@rue-js/text`：Text.js 全栈应用框架与 CLI
-- `@rue-js/runtime-vapor`：Rust / WebAssembly 运行时实现
+- `@rue-js/runtime`：JavaScript 响应式与 DOM 渲染运行时
 - `@rue-js/design`：设计系统与组件库
 - `@rue-js/vite-plugin-rue`：Vite 集成
-- `@rue-js/swc-plugin-rue`：SWC JSX 转换插件
+- `@rue-js/swc-plugin-rue`：基于 Rust 的 SWC 插件，用于构建时 JSX 编译
 
 ## 本地开发
 
 本仓库使用 `pnpm` 管理依赖。
 
 ```sh
-make dev
 pnpm install
+make dev
 pnpm run app-dev
 pnpm run app-build
 pnpm run app-preview
@@ -150,13 +151,6 @@ pnpm run check
 pnpm run release-check
 ```
 
-如果你在开发 `runtime-vapor`，还可以进入对应包执行 Rust / Wasm 相关命令：
-
-```sh
-cd packages/runtime-vapor
-npm test
-```
-
 ### 使用本地开发版运行 js-framework-benchmark
 
 当当前 Rue 版本尚未发布到 npm 时，可以把 workspace 中的本地包临时安装到
@@ -167,8 +161,7 @@ pnpm benchmark:js-framework:install-local -- \
   ../js-framework-benchmark/frameworks/keyed/rue-signal
 ```
 
-也可以传入 `rue-signal/package.json` 的绝对路径。该命令会构建 Rue Runtime、Wasm
-运行时和 SWC 插件，打包相关的 `@rue-js/*` workspace 包，以不写入
+也可以传入 `rue-signal/package.json` 的绝对路径。该命令会构建 Rue 运行时和 SWC 编译插件，打包相关的 `@rue-js/*` workspace 包，以不写入
 `package.json` 和 `package-lock.json` 的方式安装它们，并执行 `npm run build-prod`。
 
 安装完成后，在 `js-framework-benchmark` 根目录启动服务器并运行单框架测试：
@@ -195,7 +188,7 @@ pnpm run check
 pnpm run test
 ```
 
-如果改动涉及构建、发布或 Wasm 运行时，请补充对应包级验证。
+如果改动涉及构建、发布或编译器，请补充对应包级验证。
 
 ## 许可证
 
