@@ -13,6 +13,7 @@ export {
   _$compiledSignal,
   _$compiledText,
   _$compiledWithHookId,
+  _$compiledListMemo,
   _$mountCompiledKeyedRow,
   _$mountCompiledSlotAt,
   _$mountCompiledSlotFactory,

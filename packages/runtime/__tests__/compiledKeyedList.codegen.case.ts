@@ -6,25 +6,10 @@ import { resolve } from 'node:path'
 import swc from '@swc/core'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import {
-  createOwner,
-  disposeOwner,
-  effect,
-  runWithOwner,
-  signal,
-  _$compiledText,
-} from '../src/internal-reactive'
+import { createOwner, disposeOwner, runWithOwner, signal } from '../src/internal-reactive'
 import { _$compiledRoot } from '../src/compiled-root'
-import { _$compiledSignal, _$withCompiledPropsUpdater } from '../src/compiled-component'
-import { _$mountCompiledKeyedRow, _$reconcileKeyed } from '../src/compiled-keyed-list'
-import { _$mountCompiledSlotFactory } from '../src/compiler-runtime/mount'
-import { template as _$template } from '../src/compiler-runtime/dom.browser'
-import {
-  _$compiledAppendChild,
-  _$compiledCreateComment,
-  _$compiledCreateElement,
-  _$compiledCreateTextNode,
-} from '../src/internal'
+import * as internalRuntime from '../src/internal'
+import * as compactRuntime from '../src/compiler-internal'
 
 type Row = { id: number; label: string; active?: boolean }
 
@@ -80,63 +65,23 @@ const stripModuleSyntax = (output: string): string =>
     .replace(/import\s*\{[^}]*\}\s*from\s*["'][^"']+["'];?/g, '')
     .replace(/export\s+const\s+/g, 'const ')
 
-const evaluateView = (output: string, rows: ReturnType<typeof signal<Row[]>>) => {
+const evaluateView = (
+  output: string,
+  rows: ReturnType<typeof signal<Row[]>>,
+  bindings: Record<string, unknown> = {},
+  runtime: Record<string, unknown> = internalRuntime,
+) => {
+  const names = new Set<string>()
+  for (const match of output.matchAll(/import\s*\{([^}]*)\}\s*from\s*["'][^"']+["']/g)) {
+    for (const name of match[1].split(',')) names.add(name.trim())
+  }
+  const helpers = [...names]
   const executable = `${stripModuleSyntax(output)}\nreturn View;`
-  const factory = new Function(
-    'rows',
-    'effect',
-    '_$reconcileKeyed',
-    '_$compiledRoot',
-    '_$compiledCreateElement',
-    '_$compiledCreateTextNode',
-    '_$compiledCreateComment',
-    '_$compiledAppendChild',
-    '_$template',
-    '_$compiledText',
-    '_$mountCompiledKeyedRow',
-    '_$mountCompiledSlotFactory',
-    '_$compiledSignal',
-    '_$withCompiledPropsUpdater',
-    'vapor',
-    '_$createElement',
-    executable,
-  ) as (
-    rows: ReturnType<typeof signal<Row[]>>,
-    effect: typeof import('../src/internal-reactive').effect,
-    reconcile: typeof _$reconcileKeyed,
-    compiledRoot: typeof _$compiledRoot,
-    compiledCreateElement: typeof _$compiledCreateElement,
-    compiledCreateTextNode: typeof _$compiledCreateTextNode,
-    compiledCreateComment: typeof _$compiledCreateComment,
-    compiledAppendChild: typeof _$compiledAppendChild,
-    template: typeof _$template,
-    compiledText: typeof _$compiledText,
-    mountCompiledKeyedRow: typeof _$mountCompiledKeyedRow,
-    mountCompiledSlotFactory: typeof _$mountCompiledSlotFactory,
-    compiledSignal: typeof _$compiledSignal,
-    withCompiledPropsUpdater: typeof _$withCompiledPropsUpdater,
-    vapor: (setup: (parent: ParentNode) => Node) => (parent: ParentNode) => Node,
-    createElement: (tag: string) => HTMLElement,
-  ) => () => ReturnType<typeof _$compiledRoot>
-
-  return factory(
+  return new Function('rows', ...Object.keys(bindings), ...helpers, executable)(
     rows,
-    effect,
-    _$reconcileKeyed,
-    _$compiledRoot,
-    _$compiledCreateElement,
-    _$compiledCreateTextNode,
-    _$compiledCreateComment,
-    _$compiledAppendChild,
-    _$template,
-    _$compiledText,
-    _$mountCompiledKeyedRow,
-    _$mountCompiledSlotFactory,
-    _$compiledSignal,
-    _$withCompiledPropsUpdater,
-    setup => setup,
-    tag => document.createElement(tag),
-  )
+    ...Object.values(bindings),
+    ...helpers.map(name => runtime[name]),
+  ) as () => ReturnType<typeof _$compiledRoot>
 }
 
 const flushCompiledEffects = async (): Promise<void> => {
@@ -159,6 +104,164 @@ afterEach(() => {
 })
 
 describe('compiled keyed list codegen', () => {
+  it.each(
+    ['v-memo', 'r-memo'].flatMap(directive =>
+      ['map', 'block', 'for'].map(shape => [directive, shape]),
+    ),
+  )('preserves keyed identity and memo dependencies with %s / %s', async (directive, shape) => {
+    let input = source.replace(
+      'key={row.id}',
+      `key={row.id} ${directive}={[row.label, row.active]}`,
+    )
+    if (shape === 'block')
+      input = input.replace('row => (', 'row => { return (').replace('))}', '); })}')
+    if (shape === 'for')
+      input = `export const View = () => <tbody><tr ${directive.startsWith('v') ? 'v-for' : 'r-for'}="row in rows.get()" key={row.id} ${directive}={[row.label, row.active]} data-id={row.id}><td>{row.label}</td></tr></tbody>`
+    const output = compile(input)
+    expect(output).toContain('_$reconcileKeyed')
+    const rows = signal<Row[]>([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    const owner = createOwner()
+    const host = document.createElement('table')
+    document.body.appendChild(host)
+    runWithOwner(owner, () => {
+      const handle = evaluateView(output, rows)()
+      host.appendChild(handle.__rue_compiled_mount(host)!)
+    })
+    const original = [...host.querySelectorAll('tr')]
+    rows.set([rows.peek()[1], rows.peek()[0]])
+    await flushCompiledEffects()
+    expect([...host.querySelectorAll('tr')]).toEqual([original[1], original[0]])
+    rows.update(items => items.map(row => (row.id === 1 ? { ...row, label: 'ONE' } : row)))
+    await flushCompiledEffects()
+    expect(original[0].textContent).toBe('ONE')
+    expect(host.querySelectorAll('tr')[1]).toBe(original[0])
+    rows.peek()[0].label = 'TWO'
+    rows.set(rows.peek().slice())
+    await flushCompiledEffects()
+    expect(original[1].textContent).toBe('TWO')
+    rows.set([])
+    await flushCompiledEffects()
+    expect(host.querySelectorAll('tr')).toHaveLength(0)
+    disposeOwner(owner)
+  })
+
+  it.each([
+    ['v-memo', internalRuntime],
+    ['r-memo', internalRuntime],
+    ['v-memo', compactRuntime],
+    ['r-memo', compactRuntime],
+  ] as const)(
+    'skips unchanged rows and tracks external selection with %s (%#)',
+    async (directive, runtime) => {
+      const { signal } = runtime
+      const output = compile(`export const View = () => <tbody>{rows.get().map(row =>
+      <tr key={row.id} ${directive}={[row.label, row.id === selected.get()]} data-id={row.id}>
+        <td>{capture(row.id, row.label + ':' + (row.id === selected.get()) + ':' + unrelated.get())}</td>
+      </tr>)}</tbody>`)
+      const rows = signal<Row[]>([
+        { id: 1, label: 'same' },
+        { id: 2, label: 'same' },
+        { id: 3, label: 'same' },
+      ])
+      const selected = signal(1)
+      const unrelated = signal(0)
+      const calls: number[] = []
+      const capture = (id: number, text: string) => {
+        calls.push(id)
+        return text
+      }
+      const owned =
+        runtime === compactRuntime
+          ? (() => {
+              const owner = compactRuntime.createOwner()
+              return {
+                run: (fn: () => void) => compactRuntime.runWithOwner(owner, fn),
+                dispose: () => compactRuntime.disposeOwner(owner),
+              }
+            })()
+          : (() => {
+              const owner = createOwner()
+              return {
+                run: (fn: () => void) => runWithOwner(owner, fn),
+                dispose: () => disposeOwner(owner),
+              }
+            })()
+      const host = document.createElement('table')
+      owned.run(() => {
+        const handle = evaluateView(
+          output,
+          rows,
+          { selected, unrelated, capture },
+          { ...internalRuntime, ...runtime },
+        )()
+        host.appendChild(handle.__rue_compiled_mount(host)!)
+      })
+      const original = [...host.querySelectorAll('tr')]
+      calls.length = 0
+      unrelated.set(1)
+      rows.set(rows.peek().map(row => ({ ...row })))
+      await flushCompiledEffects()
+      expect(calls).toEqual([])
+      expect(original[0].textContent).toBe('same:true:0')
+      selected.set(2)
+      await flushCompiledEffects()
+      expect(calls.sort()).toEqual([1, 2])
+      expect(original[0].textContent).toBe('same:false:1')
+      expect(original[1].textContent).toBe('same:true:1')
+      expect(original[2].textContent).toBe('same:false:0')
+      calls.length = 0
+      rows.set([rows.peek()[2], rows.peek()[1], rows.peek()[0]])
+      await flushCompiledEffects()
+      expect([...host.querySelectorAll('tr')]).toEqual([original[2], original[1], original[0]])
+      expect(calls).toEqual([])
+      rows.set([{ id: 4, label: 'same' }, rows.peek()[1]])
+      await flushCompiledEffects()
+      expect(host.querySelectorAll('tr')[0]).not.toBe(original[2])
+      calls.length = 0
+      selected.set(3)
+      await flushCompiledEffects()
+      expect(calls).toEqual([2])
+      owned.dispose()
+      calls.length = 0
+      selected.set(4)
+      await flushCompiledEffects()
+      expect(calls).toEqual([])
+    },
+  )
+
+  it.each(['v-memo', 'r-memo'])(
+    'keeps empty %s dependencies frozen while keys move or change',
+    async directive => {
+      const output = compile(source.replace('key={row.id}', `key={row.id} ${directive}={[]}`))
+      const rows = signal<Row[]>([
+        { id: 1, label: 'one' },
+        { id: 2, label: 'two' },
+      ])
+      const owner = createOwner()
+      const host = document.createElement('table')
+      runWithOwner(owner, () => {
+        const handle = evaluateView(output, rows)()
+        host.appendChild(handle.__rue_compiled_mount(host)!)
+      })
+      const original = [...host.querySelectorAll('tr')]
+      rows.set([
+        { id: 2, label: 'TWO' },
+        { id: 1, label: 'ONE' },
+      ])
+      await flushCompiledEffects()
+      expect([...host.querySelectorAll('tr')]).toEqual([original[1], original[0]])
+      expect(original.map(row => row.textContent)).toEqual(['one', 'two'])
+      rows.set([{ id: 3, label: 'three' }])
+      await flushCompiledEffects()
+      expect(host.querySelector('tr')).not.toBe(original[0])
+      expect(host.querySelector('tr')?.textContent).toBe('three')
+      disposeOwner(owner)
+    },
+  )
+
   it('executes the real SWC output through nine keyed operations without the generic list', async () => {
     const output = compile(source)
     const compiledImport = output.match(

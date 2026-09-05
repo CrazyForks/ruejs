@@ -985,6 +985,62 @@ fn extract_render_root_key_expr(expr: &Expr) -> Option<Expr> {
     }
 }
 
+// Recover the directive lowering before selecting the closed keyed-row path.
+fn list_memo_expr(expr: &Expr) -> Option<(Expr, Expr)> {
+    let Expr::Call(call) = utils::unwrap_expr(expr) else { return None };
+    let arrow_body = |expr: &Expr| -> Option<Expr> {
+        let Expr::Arrow(arrow) = utils::unwrap_expr(expr) else { return None };
+        match arrow.body.as_ref() {
+            BlockStmtOrExpr::Expr(expr) => Some(*expr.clone()),
+            _ => None,
+        }
+    };
+    match call_callee_ident_name(call) {
+        Some("_$compiledWithHookId") => list_memo_expr(&arrow_body(&call.args.get(1)?.expr)?),
+        Some("useMemo") => {
+            Some((arrow_body(&call.args.first()?.expr)?, *call.args.get(1)?.expr.clone()))
+        }
+        _ => None,
+    }
+}
+
+fn list_reader(expr: Expr) -> Expr {
+    Expr::Arrow(ArrowExpr {
+        span: DUMMY_SP,
+        params: vec![],
+        body: Box::new(BlockStmtOrExpr::Expr(Box::new(expr))),
+        is_async: false,
+        is_generator: false,
+        type_params: None,
+        return_type: None,
+        ctxt: SyntaxContext::empty(),
+    })
+}
+
+struct GateListMemoReads<'a>(&'a Ident);
+impl VisitMut for GateListMemoReads<'_> {
+    fn visit_mut_call_expr(&mut self, call: &mut CallExpr) {
+        call.visit_mut_children_with(self);
+        if !call.span.is_dummy() {
+            return;
+        }
+        let index = match call_callee_ident_name(call) {
+            Some("effect") => 0,
+            Some("_$compiledText") => 1,
+            _ => return,
+        };
+        let Some(arg) = call.args.get_mut(index) else { return };
+        let Expr::Arrow(callback) = arg.expr.as_ref() else { return };
+        let mut wrapped = callback.clone();
+        wrapped.body = Box::new(BlockStmtOrExpr::Expr(Box::new(call_member(
+            self.0.clone(),
+            "read",
+            vec![Expr::Arrow(callback.clone())],
+        ))));
+        arg.expr = Box::new(Expr::Arrow(wrapped));
+    }
+}
+
 // Lower Array.map(JSX) into a stable anchor plus compiled keyed row factories.
 // Each row owns an explicit DOM range; unsupported row shapes are diagnosed by
 // strict capability collection instead of falling back to the Vapor list runtime.
@@ -1152,6 +1208,15 @@ fn try_build_list_from_map_with_anchor(
                 }
             };
 
+            let mut memo_dependencies = None;
+            let direct_render_expr = direct_render_expr.map(|expr| {
+                if let Some((inner, deps)) = list_memo_expr(&expr) {
+                    memo_dependencies = Some(deps);
+                    inner
+                } else {
+                    expr
+                }
+            });
             let direct_render_expr = direct_render_expr.map(|mut expr| {
                 rewrite_alias_exprs_in_expr(&mut expr, &item_alias_exprs);
                 expr
@@ -1251,6 +1316,8 @@ fn try_build_list_from_map_with_anchor(
                 return true;
             }
 
+            let memo_ident = ident(&format!("{}_memo", map_base));
+            let mut memo_setup = None;
             // A compiled row factory owns a closed DOM range. The keyed reconciler only
             // reuses, patches, moves, and disposes that explicit block.
             let mut render_item_stmts: Vec<Stmt> = Vec::new();
@@ -1273,6 +1340,16 @@ fn try_build_list_from_map_with_anchor(
                         (idx_ident.sym.to_string(), getter(&index_signal)),
                     ]);
                     rewrite_alias_exprs_in_expr(&mut compiled_inner, &aliases);
+                    if let Some(deps) = &memo_dependencies {
+                        let mut deps = deps.clone();
+                        rewrite_alias_exprs_in_expr(&mut deps, &item_alias_exprs);
+                        if let Some(prefix) = collect_inline_alias_exprs_from_prefix(&rewritten_callback_prefix_stmts) {
+                            rewrite_alias_exprs_in_expr(&mut deps, &prefix);
+                        }
+                        rewrite_alias_exprs_in_expr(&mut deps, &aliases);
+                        memo_setup = Some(const_decl(memo_ident.clone(), call_ident("_$compiledListMemo", vec![list_reader(deps)])));
+
+                    }
                     vt.push_plain_local_scope(std::collections::HashSet::from([
                         crate::reactive_provenance::signal_value_marker(item_signal.sym.as_ref()),
                         crate::reactive_provenance::signal_value_marker(index_signal.sym.as_ref()),
@@ -1283,7 +1360,12 @@ fn try_build_list_from_map_with_anchor(
                         crate::element_expr::compiled_slot_factory_expr(vt, &compiled_inner);
                     vt.static_templates = static_templates;
                     vt.pop_plain_local_scope();
-                    factory.map(|factory| (factory, item_signal, index_signal))
+                    factory.map(|mut factory| {
+                        if memo_dependencies.is_some() {
+                            factory.visit_mut_with(&mut GateListMemoReads(&memo_ident));
+                        }
+                        (factory, item_signal, index_signal)
+                    })
                 } else {
                     None
                 }
@@ -1389,12 +1471,14 @@ fn try_build_list_from_map_with_anchor(
                     index_signal,
                     call_ident("_$compiledSignal", vec![Expr::Ident(idx_ident.clone())]),
                 ));
+                let mut mount_args = vec![factory, patch];
+                if let Some(setup) = memo_setup {
+                    render_item_stmts.push(setup);
+                    mount_args.push(Expr::Ident(memo_ident));
+                }
                 render_item_stmts.push(Stmt::Return(ReturnStmt {
                     span: DUMMY_SP,
-                    arg: Some(Box::new(call_ident(
-                        "_$mountCompiledKeyedRow",
-                        vec![factory, patch],
-                    ))),
+                    arg: Some(Box::new(call_ident("_$mountCompiledKeyedRow", mount_args))),
                 }));
             } else {
                 (vt.next_el, vt.next_list, vt.next_map, vt.next_child) = counter_checkpoint;

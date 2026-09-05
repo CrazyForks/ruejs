@@ -66,6 +66,7 @@ const RUNTIME_CAPABILITIES: &[RuntimeCapability] = &[
     auto_capability("_$mountCompiledSlotAt", RuntimeTier::Compiled, true),
     auto_capability("_$mountCompiledDynamic", RuntimeTier::Compiled, true),
     auto_capability("_$reconcileKeyed", RuntimeTier::Compiled, true),
+    auto_capability("_$compiledListMemo", RuntimeTier::Compiled, true),
     auto_capability("_$mountCompiledKeyedRow", RuntimeTier::Compiled, true),
     auto_capability("_$compiledCreateElement", RuntimeTier::Compiled, true),
     auto_capability("_$compiledCreateDocumentFragment", RuntimeTier::Compiled, true),

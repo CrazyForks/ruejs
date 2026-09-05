@@ -57,6 +57,7 @@ export {
   _$insertBefore,
   _$mountCompiledComponent,
   _$mountCompiledDynamic,
+  _$compiledListMemo,
   _$mountCompiledKeyedRow,
   _$mountCompiledSlotAt,
   _$mountCompiledSlotFactory,

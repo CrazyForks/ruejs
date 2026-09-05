@@ -1,4 +1,11 @@
-import { createOwner, disposeOwner, runWithOwner } from '../runtime-core/compiled'
+import {
+  createOwner,
+  disposeOwner,
+  effect,
+  runWithOwner,
+  signal,
+  untrack,
+} from '../runtime-core/compiled'
 import {
   createDocumentFragment,
   insertBefore,
@@ -6,11 +13,38 @@ import {
   withDOMHostOperations,
 } from './dom.browser'
 
+export interface CompactListMemo {
+  read: <T>(read: () => T) => T
+  refresh: () => void
+  dispose: () => void
+}
+
+export const _$compiledListMemo = (dependencies: () => readonly unknown[]): CompactListMemo => {
+  const snapshot = signal<readonly unknown[]>([], {
+    equals: (previous, next) =>
+      previous.length === next.length && next.every((value, i) => Object.is(value, previous[i])),
+  })
+  const refresh = () => snapshot.set(dependencies().slice())
+  const watcher = effect(refresh)
+  return {
+    read: read => {
+      snapshot.get()
+      return untrack(read)
+    },
+    refresh: () => untrack(refresh),
+    dispose: () => {
+      watcher.dispose()
+      snapshot.dispose()
+    },
+  }
+}
+
 export interface CompactCompiledKeyedRow<T, K = unknown> {
   key: K
   item: T
   node: Node
   last?: Node
+  memo?: CompactListMemo
   patch(item: T, index: number): void
   dispose(): void
 }
@@ -74,6 +108,7 @@ export const _$reconcileKeyed = <T, K>(
       if (reused) {
         oldByKey.delete(key)
         reused.patch(item, index)
+        reused.memo?.refresh()
         reused.item = item
         return reused
       }
@@ -101,15 +136,29 @@ export const _$mountCompiledKeyedRow = <T>(
     dispose(): void
   },
   patch: (item: T, index: number) => void,
+  memo?: CompactListMemo,
 ) => {
   const owner = createOwner()
   const staging = createDocumentFragment()
   try {
     const block = runWithOwner(owner, () => factory({ parent: staging, before: null }, {}, owner))
     if (block == null) throw new Error('[rue] compiled keyed row factory did not return a block')
-    return { node: block.first, last: block.last, patch, dispose: () => block.dispose() }
+    return {
+      node: block.first,
+      last: block.last,
+      patch,
+      memo,
+      dispose: () => {
+        try {
+          block.dispose()
+        } finally {
+          memo?.dispose()
+        }
+      },
+    }
   } catch (error) {
     disposeOwner(owner)
+    memo?.dispose()
     throw error
   }
 }

@@ -466,6 +466,10 @@ export default function Demo() {
 }
 ```
 
+在 keyed 列表中，将 `key` 与 memo 放在同一个行根元素上。缓存按 `key` 随行保留：换位只移动原 DOM，依赖数组中的值通过 `Object.is` 逐项比较，未变化时跳过行内更新。`key` 不需要重复放入 memo 依赖数组；更换 `key` 会创建新行。
+
+两种指令均支持 `map` 列表及 `v-for` / `r-for` 列表。应将需要触发行内容更新的值（例如 `row.label`、`row.id === selectedId.value`）放入依赖数组；空数组会固定该行内容，直到对应的 key 被移除。
+
 完整交互示例见 [`v-memo / r-memo` 指令页面](/jsx/v-memo-r-memo)。
 
 ## `v-cloak` {#v-cloak}

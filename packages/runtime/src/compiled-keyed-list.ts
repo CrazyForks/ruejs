@@ -1,5 +1,5 @@
 import { insertBefore, removeChild, withDOMHostOperations } from './compiler-runtime/dom.browser'
-import { createOwner, disposeOwner } from './internal-reactive'
+import { computed, createOwner, disposeOwner, signal, untrack } from './internal-reactive'
 import type { CompiledSlotFactory } from './compiler-runtime/mount'
 
 export interface CompiledKeyedRow<T, K = unknown> {
@@ -7,6 +7,7 @@ export interface CompiledKeyedRow<T, K = unknown> {
   item: T
   node: Node
   last?: Node
+  memo?: CompiledListMemo
   patch: (item: T, index: number) => void
   dispose: () => void
 }
@@ -14,6 +15,7 @@ export interface CompiledKeyedRow<T, K = unknown> {
 export interface CompiledKeyedMountResult<T> {
   node: Node
   last?: Node
+  memo?: CompiledListMemo
   patch: (item: T, index: number) => void
   dispose: () => void
 }
@@ -22,10 +24,46 @@ export type CompiledKeyedMount<T> = (item: T, index: number) => CompiledKeyedMou
 
 type CompiledKeyedParent = Node & ParentNode
 
+export interface CompiledListMemo {
+  read: <T>(read: () => T) => T
+  refresh: () => void
+  dispose: () => void
+}
+
+/** Each keyed row owns its dependency snapshot, independent of its list position. */
+export const _$compiledListMemo = (dependencies: () => readonly unknown[]): CompiledListMemo => {
+  const revision = signal(0)
+  let previous: readonly unknown[] | undefined
+  const snapshot = computed(() => {
+    revision.get()
+    const next = dependencies()
+    if (
+      !previous ||
+      next.length !== previous.length ||
+      next.some((value, i) => !Object.is(value, previous![i]))
+    ) {
+      previous = next.slice()
+    }
+    return previous
+  })
+  return {
+    read: read => {
+      snapshot.get()
+      return untrack(read)
+    },
+    refresh: () => revision.trigger(),
+    dispose: () => {
+      snapshot.dispose()
+      revision.dispose()
+    },
+  }
+}
+
 /** Mount a closed compiled slot factory as one keyed row range. */
 export const _$mountCompiledKeyedRow = <T>(
   factory: CompiledSlotFactory,
   patch: (item: T, index: number) => void,
+  memo?: CompiledListMemo,
 ): CompiledKeyedMountResult<T> => {
   const owner = createOwner()
   const staging = document.createDocumentFragment()
@@ -35,10 +73,18 @@ export const _$mountCompiledKeyedRow = <T>(
       node: block.first,
       last: block.last,
       patch,
-      dispose: () => block.dispose(),
+      memo,
+      dispose: () => {
+        try {
+          block.dispose()
+        } finally {
+          memo?.dispose()
+        }
+      },
     }
   } catch (error) {
     disposeOwner(owner)
+    memo?.dispose()
     throw error
   }
 }
@@ -164,7 +210,9 @@ export const _$reconcileKeyed = <T, K>(
         previousIndex: number,
         nextIndex: number,
       ) => {
-        if (!Object.is(row.item, item) || previousIndex !== nextIndex) row.patch(item, nextIndex)
+        if (row.memo || !Object.is(row.item, item) || previousIndex !== nextIndex)
+          row.patch(item, nextIndex)
+        row.memo?.refresh()
         row.item = item
       }
 
@@ -203,7 +251,7 @@ export const _$reconcileKeyed = <T, K>(
           }
           cursor = row.node
           if (row.key === keys[index]) {
-            if (row.item !== items[index]) stableItemsRetained = false
+            if (row.memo || row.item !== items[index]) stableItemsRetained = false
             continue
           }
           if (firstMismatch < 0) firstMismatch = index
@@ -278,6 +326,7 @@ export const _$reconcileKeyed = <T, K>(
           patch: mounted.patch,
           dispose: mounted.dispose,
         } as CompiledKeyedRow<T, K>
+        if (mounted.memo) Object.defineProperty(row, 'memo', { value: mounted.memo })
         Object.defineProperty(row, 'last', {
           configurable: false,
           enumerable: false,
