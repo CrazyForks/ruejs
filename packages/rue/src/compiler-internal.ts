@@ -62,8 +62,10 @@ export {
   _$compiledComponent,
   _$compiledOmitProps,
   _$compiledShowStyle,
+  _$compiledSlotValue,
   _$compiledSpreadAttributes,
   _$compiledUseEffect,
+  _$compiledUseRef,
   _$compiledWithEventModifiers,
   _$compiledWithKey,
   _$compiledWithNativeEvents,
@@ -85,5 +87,6 @@ export {
   _$spreadAttributes,
   getCompiledKey,
   vapor,
+  watch,
 } from '@rue-js/runtime/internal'
 export type * from '@rue-js/runtime/internal/compiler'

@@ -1,6 +1,6 @@
 {
   "name": "@rue-js/text",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "@rue-js/text",
   "keywords": [
     "rue"
@@ -269,6 +269,7 @@
       "esm-bundler"
     ],
     "preserveModules": true,
+    "rueTransform": true,
     "external": [
       "@rue-js/rsc",
       "@rue-js/server-renderer",

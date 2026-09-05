@@ -29,6 +29,10 @@ const nodeBuiltinNames = new Set([
 
 const workspaceAliasEntries = [
   ...entries,
+  {
+    find: /^@rue-js\/runtime\/internal\/compiler$/,
+    replacement: path.resolve(rootDir, 'packages/runtime/src/compiler-internal.ts'),
+  },
   { find: '@rue-js/router', replacement: path.resolve(rootDir, 'packages/router/src') },
   { find: '@rue-js/store', replacement: path.resolve(rootDir, 'packages/store/src') },
   { find: '@rue-js/i18n', replacement: path.resolve(rootDir, 'packages/i18n/src') },
@@ -427,7 +431,10 @@ function createViteConfig(request) {
       request.packageInfo.target === 'rue-design' ? createPureCompoundComponentPlugin() : null,
       request.enableRueVaporTransform
         ? VitePluginRue({
-            include: [`/packages/${request.packageInfo.target}/`],
+            // Browser/global builds also bundle workspace dependencies containing JSX.
+            include: request.externalize
+              ? [`/packages/${request.packageInfo.target}/`]
+              : ['/packages/'],
             transformTimeoutMs: RUE_BUILD_TRANSFORM_TIMEOUT_MS,
           })
         : null,
