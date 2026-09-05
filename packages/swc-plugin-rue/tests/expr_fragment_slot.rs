@@ -282,7 +282,8 @@ const Demo: FC = () => {
     let out = compile(src, "expr_fragment_slot_conditional_map_preserves_key");
 
     assert!(!out.contains(&utils::normalize("_$compiledKeyedList({")), "{out}");
-    assert!(out.contains("visibleTodos.get().map"), "{out}");
+    assert!(out.contains("_$reconcileKeyed"), "{out}");
+    assert!(out.contains("(item, idx)=>item.id"), "{out}");
     assert!(out.contains(&utils::normalize("visibleTodos.get().length")), "{out}");
     assert!(out.contains(&utils::normalize("renderAnchor(__slot")), "{out}");
 }

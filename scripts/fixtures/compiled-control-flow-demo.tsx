@@ -36,9 +36,7 @@ type BranchProps = {
 }
 
 export const SafeBranch = (props: BranchProps) => {
-  const entryMarker = beginSetup('entry')
-  const entryPrefix = 'entry'
-  const entrySuffix = 'state'
+  beginSetup('entry')
   const bumpEntryValue = (value: number) => value + 1
   const entryCompiled = compiledSignal(1)
   const entryRef = ref(10)
@@ -68,9 +66,7 @@ export const SafeBranch = (props: BranchProps) => {
       </div>
     )
 
-  const middleMarker = beginSetup('middle')
-  const hello = 'hello'
-  const middleSuffix = 'region'
+  beginSetup('middle')
   function bumpMiddleValue(value: number) {
     return value + 1
   }
@@ -94,9 +90,7 @@ export const SafeBranch = (props: BranchProps) => {
       </section>
     )
 
-  const finalMarker = beginSetup('final')
-  const world = 'world'
-  const finalSuffix = 'region'
+  beginSetup('final')
   const bumpFinalValue = (value: number) => value + 1
   const finalCompiled = compiledSignal(3)
   const finalRef = ref(30)

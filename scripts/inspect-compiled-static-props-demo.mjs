@@ -98,10 +98,8 @@ const buildRunnable = () => {
       sourcefile: 'compiled-static-props-output.mjs',
     },
     alias: {
-      '@rue-js/rue/internal': resolve(root, 'packages/rue/src/compiled.ts'),
-      '@rue-js/rue/internal': resolve(root, 'packages/rue/src/vapor.ts'),
-      '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/compiled.ts'),
-      '@rue-js/runtime/vapor': resolve(root, 'packages/runtime/src/vapor.ts'),
+      '@rue-js/rue/internal': resolve(root, 'packages/rue/src/internal.ts'),
+      '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/internal.ts'),
     },
     bundle: true,
     format: 'esm',
@@ -192,8 +190,8 @@ const verifyFinalBundle = () => {
       sourcefile: 'compiled-static-props-entry-output.mjs',
     },
     alias: {
-      '@rue-js/rue/internal': resolve(root, 'packages/rue/src/compiled.ts'),
-      '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/compiled.ts'),
+      '@rue-js/rue/internal': resolve(root, 'packages/rue/src/internal.ts'),
+      '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/internal.ts'),
     },
     bundle: true,
     format: 'esm',

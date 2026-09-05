@@ -263,7 +263,7 @@ export default TodoApp;
     let normalized = utils::normalize(&utils::strip_marker(&out));
     assert!(normalized.contains("_$reconcileKeyed"));
     assert!(!normalized.contains("_$compiledKeyedList"));
-    assert!(normalized.contains("_$compiledText(_el8, ()=>_$rowItem.get().id)"), "{normalized}");
-    assert!(normalized.contains("_$compiledText(_el11, ()=>_$rowItem.get().text)"), "{normalized}");
+    assert!(normalized.contains("_$compiledText(_el8, ()=>_$rowItem1.get().id)"), "{normalized}");
+    assert!(normalized.contains("_$compiledText(_el11, ()=>_$rowItem1.get().text)"), "{normalized}");
     assert!(!normalized.contains("_$setAttribute(_el8, \"key\""));
 }

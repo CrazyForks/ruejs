@@ -286,11 +286,11 @@ export default UseCart;
     assert_eq!(normalized.matches("_$mountCompiledKeyedRow(").count(), 2);
     assert_eq!(normalized.matches("_$compiledSignal(pr)").count(), 1);
     assert_eq!(normalized.matches("_$compiledSignal(i)").count(), 1);
-    assert!(normalized.contains("_$compiledText(_el9, ()=>_$rowItem.get().name)"));
-    assert!(normalized.contains("_$compiledText(_el10, ()=>_$rowItem.get().price)"));
-    assert!(normalized.contains("_$compiledText(_el13, ()=>_$rowItem.get().name)"));
-    assert!(normalized.contains("_$compiledText(_el14, ()=>_$rowItem.get().qty)"));
-    assert!(normalized.contains("()=>cart.add(_$rowItem.get())"));
-    assert!(normalized.contains("()=>cart.remove(_$rowItem.get().id)"));
+    assert!(normalized.contains("_$compiledText(_el9, ()=>_$rowItem1.get().name)"));
+    assert!(normalized.contains("_$compiledText(_el10, ()=>_$rowItem1.get().price)"));
+    assert!(normalized.contains("_$compiledText(_el13, ()=>_$rowItem2.get().name)"));
+    assert!(normalized.contains("_$compiledText(_el14, ()=>_$rowItem2.get().qty)"));
+    assert!(normalized.contains("()=>cart.add(_$rowItem1.get())"));
+    assert!(normalized.contains("()=>cart.remove(_$rowItem2.get().id)"));
     assert!(!normalized.contains("_$compiledKeyedList"));
 }

@@ -36,6 +36,9 @@ import {
   withHydrationStaging,
 } from './compiler-runtime/dom.hydrate'
 import { withHydrationDOMMutations } from './compiler-runtime/dom.browser'
+
+void setDOMAdapter
+void withHydrationDOMMutations
 export {
   appendChild as _$compiledAppendChild,
   createComment as _$compiledCreateComment,

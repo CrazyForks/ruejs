@@ -22,6 +22,8 @@ import {
 import { vapor } from './legacy-test-render'
 import { waitForContent } from './page-test-utils'
 
+void watchEffect
+
 const createLegacyVapor = (renderFn: Parameters<typeof _$compiledVapor>[0]) =>
   _$compiledVapor(renderFn)
 

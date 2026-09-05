@@ -105,8 +105,8 @@ describe('vite-plugin-rue compiler-only JSX contract', () => {
 
     expect(diagnostics).toEqual([])
     expect(code).toContain('_$compiledRoot(')
-    expect(code).toMatch(/from\s*["']@rue-js\/rue\/internal["']/)
-    expect(code).not.toContain('@rue-js/rue/internal/compiler')
+    expect(code).toMatch(/from\s*["']@rue-js\/rue\/internal\/compiler["']/)
+    expect(code).not.toMatch(/from\s*["']@rue-js\/rue\/internal["']/)
   })
 
   it.each([

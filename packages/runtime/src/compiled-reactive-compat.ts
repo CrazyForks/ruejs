@@ -1,4 +1,11 @@
-import { batch, effect, getCurrentOwner, onOwnerCleanup, signal } from './internal-reactive'
+import {
+  batch,
+  effect,
+  getCurrentOwner,
+  onOwnerCleanup,
+  signal,
+  untrack,
+} from './internal-reactive'
 import {
   createResource as runtimeCreateResource,
   onRenderTracked as runtimeOnRenderTracked,
@@ -209,7 +216,7 @@ export const watch = (
   let previous: unknown
   return effect(() => {
     const value = readSource(source)
-    if (initialized || options?.immediate) callback(value, previous)
+    if (initialized || options?.immediate) untrack(() => callback(value, previous))
     previous = value
     initialized = true
   })

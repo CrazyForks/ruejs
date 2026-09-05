@@ -4,7 +4,7 @@
 - 层级：本页是 /examples/router-demo 的父路由，内部 RouterView 会继续渲染 depth=1/2 的子视图。
 - 反馈：通过 useRoute 展示当前匹配结果，并用 afterEach 记录本轮导航结果。
 */
-import { type FC, onMounted, onUnmounted, ref } from '@rue-js/rue'
+import { computed, type FC, onMounted, onUnmounted, ref } from '@rue-js/rue'
 import {
   isNavigationFailure,
   NavigationFailureType,
@@ -186,8 +186,8 @@ const RouterDemoScene: FC = () => {
   const route = currentRoute.get()
   const matchedChain =
     route?.matched.map((record: { path: string }) => record.path).join(' -> ') || '无'
-  const paramsText = JSON.stringify(route?.params ?? {}, null, 2)
-  const metaText = JSON.stringify(route?.meta ?? {}, null, 2)
+  const paramsText = computed(() => JSON.stringify(currentRoute.get()?.params ?? {}, null, 2))
+  const metaText = computed(() => JSON.stringify(currentRoute.get()?.meta ?? {}, null, 2))
 
   return (
     <div className="grid gap-6">
@@ -322,14 +322,14 @@ const RouterDemoScene: FC = () => {
                   params
                 </div>
                 <pre className="mt-3 overflow-auto text-xs leading-6 text-base-content/80">
-                  {paramsText}
+                  {paramsText.get()}
                 </pre>
               </div>
 
               <div className="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
                 <div className="text-xs uppercase tracking-[0.2em] text-base-content/45">meta</div>
                 <pre className="mt-3 overflow-auto text-xs leading-6 text-base-content/80">
-                  {metaText}
+                  {metaText.get()}
                 </pre>
               </div>
             </div>
@@ -442,20 +442,20 @@ export const RouterDemoGuideShell: FC<{ params: { section: string; topic?: strin
 }
 
 export const RouterDemoTopicPage: FC<{ params: { section: string; topic: string } }> = props => {
-  const content = readTopicContent(props.params.section, props.params.topic)
+  const content = computed(() => readTopicContent(props.params.section, props.params.topic))
 
   return (
     <article className="space-y-4 rounded-box border border-base-300 bg-base-100 p-5 shadow-sm">
       <div>
         <div className="text-xs uppercase tracking-[0.22em] text-base-content/45">
-          {content.eyebrow}
+          {content.get().eyebrow}
         </div>
-        <h4 className="mt-2 text-2xl font-semibold text-base-content">{content.title}</h4>
-        <p className="mt-3 leading-7 text-base-content/75">{content.summary}</p>
+        <h4 className="mt-2 text-2xl font-semibold text-base-content">{content.get().title}</h4>
+        <p className="mt-3 leading-7 text-base-content/75">{content.get().summary}</p>
       </div>
 
       <ul className="space-y-2 text-sm leading-6 text-base-content/75">
-        {content.bullets.map((bullet, index) => (
+        {content.get().bullets.map((bullet, index) => (
           <li
             key={`router-demo-bullet-${props.params.section}-${props.params.topic}-${index}`}
             className="rounded-box border border-base-300 bg-base-100 px-3 py-2"

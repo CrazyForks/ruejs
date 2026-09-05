@@ -1327,12 +1327,13 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
         option => option.getAttribute('aria-selected') === 'true',
       )
       const direction = key === 'ArrowDown' ? 1 : -1
+      const currentIndex = selectedIndex < 0 ? getResolvedActiveIndex() : selectedIndex
       const nextIndex =
-        selectedIndex < 0
+        currentIndex < 0
           ? direction === 1
             ? 0
             : liveOptions.length - 1
-          : (selectedIndex + direction + liveOptions.length) % liveOptions.length
+          : (currentIndex + direction + liveOptions.length) % liveOptions.length
       liveOptions.forEach((option, index) =>
         option.setAttribute('aria-selected', index === nextIndex ? 'true' : 'false'),
       )
@@ -1759,6 +1760,10 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
                                 }
                                 type="button"
                                 role="option"
+                                data-rue-auto-complete-value={resolveOptionText(
+                                  option.raw,
+                                  optionLabelProp,
+                                )}
                                 aria-selected={active ? 'true' : 'false'}
                                 disabled={option.disabled}
                                 title={option.title}
@@ -1885,6 +1890,10 @@ const AutoCompleteRoot: FC<AutoCompleteProps> = ({
                                 }
                                 type="button"
                                 role="option"
+                                data-rue-auto-complete-value={resolveOptionText(
+                                  option.raw,
+                                  optionLabelProp,
+                                )}
                                 aria-selected={active ? 'true' : 'false'}
                                 disabled={option.disabled}
                                 title={option.title}

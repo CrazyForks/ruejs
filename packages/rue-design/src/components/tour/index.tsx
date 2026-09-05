@@ -653,7 +653,6 @@ const SparkIcon: FC = () => {
 /** Tour 的内部工具函数。 */
 const Tour: FC<TourProps> = props => {
   const {
-    steps = [],
     defaultOpen = false,
     defaultCurrent = 0,
     placement = 'bottom',

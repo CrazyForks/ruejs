@@ -48,6 +48,8 @@ import {
   RouterLink,
   RouterView,
 } from '@rue-js/router'
+
+void watchEffect
 import { renderToString } from '@rue-js/server-renderer'
 import { renderToString as renderToStringFromRue } from '@rue-js/rue/server-renderer'
 

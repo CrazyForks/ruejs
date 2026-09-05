@@ -47,7 +47,7 @@ const hydrateInput = Object.freeze({
   imports: Object.freeze(['hydrateRoot']),
 })
 
-const compiledKeyedAppInput = Object.freeze({
+const _compiledKeyedAppInput = Object.freeze({
   entry: '@rue-js/rue/internal/compiler',
   imports: Object.freeze([
     'signal',

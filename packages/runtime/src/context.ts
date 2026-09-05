@@ -21,6 +21,8 @@ import { _$compiledValue } from './compiled-render-anchor'
 import type { CompiledRootHandle } from './compiled-root'
 import { invokeCompiledComponent } from './compiled-runtime-bridge'
 import type { ComponentProps } from './runtime-types'
+
+void createCompiledDynamic
 const RUE_PORTABLE_COMPONENT_TYPE_KEY = '__rue_component_type'
 const RUE_REPEATABLE_MOUNT_FACTORY_KEY = '__rue_repeatable_mount_factory__'
 const RUE_COMPILED_COMPONENT_FACTORY_KEY = '__rue_compiled_component_factory__'

@@ -19,11 +19,7 @@ import {
   withFreshBrowserDOMHostOperations,
 } from './compiler-runtime/dom-host-operations'
 
-export {
-  attachDOMHostResult,
-  withDOMHostOperations,
-  withFreshBrowserDOMHostOperations,
-} from './compiler-runtime/dom-host-operations'
+export { attachDOMHostResult, withDOMHostOperations, withFreshBrowserDOMHostOperations }
 
 /** Rue DOMAdapter 使用的最小节点形态。 */
 export interface DomNodeLike {

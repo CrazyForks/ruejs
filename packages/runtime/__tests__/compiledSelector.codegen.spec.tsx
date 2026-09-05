@@ -26,6 +26,9 @@ import {
 } from '../src/internal'
 import * as internalRuntime from '../src/internal'
 
+void createCompiledSelector
+void compiledOnCleanup
+
 type Row = { readonly key: number; readonly id: number; label: string }
 
 const pluginPath = resolve(process.cwd(), 'packages/swc-plugin-rue/swc-plugin-rue.wasm')

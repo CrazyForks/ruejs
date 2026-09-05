@@ -204,9 +204,9 @@ const Demo: FC = () => {
 
     assert!(out.contains("_$reconcileKeyed"), "{out}");
     assert_eq!(out.matches("_$compiledBranch(").count(), 2, "{out}");
-    assert!(out.contains("!(editingId.value === _$rowItem.get().id)"), "{out}");
-    assert!(out.contains("editingId.value === _$rowItem.get().id"), "{out}");
-    assert!(out.contains("_$rowItem.get().title"), "{out}");
+    assert!(out.contains("!(editingId.value === _$rowItem1.get().id)"), "{out}");
+    assert!(out.contains("editingId.value === _$rowItem1.get().id"), "{out}");
+    assert!(out.contains("_$rowItem1.get().title"), "{out}");
     assert!(!out.contains("renderAnchor("), "{out}");
     assert!(!out.contains("vapor("), "{out}");
     assert!(!out.contains("const isEditing = editingId.value === row.id;"));
@@ -248,7 +248,7 @@ const Demo: FC = () => {
     );
     assert!(out.contains("_$mountCompiledKeyedRow"), "{out}");
     assert!(out.contains("_$compiledText("), "{out}");
-    assert!(out.contains("selectedId.get() === _$rowItem.get().id"), "{out}");
+    assert!(out.contains("selectedId.get() === _$rowItem1.get().id"), "{out}");
     assert!(!out.contains("renderAnchor("), "{out}");
     assert!(!out.contains("vapor("), "{out}");
     assert!(!out.contains("const isSelected = selectedId.get() === row.id;"));

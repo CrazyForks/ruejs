@@ -273,10 +273,11 @@ describe('rue router', () => {
       const route = useRoute()
       const router = useRouter()
 
-      return createCompiledDynamic('p', {
-        'data-testid': 'current',
-        children: `${route.get()?.path} / ${router.currentPath.get()}`,
-      }) as any
+      return (
+        <p data-testid="current">
+          {route.get()?.path} / {router.currentPath.get()}
+        </p>
+      )
     }
     const App: FC = () =>
       createCompiledDynamic('main', {

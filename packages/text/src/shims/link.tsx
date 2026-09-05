@@ -79,6 +79,8 @@ import { createTextCompatElement } from './component-adapter.js'
 import { readContextRuntime } from './context-runtime-global.js'
 import { createTextElement, type TextNode } from '../runtime/render-protocol.js'
 
+void createTextCompatElement
+
 type NavigateEvent = {
   url: URL
   /** Call to prevent the Link's default navigation (e.g. for View Transitions). */

@@ -1,3 +1,10 @@
+# [0.9.0](https://github.com/hunzhiwange/ruejs/compare/v0.8.21...v0.9.0) (2026-09-04)
+
+
+### Features
+
+* 框架底层架构重写，完整移除虚拟 DOM 遗留产物 ([4a2850c](https://github.com/hunzhiwange/ruejs/commit/4a2850c6d012ea1c9d5d0d858ea727cbc5bfc036))
+
 ## [0.8.17](https://github.com/hunzhiwange/ruejs/compare/v0.8.16...v0.8.17) (2026-08-29)
 
 

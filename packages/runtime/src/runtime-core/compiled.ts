@@ -416,7 +416,9 @@ export const disposeOwner = (owner: CompiledOwner): boolean => {
       record.lifecycle.beforeUnmount.slice().forEach(callback => callback()),
     )
     record.disposed = true
+    // eslint-disable-next-line unicorn/no-useless-spread -- disposal mutates the iterated owner set
     for (const child of [...record.children]) disposeOwner(child)
+    // eslint-disable-next-line unicorn/no-useless-spread -- disposal mutates the iterated owner set
     for (const ownedEffect of [...record.effects]) disposeEffect(ownedEffect)
     runCleanups(record.cleanups)
     const previous = currentOwner

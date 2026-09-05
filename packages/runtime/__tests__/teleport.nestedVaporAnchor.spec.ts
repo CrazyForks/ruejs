@@ -15,6 +15,8 @@ import { render, renderAnchor } from '../src'
 import type { FC } from '../src'
 import { vapor } from './legacy-test-render'
 
+void watchEffect
+
 setReactiveScheduling('sync')
 
 afterEach(() => {

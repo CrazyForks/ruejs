@@ -4,7 +4,7 @@ Dropdown 组件概述
 - 同时补齐更接近成熟组件库的增强 API：menu/items、trigger、open/defaultOpen、popupRender。
 - 视觉仍沿用 Rue 当前的 dropdown 基底，只做交互与组织能力增强。
 */
-import { onMounted, onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
+import { computed, onMounted, onUnmounted, ref, useRef, watch, type FC } from '@rue-js/rue'
 import Menu from '../menu/index'
 import type { MenuClickInfo, MenuDataEntry, MenuProps } from '../menu/index'
 
@@ -673,13 +673,14 @@ const Dropdown: FC<DropdownProps> = ({
   }
   const currentTriggers = ref(normalizeTrigger(trigger))
   const contextPosition = ref<{ x: number; y: number } | null>(null)
-  const menuConfig: DropdownMenuProps | undefined =
+  const menuConfig = computed<DropdownMenuProps | undefined>(() =>
     menu || items
       ? {
           ...menu,
           items: items ?? menu?.items,
         }
-      : undefined
+      : undefined,
+  )
 
   let rootElement: HTMLElement | null = null
   let triggerElement: HTMLElement | null = null
@@ -817,7 +818,7 @@ const Dropdown: FC<DropdownProps> = ({
   const hasOverlay =
     childSlots.contentNode ||
     popupRender !== undefined ||
-    (menuConfig?.items !== undefined && menuConfig.items.length > 0) ||
+    (menuConfig.get()?.items?.length ?? 0) > 0 ||
     (overlay !== undefined && overlay !== null && overlay !== false) ||
     (content !== undefined && content !== null && content !== false)
 
@@ -851,7 +852,7 @@ const Dropdown: FC<DropdownProps> = ({
       : mergeClassNames(
           'z-30 min-w-56 rounded-box border border-base-300/60 bg-base-100 shadow-lg',
           getOverlayOffsetClass(resolvedDirection),
-          menuConfig?.items && menuConfig.items.length > 0 ? 'p-1' : 'p-0',
+          (menuConfig.get()?.items?.length ?? 0) > 0 ? 'p-1' : 'p-0',
         ),
     classNames?.overlay,
     overlayClassName,
@@ -864,7 +865,7 @@ const Dropdown: FC<DropdownProps> = ({
   }
   const closeFromMenu = () => requestOpenChange(false, 'menu')
   const handleOverlayContentClick = (event: MouseEvent) => {
-    if (!menuConfig?.items?.length || !mergedCloseOnClick) return
+    if (!menuConfig.get()?.items?.length || !mergedCloseOnClick) return
     const clickable = (event.target as HTMLElement | null)?.closest?.('a,button,[role="menuitem"]')
     if (!clickable) return
     const parentLi = clickable.closest('li')
@@ -876,19 +877,19 @@ const Dropdown: FC<DropdownProps> = ({
   }
   const overlayPatchedStyle = mergeStyles(overlayStyle, styles?.overlay, contextOverlayStyle)
   const renderOverlaySourceNode = () => {
-    if (menuConfig?.items && menuConfig.items.length > 0) {
+    if ((menuConfig.get()?.items?.length ?? 0) > 0) {
       return (
         <Menu
-          {...menuConfig}
-          items={menuConfig.items}
-          selectable={menuConfig.selectable ?? false}
-          triggerSubMenuAction={menuConfig.triggerSubMenuAction ?? 'click'}
+          {...menuConfig.get()}
+          items={menuConfig.get()?.items}
+          selectable={menuConfig.get()?.selectable ?? false}
+          triggerSubMenuAction={menuConfig.get()?.triggerSubMenuAction ?? 'click'}
           className={mergeClassNames(
             'w-full min-w-56 rounded-box bg-transparent p-0',
             classNames?.menu,
-            menuConfig.className,
+            menuConfig.get()?.className,
           )}
-          style={mergeStyleValue(menuConfig.style, styles?.menu) || undefined}
+          style={mergeStyleValue(menuConfig.get()?.style, styles?.menu) || undefined}
           onClick={(info: MenuClickInfo) => {
             const liveOverlay = (info.domEvent.target as HTMLElement | null)?.closest?.(
               '.dropdown-content',
@@ -903,7 +904,7 @@ const Dropdown: FC<DropdownProps> = ({
               })
               ancestor = ancestor.parentElement
             }
-            if (menuConfig.onClick) menuConfig.onClick(info)
+            menuConfig.get()?.onClick?.(info)
             if (mergedCloseOnClick) closeFromMenu()
             else {
               const preserveOpenDom = () => {
@@ -1032,7 +1033,7 @@ const Dropdown: FC<DropdownProps> = ({
           }
         }}
         className={mergeClassNames('inline-flex', classNames?.trigger, triggerClassName)}
-        hasMenu={!!menuConfig?.items?.length}
+        hasMenu={!!menuConfig.get()?.items?.length}
         expanded={currentOpen.value}
         disabled={disabled}
         onClick={(_event: MouseEvent) => {

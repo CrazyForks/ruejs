@@ -29,6 +29,8 @@ import {
 import { vapor } from './legacy-test-render'
 import { appendChild, createComment, createElement } from '../src/dom'
 
+void watchEffect
+
 setReactiveScheduling('microtask')
 
 afterEach(() => {

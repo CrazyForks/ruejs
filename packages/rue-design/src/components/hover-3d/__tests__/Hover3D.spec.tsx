@@ -30,7 +30,7 @@ const ManualOverlayFragment = () =>
   })
 
 const ManualVaporHoverRoot = ({ children }: { children?: any }) =>
-  vapor(parent => {
+  vapor(_parent => {
     const root = _$createElement('div')
     _$setClassName(root, 'hover-3d')
 

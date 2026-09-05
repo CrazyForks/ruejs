@@ -24,6 +24,9 @@ import {
 import { linkCurrentOwnerToParentContextProps, preserveParentContextProps } from './context'
 import { useApp } from './hooks/useApp'
 
+void appendChild
+void createComment
+
 /** useCustomElement 的包装配置。 */
 export interface CustomElementsOptions {
   /** 需要注入到 shadow root 或 host 的样式文本。 */

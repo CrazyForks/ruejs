@@ -1,4 +1,5 @@
 import {
+  computed,
   createContext,
   Slot,
   Template,
@@ -197,16 +198,16 @@ const EventProbe: FC<Record<string, unknown>> = props => {
 }
 
 const ContextProbe: FC<Record<string, unknown>> = props => {
-  const channel = useContext(LAB_CONTEXT)
+  const channel = computed(() => useContext(LAB_CONTEXT))
   const count = Number(props.count ?? 0)
 
   return (
     <section className="rounded-box border border-base-300 bg-base-100 p-5 shadow-sm">
       <p className="font-mono text-sm" data-testid="lab-context-value">
-        {channel}
+        {channel.value}
       </p>
       <div className="mt-4">
-        <Slot source={props} name="badge" props={{ channel, count }}>
+        <Slot source={props} name="badge" props={{ channel: channel.value, count }}>
           <span className="badge badge-outline" data-testid="lab-scoped-fallback">
             fallback badge
           </span>

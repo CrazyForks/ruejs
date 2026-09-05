@@ -79,8 +79,8 @@ fn compiles_keyed_native_rows_to_closed_factories() {
     assert!(out.contains("_$reconcileKeyed("), "{out}");
     assert!(out.contains("(item,index)=>item.id"), "{out}");
     assert!(out.contains("_$mountCompiledKeyedRow("), "{out}");
-    assert!(out.contains("_$rowItem.set(_$rowNextItem)"), "{out}");
-    assert!(out.contains("_$rowIndex.set(_$rowNextIndex)"), "{out}");
+    assert!(out.contains("_$rowItem1.set(_$rowNextItem)"), "{out}");
+    assert!(out.contains("_$rowIndex1.set(_$rowNextIndex)"), "{out}");
     assert!(!out.contains("_$compiledKeyedList"), "{out}");
     assert!(!out.contains("renderBetween("), "{out}");
     assert!(!out.contains("renderAnchor("), "{out}");

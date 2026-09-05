@@ -35,6 +35,8 @@ import {
 import { vapor } from './legacy-test-render'
 import { waitForContent } from './page-test-utils'
 
+void watchEffect
+
 const createLegacyVapor = (renderFn: Parameters<typeof _$compiledVapor>[0]) =>
   _$compiledVapor(renderFn)
 
@@ -239,6 +241,7 @@ describe('Component renderable boundary', () => {
               _$createDynamic((null as any) === 'component' ? null : (null as any), {
                 children: 'missing',
               }),
+              // eslint-disable-next-line no-constant-condition -- exercises compile-time reserved-tag handling
               _$createDynamic('component' === 'component' ? null : 'component', {
                 children: 'reserved',
               }),

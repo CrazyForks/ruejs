@@ -615,13 +615,16 @@ const RadioRoot: FC<RadioProps> = ({
 }
 
 /** inject Radio Group Props 的内部工具函数。 */
-const injectRadioGroupProps = (value: unknown, injectedProps: RadioGroupInjectedProps): unknown => {
+const _injectRadioGroupProps = (
+  value: unknown,
+  injectedProps: RadioGroupInjectedProps,
+): unknown => {
   if (typeof value === 'function' && (value as { kind?: unknown }).kind === 'block-factory') {
-    return injectRadioGroupProps((value as () => unknown)(), injectedProps)
+    return _injectRadioGroupProps((value as () => unknown)(), injectedProps)
   }
 
   if (Array.isArray(value)) {
-    return value.map(child => injectRadioGroupProps(child, injectedProps))
+    return value.map(child => _injectRadioGroupProps(child, injectedProps))
   }
   if (!isRenderableNode(value)) {
     return value
@@ -637,7 +640,7 @@ const injectRadioGroupProps = (value: unknown, injectedProps: RadioGroupInjected
   }
 
   if ('children' in nextProps) {
-    nextProps.children = injectRadioGroupProps(nextProps.children, injectedProps)
+    nextProps.children = _injectRadioGroupProps(nextProps.children, injectedProps)
   }
 
   if (isVNodeOfType(value, RadioRoot) || isVNodeOfType(value, RadioButton)) {

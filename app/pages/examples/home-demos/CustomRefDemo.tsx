@@ -211,7 +211,7 @@ const renderLog = (items: string[]) => (
 
 const CustomRefDemo: FC = () => {
   const [state] = useState(createCustomRefDemoState)
-  const matches = computed(() => {
+  const matches = computed<string[]>(() => {
     const normalizedQuery = state.query.value.trim().toLowerCase()
     return normalizedQuery
       ? searchItems.filter(item => item.toLowerCase().includes(normalizedQuery))
@@ -284,8 +284,8 @@ const CustomRefDemo: FC = () => {
           <div className="mt-4">
             <h3 className="mb-2 text-sm font-medium text-base-content/70">匹配结果</h3>
             <ul className="menu rounded-box bg-base-200/40">
-              {matches.value.length ? (
-                matches.value.map(item => (
+              {matches.get().length ? (
+                matches.get().map(item => (
                   <li key={item}>
                     <span>{item}</span>
                   </li>

@@ -64,11 +64,9 @@ assert.equal(
   3,
   'entry, middle, and final regions should each have one stable hook id',
 )
-assert.equal((safe.match(/useSetup\(/g) ?? []).length, 3)
+assert.equal((safe.match(/_\$compiledSetup\(/g) ?? []).length, 3)
 assert.doesNotMatch(safe, /_\$compiledCreateElement/)
-assert.match(safe, /const entryPrefix = 'entry'/)
 assert.match(safe, /function bumpMiddleValue/)
-assert.match(safe, /const world = 'world'/)
 assert.doesNotMatch(
   safe,
   /\bvapor\(|_\$createElement|_\$createComment|_\$createTextNode|_\$appendChild|renderAnchor|rue:slot:anchor|Proxy|_\$vaporMarkComponentRenderReactive/,
@@ -82,10 +80,8 @@ buildSync({
     sourcefile: 'compiled-control-flow-output.mjs',
   },
   alias: {
-    '@rue-js/rue/internal': resolve(root, 'packages/rue/src/compiled.ts'),
-    '@rue-js/rue/internal': resolve(root, 'packages/rue/src/vapor.ts'),
-    '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/compiled.ts'),
-    '@rue-js/runtime/vapor': resolve(root, 'packages/runtime/src/vapor.ts'),
+    '@rue-js/rue/internal': resolve(root, 'packages/rue/src/internal.ts'),
+    '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/internal.ts'),
   },
   bundle: true,
   format: 'esm',
@@ -188,10 +184,8 @@ const browserBuild = buildSync({
     sourcefile: 'compiled-control-flow-output.mjs',
   },
   alias: {
-    '@rue-js/rue/internal': resolve(root, 'packages/rue/src/compiled.ts'),
-    '@rue-js/rue/internal': resolve(root, 'packages/rue/src/vapor.ts'),
-    '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/compiled.ts'),
-    '@rue-js/runtime/vapor': resolve(root, 'packages/runtime/src/vapor.ts'),
+    '@rue-js/rue/internal': resolve(root, 'packages/rue/src/internal.ts'),
+    '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/internal.ts'),
   },
   bundle: true,
   format: 'esm',

@@ -680,7 +680,7 @@ const Descriptions: FC<DescriptionsProps> = ({
     collectedItemsRef.value = nextItems
   }
 
-  const renderTableView = () => {
+  const renderTableView = (_collectedItems: DescriptionsItemProps[]) => {
     const mergedColumn = resolveColumnCount(column, viewportWidth.value)
     const mergedItems = normalizeItems(
       items ?? collectedItemsRef.value,
@@ -1002,7 +1002,7 @@ const Descriptions: FC<DescriptionsProps> = ({
         )}
         style={styles?.body}
       >
-        {renderTableView()}
+        {renderTableView(collectedItemsRef.value)}
       </div>
 
       {items === undefined ? (

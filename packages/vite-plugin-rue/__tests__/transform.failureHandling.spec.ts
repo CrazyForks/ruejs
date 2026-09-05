@@ -71,7 +71,7 @@ describe('vite-plugin-rue transform failure handling', () => {
     const plugin = createPlugin({
       transformConcurrency: 2,
       transformTimeoutMs: 0,
-      transformExecutor: payload =>
+      transformExecutor: _payload =>
         new Promise(resolve => {
           activeTransforms += 1
           startedTransforms += 1

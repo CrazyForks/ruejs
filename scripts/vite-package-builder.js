@@ -539,7 +539,7 @@ function createPureCompoundComponentPlugin() {
   }
 }
 
-function resolveAliasEntries(request) {
+function resolveAliasEntries(_request) {
   return workspaceAliasEntries
 }
 

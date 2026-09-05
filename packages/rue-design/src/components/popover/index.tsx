@@ -446,33 +446,34 @@ const renderRoot = (
 }
 
 /** Root 的内部工具函数。 */
-const Root: FC<PopoverProps> = ({
-  as = 'div',
-  title,
-  content,
-  overlay,
-  placement = 'top',
-  trigger,
-  open,
-  defaultOpen,
-  disabled,
-  arrow = true,
-  destroyOnHidden = false,
-  mouseEnterDelay = 0.08,
-  mouseLeaveDelay = 0.12,
-  zIndex,
-  className,
-  style,
-  triggerClassName,
-  triggerStyle,
-  overlayClassName,
-  overlayStyle,
-  classNames,
-  styles,
-  onOpenChange,
-  children,
-  ...rest
-}) => {
+const Root: FC<PopoverProps> = props => {
+  const {
+    as = 'div',
+    title,
+    content,
+    overlay,
+    placement = 'top',
+    trigger,
+    open,
+    defaultOpen,
+    disabled,
+    arrow = true,
+    destroyOnHidden = false,
+    mouseEnterDelay = 0.08,
+    mouseLeaveDelay = 0.12,
+    zIndex,
+    className,
+    style,
+    triggerClassName,
+    triggerStyle,
+    overlayClassName,
+    overlayStyle,
+    classNames,
+    styles,
+    onOpenChange,
+    children,
+    ...rest
+  } = props
   const Component = as as any
   const uncontrolledOpenRef = useRef(ref(defaultOpen ?? false))
   const currentOpenRef = useRef(ref(open ?? defaultOpen ?? false))
@@ -504,7 +505,7 @@ const Root: FC<PopoverProps> = ({
   }
 
   watch(
-    () => open,
+    () => props.open,
     nextOpen => {
       currentOpen.value = typeof nextOpen === 'boolean' ? nextOpen : uncontrolledOpen.value
       syncPopoverDom(currentOpen.value)
@@ -513,7 +514,7 @@ const Root: FC<PopoverProps> = ({
   )
 
   watch(
-    () => trigger,
+    () => props.trigger,
     (nextTrigger: PopoverTrigger | PopoverTrigger[] | undefined) => {
       currentTriggers.value = normalizeTrigger(nextTrigger)
     },
@@ -521,7 +522,7 @@ const Root: FC<PopoverProps> = ({
   )
 
   watch(
-    () => defaultOpen,
+    () => props.defaultOpen,
     nextDefaultOpen => {
       if (!isControlled) {
         uncontrolledOpen.value = !!nextDefaultOpen

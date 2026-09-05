@@ -20,6 +20,8 @@ import { isReactive, isRef, reactive } from '../compiled-reactive-compat'
 import { getCurrentCompiledHookId } from '../compiled-hook-compat'
 import { hasCompiledHookRun } from '../runtime-context'
 
+void onCleanup
+
 const COMPILED_OWNER = Symbol('rue.compiledOwner')
 const COMPILED_MOUNTED = Symbol('rue.compiledMounted')
 
@@ -94,6 +96,8 @@ const createObjectState = <T extends object>(state: CompiledSignalHandle<T>): T 
       return true
     },
   })
+
+void createObjectState
 
 const cloneStateValue = <T extends object>(value: T): T =>
   (Array.isArray(value) ? [...value] : { ...value }) as T

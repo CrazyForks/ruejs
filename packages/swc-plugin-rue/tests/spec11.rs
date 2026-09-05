@@ -403,7 +403,7 @@ export default FormBindings;
     assert!(normalized.contains("_$compiledText"), "{normalized}");
     assert!(normalized.contains("_$setValue"), "{normalized}");
     assert!(normalized.contains("_$setChecked"), "{normalized}");
-    assert!(normalized.contains("checkedNames.value.includes(_$rowItem.get())"), "{normalized}");
+    assert!(normalized.contains("checkedNames.value.includes(_$rowItem1.get())"), "{normalized}");
     assert_eq!(
         normalized.matches(".addEventListener(").count(),
         normalized.matches(".removeEventListener(").count()

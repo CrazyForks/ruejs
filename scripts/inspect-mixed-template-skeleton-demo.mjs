@@ -75,11 +75,9 @@ const pageMetrics = {
 }
 
 const aliases = {
-  '@rue-js/rue/internal': resolve(root, 'packages/rue/src/compiled.ts'),
-  '@rue-js/rue/internal': resolve(root, 'packages/rue/src/vapor.ts'),
+  '@rue-js/rue/internal': resolve(root, 'packages/rue/src/internal.ts'),
   '@rue-js/rue': resolve(root, 'packages/rue/src/index.ts'),
-  '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/compiled.ts'),
-  '@rue-js/runtime/vapor': resolve(root, 'packages/runtime/src/vapor.ts'),
+  '@rue-js/runtime/internal': resolve(root, 'packages/runtime/src/internal.ts'),
 }
 
 const installDOM = () => {

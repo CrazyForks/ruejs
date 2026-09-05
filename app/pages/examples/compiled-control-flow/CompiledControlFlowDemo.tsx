@@ -20,9 +20,7 @@ const beginRegion = (region: RegionName) => {
 }
 
 const CompiledBranchCard: FC<{ label: string; mode: number }> = props => {
-  const entrySetupId = beginRegion('entry')
-  const entryPrefix = 'entry'
-  const entrySuffix = 'state'
+  beginRegion('entry')
   const bumpEntryValue = (value: number) => value + 1
   const entryCompiled = compiledSignal(1)
   const entryRef = ref(10)
@@ -64,9 +62,7 @@ const CompiledBranchCard: FC<{ label: string; mode: number }> = props => {
       </div>
     )
 
-  const middleSetupId = beginRegion('middle')
-  const hello = 'hello'
-  const middleSuffix = 'region'
+  beginRegion('middle')
   function bumpMiddleValue(value: number) {
     return value + 1
   }
@@ -98,9 +94,7 @@ const CompiledBranchCard: FC<{ label: string; mode: number }> = props => {
       </section>
     )
 
-  const finalSetupId = beginRegion('final')
-  const world = 'world'
-  const finalSuffix = 'region'
+  beginRegion('final')
   const bumpFinalValue = (value: number) => value + 1
   const finalCompiled = compiledSignal(3)
   const finalRef = ref(30)

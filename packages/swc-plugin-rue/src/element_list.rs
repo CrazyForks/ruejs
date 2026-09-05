@@ -1262,8 +1262,9 @@ fn try_build_list_from_map_with_anchor(
                 if needs_block_range {
                     let mut compiled_inner = inner.clone();
                     strip_compiled_list_row_keys(&mut compiled_inner);
-                    let item_signal = ident("_$rowItem");
-                    let index_signal = ident("_$rowIndex");
+                    let row_scope = vt.next_map;
+                    let item_signal = ident(&format!("_$rowItem{row_scope}"));
+                    let index_signal = ident(&format!("_$rowIndex{row_scope}"));
                     let getter = |signal: &Ident| {
                         call_member(signal.clone(), "get", vec![])
                     };
@@ -1290,8 +1291,9 @@ fn try_build_list_from_map_with_anchor(
                 let BlockStmtOrExpr::BlockStmt(block) = body.as_ref() else {
                     return None;
                 };
-                let item_signal = ident("_$rowItem");
-                let index_signal = ident("_$rowIndex");
+                let row_scope = vt.next_map;
+                let item_signal = ident(&format!("_$rowItem{row_scope}"));
+                let index_signal = ident(&format!("_$rowIndex{row_scope}"));
                 let mut block = block.clone();
                 for stmt in &mut block.stmts {
                     rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);

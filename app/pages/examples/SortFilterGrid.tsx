@@ -13,27 +13,29 @@ const DemoGrid: FC<{
   onSort: (key: string) => void
 }> = props => {
   const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
-  let currentRows: Row[] = props.data
-  if (props.filterKey) {
-    const query = String(props.filterKey).toLowerCase()
-    currentRows = currentRows.filter(row =>
-      Object.keys(row).some(key => String(row[key]).toLowerCase().includes(query)),
-    )
-  }
-
-  if (props.sortKey) {
-    const key = props.sortKey
-    const order = props.sortDirection
-    currentRows = currentRows.slice().sort((left, right) => {
-      const leftValue = left[key] as any
-      const rightValue = right[key] as any
-      return (leftValue === rightValue ? 0 : leftValue > rightValue ? 1 : -1) * order
-    })
+  const resolveRows = (): Row[] => {
+    let rows = props.data
+    if (props.filterKey) {
+      const query = String(props.filterKey).toLowerCase()
+      rows = rows.filter(row =>
+        Object.keys(row).some(key => String(row[key]).toLowerCase().includes(query)),
+      )
+    }
+    if (props.sortKey) {
+      const key = props.sortKey
+      const order = props.sortDirection
+      rows = rows.slice().sort((left, right) => {
+        const leftValue = left[key] as any
+        const rightValue = right[key] as any
+        return (leftValue === rightValue ? 0 : leftValue > rightValue ? 1 : -1) * order
+      })
+    }
+    return rows
   }
 
   return (
     <div>
-      {currentRows.length ? (
+      {resolveRows().length ? (
         <table className="min-w-full border-2 border-emerald-500 rounded-md bg-white">
           <thead>
             <tr>
@@ -56,7 +58,7 @@ const DemoGrid: FC<{
             </tr>
           </thead>
           <tbody>
-            {currentRows.map((entry: Row, idx: number) => (
+            {resolveRows().map((entry: Row, idx: number) => (
               <tr key={idx}>
                 {props.columns.map(key => (
                   <td key={key} className="bg-gray-50 min-w-[120px] px-5 py-2">

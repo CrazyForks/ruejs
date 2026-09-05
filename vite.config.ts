@@ -172,6 +172,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
               '/app/',
               '/docs/',
               '/packages/router/src/',
+              '/packages/router/__tests__/',
               '/packages/rue-design/src/',
               '/packages/rue/__tests__/',
               '/packages/runtime/__tests__/',

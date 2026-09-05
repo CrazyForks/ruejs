@@ -587,7 +587,6 @@ const renderParagraph = (
 /** Skeleton Root 的内部工具函数。 */
 const SkeletonRoot: FC<SkeletonProps> = props => {
   const {
-    loading,
     active,
     avatar,
     title,
@@ -598,7 +597,6 @@ const SkeletonRoot: FC<SkeletonProps> = props => {
     classNames,
     style,
     styles,
-    children,
     ...rest
   } = props
   const hasLoadingProp = Object.prototype.hasOwnProperty.call(props, 'loading')

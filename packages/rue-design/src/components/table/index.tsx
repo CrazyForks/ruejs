@@ -662,7 +662,6 @@ const Table: FC<TableProps> = props => {
     styles,
     children,
     dataSource,
-    columns,
     rowKey = 'key',
     showHeader = true,
     onRow,
@@ -739,7 +738,7 @@ const Table: FC<TableProps> = props => {
       </table>
     )
 
-  const initialLeafColumns = Array.isArray(columns) ? flattenLeafColumns(columns) : []
+  const initialLeafColumns = Array.isArray(props.columns) ? flattenLeafColumns(props.columns) : []
   const [tableId] = useState(`rue-table-${tableSeed++}`)
   const [sortStateRef] = useState<SortState[]>(resolveInitialSort(initialLeafColumns), {
     kind: 'ref',
@@ -791,9 +790,9 @@ const Table: FC<TableProps> = props => {
     { kind: 'ref' },
   )
 
-  if (Array.isArray(columns) && Array.isArray(dataSource)) {
-    const headerRows = buildHeaderRows(columns)
-    const leafColumns = flattenLeafColumns(columns)
+  if (Array.isArray(props.columns) && Array.isArray(dataSource)) {
+    const headerRows = buildHeaderRows(props.columns)
+    const leafColumns = flattenLeafColumns(props.columns)
     const leafColumnMap = /*#__PURE__*/ new Map(leafColumns.map(leaf => [leaf.key, leaf] as const))
 
     const bumpStateVersion = () => {
@@ -801,7 +800,9 @@ const Table: FC<TableProps> = props => {
     }
 
     const hasControlledSort = leafColumns.some(leaf => leaf.column.sortOrder !== undefined)
-    const activeSortStates = normalizeSortStates(sortStateRef.value)
+    const activeSortStates = hasControlledSort
+      ? resolveInitialSort(leafColumns)
+      : normalizeSortStates(sortStateRef.value)
     const activeSortStateMap = /*#__PURE__*/ new Map(
       activeSortStates.map(state => [state.key, state] as const),
     )

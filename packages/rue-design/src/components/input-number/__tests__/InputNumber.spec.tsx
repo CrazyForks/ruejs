@@ -116,7 +116,6 @@ describe('InputNumber', () => {
     const decreaseButton = container.querySelector(
       'button[aria-label="Decrease value"]',
     ) as HTMLButtonElement
-
     increaseButton.click()
     await waitForContent(() => {
       expect(input.value).toBe('2.5')
@@ -244,10 +243,6 @@ describe('InputNumber', () => {
     const increaseButton = container.querySelector(
       'button[aria-label="Increase value"]',
     ) as HTMLButtonElement
-    const decreaseButton = container.querySelector(
-      'button[aria-label="Decrease value"]',
-    ) as HTMLButtonElement
-
     increaseButton.dispatchEvent(createPointerLikeEvent('pointerdown'))
     expect(input.value).toBe('$1500')
 

@@ -26,6 +26,8 @@ import {
   isRueServerIslandDescriptor,
 } from '@rue-js/runtime/island'
 
+void createCompiledComponent
+
 const SERVER_OPERATION = Symbol.for('rue.server.operation')
 const TEXT_CONTEXT_VALUE_STACK_KEY = Symbol.for('text.contextValueStack')
 const CONTEXT_PROVIDER_MARKER = '__rue_context_provider__'

@@ -1,5 +1,6 @@
 import type { ComponentInstance, ComponentProps, RenderOutput } from './runtime-types'
 import { _$createComponent } from './compiled-component-call'
+import { _$compiledWithKey } from './compiled-legacy-dom'
 import { _$compiledValue } from './compiled-render-anchor'
 
 /** Compiler-only dynamic target protocol. Children are carried by props; there is no rest-children API. */
@@ -14,7 +15,10 @@ export const createCompiledDynamic = <P = {}>(
   if (typeof type !== 'string' && typeof type !== 'function') {
     throw new TypeError('[rue] compiled dynamic targets must be a tag string or component function')
   }
-  return _$createComponent(type, (props ?? {}) as P & { children?: any })
+  const rendered = _$createComponent(type, (props ?? {}) as P & { children?: any })
+  return props != null && Object.hasOwn(props, 'key')
+    ? _$compiledWithKey(rendered, (props as ComponentProps).key)
+    : rendered
 }
 
 /** Mount an explicit compiler-produced children list as one repeatable Fragment handle. */
