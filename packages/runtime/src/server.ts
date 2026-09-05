@@ -487,13 +487,8 @@ export class ServerDOMAdapter implements DOMAdapter {
     return this.isFragment(node) ? [...(node as ServerNode).childNodes] : [node]
   }
 
-  applyRef(el: DomElementLike, ref: any) {
-    if (typeof ref === 'function') {
-      ref(el)
-    } else if (ref && typeof ref === 'object' && 'current' in ref) {
-      ref.current = el
-    }
-  }
+  // Server nodes are serialization records, not mounted browser elements.
+  applyRef(_el: DomElementLike, _ref: any) {}
 
   clearRef(ref: any) {
     if (typeof ref === 'function') {
@@ -831,10 +826,6 @@ function createServerNodeFromProtocolElement(
   if (node instanceof ServerElementNode) {
     for (const [key, value] of Object.entries(props)) {
       setServerElementProp(node, key, value)
-    }
-    const ref = props.ref
-    if (ref) {
-      getDOMAdapter().applyRef(node, ref)
     }
   }
   if (!(node instanceof ServerElementNode) || node.rawInnerHTML == null) {
