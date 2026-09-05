@@ -109,27 +109,27 @@ const notificationLikeSource = `
   export default Demo
 `
 
+// Give each component its own timeout and failure report as the design library grows.
+const entryIds = await rueDesignComponentEntryIds()
+
 describe('vite-plugin-rue rue-design transform header guard', () => {
-  it('strict-compiles every rue-design component entry without fallback', async () => {
-    const entryIds = await rueDesignComponentEntryIds()
+  it.each(entryIds)('strict-compiles %s without fallback', async id => {
     const failures: Array<{ id: string; message: string }> = []
 
-    for (const id of entryIds) {
-      const source = await readFile(id, 'utf8')
+    const source = await readFile(id, 'utf8')
 
-      try {
-        const result = await invokeTransform(source, id)
-        const code = typeof result === 'string' ? result : String(result?.code ?? '')
+    try {
+      const result = await invokeTransform(source, id)
+      const code = typeof result === 'string' ? result : String(result?.code ?? '')
 
-        if (!code.includes(HEADER)) {
-          throw new Error('transform returned no Rue compiler header')
-        }
-      } catch (error) {
-        failures.push({
-          id,
-          message: error instanceof Error ? error.message : String(error),
-        })
+      if (!code.includes(HEADER)) {
+        throw new Error('transform returned no Rue compiler header')
       }
+    } catch (error) {
+      failures.push({
+        id,
+        message: error instanceof Error ? error.message : String(error),
+      })
     }
 
     const report = formatStrictDiagnosticReport(failures)

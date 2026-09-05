@@ -560,39 +560,49 @@ describe('RouterView renderable boundary', () => {
     }
   })
 
-  it('restores async leaf content while switching across real sidebar route layouts', async () => {
-    setReactiveScheduling('sync')
-    const router = createAppRouter(createMemoryHistory('/'))
-    attachRouter(router)
+  it(
+    'restores async leaf content while switching across real sidebar route layouts',
+    async () => {
+      setReactiveScheduling('sync')
+      const router = createAppRouter(createMemoryHistory('/'))
+      attachRouter(router)
 
-    const container = mountTestContainer()
-    render(<RouterView />, container)
+      const container = mountTestContainer()
+      render(<RouterView />, container)
 
-    await waitForContent(() => {
-      expect(container.textContent).toContain('Framework For Native DOM')
-    }, 400)
+      // Real route imports (including nested MDX imports) can outlast short DOM polling on CI.
+      await vi.dynamicImportSettled()
 
-    await router.push('/examples/hello-world')
-    await waitForContent(() => {
-      expect(container.querySelector('.sidebar-playground')).toBeTruthy()
-      expect(container.textContent).toContain('你好，世界（移植自 Vue）')
-    }, 400)
+      await waitForContent(() => {
+        expect(container.textContent).toContain('Framework For Native DOM')
+      }, 400)
 
-    await router.push('/guide/guide/quick-start')
-    await waitForContent(() => {
-      expect(container.querySelector('.sidebar-playground')).toBeTruthy()
-      expect(container.querySelector('#doc-body')?.textContent).toContain('快速开始')
-      expect(container.querySelector('#doc-body')?.textContent).toContain('创建 Rue 应用')
-      expect(container.textContent).not.toContain('你好，世界（移植自 Vue）')
-    }, 400)
+      await router.push('/examples/hello-world')
+      await vi.dynamicImportSettled()
+      await waitForContent(() => {
+        expect(container.querySelector('.sidebar-playground')).toBeTruthy()
+        expect(container.textContent).toContain('你好，世界（移植自 Vue）')
+      }, 400)
 
-    await router.push('/examples/hello-world')
-    await waitForContent(() => {
-      expect(container.querySelector('.sidebar-playground')).toBeTruthy()
-      expect(container.textContent).toContain('你好，世界（移植自 Vue）')
-      expect(container.querySelector('#doc-body')).toBeNull()
-    }, 400)
-  })
+      await router.push('/guide/guide/quick-start')
+      await vi.dynamicImportSettled()
+      await waitForContent(() => {
+        expect(container.querySelector('.sidebar-playground')).toBeTruthy()
+        expect(container.querySelector('#doc-body')?.textContent).toContain('快速开始')
+        expect(container.querySelector('#doc-body')?.textContent).toContain('创建 Rue 应用')
+        expect(container.textContent).not.toContain('你好，世界（移植自 Vue）')
+      }, 400)
+
+      await router.push('/examples/hello-world')
+      await vi.dynamicImportSettled()
+      await waitForContent(() => {
+        expect(container.querySelector('.sidebar-playground')).toBeTruthy()
+        expect(container.textContent).toContain('你好，世界（移植自 Vue）')
+        expect(container.querySelector('#doc-body')).toBeNull()
+      }, 400)
+    },
+    slowTestTimeout,
+  )
 
   it('renders the home page after leaving the API index route', async () => {
     const ApiIndex: FC = () => <article id="doc-body">API 参考</article>
