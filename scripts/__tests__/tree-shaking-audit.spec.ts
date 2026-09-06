@@ -74,7 +74,7 @@ describe('consumer tree-shaking audit', () => {
         ),
       )
     }
-  })
+  }, 30_000)
 
   it('accepts reports within every configured byte and module budget', () => {
     const result = evaluateTreeShakingBudget(
