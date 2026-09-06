@@ -1,3 +1,14 @@
+## [0.9.4](https://github.com/hunzhiwange/ruejs/compare/v0.9.3...v0.9.4) (2026-09-06)
+
+
+### Features
+
+* JSX最终展示值自动解包;useEffect依赖数组兼容;useState完全兼容React;清理-hooks-api; ([87f1d83](https://github.com/hunzhiwange/ruejs/commit/87f1d83a60d8175252d8e0b57f03fc8c4a0bf832))
+* v-memo、r-memo 现在按 key 保存行缓存，交换行复用原 DOM，依赖不变时跳过行内更新，删除行时释放订阅 ([6b267a8](https://github.com/hunzhiwange/ruejs/commit/6b267a8a00a8b70f9489ae0d94f23e4cf19c0a38))
+* 修复 make deploy-static-site ([19f3713](https://github.com/hunzhiwange/ruejs/commit/19f37136d51633ef5ff43b813602680c5dcc5958))
+* 修复 已修复这 10 个 SSR 错误。根因是服务端错误执行了 DOM ref，让组件在服务端节点上调用浏览器 API；现在 SSR 不再绑定 DOM ref，客户端行为保持正常。 ([17fc7a3](https://github.com/hunzhiwange/ruejs/commit/17fc7a32d77ddc9582acbc743dbd5daf570e76d3))
+* 修复readme ([8ef810e](https://github.com/hunzhiwange/ruejs/commit/8ef810e9a1c2f74b918b7bc537f776477fa5c35d))
+
 # [0.9.0](https://github.com/hunzhiwange/ruejs/compare/v0.8.21...v0.9.0) (2026-09-04)
 
 
