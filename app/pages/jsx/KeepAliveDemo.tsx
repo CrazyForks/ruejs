@@ -17,13 +17,11 @@ const CounterPanel: FC = () => {
   return (
     <article className="rounded-box border border-primary/25 bg-primary/10 p-4 shadow-sm">
       <div className="text-xs uppercase tracking-[0.22em] opacity-60">CounterPanel</div>
-      <div className="mt-2 text-3xl font-semibold">{count.value}</div>
+      <div className="mt-2 text-3xl font-semibold">{count}</div>
       <button
         className="btn btn-primary btn-sm mt-4"
         onClick={() => {
-          setCount(value => {
-            value.value += 1
-          })
+          setCount(value => value + 1)
         }}
       >
         增加
@@ -42,13 +40,13 @@ const DraftPanel: FC = () => {
         <span className="label-text">标题</span>
         <input
           className="input input-bordered mt-1"
-          value={title.value}
+          value={title}
           onInput={(event: Event) => {
             setTitle((event.target as HTMLInputElement).value)
           }}
         />
       </label>
-      <div className="mt-3 text-sm opacity-75">当前草稿：{title.value}</div>
+      <div className="mt-3 text-sm opacity-75">当前草稿：{title}</div>
     </article>
   )
 }
@@ -91,8 +89,8 @@ type ViewName = 'CounterPanel' | 'DraftPanel' | 'FeedPanel';
 const CounterPanel: FC = () => {
   const [count, setCount] = useState(0);
   return (
-    <button onClick={() => setCount(value => { value.value += 1 })}>
-      CounterPanel: {count.value}
+    <button onClick={() => setCount(value => value + 1)}>
+      CounterPanel: {count}
     </button>
   );
 };
@@ -101,7 +99,7 @@ const DraftPanel: FC = () => {
   const [title, setTitle] = useState('未提交草稿');
   return (
     <input
-      value={title.value}
+      value={title}
       onInput={(event: Event) => setTitle((event.target as HTMLInputElement).value)}
     />
   );

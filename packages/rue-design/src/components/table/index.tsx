@@ -739,28 +739,20 @@ const Table: FC<TableProps> = props => {
     )
 
   const initialLeafColumns = Array.isArray(props.columns) ? flattenLeafColumns(props.columns) : []
-  const [tableId] = useState(`rue-table-${tableSeed++}`)
-  const [sortStateRef] = useState<SortState[]>(resolveInitialSort(initialLeafColumns), {
-    kind: 'ref',
-  })
+  const [tableId] = useState(() => `rue-table-${tableSeed++}`)
+  const [sortStateRef, setSortStateRef] = useState<SortState[]>(
+    resolveInitialSort(initialLeafColumns),
+  )
   const [filterStateRef, setFilterStateRef] = useState<Record<string, any[]>>(
     resolveInitialFilters(initialLeafColumns),
-    { kind: 'ref' },
   )
-  const [draftFilterStateRef, setDraftFilterStateRef] = useState<Record<string, any[]>>(
-    {},
-    { kind: 'ref' },
-  )
-  const [filterSearchRef, setFilterSearchRef] = useState<Record<string, string>>(
-    {},
-    { kind: 'ref' },
-  )
+  const [draftFilterStateRef, setDraftFilterStateRef] = useState<Record<string, any[]>>({})
+  const [filterSearchRef, setFilterSearchRef] = useState<Record<string, string>>({})
   const openFilterMenuKey = { value: null as string | null }
   const scrollRoot = { value: null as HTMLElement | null }
   const [stateVersion, setStateVersion] = useState(0)
   const [selectedRowKeysRef, setSelectedRowKeysRef] = useState<TableKey[]>(
     rowSelection?.defaultSelectedRowKeys ? [...rowSelection.defaultSelectedRowKeys] : [],
-    { kind: 'ref' },
   )
   const paginationConfig = pagination != null && pagination !== false ? pagination : undefined
   const [uncontrolledPageRef, setUncontrolledPageRef] = useState(
@@ -787,7 +779,6 @@ const Table: FC<TableProps> = props => {
             return []
           })
         : [],
-    { kind: 'ref' },
   )
 
   if (Array.isArray(props.columns) && Array.isArray(dataSource)) {
@@ -796,13 +787,13 @@ const Table: FC<TableProps> = props => {
     const leafColumnMap = /*#__PURE__*/ new Map(leafColumns.map(leaf => [leaf.key, leaf] as const))
 
     const bumpStateVersion = () => {
-      setStateVersion(stateVersion.value + 1)
+      setStateVersion(version => version + 1)
     }
 
     const hasControlledSort = leafColumns.some(leaf => leaf.column.sortOrder !== undefined)
     const activeSortStates = hasControlledSort
       ? resolveInitialSort(leafColumns)
-      : normalizeSortStates(sortStateRef.value)
+      : normalizeSortStates(sortStateRef)
     const activeSortStateMap = /*#__PURE__*/ new Map(
       activeSortStates.map(state => [state.key, state] as const),
     )
@@ -813,7 +804,7 @@ const Table: FC<TableProps> = props => {
         acc[leaf.key] = normalizeFilterValues(controlledValue)
         return acc
       }
-      acc[leaf.key] = normalizeFilterValues(filterStateRef.value[leaf.key])
+      acc[leaf.key] = normalizeFilterValues(filterStateRef[leaf.key])
       return acc
     }, {})
 
@@ -897,7 +888,7 @@ const Table: FC<TableProps> = props => {
 
     const expandedRowKeys = expandable?.expandedRowKeys
       ? [...expandable.expandedRowKeys]
-      : [...expandedRowKeysRef.value]
+      : [...expandedRowKeysRef]
     const expandedRowKeySet = /*#__PURE__*/ new Set(expandedRowKeys)
 
     const flattenRows = (
@@ -930,11 +921,11 @@ const Table: FC<TableProps> = props => {
     const total = visibleRows.length
     const paginationEnabled = paginationConfig != null
     const resolvedPageSize = paginationEnabled
-      ? Math.max(1, paginationConfig.pageSize ?? uncontrolledPageSizeRef.value)
+      ? Math.max(1, paginationConfig.pageSize ?? uncontrolledPageSizeRef)
       : Math.max(total, 1)
     const pageCount = paginationEnabled ? Math.max(1, Math.ceil(total / resolvedPageSize)) : 1
     const currentPage = paginationEnabled
-      ? clampPage(paginationConfig.current ?? uncontrolledPageRef.value, pageCount)
+      ? clampPage(paginationConfig.current ?? uncontrolledPageRef, pageCount)
       : 1
     const pageRows = paginationEnabled
       ? visibleRows.slice((currentPage - 1) * resolvedPageSize, currentPage * resolvedPageSize)
@@ -943,7 +934,7 @@ const Table: FC<TableProps> = props => {
 
     const selectedRowKeys = rowSelection?.selectedRowKeys
       ? [...rowSelection.selectedRowKeys]
-      : [...selectedRowKeysRef.value]
+      : [...selectedRowKeysRef]
     const selectedRowKeySet = /*#__PURE__*/ new Set(selectedRowKeys)
 
     const selectionAlign = rowSelection?.align ?? 'center'
@@ -982,12 +973,12 @@ const Table: FC<TableProps> = props => {
 
     const ensureOutsideCloseRegistered = () => {
       const globalValue: any = globalThis
-      const registryKey = `__rue_table_outside_close_${tableId.value}`
+      const registryKey = `__rue_table_outside_close_${tableId}`
       if (globalValue[registryKey]) return
       const handler = (event: any) => {
         const target = event?.target as HTMLElement | null
         if (!target) return
-        if (target.closest(`[data-rue-table-root="${tableId.value}"]`)) return
+        if (target.closest(`[data-rue-table-root="${tableId}"]`)) return
         openFilterMenuKey.value = null
         bumpStateVersion()
       }
@@ -1094,7 +1085,7 @@ const Table: FC<TableProps> = props => {
         if (!order) return []
         return [{ key: columnKey, order, multiple }]
       })()
-      sortStateRef.value = nextSortStates
+      setSortStateRef(nextSortStates)
       bumpStateVersion()
       if (paginationEnabled && paginationConfig.current === undefined) setUncontrolledPageRef(1)
       scrollToTopIfNeeded()
@@ -1130,7 +1121,7 @@ const Table: FC<TableProps> = props => {
       const nextFilters = { ...currentFilters, [columnKey]: nextValues }
       const column = leafColumns.find(leaf => leaf.key === columnKey)?.column
       if (column?.filteredValue === undefined) setFilterStateRef(nextFilters)
-      setDraftFilterStateRef({ ...draftFilterStateRef.value, [columnKey]: nextValues })
+      setDraftFilterStateRef(current => ({ ...current, [columnKey]: nextValues }))
       bumpStateVersion()
       if (paginationEnabled && paginationConfig.current === undefined) setUncontrolledPageRef(1)
       if (closeMenu) openFilterMenuKey.value = null
@@ -1192,7 +1183,7 @@ const Table: FC<TableProps> = props => {
     const selectAll = (checked: boolean) => {
       if (!rowSelection || rowSelection.type === 'radio') return
       const pageKeySet = /*#__PURE__*/ new Set(selectablePageKeys)
-      const existingKeys = (rowSelection.selectedRowKeys ?? selectedRowKeysRef.value) as TableKey[]
+      const existingKeys = (rowSelection.selectedRowKeys ?? selectedRowKeysRef) as TableKey[]
       const nextKeySet = /*#__PURE__*/ new Set(existingKeys)
       pageKeySet.forEach(key => {
         if (checked) nextKeySet.add(key)
@@ -1242,9 +1233,8 @@ const Table: FC<TableProps> = props => {
     const getNextSortOrder = (columnKey: string, column: ColumnItem) => {
       const cycle = getSortCycle(column)
       const currentOrder =
-        new Map(normalizeSortStates(sortStateRef.value).map(state => [state.key, state])).get(
-          columnKey,
-        )?.order ?? null
+        new Map(normalizeSortStates(sortStateRef).map(state => [state.key, state])).get(columnKey)
+          ?.order ?? null
       const currentIndex = cycle.findIndex(order => order === currentOrder)
       return cycle[(currentIndex + 1 + cycle.length) % cycle.length]
     }
@@ -1259,19 +1249,17 @@ const Table: FC<TableProps> = props => {
       const visible = column
         ? resolveFilterDropdownOpen(column, columnKey)
         : openFilterMenuKey.value === columnKey
-      if (visible || draftFilterStateRef.value[columnKey] !== undefined) {
-        return normalizeFilterValues(
-          draftFilterStateRef.value[columnKey] ?? currentFilters[columnKey],
-        )
+      if (visible || draftFilterStateRef[columnKey] !== undefined) {
+        return normalizeFilterValues(draftFilterStateRef[columnKey] ?? currentFilters[columnKey])
       }
       return normalizeFilterValues(currentFilters[columnKey])
     }
 
     const setDraftFilterValues = (columnKey: string, values: any[]) => {
-      setDraftFilterStateRef({
-        ...draftFilterStateRef.value,
+      setDraftFilterStateRef(current => ({
+        ...current,
         [columnKey]: normalizeFilterValues(values),
-      })
+      }))
       bumpStateVersion()
     }
 
@@ -1400,7 +1388,7 @@ const Table: FC<TableProps> = props => {
           >
             <input
               type={column.filterMultiple === false ? 'radio' : 'checkbox'}
-              name={`rue-table-filter-${tableId.value}-${leafKey}`}
+              name={`rue-table-filter-${tableId}-${leafKey}`}
               className={
                 column.filterMultiple === false ? 'radio radio-xs' : 'checkbox checkbox-xs'
               }
@@ -1457,12 +1445,12 @@ const Table: FC<TableProps> = props => {
               type="text"
               className="input input-bordered input-xs mb-2 w-full"
               placeholder="搜索筛选项"
-              value={filterSearchRef.value[leafKey] ?? ''}
+              value={filterSearchRef[leafKey] ?? ''}
               onInput={(event: any) => {
-                setFilterSearchRef({
-                  ...filterSearchRef.value,
+                setFilterSearchRef(current => ({
+                  ...current,
                   [leafKey]: (event.target as HTMLInputElement).value,
-                })
+                }))
                 bumpStateVersion()
               }}
             />
@@ -1510,7 +1498,7 @@ const Table: FC<TableProps> = props => {
       const filtered = column.filtered ?? (currentFilters[leafKey] ?? []).length > 0
       const sortOrder = activeSortStateMap.get(leafKey)?.order ?? null
       const draftValues = getDraftFilterValues(leafKey, column)
-      const filterSearchValue = filterSearchRef.value[leafKey] ?? ''
+      const filterSearchValue = filterSearchRef[leafKey] ?? ''
       const visible = resolveFilterDropdownOpen(column, leafKey)
       const menuItems = filterItemsBySearch(column.filters ?? [], filterSearchValue, column)
       const sorterTooltipTitle = resolveSorterTooltipTitle(column, leafKey)
@@ -1637,7 +1625,7 @@ const Table: FC<TableProps> = props => {
           updateSelectedKeys([row.key], { type: 'radio' }, row.record, true, event)
           return
         }
-        const baseKeys = rowSelection.selectedRowKeys ?? selectedRowKeysRef.value
+        const baseKeys = rowSelection.selectedRowKeys ?? selectedRowKeysRef
         const nextKeySet = /*#__PURE__*/ new Set(baseKeys)
         if (input.checked) nextKeySet.add(row.key)
         else nextKeySet.delete(row.key)
@@ -1791,9 +1779,9 @@ const Table: FC<TableProps> = props => {
         ref={(element: HTMLElement | null) => {
           scrollRoot.value = element
         }}
-        data-rue-table-root={tableId.value}
-        data-rue-table-scroll={tableId.value}
-        data-rue-table-version={stateVersion.value}
+        data-rue-table-root={tableId}
+        data-rue-table-scroll={tableId}
+        data-rue-table-version={stateVersion}
         className={mergeClassNames(
           'relative',
           bordered ? 'rounded-box border border-base-300 bg-base-100' : undefined,
@@ -1814,7 +1802,7 @@ const Table: FC<TableProps> = props => {
             {titleNode}
           </div>
         ) : null}
-        <table className={cls} style={tableStyle} data-rue-table-id={tableId.value}>
+        <table className={cls} style={tableStyle} data-rue-table-id={tableId}>
           {showHeader ? (
             <thead className={semanticClasses.thead} style={semanticStyles.thead}>
               {headerRows.map((row, rowIndex) => {
@@ -1884,7 +1872,7 @@ const Table: FC<TableProps> = props => {
             </thead>
           ) : null}
           <tbody
-            key={`body-${stateVersion.value}`}
+            key={`body-${stateVersion}`}
             className={semanticClasses.tbody}
             style={semanticStyles.tbody}
           >

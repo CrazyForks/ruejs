@@ -21,12 +21,9 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
 
     assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
-    assert!(
-        out.contains(&utils::normalize("_$compiledCreateElement(\"li\", __rue_parent_context)")),
-        "{out}"
-    );
-    assert!(out.contains("_$mountCompiledKeyedRow"), "{out}");
-    assert!(out.contains("_$mountCompiledSlotFactory"), "{out}");
+    assert!(out.contains("_$template("), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedRowOwnerless"), "{out}");
+    assert!(!out.contains("_$mountCompiledSlotFactory"), "{out}");
     assert!(!out.contains(&utils::normalize("singleRoot:")));
     assert!(!out.contains(&utils::normalize(concat!("direct", "Root:"))));
     assert!(!out.contains(&utils::normalize("renderAnchor(__slot, parent, start)")));

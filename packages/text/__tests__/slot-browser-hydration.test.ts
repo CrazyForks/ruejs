@@ -93,11 +93,11 @@ describe('slot browser hydration', () => {
         {
           onClick: () => {
             clicks += 1
-            setCount(count.value + 1)
+            setCount(previous => previous + 1)
           },
           type: 'button',
         },
-        `Count ${count.value}`,
+        `Count ${count}`,
       )
     }
 
@@ -122,19 +122,19 @@ describe('slot browser hydration', () => {
 
       function handleClick() {
         clicks += 1
-        const nextLiked = !liked.value
+        const nextLiked = !liked
         setLiked(nextLiked)
-        setLikes(likes.value + (nextLiked ? 1 : -1))
+        setLikes(previous => previous + (nextLiked ? 1 : -1))
       }
 
       return createCompiledTestElement(
         'button',
         {
-          className: liked.value ? 'like-button liked' : 'like-button',
+          className: liked ? 'like-button liked' : 'like-button',
           onClick: handleClick,
           type: 'button',
         },
-        `${liked.value ? 'Liked' : 'Like'} · ${likes.value}`,
+        `${liked ? 'Liked' : 'Like'} · ${likes}`,
       )
     }
 
@@ -245,10 +245,7 @@ describe('slot browser hydration', () => {
     })
 
     function BrowserRootLike() {
-      const [stateRef] = useState(() => ({ elements }), { kind: 'ref' } as never)
-      const state = ((stateRef as { value?: unknown }).value ?? stateRef) as {
-        elements: Record<string, unknown>
-      }
+      const [state] = useState(() => ({ elements }))
       return renderSlotElement({
         elements: state.elements as never,
         id: 'page:/client',

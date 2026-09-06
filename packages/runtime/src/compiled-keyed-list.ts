@@ -1,6 +1,7 @@
 import { insertBefore, removeChild, withDOMHostOperations } from './compiler-runtime/dom.browser'
 import { computed, createOwner, disposeOwner, signal, untrack } from './internal-reactive'
-import type { CompiledSlotFactory } from './compiler-runtime/mount'
+import { _$mountCompiledSlotFactory, type CompiledSlotFactory } from './compiler-runtime/mount'
+import { _$compiledRoot, type CompiledRootSetupResult } from './compiled-root'
 
 export interface CompiledKeyedRow<T, K = unknown> {
   key: K
@@ -26,7 +27,7 @@ type CompiledKeyedParent = Node & ParentNode
 
 export interface CompiledListMemo {
   read: <T>(read: () => T) => T
-  refresh: () => void
+  refresh: () => boolean
   dispose: () => void
 }
 
@@ -51,7 +52,11 @@ export const _$compiledListMemo = (dependencies: () => readonly unknown[]): Comp
       snapshot.get()
       return untrack(read)
     },
-    refresh: () => revision.trigger(),
+    refresh: () => {
+      const before = snapshot.get()
+      revision.trigger()
+      return !Object.is(snapshot.get(), before)
+    },
     dispose: () => {
       snapshot.dispose()
       revision.dispose()
@@ -88,6 +93,19 @@ export const _$mountCompiledKeyedRow = <T>(
     throw error
   }
 }
+
+/** Compatibility modules keep setup resources in the full runtime's owner system. */
+export const _$mountCompiledKeyedRowSetup = <T>(
+  setup: (parent: ParentNode | null) => CompiledRootSetupResult,
+  patch: (item: T, index: number) => void,
+): CompiledKeyedMountResult<T> =>
+  _$mountCompiledKeyedRow(
+    (target, _props, owner) =>
+      _$mountCompiledSlotFactory(target, owner, () =>
+        _$compiledRoot(Object.assign(setup, { __rue_compiled_explicit_roots: true as const })),
+      ),
+    patch,
+  )
 
 const rowLast = <T, K>(row: Pick<CompiledKeyedRow<T, K>, 'node' | 'last'>) => row.last ?? row.node
 
@@ -210,9 +228,9 @@ export const _$reconcileKeyed = <T, K>(
         previousIndex: number,
         nextIndex: number,
       ) => {
-        if (row.memo || !Object.is(row.item, item) || previousIndex !== nextIndex)
+        const memoChanged = row.memo?.refresh() ?? false
+        if (memoChanged || !Object.is(row.item, item) || previousIndex !== nextIndex)
           row.patch(item, nextIndex)
-        row.memo?.refresh()
         row.item = item
       }
 
@@ -251,7 +269,7 @@ export const _$reconcileKeyed = <T, K>(
           }
           cursor = row.node
           if (row.key === keys[index]) {
-            if (row.memo || row.item !== items[index]) stableItemsRetained = false
+            if (row.item !== items[index]) stableItemsRetained = false
             continue
           }
           if (firstMismatch < 0) firstMismatch = index
@@ -279,8 +297,15 @@ export const _$reconcileKeyed = <T, K>(
           const next = previous.slice() as CompiledKeyedRow<T, K>[]
           next[firstMismatch] = previous[secondMismatch]
           next[secondMismatch] = previous[firstMismatch]
-          patchReusedRow(next[firstMismatch], items[firstMismatch], secondMismatch, firstMismatch)
-          patchReusedRow(next[secondMismatch], items[secondMismatch], firstMismatch, secondMismatch)
+          for (let index = 0; index < next.length; index += 1) {
+            const previousIndex =
+              index === firstMismatch
+                ? secondMismatch
+                : index === secondMismatch
+                  ? firstMismatch
+                  : index
+            patchReusedRow(next[index], items[index], previousIndex, index)
+          }
 
           const lowerMismatch = Math.min(firstMismatch, secondMismatch)
           const upperMismatch = Math.max(firstMismatch, secondMismatch)

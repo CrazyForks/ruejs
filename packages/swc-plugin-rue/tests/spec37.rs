@@ -57,11 +57,11 @@ const ControlledInputs: FC = () => {
       <div className="card-body grid gap-4">
         <input
           className="input input-bordered"
-          value={text.value}
+          value={text}
           onInput={(e: any) => setText((e.target as HTMLInputElement).value)}
           placeholder="输入试试"
         />
-        <div>当前：{text.value}</div>
+        <div>当前：{text}</div>
       </div>
     </div>
   );
@@ -78,11 +78,11 @@ export default ControlledInputs;`}
             <div className="card-body grid gap-4">
               <input
                 className="input input-bordered"
-                value={text.value}
+                value={text}
                 onInput={(e: any) => setText((e.target as HTMLInputElement).value)}
                 placeholder="输入试试"
               />
-              <div>当前：{text.value}</div>
+              <div>当前：{text}</div>
             </div>
           </div>
         )}
@@ -146,11 +146,11 @@ const ControlledInputs: FC = () => {
       <div className="card-body grid gap-4">
         <input
           className="input input-bordered"
-          value={text.value}
+          value={text}
           onInput={(e: any) => setText((e.target as HTMLInputElement).value)}
           placeholder="输入试试"
         />
-        <div>当前：{text.value}</div>
+        <div>当前：{text}</div>
       </div>
     </div>
   );
@@ -162,8 +162,8 @@ export default ControlledInputs;`}/>
 
         {activeTab.value === 'preview' && (<div className="card bg-base-100 shadow">
             <div className="card-body grid gap-4">
-              <input className="input input-bordered" value={text.value} onInput={(e: any)=>setText((e.target as HTMLInputElement).value)} placeholder="输入试试"/>
-              <div>当前：{text.value}</div>
+              <input className="input input-bordered" value={text} onInput={(e: any)=>setText((e.target as HTMLInputElement).value)} placeholder="输入试试"/>
+              <div>当前：{text}</div>
             </div>
           </div>)}
       </div>
@@ -180,6 +180,6 @@ export default ControlledInputs;
     assert!(normalized.contains("const [text, setText] = useState('')"), "{normalized}");
     assert!(normalized.contains("var [text2, setText2] = useState('')"), "{normalized}");
     assert!(normalized.contains("let [text3, setText3] = useState('')"), "{normalized}");
-    assert!(normalized.contains("value={text.value}"), "{normalized}");
+    assert!(normalized.contains("value={text}"), "{normalized}");
     assert!(normalized.contains("setText((e.target as HTMLInputElement).value)"), "{normalized}");
 }

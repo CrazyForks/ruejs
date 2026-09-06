@@ -19,7 +19,6 @@ enum FactoryKind {
     ToRefs,
     Signal,
     ReactiveProxy,
-    UseSignal,
     UseState,
 }
 
@@ -41,7 +40,6 @@ impl Binding {
             Self::Factory(FactoryKind::ToRefs) => "factory-to-refs",
             Self::Factory(FactoryKind::Signal) => "factory-signal",
             Self::Factory(FactoryKind::ReactiveProxy) => "factory-proxy",
-            Self::Factory(FactoryKind::UseSignal) => "factory-use-signal",
             Self::Factory(FactoryKind::UseState) => "factory-use-state",
             Self::Value(ReactiveKind::RefLike) => "value-ref",
             Self::Value(ReactiveKind::Signal) => "value-signal",
@@ -60,7 +58,6 @@ impl Binding {
             "factory-to-refs" => Self::Factory(FactoryKind::ToRefs),
             "factory-signal" => Self::Factory(FactoryKind::Signal),
             "factory-proxy" => Self::Factory(FactoryKind::ReactiveProxy),
-            "factory-use-signal" => Self::Factory(FactoryKind::UseSignal),
             "factory-use-state" => Self::Factory(FactoryKind::UseState),
             "value-ref" => Self::Value(ReactiveKind::RefLike),
             "value-signal" => Self::Value(ReactiveKind::Signal),
@@ -106,7 +103,6 @@ fn factory_kind(imported: &str) -> Option<FactoryKind> {
         "ref" | "shallowRef" | "customRef" | "toRef" => FactoryKind::RefLike,
         "toRefs" => FactoryKind::ToRefs,
         "computed" | "signal" => FactoryKind::Signal,
-        "useSignal" | "_$compiledUseSignal" => FactoryKind::UseSignal,
         "reactive" | "shallowReactive" | "readonly" | "shallowReadonly" | "propsReactive" => {
             FactoryKind::ReactiveProxy
         }
@@ -121,7 +117,6 @@ fn factory_result(factory: FactoryKind) -> Binding {
         FactoryKind::ToRefs => Binding::RefCollection,
         FactoryKind::Signal => Binding::Value(ReactiveKind::Signal),
         FactoryKind::ReactiveProxy => Binding::Value(ReactiveKind::ReactiveProxy),
-        FactoryKind::UseSignal => Binding::SignalTuple,
         FactoryKind::UseState => Binding::StateTuple,
     }
 }
@@ -161,15 +156,8 @@ impl<'a> ScopeBuilder<'a> {
         let Some(callee_name) = call_callee_ident_name(call) else {
             return Binding::Unknown;
         };
-        if callee_name == "_$compiledUseSignal" {
-            return Binding::SignalTuple;
-        }
         if callee_name == "_$compiledUseState" {
-            return if use_state_signal_kind(call) {
-                Binding::SignalTuple
-            } else {
-                Binding::StateTuple
-            };
+            return Binding::SignalTuple;
         }
         if callee_name == "_$compiledWithHookId" {
             return call

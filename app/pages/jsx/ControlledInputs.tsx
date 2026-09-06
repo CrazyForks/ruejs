@@ -45,11 +45,11 @@ const ControlledInputs: FC = () => {
       <div className="card-body grid gap-4">
         <input
           className="input input-bordered"
-          value={text.value}
+          value={text}
           onInput={(e: any) => setText((e.target as HTMLInputElement).value)}
           placeholder="输入试试"
         />
-        <div>当前：{text.value}</div>
+        <div>当前：{text}</div>
       </div>
     </div>
   );
@@ -66,11 +66,11 @@ export default ControlledInputs;`}
             <div className="card-body grid gap-4">
               <input
                 className="input input-bordered"
-                value={text.value}
+                value={text}
                 onInput={(e: any) => setText((e.target as HTMLInputElement).value)}
                 placeholder="输入试试"
               />
-              <div>当前：{text.value}</div>
+              <div>当前：{text}</div>
             </div>
           </div>
         )}

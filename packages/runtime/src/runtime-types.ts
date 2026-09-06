@@ -1,4 +1,5 @@
 import type { PortableHandle } from './runtime-core/protocol'
+import type { StateRef } from './runtime-core/reactive'
 import type { CompiledRootHandle } from './compiled-root'
 import type { DomNodeLike } from './dom'
 
@@ -28,7 +29,7 @@ export type RenderOutput =
 export type RenderInput = RenderOutput
 
 export type Child = RenderOutput
-export type ChildInput = Child | ReadonlyArray<ChildInput>
+export type ChildInput = Child | StateRef<ChildInput> | ReadonlyArray<ChildInput>
 
 /** 给组件 props 自动附加 children 字段。 */
 export type PropsWithChildren<P = {}> = P & { children?: ChildInput }

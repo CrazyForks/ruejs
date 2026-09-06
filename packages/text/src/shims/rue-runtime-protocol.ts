@@ -2,10 +2,8 @@ import {
   Component,
   Suspense,
   createContext,
-  useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from '@rue-js/rue'
@@ -24,10 +22,8 @@ export type RueRuntimeExportKey =
   | 'createElement'
   | 'startTransition'
   | 'use'
-  | 'useCallback'
   | 'useContext'
   | 'useEffect'
-  | 'useMemo'
   | 'useRef'
   | 'useState'
   | 'useSyncExternalStore'
@@ -44,10 +40,8 @@ const RUE_RUNTIME_EXPORTS: Partial<Record<RueRuntimeExportKey, unknown>> = {
   use<T>(thenable: PromiseLike<T>): T {
     throw thenable
   },
-  useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
   version: 'rue',

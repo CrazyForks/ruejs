@@ -1,13 +1,4 @@
-import {
-  type FC,
-  computed,
-  onMounted,
-  onUnmounted,
-  ref,
-  useRef,
-  useState,
-  watchEffect,
-} from '@rue-js/rue'
+import { type FC, computed, onMounted, onUnmounted, ref, useRef, watchEffect } from '@rue-js/rue'
 import { extend } from '@rue-js/shared'
 import { RouterLink, useRoute } from '@rue-js/router'
 import PageContentAnchor from './PageContentAnchor'
@@ -246,7 +237,7 @@ export const createPersistentSidebarPlayground = ({
       const routePath = normalizeCurrentPath(((route.get() as any)?.path || '') as string)
       return routePath || readCurrentLocationPath()
     })
-    const [searchQuery, setSearchQuery] = useState(() => sharedSearchQuery ?? '')
+    const searchQuery = ref(sharedSearchQuery ?? '')
     const searchComposingRef = useRef(false)
 
     const resolveInitialOpenSections = () => {
@@ -376,7 +367,7 @@ export const createPersistentSidebarPlayground = ({
                       }
 
                       sharedSearchQuery = next
-                      setSearchQuery(next)
+                      searchQuery.value = next
                     }}
                     onCompositionStart={() => {
                       searchComposingRef.current = true
@@ -385,7 +376,7 @@ export const createPersistentSidebarPlayground = ({
                       const next = (event.target as HTMLInputElement).value
                       searchComposingRef.current = false
                       sharedSearchQuery = next
-                      setSearchQuery(next)
+                      searchQuery.value = next
                     }}
                     placeholder="搜索条目 / Search"
                   />

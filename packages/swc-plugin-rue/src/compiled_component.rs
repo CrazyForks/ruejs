@@ -17,14 +17,14 @@ pub(crate) struct CompiledComponentCandidate {
     rest_prop: Option<String>,
     branching: bool,
     hook_aware: bool,
+    render_reactive: bool,
+    use_state_names: HashSet<String>,
 }
 
 fn is_regional_setup_helper(name: &str) -> bool {
     matches!(
         name,
-        "useMemo"
-            | "useEffect"
-            | "useCallback"
+        "useEffect"
             | "useRef"
             | "reactive"
             | "ref"
@@ -40,7 +40,6 @@ fn is_regional_setup_helper(name: &str) -> bool {
             | "signal"
             | "readonly"
             | "shallowReactive"
-            | "useSignal"
             | "useSetup"
             | "shallowReadonly"
             | "onMounted"
@@ -442,11 +441,12 @@ struct PropsUsageAnalyzer {
     control_depth: usize,
     nested_function_depth: usize,
     uses_compiled_hooks: bool,
+    use_state_names: HashSet<String>,
 }
 
 impl PropsUsageAnalyzer {
-    fn new(props_name: String) -> Self {
-        Self { props_name, ..Self::default() }
+    fn new(props_name: String, use_state_names: HashSet<String>) -> Self {
+        Self { props_name, use_state_names, ..Self::default() }
     }
 }
 
@@ -462,11 +462,11 @@ impl Visit for PropsUsageAnalyzer {
             && let Expr::Ident(ident) = crate::utils::unwrap_expr(callee.as_ref())
         {
             let name = ident.sym.as_ref();
-            if is_regional_setup_helper(name)
-                && (self.control_depth > 0 || self.nested_function_depth > 0)
-            {
+            let is_regional_helper =
+                is_regional_setup_helper(name) || self.use_state_names.contains(name);
+            if is_regional_helper && (self.control_depth > 0 || self.nested_function_depth > 0) {
                 self.uses_vapor = true;
-            } else if is_regional_setup_helper(name) {
+            } else if is_regional_helper {
                 self.uses_compiled_hooks = true;
             } else if crate::compiled_capabilities::runtime_tier_for_helper(name)
                 == Some(crate::compiled_capabilities::RuntimeTier::Vapor)
@@ -566,12 +566,14 @@ fn analyze_candidate(
     body: &impl VisitWith<PropsUsageAnalyzer>,
     render: &Expr,
     branching: bool,
+    render_reactive: bool,
+    use_state_names: &HashSet<String>,
 ) -> Option<CompiledComponentCandidate> {
     if !render_expr_is_safe(render) {
         return None;
     }
 
-    let mut usage = PropsUsageAnalyzer::new(props_name.clone());
+    let mut usage = PropsUsageAnalyzer::new(props_name.clone(), use_state_names.clone());
     body.visit_with(&mut usage);
     if let Some(bindings) = &destructured_props {
         usage.keys.extend(bindings.bindings.values().map(|(key, _)| key.clone()));
@@ -588,12 +590,15 @@ fn analyze_candidate(
         destructured_props: destructured_props.map(|props| props.bindings).unwrap_or_default(),
         branching,
         hook_aware: usage.uses_compiled_hooks,
+        render_reactive,
+        use_state_names: use_state_names.clone(),
     })
 }
 
 pub(crate) fn analyze_module(module: &Module) -> CompiledComponentCandidates {
     let mut candidates = HashMap::new();
     let mut imported = HashSet::new();
+    let mut use_state_names = HashSet::from(["useState".to_string()]);
     for item in &module.body {
         if let ModuleItem::ModuleDecl(ModuleDecl::Import(import)) = item {
             for specifier in &import.specifiers {
@@ -603,6 +608,25 @@ pub(crate) fn analyze_module(module: &Module) -> CompiledComponentCandidates {
                     ImportSpecifier::Namespace(namespace) => &namespace.local,
                 };
                 imported.insert(local.sym.to_string());
+                if matches!(
+                    specifier,
+                    ImportSpecifier::Named(named)
+                        if !named.is_type_only
+                            && match &named.imported {
+                                Some(ModuleExportName::Ident(imported)) => {
+                                    imported.sym.as_ref() == "useState"
+                                }
+                                Some(ModuleExportName::Str(imported)) => {
+                                    imported.value.to_string_lossy() == "useState"
+                                }
+                                None => named.local.sym.as_ref() == "useState",
+                            }
+                ) && matches!(
+                    import.src.value.to_string_lossy().as_ref(),
+                    "@rue-js/rue" | "@rue-js/rue/internal" | "@rue-js/rue/internal/compiler"
+                ) {
+                    use_state_names.insert(local.sym.to_string());
+                }
             }
         }
     }
@@ -638,6 +662,8 @@ pub(crate) fn analyze_module(module: &Module) -> CompiledComponentCandidates {
                     body,
                     &render,
                     branching,
+                    crate::pre::block_requires_custom_composable_render_effect(body),
+                    &use_state_names,
                 ) {
                     candidates.insert(name, candidate);
                 }
@@ -672,6 +698,11 @@ pub(crate) fn analyze_module(module: &Module) -> CompiledComponentCandidates {
                     continue;
                 };
                 let name = binding.id.sym.to_string();
+                let render_reactive = matches!(
+                    arrow.body.as_ref(),
+                    BlockStmtOrExpr::BlockStmt(block)
+                        if crate::pre::block_requires_custom_composable_render_effect(block)
+                );
                 if let Some(candidate) = analyze_candidate(
                     name.clone(),
                     props_name,
@@ -679,6 +710,8 @@ pub(crate) fn analyze_module(module: &Module) -> CompiledComponentCandidates {
                     arrow.body.as_ref(),
                     &render,
                     branching,
+                    render_reactive,
+                    &use_state_names,
                 ) {
                     candidates.insert(name, candidate);
                 }
@@ -1201,6 +1234,7 @@ fn lower_setup_region(
 struct CompiledHookLowerer<'a> {
     component_name: &'a str,
     next_slot: usize,
+    use_state_names: &'a HashSet<String>,
 }
 
 impl VisitMut for CompiledHookLowerer<'_> {
@@ -1219,20 +1253,204 @@ impl VisitMut for CompiledHookLowerer<'_> {
         let helper = match ident.sym.as_ref() {
             "useSetup" => "_$compiledUseSetup",
             "useRef" => "_$compiledUseRef",
-            "useMemo" => "_$compiledUseMemo",
-            "useCallback" => "_$compiledUseCallback",
-            "useSignal" => "_$compiledUseSignal",
             "useState" => "_$compiledUseState",
             "useEffect" => "_$compiledUseEffect",
+            name if self.use_state_names.contains(name) => "_$compiledUseState",
             _ => return,
         };
         let slot = format!("{}:hook:{}", self.component_name, self.next_slot);
         self.next_slot += 1;
+        if helper == "_$compiledUseEffect" {
+            if let Some(deps) = call.args.get_mut(1) {
+                deps.expr = Box::new(Expr::Arrow(ArrowExpr {
+                    span: DUMMY_SP,
+                    ctxt: SyntaxContext::empty(),
+                    params: vec![],
+                    body: Box::new(BlockStmtOrExpr::Expr(deps.expr.clone())),
+                    is_async: false,
+                    is_generator: false,
+                    type_params: None,
+                    return_type: None,
+                }));
+            }
+        }
         call.callee = Callee::Expr(Box::new(Expr::Ident(crate::emit::ident(helper))));
         call.args.insert(
             0,
             ExprOrSpread { spread: None, expr: Box::new(crate::emit::string_expr(&slot)) },
         );
+    }
+}
+
+struct ReactStateBindingCollector<'a> {
+    used_names: &'a mut HashSet<String>,
+    bindings: HashMap<String, Ident>,
+}
+
+impl VisitMut for ReactStateBindingCollector<'_> {
+    fn visit_mut_function(&mut self, _: &mut Function) {}
+
+    fn visit_mut_arrow_expr(&mut self, _: &mut ArrowExpr) {}
+
+    fn visit_mut_var_declarator(&mut self, declarator: &mut VarDeclarator) {
+        let Some(init) = declarator.init.as_deref() else { return };
+        let Expr::Call(call) = crate::utils::unwrap_expr(init) else { return };
+        let Callee::Expr(callee) = &call.callee else { return };
+        let Expr::Ident(callee) = crate::utils::unwrap_expr(callee.as_ref()) else { return };
+        if callee.sym.as_ref() != "_$compiledUseState" {
+            return;
+        }
+        let Pat::Array(pattern) = &mut declarator.name else { return };
+        let Some(Some(Pat::Ident(binding))) = pattern.elems.first_mut() else { return };
+
+        let source_name = binding.id.sym.to_string();
+        let hidden = unique_ident("_$state", self.used_names);
+        binding.id = hidden.clone();
+        self.bindings.insert(source_name, hidden);
+    }
+}
+
+struct ReactStateUsageRewriter<'a> {
+    bindings: &'a HashMap<String, Ident>,
+    scope_stack: Vec<HashSet<String>>,
+}
+
+impl ReactStateUsageRewriter<'_> {
+    fn is_shadowed(&self, name: &str) -> bool {
+        self.scope_stack.iter().rev().any(|scope| scope.contains(name))
+    }
+
+    fn push_scope(&mut self, names: HashSet<String>) {
+        self.scope_stack.push(names);
+    }
+
+    fn pop_scope(&mut self) {
+        self.scope_stack.pop();
+    }
+
+    fn rewrite_ident_expr(&self, expr: &mut Expr) -> bool {
+        let Expr::Ident(ident) = expr else { return false };
+        let name = ident.sym.as_ref();
+        let Some(hidden) = self.bindings.get(name) else { return false };
+        if self.is_shadowed(name) {
+            return false;
+        }
+        *expr = crate::emit::call_member(hidden.clone(), "get", vec![]);
+        true
+    }
+}
+
+impl VisitMut for ReactStateUsageRewriter<'_> {
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        if self.rewrite_ident_expr(expr) {
+            return;
+        }
+        expr.visit_mut_children_with(self);
+    }
+
+    fn visit_mut_prop(&mut self, prop: &mut Prop) {
+        if let Prop::Shorthand(ident) = prop {
+            let name = ident.sym.as_ref();
+            if let Some(hidden) = self.bindings.get(name)
+                && !self.is_shadowed(name)
+            {
+                *prop = Prop::KeyValue(KeyValueProp {
+                    key: PropName::Ident(ident.clone().into()),
+                    value: Box::new(crate::emit::call_member(hidden.clone(), "get", vec![])),
+                });
+                return;
+            }
+        }
+        prop.visit_mut_children_with(self);
+    }
+
+    fn visit_mut_block_stmt(&mut self, block: &mut BlockStmt) {
+        let names = block.stmts.iter().flat_map(declared_names).collect();
+        self.push_scope(names);
+        block.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_function(&mut self, function: &mut Function) {
+        let mut names = HashSet::new();
+        for parameter in &function.params {
+            collect_pattern_names(&parameter.pat, &mut names);
+        }
+        if let Some(body) = &function.body {
+            names.extend(body.stmts.iter().flat_map(declared_names));
+        }
+        self.push_scope(names);
+        function.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_arrow_expr(&mut self, arrow: &mut ArrowExpr) {
+        let mut names = HashSet::new();
+        for parameter in &arrow.params {
+            collect_pattern_names(parameter, &mut names);
+        }
+        if let BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() {
+            names.extend(block.stmts.iter().flat_map(declared_names));
+        }
+        self.push_scope(names);
+        arrow.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_catch_clause(&mut self, catch: &mut CatchClause) {
+        let mut names = HashSet::new();
+        if let Some(parameter) = &catch.param {
+            collect_pattern_names(parameter, &mut names);
+        }
+        self.push_scope(names);
+        catch.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_for_stmt(&mut self, for_stmt: &mut ForStmt) {
+        let mut names = HashSet::new();
+        if let Some(VarDeclOrExpr::VarDecl(var)) = &for_stmt.init {
+            for declarator in &var.decls {
+                collect_pattern_names(&declarator.name, &mut names);
+            }
+        }
+        self.push_scope(names);
+        for_stmt.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_for_in_stmt(&mut self, for_in: &mut ForInStmt) {
+        let mut names = HashSet::new();
+        if let ForHead::VarDecl(var) = &for_in.left {
+            for declarator in &var.decls {
+                collect_pattern_names(&declarator.name, &mut names);
+            }
+        }
+        self.push_scope(names);
+        for_in.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_for_of_stmt(&mut self, for_of: &mut ForOfStmt) {
+        let mut names = HashSet::new();
+        if let ForHead::VarDecl(var) = &for_of.left {
+            for declarator in &var.decls {
+                collect_pattern_names(&declarator.name, &mut names);
+            }
+        }
+        self.push_scope(names);
+        for_of.visit_mut_children_with(self);
+        self.pop_scope();
+    }
+
+    fn visit_mut_update_expr(&mut self, update: &mut UpdateExpr) {
+        if matches!(
+            update.arg.as_ref(),
+            Expr::Ident(ident) if self.bindings.contains_key(ident.sym.as_ref())
+        ) {
+            return;
+        }
+        update.visit_mut_children_with(self);
     }
 }
 
@@ -1326,8 +1544,21 @@ fn rewrite_block(block: &mut BlockStmt, candidate: &CompiledComponentCandidate) 
         shadowed: HashSet::new(),
     });
 
-    block
-        .visit_mut_with(&mut CompiledHookLowerer { component_name: &candidate.name, next_slot: 0 });
+    block.visit_mut_with(&mut CompiledHookLowerer {
+        component_name: &candidate.name,
+        next_slot: 0,
+        use_state_names: &candidate.use_state_names,
+    });
+
+    let mut state_collector =
+        ReactStateBindingCollector { used_names: &mut used.names, bindings: HashMap::new() };
+    block.visit_mut_children_with(&mut state_collector);
+    if !state_collector.bindings.is_empty() {
+        block.visit_mut_children_with(&mut ReactStateUsageRewriter {
+            bindings: &state_collector.bindings,
+            scope_stack: Vec::new(),
+        });
+    }
 
     if candidate.branching {
         let Some(has_setup_regions) =
@@ -1459,6 +1690,15 @@ pub(crate) fn transform_module(module: &mut Module, candidates: &CompiledCompone
             }
             _ => {}
         }
+    }
+    for candidate in candidates.values().filter(|candidate| candidate.render_reactive) {
+        module.body.push(ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::new(crate::emit::call_ident(
+                "_$compiledMarkComponentRenderReactive",
+                vec![Expr::Ident(crate::emit::ident(&candidate.name))],
+            )),
+        })));
     }
 }
 

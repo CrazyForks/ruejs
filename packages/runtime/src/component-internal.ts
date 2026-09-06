@@ -1,0 +1,61 @@
+// Private compiler ABI for component mounting and the legacy DOM fallback.
+// Builtins intentionally live in ./builtins-internal so component-only output
+// cannot retain their implementations through this facade.
+export * from './internal-reactive'
+export * from './compiled-props'
+export * from './compiled-component'
+export * from './compiled-dom-bindings'
+export * from './compiled-dom-bindings-legacy'
+export * from './compiled-component-call'
+export * from './compiled-dynamic'
+export {
+  createCompiledDynamic as _$createDynamic,
+  createCompiledFragment as _$createFragment,
+} from './compiled-dynamic'
+export * from './compiled-render-anchor'
+export * from './compiled-legacy-dom'
+export * from './compiled-reactive-compat'
+export { getCurrentContainer } from './runtime-context'
+export { useApp } from './hooks/useApp'
+export { onError } from './rue'
+export {
+  _$compiledMarkComponentRenderReactive,
+  _$compiledWithHookId,
+  getCurrentInstance,
+} from './compiled-hook-compat'
+export { _$withCompiledHookScope } from './compiled-hook-scope'
+export { toRaw, toValue, triggerRef, watch } from './reactivity/index'
+export {
+  computed,
+  customRef,
+  isProxy,
+  isReactive,
+  isReadonly,
+  propsReactive,
+  reactive,
+  readonly,
+  shallowReactive,
+  shallowReadonly,
+  toRef,
+  toRefs,
+  unref,
+} from './reactivity/index'
+export * from './compiled-root'
+export * from './compiled-keyed-list'
+export {
+  _$disposeCompiledKeyedRows,
+  _$mountCompiledKeyedRowOwnerless,
+} from './compiler-runtime/compact-keyed-list'
+export * from './compiler-runtime/types'
+export * from './compiler-runtime/mount'
+export * from './compiler-runtime/hooks'
+export {
+  appendChild as _$compiledAppendChild,
+  createComment as _$compiledCreateComment,
+  createDocumentFragment as _$compiledCreateDocumentFragment,
+  createElement as _$compiledCreateElement,
+  createTextNode as _$compiledCreateTextNode,
+  insertBefore as _$compiledInsertBefore,
+  removeChild as _$compiledRemoveChild,
+  template as _$template,
+} from './compiler-runtime/dom.browser'

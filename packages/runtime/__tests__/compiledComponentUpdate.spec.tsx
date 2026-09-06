@@ -104,6 +104,7 @@ const evaluate = (): CompiledModule => {
   const module = { exports: {} as Record<string, unknown> }
   const runtimeRequire = (id: string): Record<string, unknown> => {
     if (id === '@rue-js/rue/internal') return compilerRuntime
+    if (id === '@rue-js/rue/internal/component') return compilerRuntime
     if (id === '@rue-js/rue') return runtimeRoot
     throw new Error(`Unexpected generated import: ${id}`)
   }

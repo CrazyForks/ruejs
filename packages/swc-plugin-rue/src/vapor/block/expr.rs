@@ -224,11 +224,11 @@ fn map_call_returns_jsx_renderable(call: &CallExpr) -> bool {
             .unwrap_or(false)
 }
 
-fn use_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
-    call_callee_ident_name(call) == Some("useMemo")
+fn compiled_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("_$compiledMemo")
         && call
             .args
-            .first()
+            .get(1)
             .map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref()))
             .unwrap_or(false)
 }
@@ -243,16 +243,16 @@ fn hook_wrapped_call_returns_jsx_renderable(call: &CallExpr) -> bool {
 }
 
 fn call_returns_jsx_renderable(call: &CallExpr) -> bool {
-    use_memo_call_returns_jsx_renderable(call)
+    compiled_memo_call_returns_jsx_renderable(call)
         || hook_wrapped_call_returns_jsx_renderable(call)
         || map_call_returns_jsx_renderable(call)
 }
 
-fn use_memo_call_has_empty_deps(call: &CallExpr) -> bool {
-    call_callee_ident_name(call) == Some("useMemo")
+fn compiled_memo_call_has_empty_deps(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("_$compiledMemo")
         && call
             .args
-            .get(1)
+            .get(2)
             .map(|arg| matches!(unwrap_expr(arg.expr.as_ref()), Expr::Array(arr) if arr.elems.is_empty()))
             .unwrap_or(false)
 }
@@ -278,7 +278,7 @@ fn hook_wrapped_call_has_empty_memo_deps(call: &CallExpr) -> bool {
 pub(crate) fn is_empty_deps_memoized_jsx_expr(expr: &Expr) -> bool {
     match unwrap_expr(expr) {
         Expr::Call(call) => {
-            use_memo_call_has_empty_deps(call)
+            compiled_memo_call_has_empty_deps(call)
                 || hook_wrapped_call_has_empty_memo_deps(call)
                 || call.args.iter().any(|arg| is_empty_deps_memoized_jsx_expr(arg.expr.as_ref()))
         }
@@ -314,12 +314,12 @@ fn rewrite_arrow_expr_body_for_slot(this: &mut VaporTransform, expr: &Expr) -> O
 }
 
 fn rewrite_use_memo_call_for_slot(this: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
-    if call_callee_ident_name(call) != Some("useMemo") {
+    if call_callee_ident_name(call) != Some("_$compiledMemo") {
         return None;
     }
 
     let mut next = call.clone();
-    let first = next.args.first_mut()?;
+    let first = next.args.get_mut(1)?;
     let rewritten =
         this.with_once_context(|this| rewrite_arrow_expr_body_for_slot(this, first.expr.as_ref()))?;
     *first.expr = rewritten;

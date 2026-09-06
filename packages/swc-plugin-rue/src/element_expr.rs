@@ -821,11 +821,11 @@ fn map_call_returns_jsx_renderable(call: &CallExpr) -> bool {
             .unwrap_or(false)
 }
 
-fn use_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
-    call_callee_ident_name(call) == Some("useMemo")
+fn compiled_memo_call_returns_jsx_renderable(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("_$compiledMemo")
         && call
             .args
-            .first()
+            .get(1)
             .map(|arg| arrow_returns_jsx_renderable(arg.expr.as_ref()))
             .unwrap_or(false)
 }
@@ -839,7 +839,7 @@ fn hook_wrapped_call_returns_jsx_renderable(call: &CallExpr) -> bool {
 }
 
 fn call_returns_jsx_renderable(call: &CallExpr) -> bool {
-    use_memo_call_returns_jsx_renderable(call)
+    compiled_memo_call_returns_jsx_renderable(call)
         || hook_wrapped_call_returns_jsx_renderable(call)
         || map_call_returns_jsx_renderable(call)
         || match &call.callee {
@@ -848,9 +848,9 @@ fn call_returns_jsx_renderable(call: &CallExpr) -> bool {
         }
 }
 
-fn use_memo_call_has_empty_deps(call: &CallExpr) -> bool {
-    call_callee_ident_name(call) == Some("useMemo")
-        && call.args.get(1).map(|arg| {
+fn compiled_memo_call_has_empty_deps(call: &CallExpr) -> bool {
+    call_callee_ident_name(call) == Some("_$compiledMemo")
+        && call.args.get(2).map(|arg| {
             matches!(crate::utils::unwrap_expr(arg.expr.as_ref()), Expr::Array(arr) if arr.elems.is_empty())
         }).unwrap_or(false)
 }
@@ -872,13 +872,13 @@ fn hook_wrapped_call_has_empty_memo_deps(call: &CallExpr) -> bool {
     let Expr::Call(memo_call) = crate::utils::unwrap_expr(body_expr) else {
         return false;
     };
-    use_memo_call_has_empty_deps(memo_call)
+    compiled_memo_call_has_empty_deps(memo_call)
 }
 
 fn is_empty_deps_memoized_jsx_expr(expr: &Expr) -> bool {
     match crate::utils::unwrap_expr(expr) {
         Expr::Call(call) => {
-            use_memo_call_has_empty_deps(call)
+            compiled_memo_call_has_empty_deps(call)
                 || hook_wrapped_call_has_empty_memo_deps(call)
                 || call.args.iter().any(|arg| is_empty_deps_memoized_jsx_expr(arg.expr.as_ref()))
         }
@@ -915,12 +915,12 @@ fn rewrite_arrow_expr_body_for_slot(vt: &mut VaporTransform, expr: &Expr) -> Opt
 }
 
 fn rewrite_use_memo_call_for_slot(vt: &mut VaporTransform, call: &CallExpr) -> Option<Expr> {
-    if call_callee_ident_name(call) != Some("useMemo") {
+    if call_callee_ident_name(call) != Some("_$compiledMemo") {
         return None;
     }
 
     let mut next = call.clone();
-    let first = next.args.first_mut()?;
+    let first = next.args.get_mut(1)?;
     let rewritten =
         vt.with_once_context(|vt| rewrite_arrow_expr_body_for_slot(vt, first.expr.as_ref()))?;
     *first.expr = rewritten;
@@ -1281,7 +1281,7 @@ pub fn make_expr_for_slot(vt: &mut VaporTransform, inner: &Expr) -> Expr {
             let alt_inner = crate::utils::unwrap_expr(alt.as_ref());
             // 每个分支独立判断：
             // - 直接 JSX：立即编译成 vapor 片段；
-            // - 间接 JSX（useMemo/map 等）：递归规范；
+            // - 间接 JSX（memoized/map 等）：递归规范；
             // - 静态空值：统一转成空字符串，避免 runtime 渲染 undefined/null。
             let new_cons: Expr = if let Some(slot_expr) = jsx_expr_to_slot_expr(vt, cons_inner) {
                 slot_expr
@@ -1498,7 +1498,7 @@ pub fn emit_element_expr_container_child(
                     let render_once = is_empty_deps_memoized_jsx_expr(&inner_top)
                         || is_empty_deps_memoized_jsx_expr(&expr_for_slot);
                     if render_once {
-                        // 空依赖 memo/useMemo 包住的 JSX 在语义上只创建一次，可直接一次性渲染。
+                        // 空依赖 memo wrapper 包住的 JSX 在语义上只创建一次，可直接一次性渲染。
                         crate::element_slot::render_once_for_slot(
                             vt,
                             el_ident,

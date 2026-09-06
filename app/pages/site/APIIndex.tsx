@@ -7,8 +7,8 @@ const APIIndex: FC = () => (
       <ul className="space-y-2">
         <li>
           <div className="font-mono text-sm">
-            useState&lt;T&gt;(initial: T | () =&gt; T): [T, (updater: (prev: T) =&gt; T) | (next: T)
-            =&gt; void]
+            useState&lt;T&gt;(initial: T | (() =&gt; T)): [T,
+            Dispatch&lt;SetStateAction&lt;T&gt;&gt;]
           </div>
           <p className="text-sm text-base-content/70">创建状态，支持工厂函数初始化与函数式更新。</p>
         </li>

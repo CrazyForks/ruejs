@@ -105,6 +105,14 @@ const createDemoI18n = (): I18n => {
 }
 
 const UserNameInput: FC<{ name: ValueSignal<string> }> = props => {
+  const composingRef = useRef(false)
+  const restoreInputFocus = (ownerDocument: Document) => {
+    const restore = () =>
+      ownerDocument.querySelector<HTMLInputElement>('[data-testid="i18n-user-name-input"]')?.focus()
+    queueMicrotask(restore)
+    setTimeout(restore, 0)
+  }
+
   return (
     <label className="form-control gap-2">
       <span className="label-text font-medium">用户名</span>
@@ -113,7 +121,21 @@ const UserNameInput: FC<{ name: ValueSignal<string> }> = props => {
         className="input input-bordered"
         value={props.name.value}
         onInput={(event: Event) => {
-          props.name.value = (event.target as HTMLInputElement).value
+          if (composingRef.current) return
+          const input = event.target as HTMLInputElement
+          const ownerDocument = input.ownerDocument
+          props.name.value = input.value
+          restoreInputFocus(ownerDocument)
+        }}
+        onCompositionStart={() => {
+          composingRef.current = true
+        }}
+        onCompositionEnd={(event: Event) => {
+          const input = event.target as HTMLInputElement
+          const ownerDocument = input.ownerDocument
+          composingRef.current = false
+          props.name.value = input.value
+          restoreInputFocus(ownerDocument)
         }}
         placeholder="Alice"
       />

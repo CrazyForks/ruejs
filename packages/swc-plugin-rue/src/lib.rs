@@ -23,6 +23,7 @@ mod element_component;
 mod element_expr;
 mod element_fragment;
 mod element_list;
+mod element_list_patch;
 mod element_node;
 mod element_slot;
 mod element_text;
@@ -52,7 +53,7 @@ mod reactive_provenance_tests;
   1) 预处理阶段（PreTransform）：
     - 指令改写：`v-show/r-show` → 改写 `style`，`v-if/v-else-if/v-else` 与 `r-if/r-else-if/r-else` → 条件表达式
      - 组件 useSetup 注入：收集安全的声明与副作用，注入到返回 JSX 之前的块体中
-     - Hook 包装：对 `useEffect/useMemo/useRef/reactive/ref/useState/watchEffect` 进行 `_$compiledWithHookId` 包装，注入可追踪的作用域与索引
+     - Hook 包装：对 `useEffect/useRef/reactive/ref/useState/watchEffect` 进行 `_$compiledWithHookId` 包装，注入可追踪的作用域与索引
   2) Vapor 深编译：
      - 将 `() => <JSX/>` 或 `return <JSX/>` 改写为 `vapor(() => { ... })`，在块体中生成原生 `createElement/appendChild` 等调用
      - 动态表达式与属性用 `watchEffect` 包裹，以微任务批量更新

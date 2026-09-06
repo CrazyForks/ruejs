@@ -1,5 +1,5 @@
 import type { FC } from '@rue-js/rue'
-import { ref, useCallback } from '@rue-js/rue'
+import { ref } from '@rue-js/rue'
 import Calendar from '../../../../packages/rue-design/src/components/calendar'
 
 type DemoCalendarMode = 'month' | 'year'
@@ -44,15 +44,15 @@ const BasicCalendarPreview: FC = () => {
   const selectedSource = ref('date')
   const panelMode = ref<DemoCalendarMode>('month')
   const panelState = ref(formatPanelLabel(parseDate(selectedValue.value), 'month'))
-  const handleChange = useCallback((date: Date) => {
+  const handleChange = (date: Date) => {
     selectedValue.value = formatIsoDate(date)
-  }, [])
-  const handlePanelChange = useCallback((date: Date, nextMode: DemoCalendarMode) => {
+  }
+  const handlePanelChange = (date: Date, nextMode: DemoCalendarMode) => {
     panelState.value = formatPanelLabel(date, nextMode)
-  }, [])
-  const handleSelect = useCallback((_date: Date, info: { source: string }) => {
+  }
+  const handleSelect = (_date: Date, info: { source: string }) => {
     selectedSource.value = info.source
-  }, [])
+  }
 
   return (
     <div className="space-y-4">

@@ -744,7 +744,7 @@ const _rscConditionShims = new Map<string, string>([
   ['text/dist/client/components/navigation', 'navigation'],
 ])
 
-const _rueClientHookExports = new Set(['useState', 'useSignal', 'useEffect'])
+const _rueClientHookExports = new Set(['useState', 'useEffect'])
 
 type ImportSpecifierNode = {
   type: string
@@ -1352,7 +1352,10 @@ export default function text(options: TextOptions = {}): PluginOption[] {
   const rueOptions: RueVitePluginOptions | undefined =
     options.rue && typeof options.rue === 'object' ? options.rue : undefined
   const getMergedRueOptions = (): RueVitePluginOptions => {
-    const textRouteRueExcludes = [path.resolve(__dirname, '../../rue-rsc/src')]
+    const textRouteRueExcludes = [
+      path.resolve(__dirname, '../../rue-rsc/src'),
+      path.resolve(__dirname, '../../runtime'),
+    ]
     return {
       ...rueOptions,
       exclude: [...new Set([...(rueOptions?.exclude ?? []), ...textRouteRueExcludes])],

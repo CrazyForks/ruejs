@@ -17,7 +17,7 @@ const compiledDomHarnessState = vi.hoisted(() => ({
   captureAnchor: null as null | ((type: unknown, props: unknown) => void),
 }))
 
-vi.mock('@rue-js/rue/internal', async importOriginal => {
+vi.mock('@rue-js/rue/internal/component', async importOriginal => {
   const actual = await importOriginal<Record<string, unknown>>()
   const elementProps = new WeakMap<object, Record<string, unknown>>()
   const propsFor = (element: object) => elementProps.get(element) ?? {}
@@ -235,14 +235,12 @@ function mockTextAnchorCaptureForLinkOnly_DO_NOT_REUSE(
       throw new Error('compiled Link test must not call the legacy element factory')
     },
     startTransition: options.startTransition ?? ((callback: () => void) => callback()),
-    useCallback: <T extends (...args: never[]) => unknown>(callback: T) => callback,
     useContext<T>(context: { currentValue?: T; defaultValue?: T }) {
       return context.currentValue ?? context.defaultValue
     },
     useEffect(effect: CapturedEffect) {
       options.captureEffect?.(effect)
     },
-    useMemo: <T>(factory: () => T) => factory(),
     useRef: <T>(initialValue: T) => ({ current: initialValue }),
     useState<T>(initialState: T | (() => T)) {
       let state = typeof initialState === 'function' ? (initialState as () => T)() : initialState

@@ -21,8 +21,6 @@ import type {
   SignalHandle,
   SignalWrapperRegistryDebugState,
   SignalWrapperRegistryEntry,
-  UseCallbackFunction,
-  UseMemoFunction,
   WatchCallback,
   WatchEffectFunction,
   WatchEffectOptions,
@@ -43,7 +41,7 @@ export const createReactiveFacade = <TRuntime extends object>(
   const baseHooks = hookLayer.hooks
   const { useEffect } = hookLayer.effects
   const { computed: computedHook } = hookLayer.computed
-  const { useCallback, useMemo, useRef, useSignal, useState } = hookLayer.state
+  const { useRef, useState } = hookLayer.state
   const {
     customRef,
     createComputed: createComputedValue,
@@ -807,10 +805,7 @@ export const createReactiveFacade = <TRuntime extends object>(
     toRefs,
     toRef,
     useEffect,
-    useCallback: useCallback as unknown as UseCallbackFunction,
-    useMemo: useMemo as unknown as UseMemoFunction,
     useRef,
-    useSignal,
     useState,
     default: runtimeWithShallowRef,
   }

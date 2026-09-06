@@ -18,12 +18,10 @@ const OnlyWidget: FC<OnlyWidgetProps> = props => {
         type="button"
         className="btn btn-warning btn-sm mt-4"
         onClick={() => {
-          setEnabled(value => {
-            value.value = !value.value
-          })
+          setEnabled(value => !value)
         }}
       >
-        {enabled.value ? 'Client state on' : 'Client state off'}
+        {enabled ? 'Client state on' : 'Client state off'}
       </button>
     </div>
   )

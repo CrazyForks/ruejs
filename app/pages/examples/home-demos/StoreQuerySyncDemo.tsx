@@ -8,7 +8,7 @@ import {
   parseAsString,
   throttle,
 } from '@rue-js/store'
-import { type FC, computed, onMounted, onUnmounted, ref, watchEffect } from '@rue-js/rue'
+import { type FC, computed, onMounted, onUnmounted, ref, useSetup, watchEffect } from '@rue-js/rue'
 
 type DemoTab = 'all' | 'router' | 'store' | 'runtime'
 type DemoItem = {
@@ -239,7 +239,7 @@ const createDemoState = () => {
 
 const StoreQuerySyncDemo: FC = () => {
   const route = useRoute()
-  const demo = createDemoState()
+  const demo = useSetup(createDemoState)
   const historyRecords = ref<HistoryRecord[]>([])
   const historyRecorderCleanup = ref<(() => void) | null>(null)
 

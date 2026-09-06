@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { resolveScriptsDirectory } from '../aliases.js'
+import { entries, resolveScriptsDirectory } from '../aliases.js'
 import { buildDistributionPackage } from '../vite-package-builder.js'
 
 const projectRoot = process.cwd()
@@ -44,6 +44,26 @@ beforeAll(() => {
 })
 
 describe('ESM-only package builder', () => {
+  it('resolves capability subpaths before the public Rue source alias', () => {
+    const resolveAlias = (id: string) => {
+      for (const alias of entries) {
+        if (typeof alias.find === 'string') {
+          if (id.startsWith(alias.find)) return id.replace(alias.find, alias.replacement)
+        } else if (alias.find.test(id)) {
+          return id.replace(alias.find, alias.replacement)
+        }
+      }
+      return id
+    }
+
+    expect(resolveAlias('@rue-js/rue/internal/component')).toBe(
+      path.resolve(projectRoot, 'packages/rue/src/component-internal.ts'),
+    )
+    expect(resolveAlias('@rue-js/rue/internal/builtins')).toBe(
+      path.resolve(projectRoot, 'packages/rue/src/builtins-internal.ts'),
+    )
+  })
+
   it('resolves the repository scripts directory for file and transformed module URLs', () => {
     expect(resolveScriptsDirectory('https://vitest.invalid/scripts/aliases.js', projectRoot)).toBe(
       path.resolve(projectRoot, 'scripts'),
@@ -78,6 +98,38 @@ describe('ESM-only package builder', () => {
     await expect(
       buildDistributionPackage(target, { env: 'development', formats: 'cjs' }),
     ).rejects.toThrow(/Unsupported package format: cjs/)
+  })
+
+  it('preserves modules only for bundler ESM while browser and global stay single-file', async () => {
+    const { fixtureDir, target } = await createFixture({
+      name: 'RueFixture',
+      formats: ['esm-bundler', 'esm-browser', 'global'],
+      preserveModules: true,
+    })
+    await writeFixtureFile(fixtureDir, 'src/leaf.ts', "export const leaf = 'leaf'")
+    await writeFixtureFile(
+      fixtureDir,
+      'src/index.ts',
+      "export { leaf } from './leaf'\nexport const marker = 'esm-only'",
+    )
+
+    await buildDistributionPackage(target, { env: 'development' })
+
+    await expect(readFile(path.resolve(fixtureDir, 'dist/index.js'), 'utf8')).resolves.toContain(
+      './leaf.js',
+    )
+    await expect(readFile(path.resolve(fixtureDir, 'dist/leaf.js'), 'utf8')).resolves.toContain(
+      'leaf',
+    )
+    await expect(
+      readFile(
+        path.resolve(fixtureDir, 'dist/esm-only-package-builder-fixture.esm-browser.js'),
+        'utf8',
+      ),
+    ).resolves.toContain('esm-only')
+    await expect(
+      readFile(path.resolve(fixtureDir, 'dist/esm-only-package-builder-fixture.global.js'), 'utf8'),
+    ).resolves.toContain('esm-only')
   })
 
   it('writes component subpaths as ESM', async () => {

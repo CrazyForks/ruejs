@@ -70,10 +70,8 @@ type TestContextRuntime = {
     ...children: unknown[]
   ) => unknown
   startTransition: (callback: () => void) => void
-  useCallback: <T extends (...args: never[]) => unknown>(callback: T) => T
   useContext: <T>(context: TestContext<T>) => T
   useEffect: () => void
-  useMemo: <T>(factory: () => T) => T
   useRef: <T>(initialValue: T) => { current: T }
   useState: <T>(initialState: T | (() => T)) => [T, (value: T | ((previous: T) => T)) => void]
   useSyncExternalStore: <T>(
@@ -124,18 +122,12 @@ const testContextRuntime: TestContextRuntime = {
   startTransition(callback) {
     callback()
   },
-  useCallback(callback) {
-    return callback
-  },
   useContext(context) {
     return context.stack.length > 0
       ? context.stack[context.stack.length - 1]!
       : context.defaultValue
   },
   useEffect() {},
-  useMemo(factory) {
-    return factory()
-  },
   useRef(initialValue) {
     return { current: initialValue }
   },

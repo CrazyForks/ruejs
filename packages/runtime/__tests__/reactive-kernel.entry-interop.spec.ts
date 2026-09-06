@@ -23,8 +23,8 @@ const loadBuiltEntry = async (filename: string): Promise<RuntimeEntry> =>
 describe('runtime built entry reactive kernel interoperability', () => {
   it('tracks public signals in internal effects and internal signals in public effects', async () => {
     const [publicRuntime, internalRuntime] = await Promise.all([
-      loadBuiltEntry('runtime.esm-bundler.js'),
-      loadBuiltEntry('runtime.internal.esm-bundler.js'),
+      loadBuiltEntry('index.js'),
+      loadBuiltEntry('internal.js'),
     ])
     publicRuntime.setReactiveScheduling('sync')
 
@@ -51,8 +51,8 @@ describe('runtime built entry reactive kernel interoperability', () => {
 
   it('keeps special-object reads compatible through both built proxy entry points', async () => {
     const [publicRuntime, internalRuntime] = await Promise.all([
-      loadBuiltEntry('runtime.esm-bundler.js'),
-      loadBuiltEntry('runtime.internal.esm-bundler.js'),
+      loadBuiltEntry('index.js'),
+      loadBuiltEntry('internal.js'),
     ])
     const node = document.createElement('div')
     node.dataset.label = 'host'

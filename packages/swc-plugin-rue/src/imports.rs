@@ -13,8 +13,8 @@ use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{Visit, VisitMut, VisitMutWith, VisitWith};
 
 use crate::compiled_capabilities::{
-    RuntimeTier, aggregate_runtime_tier, runtime_import_tier, runtime_tier_for_helper,
-    should_auto_inject_helper,
+    RuntimeImportEntry, RuntimeTier, aggregate_runtime_tier, runtime_import_entry,
+    runtime_tier_for_helper, should_auto_inject_helper,
 };
 
 /// 运行时导入收集与按需注入：
@@ -255,15 +255,27 @@ fn drain_named_runtime_subpath_imports(m: &mut Module) -> Vec<NamedImportSpec> {
         let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item else {
             return true;
         };
+        let source = decl.src.value.as_str();
         if !matches!(
-            decl.src.value.as_str(),
-            Some("@rue-js/rue/internal" | "@rue-js/rue/internal/compiler")
+            source,
+            Some(
+                "@rue-js/rue/internal"
+                    | "@rue-js/rue/internal/compiler"
+                    | "@rue-js/rue/internal/component"
+                    | "@rue-js/rue/internal/builtins"
+            )
         ) {
             return true;
         }
+        let preserve_unknown_full_internal = source == Some("@rue-js/rue/internal");
         decl.specifiers.retain(|specifier| {
             if let ImportSpecifier::Named(named) = specifier {
                 let mut named_spec = named_import_to_spec(named);
+                if preserve_unknown_full_internal
+                    && runtime_tier_for_helper(named_spec.export_name()).is_none()
+                {
+                    return true;
+                }
                 if named_spec.local_ctxt != SyntaxContext::empty() {
                     routed_bindings.push((named.local.sym.clone(), named_spec.local_ctxt));
                     named_spec.local_ctxt = SyntaxContext::empty();
@@ -364,8 +376,16 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         value: Atom::from("@rue-js/rue/internal/compiler").into(),
         raw: None,
     };
-    let vapor_import_source =
-        Str { span: DUMMY_SP, value: Atom::from("@rue-js/rue/internal").into(), raw: None };
+    let component_import_source = Str {
+        span: DUMMY_SP,
+        value: Atom::from("@rue-js/rue/internal/component").into(),
+        raw: None,
+    };
+    let builtins_import_source = Str {
+        span: DUMMY_SP,
+        value: Atom::from("@rue-js/rue/internal/builtins").into(),
+        raw: None,
+    };
 
     let explicit_compiled_reactive_graph = has_explicit_compiled_reactive_graph_import(m);
     let mut collector = RuntimeUseCollector::new();
@@ -397,7 +417,12 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         };
         matches!(
             decl.src.value.as_str(),
-            Some("@rue-js/rue/internal" | "@rue-js/rue/internal/compiler")
+            Some(
+                "@rue-js/rue/internal"
+                    | "@rue-js/rue/internal/compiler"
+                    | "@rue-js/rue/internal/component"
+                    | "@rue-js/rue/internal/builtins"
+            )
         )
     });
     let allow_compiled_root_values = has_runtime_subpath_import
@@ -408,7 +433,10 @@ pub fn ensure_runtime_imports(m: &mut Module) {
     let had_vapor_import = m.body.iter().any(|item| {
         matches!(item,
             ModuleItem::ModuleDecl(ModuleDecl::Import(decl))
-                if decl.src.value.as_str() == Some("@rue-js/rue/internal")
+                if matches!(
+                    decl.src.value.as_str(),
+                    Some("@rue-js/rue/internal" | "@rue-js/rue/internal/component")
+                )
         )
     });
     let mut moved_helper_specs = drain_routed_root_value_imports(m, allow_compiled_root_values);
@@ -427,6 +455,10 @@ pub fn ensure_runtime_imports(m: &mut Module) {
     let mut existing_runtime_locals = runtime_subpath_import_locals(m, "@rue-js/rue/internal");
     existing_runtime_locals
         .extend(runtime_subpath_import_locals(m, "@rue-js/rue/internal/compiler"));
+    existing_runtime_locals
+        .extend(runtime_subpath_import_locals(m, "@rue-js/rue/internal/component"));
+    existing_runtime_locals
+        .extend(runtime_subpath_import_locals(m, "@rue-js/rue/internal/builtins"));
     moved_helper_specs.retain(|spec| !existing_runtime_locals.contains(&spec.local));
 
     let mut helper_specs: Vec<NamedImportSpec> = collector
@@ -503,6 +535,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "_$compiledRootFactory",
         "_$compiledText",
         "_$compiledSetup",
+        "_$compiledMemo",
         "_$withCompiledHookScope",
         "createOwner",
         "createSelector",
@@ -525,7 +558,6 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "createResource",
         "watch",
         "useState",
-        "useSignal",
         "useEffect",
         "signal",
         "ref",
@@ -542,8 +574,6 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "shallowReadonly",
         "toRaw",
         "propsReactive",
-        "useMemo",
-        "useCallback",
         "_$createTextWrapper",
         "_$compiledWithKey",
         "_$compiledShowStyle",
@@ -569,25 +599,27 @@ pub fn ensure_runtime_imports(m: &mut Module) {
     dedupe_named_specs(&mut helper_specs);
 
     let mut compiled_specs = Vec::new();
-    let mut vapor_specs = Vec::new();
+    let mut component_specs = Vec::new();
+    let mut builtins_specs = Vec::new();
     // An explicit compiled reactive import selects that graph for generated compiled-tier
     // effects and owners. Vapor-only DOM/hook helpers remain on the Vapor entry. Without this
     // rule a compiled signal and a Vapor list effect silently use different dependency graphs.
     let shared_runtime_tier =
         if explicit_compiled_reactive_graph { RuntimeTier::Compiled } else { module_tier };
     for spec in helper_specs {
-        let tier = runtime_import_tier(spec.export_name(), shared_runtime_tier);
-        match tier {
-            Some(RuntimeTier::Compiled) => compiled_specs.push(spec),
-            Some(RuntimeTier::Vapor) => vapor_specs.push(spec),
-            Some(RuntimeTier::None) | None => {}
+        match runtime_import_entry(spec.export_name(), shared_runtime_tier) {
+            Some(RuntimeImportEntry::Compiler) => compiled_specs.push(spec),
+            Some(RuntimeImportEntry::Component) => component_specs.push(spec),
+            Some(RuntimeImportEntry::Builtins) => builtins_specs.push(spec),
+            None => {}
         }
     }
     crate::log::debug(&format!("rue-swc: module runtime tier {module_tier:?}"));
 
     let mut merged_type = type_specs.is_empty();
     let mut merged_compiled = compiled_specs.is_empty();
-    let mut merged_vapor = vapor_specs.is_empty();
+    let mut merged_component = component_specs.is_empty();
+    let mut merged_builtins = builtins_specs.is_empty();
     for item in &mut m.body {
         if let ModuleItem::ModuleDecl(ModuleDecl::Import(decl)) = item {
             if !merged_type && decl.src.value.as_str() == Some("@rue-js/rue") {
@@ -601,12 +633,20 @@ pub fn ensure_runtime_imports(m: &mut Module) {
                 merged_compiled = true;
                 crate::log::debug("rue-swc: merge existing @rue-js/rue/internal/compiler import");
             }
-            if !merged_vapor && decl.src.value.as_str() == Some("@rue-js/rue/internal") {
-                append_missing_specifiers(decl, &vapor_specs);
-                merged_vapor = true;
-                crate::log::debug("rue-swc: merge existing @rue-js/rue/internal import");
+            if !merged_component
+                && decl.src.value.as_str() == Some("@rue-js/rue/internal/component")
+            {
+                append_missing_specifiers(decl, &component_specs);
+                merged_component = true;
+                crate::log::debug("rue-swc: merge existing component runtime import");
             }
-            if merged_type && merged_compiled && merged_vapor {
+            if !merged_builtins && decl.src.value.as_str() == Some("@rue-js/rue/internal/builtins")
+            {
+                append_missing_specifiers(decl, &builtins_specs);
+                merged_builtins = true;
+                crate::log::debug("rue-swc: merge existing builtins runtime import");
+            }
+            if merged_type && merged_compiled && merged_component && merged_builtins {
                 break;
             }
         }
@@ -617,9 +657,14 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         insert_import(m, &compiled_import_source, compiled_specs);
     }
 
-    if !merged_vapor {
-        crate::log::debug("rue-swc: insert new @rue-js/rue/internal import");
-        insert_import(m, &vapor_import_source, vapor_specs);
+    if !merged_component {
+        crate::log::debug("rue-swc: insert new component runtime import");
+        insert_import(m, &component_import_source, component_specs);
+    }
+
+    if !merged_builtins {
+        crate::log::debug("rue-swc: insert new builtins runtime import");
+        insert_import(m, &builtins_import_source, builtins_specs);
     }
 
     if !merged_type {

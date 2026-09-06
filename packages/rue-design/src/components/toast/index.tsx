@@ -934,15 +934,12 @@ const ToastItem: FC<ToastItemProps> = ({
   )
   const [currentOpen, setCurrentOpen] = useState(
     isControlled ? !!open : itemCtx.uncontrolledOpen.value,
-    {
-      kind: 'ref',
-    },
   )
   const componentProps: Record<string, any> = { ...rest }
   const userOnMouseEnter = componentProps.onMouseEnter
   const userOnMouseLeave = componentProps.onMouseLeave
   const userOnClick = componentProps.onClick
-  const resolvedOpen = isControlled ? !!open : currentOpen.value
+  const resolvedOpen = isControlled ? !!open : currentOpen
 
   if ('onMouseEnter' in componentProps) delete componentProps.onMouseEnter
   if ('onMouseLeave' in componentProps) delete componentProps.onMouseLeave
@@ -998,7 +995,7 @@ const ToastItem: FC<ToastItemProps> = ({
   const startAutoCloseTimer = () => {
     clearAutoCloseTimer()
 
-    if (!currentOpen.value) return
+    if (!currentOpen) return
     if (pauseOnHover && itemCtx.hovered.value) return
     if (itemCtx.remainingDuration == null || itemCtx.remainingDuration <= 0) return
 
@@ -1025,7 +1022,7 @@ const ToastItem: FC<ToastItemProps> = ({
     clearAutoCloseTimer()
     itemCtx.remainingDuration = 0
 
-    if (!currentOpen.value) return
+    if (!currentOpen) return
 
     setCurrentOpen(false)
     syncItemDom(false)
@@ -1067,7 +1064,7 @@ const ToastItem: FC<ToastItemProps> = ({
   )
 
   watch(
-    () => (isControlled ? !!open : currentOpen.value),
+    () => (isControlled ? !!open : currentOpen),
     nextOpen => {
       if (!nextOpen) {
         clearAutoCloseTimer()
@@ -1084,7 +1081,7 @@ const ToastItem: FC<ToastItemProps> = ({
   watch(
     () => duration,
     () => {
-      if (!currentOpen.value) {
+      if (!currentOpen) {
         itemCtx.remainingDuration = resolveDurationMs(duration)
         return
       }
@@ -1096,7 +1093,7 @@ const ToastItem: FC<ToastItemProps> = ({
   watch(
     () => pauseOnHover,
     () => {
-      if (!currentOpen.value) return
+      if (!currentOpen) return
       refreshAutoCloseTimer(false)
     },
   )
@@ -1127,7 +1124,7 @@ const ToastItem: FC<ToastItemProps> = ({
             if (element) {
               toastItemCloseHandlerRegistry.set(element, requestClose)
             }
-            syncItemDom(currentOpen.value)
+            syncItemDom(currentOpen)
           }}
           onMouseEnter={(event: MouseEvent) => {
             itemCtx.hovered.value = true

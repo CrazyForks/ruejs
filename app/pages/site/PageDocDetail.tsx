@@ -119,7 +119,7 @@ const PageDocDetail: FC<PageDocDetailProps> = props => {
   }, [])
 
   const readMdxComponent = () => {
-    return docContentType.value === 'mdx' ? mdxComponentRef.current : null
+    return docContentType === 'mdx' ? mdxComponentRef.current : null
   }
 
   return (
@@ -133,7 +133,7 @@ const PageDocDetail: FC<PageDocDetailProps> = props => {
           <div
             className="max-w-none prose prose-sm md:prose-base"
             id="doc-body"
-            dangerouslySetInnerHTML={{ __html: html.value }}
+            dangerouslySetInnerHTML={{ __html: html }}
           ></div>
         )}
       </div>

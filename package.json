@@ -41,6 +41,8 @@
     "size-esm-runtime": "node scripts/build.js rue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime shared -f esm-bundler",
     "size-runtime": "node scripts/runtime-size-audit.js",
+    "size:tree-shaking": "node scripts/tree-shaking-audit.js",
+    "size:tree-shaking:check": "node scripts/tree-shaking-audit.js --check",
     "check:compiler-runtime-boundary": "node scripts/check-compiler-runtime-boundary.js",
     "check": "tsc --incremental --noEmit && pnpm run check:compiler-runtime-boundary",
     "check:text": "pnpm --dir packages/text check",

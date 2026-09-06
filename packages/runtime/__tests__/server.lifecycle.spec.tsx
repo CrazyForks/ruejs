@@ -1,6 +1,21 @@
 import { expect, it, vi } from 'vitest'
-import { mount, onBeforeMount, onMounted, render, useRef } from '@rue-js/rue'
-import { _$serverElement, renderToString } from '@rue-js/server-renderer'
+import { mount, onBeforeMount, onMounted, ref, render, useRef } from '@rue-js/rue'
+import { _$serverComponent, _$serverElement, renderToString } from '@rue-js/server-renderer'
+
+it('preserves Ref props until a child component displays them during SSR', async () => {
+  const state = ref('prop-value')
+  let received: unknown
+  const Child = (props: { value: typeof state }) => {
+    received = props.value
+    return _$serverElement('span', { 'data-value': props.value }, [props.value])
+  }
+  const Page = () => _$serverComponent(Child, { value: state }, [])
+
+  await expect(renderToString(Page)).resolves.toBe(
+    `<span data-value="${String(state)}">prop-value</span>`,
+  )
+  expect(received).toBe(state)
+})
 
 it('keeps browser mount callbacks out of SSR and runs them on client mount', async () => {
   const beforeMount = vi.fn()

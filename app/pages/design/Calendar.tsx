@@ -593,7 +593,7 @@ const CustomHeaderCalendarPreview: FC = () => {
   )
 }
 
-const basicCalendarCode = `import { ref, useCallback } from '@rue-js/rue'
+const basicCalendarCode = `import { ref } from '@rue-js/rue'
 import { Calendar } from '@rue-js/design'
 
 const maintenanceDates = new Set(['2026-04-04', '2026-04-05', '2026-05-01'])
@@ -636,15 +636,15 @@ export default function BasicCalendarDemo() {
   const selectedSource = ref('date')
   const panelMode = ref<'month' | 'year'>('month')
   const panelState = ref(formatPanelLabel(parseDate(selectedValue.value), 'month'))
-  const handleChange = useCallback((date: Date) => {
+  const handleChange = (date: Date) => {
     selectedValue.value = formatIsoDate(date)
-  }, [])
-  const handlePanelChange = useCallback((date: Date, nextMode: 'month' | 'year') => {
+  }
+  const handlePanelChange = (date: Date, nextMode: 'month' | 'year') => {
     panelState.value = formatPanelLabel(date, nextMode)
-  }, [])
-  const handleSelect = useCallback((_date: Date, info: { source: string }) => {
+  }
+  const handleSelect = (_date: Date, info: { source: string }) => {
     selectedSource.value = info.source
-  }, [])
+  }
 
   return (
     <div className="space-y-4">

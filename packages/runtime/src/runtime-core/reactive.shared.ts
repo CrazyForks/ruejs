@@ -1,17 +1,8 @@
 import { createReactiveFacade } from './js-reactive/facade.js'
-import { createReactiveKernel } from './reactive-kernel/index.js'
+import { reactiveKernel } from './reactive-kernel/shared.js'
 
 export type EffectHandle = import('./js-reactive/types.js').EffectHandle
 export type SignalHandle<T> = import('./js-reactive/types.js').SignalHandle<T>
-
-const reactiveKernelKey = Symbol.for('@rue-js/runtime/reactive-kernel')
-const reactiveKernelRegistry = globalThis as typeof globalThis & {
-  [reactiveKernelKey]?: ReturnType<typeof createReactiveKernel>
-}
-const reactiveKernel = (reactiveKernelRegistry[reactiveKernelKey] ??= createReactiveKernel({
-  onErrorCaptured: (error, owner, info) =>
-    globalThis.__rue_compiled_runtime_bridge?.dispatchErrorCaptured?.(error, owner, info) === true,
-}))
 
 const facade = createReactiveFacade(reactiveKernel)
 const runtimeWithJsHooks = {
@@ -63,12 +54,9 @@ export const {
   shallowReactive,
   toRaw,
   unref,
-  useCallback,
   useEffect,
-  useMemo,
   useRef,
   useSetup,
-  useSignal,
   useState,
   vaporWithHookId,
   withHookSlot,

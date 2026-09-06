@@ -12,11 +12,11 @@ const Counter: FC = () => {
         update.
       </p>
       <div class="counter">
-        <button type="button" onClick={() => setCount(count.value - 1)}>
+        <button type="button" onClick={() => setCount(value => value - 1)}>
           -
         </button>
-        <strong>{count.value}</strong>
-        <button type="button" onClick={() => setCount(count.value + 1)}>
+        <strong>{count}</strong>
+        <button type="button" onClick={() => setCount(value => value + 1)}>
           +
         </button>
       </div>

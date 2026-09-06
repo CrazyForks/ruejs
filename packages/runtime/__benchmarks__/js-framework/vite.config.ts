@@ -13,6 +13,17 @@ const workspaceVersion = createRequire(import.meta.url)(
 
 const workspaceArtifact = (...parts: string[]) => path.resolve(workspaceRoot, ...parts)
 
+const workspaceProductionEntry = (name: string, subpath = '.') => {
+  const packageDir = workspaceArtifact('packages', name)
+  const manifest = createRequire(import.meta.url)(path.join(packageDir, 'package.json'))
+  const entry = manifest.exports[subpath]
+  const target = typeof entry === 'string' ? entry : (entry?.module ?? entry?.import)
+  if (typeof target !== 'string' || !target.startsWith('./dist/')) {
+    throw new Error(`Missing production export for ${name}${subpath}`)
+  }
+  return path.resolve(packageDir, target)
+}
+
 const benchmarkModuleManifest = (): Plugin => ({
   name: 'rue-benchmark-module-manifest',
   generateBundle(_options, bundle) {
@@ -43,19 +54,19 @@ export default defineConfig({
     alias: [
       {
         find: /^@rue-js\/rue\/internal\/compiler$/,
-        replacement: workspaceArtifact('packages/rue/dist/rue.internal-compiler.esm-bundler.js'),
+        replacement: workspaceProductionEntry('rue', './internal/compiler'),
       },
       {
         find: /^@rue-js\/rue\/internal$/,
-        replacement: workspaceArtifact('packages/rue/dist/rue.internal.esm-bundler.js'),
+        replacement: workspaceProductionEntry('rue', './internal'),
       },
       {
         find: /^@rue-js\/rue$/,
-        replacement: workspaceArtifact('packages/rue/dist/rue.esm-bundler.js'),
+        replacement: workspaceProductionEntry('rue'),
       },
       {
         find: /^@rue-js\/shared$/,
-        replacement: workspaceArtifact('packages/shared/dist/shared.esm-bundler.js'),
+        replacement: workspaceProductionEntry('shared'),
       },
     ],
   },

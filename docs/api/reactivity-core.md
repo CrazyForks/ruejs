@@ -29,6 +29,23 @@
 
   ref 对象是可更改的——也就是说，你可以为 `.value` 赋予新的值。它也是响应式的，即所有对 `.value` 的读取操作都会被追踪，写入操作会触发相关副作用。
 
+  在 JSX child 的最终展示位置，Rue 会自动解包带有内部 Ref 标记（`__rue_ref__ === true`）的值，因此可以写 `<span>{count}</span>`。`computed()` 和 `customRef()` 返回的 Ref 也遵循这一规则；普通 JavaScript 表达式、事件处理和属性绑定仍需显式读取 `.value`。Signal 不属于 Ref，展示时继续使用 `count.get()`。
+
+  ```tsx
+  const count = ref(0)
+  const doubled = computed(() => count.value * 2)
+
+  const view = (
+    <>
+      <span>{count}</span>
+      <span>{doubled}</span>
+      <input value={count.value} />
+    </>
+  )
+  ```
+
+  自动解包只发生在表达式计算完成后的最终展示边界，不会按是否存在 `value` 属性来解包普通对象，也不适用于 React 风格的 DOM `useRef`。
+
   Rue 中的 `ref()` 与运行时 Hook API 保持一致：除了初始值外，还支持传入 `options.equals` 自定义比较函数，以及可选的 `forceGlobal` 参数。`forceGlobal` 通常只用于底层封装、测试或需要跳过当前组件 Hook 槽位的场景。
 
   如果一个对象被赋值给 ref，该对象将通过 [reactive()](#reactive) 按 Rue 的规则被设为深层响应式。

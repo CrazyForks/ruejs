@@ -44,13 +44,54 @@ const Counter: FC<Props> = props => {
 
   return (
     <button onClick={() => (count.value += 1)}>
-      {props.message}: {count.value}
+      {props.message}: {count}
     </button>
   )
 }
 ```
 
 静态结构、动态文本、属性和事件会由编译器分别归类。编译产物可能导入 `@rue-js/rue/internal` 的窄 helper；应用源码不应手写这些 helper。
+
+### Ref 的最终展示自动解包 {#ref-display-unwrapping}
+
+JSX child 表达式计算完成后，如果最终展示值是 Rue 标记的 Ref，运行时会自动读取一层 `.value`。这包括 `ref()`、`computed()` 和 `customRef()` 返回的 Ref，也包括条件表达式选出的 Ref 和数组中的 Ref 叶子：
+
+```tsx
+import { computed, ref } from '@rue-js/rue'
+
+const count = ref(0)
+const doubled = computed(() => count.value * 2)
+const ready = ref(true)
+
+return (
+  <div>
+    <span>{count}</span>
+    <span>{ready.value ? doubled : count}</span>
+    <p>{[count, ' / ', doubled]}</p>
+  </div>
+)
+```
+
+自动解包仅限最终展示边界。表达式内部的计算、条件测试、事件处理和 DOM 属性仍使用 `.value`；Signal 仍使用 `get()`：
+
+```tsx
+import { ref, signal } from '@rue-js/rue'
+
+const count = ref(0)
+const enabled = ref(true)
+const signalCount = signal(0)
+
+return (
+  <>
+    <span>{count.value + 1}</span>
+    <input disabled={!enabled.value} value={count.value} />
+    <button onClick={() => count.value++}>加一</button>
+    <span>{signalCount.get()}</span>
+  </>
+)
+```
+
+组件 Props 也不会在传递时解包：`<Child value={count}>` 传入的是 Ref 本身；只有子组件把 `props.value` 放到自己的 JSX child 最终展示位置时才会解包。Rue 只识别严格的 Ref 标记，不会因为普通对象含有 `value` 属性而解包，也不会把用于 DOM / 组件实例的 React 风格 `useRef` 当作响应式 Ref。
 
 组件也可以返回文本、条件片段或多个根节点：
 

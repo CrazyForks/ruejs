@@ -84,9 +84,12 @@ fn parse_jsx_fragment(src: &str) -> JSXFragment {
 
 #[test]
 fn vapor_block_expr_detects_renderable_calls_and_empty_memo_deps() {
-    assert!(call_returns_jsx_renderable(&parse_call("useMemo(() => <span />, [])", true)));
     assert!(call_returns_jsx_renderable(&parse_call(
-        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
+        "_$compiledMemo('memo', () => <span />, [])",
+        true
+    )));
+    assert!(call_returns_jsx_renderable(&parse_call(
+        "_$compiledWithHookId(\"memo:0:0\", () => _$compiledMemo('memo', () => <span />, []))",
         true,
     )));
     assert!(call_returns_jsx_renderable(&parse_call(
@@ -94,9 +97,12 @@ fn vapor_block_expr_detects_renderable_calls_and_empty_memo_deps() {
         true,
     )));
 
-    assert!(is_empty_deps_memoized_jsx_expr(&parse_expr("useMemo(() => <span />, [])", true)));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
+        "_$compiledMemo('memo', () => <span />, [])",
+        true
+    )));
+    assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
+        "_$compiledWithHookId(\"memo:0:0\", () => _$compiledMemo('memo', () => <span />, []))",
         true,
     )));
     assert!(!is_empty_deps_memoized_jsx_expr(&parse_expr(
@@ -107,7 +113,7 @@ fn vapor_block_expr_detects_renderable_calls_and_empty_memo_deps() {
     assert!(!call_returns_jsx_renderable(&parse_call("_$compiledWithHookId(\"memo:0:0\")", true,)));
     assert!(!call_returns_jsx_renderable(&parse_call("items['map'](item => <li />)", true)));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "ok && useMemo(() => <span />, [])",
+        "ok && _$compiledMemo('memo', () => <span />, [])",
         true,
     )));
 }
@@ -191,11 +197,11 @@ fn vapor_block_expr_rewrites_calls_for_slot_values() {
     let mut memo_vt = new_vt();
     let memo_out = compact(&emit_expr(build_slot_expr(
         &mut memo_vt,
-        &parse_expr("useMemo(() => <span />, [])", true),
+        &parse_expr("_$compiledMemo('memo', () => <span />, [])", true),
     )));
-    assert!(
-        memo_out.contains("useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
-    );
+    assert!(memo_out.contains(
+        "_$compiledMemo('memo',()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+    ));
     assert!(memo_out.contains("_$compiledCreateElement(\"span\",__rue_parent_context)"));
 
     let mut hook_vt = new_vt();
@@ -219,9 +225,9 @@ fn vapor_block_expr_rewrites_calls_for_slot_values() {
     let mut block_body_memo_vt = new_vt();
     let block_body_memo = compact(&emit_expr(build_slot_expr(
         &mut block_body_memo_vt,
-        &parse_expr("useMemo(() => { return <span />; }, [])", true),
+        &parse_expr("_$compiledMemo('memo', () => { return <span />; }, [])", true),
     )));
-    assert!(block_body_memo.contains("useMemo(()=>{return<span/>;},[]);"));
+    assert!(block_body_memo.contains("_$compiledMemo('memo',()=>{return<span/>;},[]);"));
     assert!(!block_body_memo.contains("vapor(()=>{"));
 }
 
@@ -355,8 +361,11 @@ fn vapor_block_expr_covers_false_edges_and_nested_slot_branches() {
     );
     assert!(rewrite_use_memo_call_for_slot(&mut vt, &parse_call("useMemo()", true)).is_none());
     assert!(
-        rewrite_use_memo_call_for_slot(&mut vt, &parse_call("useMemo(() => value)", false))
-            .is_none()
+        rewrite_use_memo_call_for_slot(
+            &mut vt,
+            &parse_call("_$compiledMemo('memo', () => value)", false)
+        )
+        .is_none()
     );
     assert!(
         rewrite_hook_wrapped_call_for_slot(

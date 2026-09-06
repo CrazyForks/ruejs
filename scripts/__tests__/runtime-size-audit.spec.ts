@@ -31,6 +31,14 @@ describe('runtime size audit', () => {
     )
   })
 
+  it('audits component and builtin capabilities through their private entries', () => {
+    const entries = Object.fromEntries(
+      RUNTIME_SIZE_PRESETS.map(preset => [preset.name, preset.input.map(input => input.entry)]),
+    )
+    expect(entries['compiled-component']).toEqual(['@rue-js/rue/internal/component'])
+    expect(entries['compiled-builtins']).toEqual(['@rue-js/rue/internal/builtins'])
+  })
+
   it('turns an over-budget fixture into a hard failure', () => {
     expect(() =>
       checkRuntimeSizeBudget(

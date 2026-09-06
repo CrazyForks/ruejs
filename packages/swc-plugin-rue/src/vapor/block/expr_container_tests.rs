@@ -217,7 +217,7 @@ fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
     );
     let map_out = compact(&emit_stmts(map_stmts));
     assert!(map_out.contains("_$reconcileKeyed("));
-    assert!(map_out.contains("(item,idx)=>{"));
+    assert!(map_out.contains("(item,idx,_$rowTarget)=>{"));
     assert!(!map_out.contains(concat!("direct", "Root:true")));
     assert!(!map_out.contains("_$createDocumentFragment"));
     assert!(!map_out.contains("renderAnchor(__slot,parent,start);"));
@@ -295,7 +295,7 @@ fn hardens_memoized_jsx_and_transition_group_container_paths() {
     handle_expr_container(
         &mut memo_vt,
         &root,
-        &parse_expr_container("useMemo(() => <span>{label}</span>, [])"),
+        &parse_expr_container("_$compiledMemo('memo', () => <span>{label}</span>, [])"),
         &mut memo_stmts,
     );
     let memo_out = compact(&emit_stmts(memo_stmts));

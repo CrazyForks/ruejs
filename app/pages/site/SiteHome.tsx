@@ -103,13 +103,13 @@ const VideoList: FC<{ videos: Video[]; emptyHeading?: string }> = p => (
 const SearchableVideoList: FC<{ videos: Video[] }> = p => {
   const [searchText, setSearchText] = useState('')
   const foundVideos = computed(() =>
-    p.videos.filter(v => v.title.toLowerCase().includes(searchText.value.toLowerCase())),
+    p.videos.filter(v => v.title.toLowerCase().includes(searchText.toLowerCase())),
   )
 
   return (
     <>
-      <SearchInput value={searchText.value} onChange={setSearchText} />
-      <VideoList videos={foundVideos.get()} emptyHeading={`没有匹配 “${searchText.value}”`} />
+      <SearchInput value={searchText} onChange={setSearchText} />
+      <VideoList videos={foundVideos.get()} emptyHeading={`没有匹配 “${searchText}”`} />
     </>
   )
 }
@@ -436,7 +436,7 @@ const SiteHome: FC = () => {
                 Framework For Native DOM
               </div>
               <p className="mt-6 text-lg md:text-xl text-base-content/70">
-                Signal 细粒度响应式 . Rust 编译器 . JSX 函数式组件
+                Signal 细粒度响应式 . 编译优化 . JSX 函数式组件
               </p>
             </figure>
             <div></div>
@@ -946,14 +946,14 @@ const SearchableVideoList: FC<{ videos: Video[] }> = (p) => {
   const [searchText, setSearchText] = useState('');
   const foundVideos = computed(() =>
     p.videos.filter(v =>
-      v.title.toLowerCase().includes(searchText.value.toLowerCase()),
+      v.title.toLowerCase().includes(searchText.toLowerCase()),
     )
   )
 
   return (
     <>
-      <SearchInput value={searchText.value} onChange={setSearchText} />
-      <VideoList videos={foundVideos} emptyHeading={\`没有匹配 “\${searchText.value}”\`} />
+      <SearchInput value={searchText} onChange={setSearchText} />
+      <VideoList videos={foundVideos} emptyHeading={\`没有匹配 “\${searchText}”\`} />
     </>
   );
 };

@@ -264,7 +264,10 @@ export default TodoApp;
     assert!(normalized.contains("_$mountCompiledKeyedRow"), "{normalized}");
     assert!(normalized.contains("_$compiledComponent(Fragment"), "{normalized}");
     assert!(normalized.contains("_$compiledText(_el8, ()=>_$rowItem1.get().id)"), "{normalized}");
-    assert!(normalized.contains("_$compiledText(_el11, ()=>_$rowItem1.get().text)"), "{normalized}");
+    assert!(
+        normalized.contains("_$compiledText(_el11, ()=>_$rowItem1.get().text)"),
+        "{normalized}"
+    );
     assert!(!normalized.contains("_$compiledKeyedList"), "{normalized}");
     assert!(!normalized.contains("_$setAttribute(_el7, \"key\""));
 }

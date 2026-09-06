@@ -50,7 +50,7 @@ const invokeTransform = async (
 }
 
 const expectClosedCompiledAbi = (code: string) => {
-  expect(code).toMatch(/from\s*["']@rue-js\/rue\/internal(?:\/compiler)?["']/)
+  expect(code).toMatch(/from\s*["']@rue-js\/rue\/internal(?:\/(?:compiler|component))?["']/)
   expect(code).not.toContain('@rue-js/runtime-vapor')
   expect(code).not.toContain('@rue-js/rue/vapor')
   expect(code).not.toContain('@rue-js/rue/compiled')
@@ -105,7 +105,7 @@ describe('vite-plugin-rue compiler-only JSX contract', () => {
 
     expect(diagnostics).toEqual([])
     expect(code).toContain('_$compiledRoot(')
-    expect(code).toMatch(/from\s*["']@rue-js\/rue\/internal\/compiler["']/)
+    expect(code).toMatch(/from\s*["']@rue-js\/rue\/internal\/component["']/)
     expect(code).not.toMatch(/from\s*["']@rue-js\/rue\/internal["']/)
   })
 

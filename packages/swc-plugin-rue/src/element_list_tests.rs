@@ -87,6 +87,67 @@ fn compiles_keyed_native_rows_to_closed_factories() {
 }
 
 #[test]
+fn uses_a_direct_item_slot_for_simple_native_rows() {
+    let out = compile_list(
+        "items.map(item => <li key={item.id} className={item.className} onClick={() => select(item)}>{item.name}</li>)",
+    )
+    .expect("compiled list");
+
+    assert!(out.contains("let_$rowItem1=item"), "{out}");
+    assert!(out.contains("_$rowItem1=_$rowNextItem"), "{out}");
+    assert!(!out.contains("_$rowItem1=_$compiledSignal("), "{out}");
+    assert!(!out.contains("_$rowItem1.get()"), "{out}");
+}
+
+#[test]
+fn emits_ownerless_mount_only_for_resource_free_simple_native_rows() {
+    let resource_free = compile_list(
+        "items.map(item => <li key={item.id} className={item.className}>{item.name}</li>)",
+    )
+    .expect("compiled list");
+    assert!(resource_free.contains("_$mountCompiledKeyedRowOwnerless("), "{resource_free}");
+    assert!(!resource_free.contains("_$mountCompiledSlotFactory("), "{resource_free}");
+
+    for source in [
+        "items.map(item => <li key={item.id} onClick={() => select(item)}>{item.name}</li>)",
+        "items.map(item => <li key={item.id} v-memo={[item.name]}>{item.name}</li>)",
+        "items.map(item => <Row key={item.id}>{item.name}</Row>)",
+    ] {
+        let out = compile_list(source).expect("compiled list");
+        assert!(!out.contains("_$mountCompiledKeyedRowOwnerless("), "{source}: {out}");
+    }
+}
+
+#[test]
+fn omits_index_signal_when_the_row_does_not_read_the_map_index() {
+    for source in [
+        "items.map(item => <li key={item.id}>{item.name}</li>)",
+        "items.map((item, index) => <li key={index}>{item.name}</li>)",
+        "items.map((item, index) => <li key={item.id}>{((index) => index + 1)(4)}</li>)",
+        "items.map(([index, item]) => <li key={item.id}>{index}</li>)",
+    ] {
+        let out = compile_list(source).expect("compiled list");
+
+        assert!(!out.contains("_$rowIndex1=_$compiledSignal("), "{source}: {out}");
+        assert!(!out.contains("_$rowIndex1.set("), "{source}: {out}");
+    }
+}
+
+#[test]
+fn keeps_index_signal_for_direct_and_event_closure_reads() {
+    for source in [
+        "items.map((item, index) => <li key={item.id}>{index}:{item.name}</li>)",
+        "items.map((item, index) => <li key={item.id} onClick={() => select(index)}>{item.name}</li>)",
+        "items.map((item, index) => <li key={item.id} v-memo={[index]}>{item.name}</li>)",
+    ] {
+        let out = compile_list(source).expect("compiled list");
+
+        assert!(out.contains("_$rowIndex1=_$compiledSignal(index)"), "{source}: {out}");
+        assert!(out.contains("_$rowIndex1.set(_$rowNextIndex)"), "{source}: {out}");
+    }
+}
+
+#[test]
 fn compiles_fragment_and_block_branch_rows() {
     for source in [
         "items.map(item => <><span key={item.id}>{item.a}</span><em>{item.b}</em></>)",
@@ -169,4 +230,42 @@ fn rejects_non_map_calls_without_output() {
 
     assert!(!try_build_list_from_map(&mut vt, &ident("root"), &call, &mut stmts));
     assert!(stmts.is_empty());
+}
+
+#[test]
+fn resource_row_setup_requires_proven_native_row_without_memo_or_ref() {
+    let out = compile_list(
+        "items.map(item => <li key={item.id} onClick={() => select(item)}>{item.name}</li>)",
+    )
+    .expect("compiled list");
+    assert!(out.contains("_$mountCompiledKeyedRowSetup("), "{out}");
+    assert!(!out.contains("_$mountCompiledSlotFactory("), "{out}");
+    for source in [
+        "items.map(item => <li key={item.id} v-memo={[item.name]} onClick={() => select(item)}>{item.name}</li>)",
+        "items.map(item => <li key={item.id} ref={capture}>{item.name}</li>)",
+        "items.map(item => <Row key={item.id}>{item.name}</Row>)",
+        "items.map(item => <li key={item.id} {...item}>{item.name}</li>)",
+    ] {
+        let out = compile_list(source).expect("compiled list");
+        assert!(!out.contains("_$mountCompiledKeyedRowSetup("), "{source}: {out}");
+    }
+}
+
+#[test]
+fn reuses_only_isolated_simple_row_text() {
+    let out = compile_list("items.map(item => <li key={item.id}><a>{item.name}</a></li>)").unwrap();
+    assert!(out.contains("rue:row-text"), "{out}");
+    assert!(!out.contains("_$compiledCreateTextNode("), "{out}");
+    assert!(!out.contains("insertBefore("), "{out}");
+    assert!(!out.contains("removeChild("), "{out}");
+    for source in [
+        "items.map(item => <li key={item.id}>prefix{item.name}</li>)",
+        "items.map(item => <li key={item.id}>{item.name}{item.id}</li>)",
+        "items.map(item => <tr key={item.id}>{item.name}</tr>)",
+    ] {
+        let out = compile_list(source).unwrap();
+        assert!(!out.contains("rue:row-text"), "{out}");
+        assert!(out.contains("rue:text-hole"), "{out}");
+        assert!(out.contains("_$compiledCreateTextNode("), "{out}");
+    }
 }

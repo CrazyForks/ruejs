@@ -7,25 +7,17 @@ const UseStateCounterDemo: FC = () => {
     <div className="card bg-base-100 shadow">
       <div className="card-body">
         <h2 className="text-2xl font-semibold mb-2">useState 计数器</h2>
-        <div className="text-4xl font-bold mb-3">{count.value}</div>
+        <div className="text-4xl font-bold mb-3">{count}</div>
         <div className="flex flex-wrap justify-center gap-2">
           <button
             className="rounded-lg border border-blue-500 bg-blue-500 px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:border-blue-700 hover:bg-blue-700 focus:ring focus:ring-blue-200"
-            onClick={() =>
-              setCount(value => {
-                value.value += 1
-              })
-            }
+            onClick={() => setCount(value => value + 1)}
           >
             +1
           </button>
           <button
             className="rounded-lg border border-yellow-500 bg-yellow-500 px-5 py-2.5 text-center text-sm font-medium text-white shadow-sm transition-all hover:border-yellow-700 hover:bg-yellow-700 focus:ring focus:ring-yellow-200"
-            onClick={() =>
-              setCount(value => {
-                value.value -= 1
-              })
-            }
+            onClick={() => setCount(value => value - 1)}
           >
             -1
           </button>

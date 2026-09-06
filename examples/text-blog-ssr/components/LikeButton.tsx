@@ -7,18 +7,14 @@ export default function LikeButton({ initialLikes = 12 }: { initialLikes?: numbe
   const [likes, setLikes] = useState(initialLikes)
 
   function handleClick() {
-    const nextLiked = !liked.value
+    const nextLiked = !liked
     setLiked(nextLiked)
-    setLikes(likes.value + (nextLiked ? 1 : -1))
+    setLikes(value => value + (nextLiked ? 1 : -1))
   }
 
   return (
-    <button
-      className={`like-button${liked.value ? ' liked' : ''}`}
-      type="button"
-      onClick={handleClick}
-    >
-      {liked.value ? 'Liked' : 'Like'} · {likes.value}
+    <button className={`like-button${liked ? ' liked' : ''}`} type="button" onClick={handleClick}>
+      {liked ? 'Liked' : 'Like'} · {likes}
     </button>
   )
 }

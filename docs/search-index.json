@@ -3784,11 +3784,33 @@
       "title": "内置指令",
       "sectionTitle": "v-memo / r-memo",
       "type": "paragraph",
+      "text": "在 keyed 列表中，将 key 与 memo 放在同一个行根元素上。缓存按 key 随行保留：换位只移动原 DOM，依赖数组中的值通过 Object.is 逐项比较，未变化时跳过行内更新。key 不需要重复放入 memo 依赖数组；更换 key 会创建新行。",
+      "searchText": "内置指令 v-memo / r-memo 在 keyed 列表中，将 key 与 memo 放在同一个行根元素上。缓存按 key 随行保留：换位只移动原 dom，依赖数组中的值通过 object.is 逐项比较，未变化时跳过行内更新。key 不需要重复放入 memo 依赖数组；更换 key 会创建新行。 api/built-in-directives"
+    },
+    {
+      "id": "api/built-in-directives:78",
+      "docId": "api/built-in-directives",
+      "route": "/api/api/built-in-directives",
+      "href": "/api/api/built-in-directives#v-memo",
+      "title": "内置指令",
+      "sectionTitle": "v-memo / r-memo",
+      "type": "paragraph",
+      "text": "两种指令均支持 map 列表及 v-for / r-for 列表。应将需要触发行内容更新的值（例如 row.label、row.id === selectedId.value）放入依赖数组；空数组会固定该行内容，直到对应的 key 被移除。",
+      "searchText": "内置指令 v-memo / r-memo 两种指令均支持 map 列表及 v-for / r-for 列表。应将需要触发行内容更新的值（例如 row.label、row.id === selectedid.value）放入依赖数组；空数组会固定该行内容，直到对应的 key 被移除。 api/built-in-directives"
+    },
+    {
+      "id": "api/built-in-directives:79",
+      "docId": "api/built-in-directives",
+      "route": "/api/api/built-in-directives",
+      "href": "/api/api/built-in-directives#v-memo",
+      "title": "内置指令",
+      "sectionTitle": "v-memo / r-memo",
+      "type": "paragraph",
       "text": "完整交互示例见 v-memo / r-memo 指令页面。",
       "searchText": "内置指令 v-memo / r-memo 完整交互示例见 v-memo / r-memo 指令页面。 api/built-in-directives"
     },
     {
-      "id": "api/built-in-directives:78",
+      "id": "api/built-in-directives:80",
       "docId": "api/built-in-directives",
       "route": "/api/api/built-in-directives",
       "href": "/api/api/built-in-directives#v-cloak",
@@ -3799,7 +3821,7 @@
       "searchText": "内置指令 v-cloak v-cloak api/built-in-directives"
     },
     {
-      "id": "api/built-in-directives:79",
+      "id": "api/built-in-directives:81",
       "docId": "api/built-in-directives",
       "route": "/api/api/built-in-directives",
       "href": "/api/api/built-in-directives#v-cloak",
@@ -3810,7 +3832,7 @@
       "searchText": "内置指令 v-cloak rue 使用编译后的 jsx/tsx 运行，通常不需要 v-cloak。如果应用有自定义的首屏隐藏需求，可以用普通属性和 css 自行控制： api/built-in-directives"
     },
     {
-      "id": "api/built-in-directives:80",
+      "id": "api/built-in-directives:82",
       "docId": "api/built-in-directives",
       "route": "/api/api/built-in-directives",
       "href": "/api/api/built-in-directives#v-cloak",
@@ -3821,7 +3843,7 @@
       "searchText": "内置指令 v-cloak <div data-cloak={hydrated.value ? undefined : ''}>{content.value}</div> api/built-in-directives"
     },
     {
-      "id": "api/built-in-directives:81",
+      "id": "api/built-in-directives:83",
       "docId": "api/built-in-directives",
       "route": "/api/api/built-in-directives",
       "href": "/api/api/built-in-directives#directive-reference",
@@ -3832,7 +3854,7 @@
       "searchText": "内置指令 指令速查 指令速查 api/built-in-directives"
     },
     {
-      "id": "api/built-in-directives:82",
+      "id": "api/built-in-directives:84",
       "docId": "api/built-in-directives",
       "route": "/api/api/built-in-directives",
       "href": "/api/api/built-in-directives#directive-reference",
@@ -5540,6 +5562,248 @@
       "id": "api/composition-api-helpers:1",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "heading",
+      "text": "useEffect()",
+      "searchText": "组合式 api：辅助函数 useeffect() useeffect() api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:2",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "在组件挂载后执行副作用，并在需要时清理上一次执行产生的资源。以下三种依赖模式适用于经 Rue 编译器转换的组件。",
+      "searchText": "组合式 api：辅助函数 useeffect() 在组件挂载后执行副作用，并在需要时清理上一次执行产生的资源。以下三种依赖模式适用于经 rue 编译器转换的组件。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:3",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "list",
+      "text": "类型",
+      "searchText": "组合式 api：辅助函数 useeffect() 类型 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:4",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "code",
+      "text": "function useEffect( callback: () => void | (() => void), dependencies?: readonly unknown[] | null, ): void",
+      "searchText": "组合式 api：辅助函数 useeffect() function useeffect( callback: () => void | (() => void), dependencies?: readonly unknown[] | null, ): void api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:5",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "这里列出编译模式的依赖参数签名；本节不涉及其他运行时模式或额外 options 的行为。",
+      "searchText": "组合式 api：辅助函数 useeffect() 这里列出编译模式的依赖参数签名；本节不涉及其他运行时模式或额外 options 的行为。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:6",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "list",
+      "text": "三种依赖模式",
+      "searchText": "组合式 api：辅助函数 useeffect() 三种依赖模式 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:7",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "table",
+      "text": "| 调用形式 | 执行时机 | | ----------------------------- | -------------------------------------------------------------------- | | useEffect(fn) | 挂载时执行，并自动追踪回调执行期间的响应式读取；这些依赖变化时重跑。 | | useEffect(fn, []) | 每次组件挂载只执行一次，回调内的响应式读取不会触发重跑。 | | useEffect(fn, [dep1, dep2]) | 挂载时执行，此后只在声明的依赖值变化时重跑。 |",
+      "searchText": "组合式 api：辅助函数 useeffect() | 调用形式 | 执行时机 | | ----------------------------- | -------------------------------------------------------------------- | | useeffect(fn) | 挂载时执行，并自动追踪回调执行期间的响应式读取；这些依赖变化时重跑。 | | useeffect(fn, []) | 每次组件挂载只执行一次，回调内的响应式读取不会触发重跑。 | | useeffect(fn, [dep1, dep2]) | 挂载时执行，此后只在声明的依赖值变化时重跑。 | api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:8",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "省略数组是 Rue 自动追踪扩展，不表示 React 中省略数组时的每次渲染后执行。空数组与显式依赖数组提供 React 迁移兼容语义。传入 null 按空数组处理。",
+      "searchText": "组合式 api：辅助函数 useeffect() 省略数组是 rue 自动追踪扩展，不表示 react 中省略数组时的每次渲染后执行。空数组与显式依赖数组提供 react 迁移兼容语义。传入 null 按空数组处理。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:9",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "显式依赖表达式由编译器延迟读取，例如 [count.get()] 会订阅 count，不会把 setup 阶段的值固定下来。依赖快照按长度及逐项 Object.is 比较；Signal / Ref 句柄作为依赖时读取当前值，函数作为依赖时保留引用，不会被当成 getter 调用。",
+      "searchText": "组合式 api：辅助函数 useeffect() 显式依赖表达式由编译器延迟读取，例如 [count.get()] 会订阅 count，不会把 setup 阶段的值固定下来。依赖快照按长度及逐项 object.is 比较；signal / ref 句柄作为依赖时读取当前值，函数作为依赖时保留引用，不会被当成 getter 调用。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:10",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "显式数组模式只追踪依赖表达式中的响应式读取。回调及 cleanup 中未列出的响应式读取不会增加依赖，也不会单独触发重跑。",
+      "searchText": "组合式 api：辅助函数 useeffect() 显式数组模式只追踪依赖表达式中的响应式读取。回调及 cleanup 中未列出的响应式读取不会增加依赖，也不会单独触发重跑。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:11",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "list",
+      "text": "示例：自动追踪",
+      "searchText": "组合式 api：辅助函数 useeffect() 示例：自动追踪 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:12",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "以下示例中的 Hook 均写在编译组件函数内。",
+      "searchText": "组合式 api：辅助函数 useeffect() 以下示例中的 hook 均写在编译组件函数内。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:13",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "code",
+      "text": "import { signal, useEffect } from '@rue-js/rue' const count = signal(0) useEffect(() => { console.log(count.get()) }) // count.set(1) 会触发重跑。",
+      "searchText": "组合式 api：辅助函数 useeffect() import { signal, useeffect } from '@rue-js/rue' const count = signal(0) useeffect(() => { console.log(count.get()) }) // count.set(1) 会触发重跑。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:14",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "list",
+      "text": "示例：挂载时执行一次",
+      "searchText": "组合式 api：辅助函数 useeffect() 示例：挂载时执行一次 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:15",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "code",
+      "text": "import { useEffect, useRef } from '@rue-js/rue' const inputRef = useRef<HTMLInputElement>() useEffect(() => { inputRef.current?.focus() }, []) // 在组件返回的 JSX 中使用 <input ref={inputRef} />。",
+      "searchText": "组合式 api：辅助函数 useeffect() import { useeffect, useref } from '@rue-js/rue' const inputref = useref<htmlinputelement>() useeffect(() => { inputref.current?.focus() }, []) // 在组件返回的 jsx 中使用 <input ref={inputref} />。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:16",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "list",
+      "text": "示例：显式依赖与隔离",
+      "searchText": "组合式 api：辅助函数 useeffect() 示例：显式依赖与隔离 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:17",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "code",
+      "text": "import { signal, useEffect } from '@rue-js/rue' const count = signal(0) const label = signal('计数') useEffect(() => { console.log(label.get(), count.get()) }, [count.get()]) // label.set('总数') 不触发重跑。 // count.set(1) 触发重跑，此时回调会读到最新 label。",
+      "searchText": "组合式 api：辅助函数 useeffect() import { signal, useeffect } from '@rue-js/rue' const count = signal(0) const label = signal('计数') useeffect(() => { console.log(label.get(), count.get()) }, [count.get()]) // label.set('总数') 不触发重跑。 // count.set(1) 触发重跑，此时回调会读到最新 label。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:18",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "list",
+      "text": "cleanup 与 React 迁移",
+      "searchText": "组合式 api：辅助函数 useeffect() cleanup 与 react 迁移 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:19",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "回调可返回一个 cleanup 函数。副作用重跑前先执行上一轮 cleanup，组件销毁时执行最后一轮 cleanup 并停止订阅。空数组模式的 cleanup 只在组件销毁时执行；显式依赖快照未变化时，不重跑回调，也不执行 cleanup。",
+      "searchText": "组合式 api：辅助函数 useeffect() 回调可返回一个 cleanup 函数。副作用重跑前先执行上一轮 cleanup，组件销毁时执行最后一轮 cleanup 并停止订阅。空数组模式的 cleanup 只在组件销毁时执行；显式依赖快照未变化时，不重跑回调，也不执行 cleanup。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:20",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "从 React 迁移时，可以保留空数组或显式数组的意图，并将依赖改成 Rue 的响应式读法。例如将订阅某个 ID 的 effect 写成：",
+      "searchText": "组合式 api：辅助函数 useeffect() 从 react 迁移时，可以保留空数组或显式数组的意图，并将依赖改成 rue 的响应式读法。例如将订阅某个 id 的 effect 写成： api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:21",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "code",
+      "text": "import { signal, useEffect } from '@rue-js/rue' const channelId = signal('general') useEffect(() => { const channel = new BroadcastChannel(channelId.get()) return () => channel.close() }, [channelId.get()])",
+      "searchText": "组合式 api：辅助函数 useeffect() import { signal, useeffect } from '@rue-js/rue' const channelid = signal('general') useeffect(() => { const channel = new broadcastchannel(channelid.get()) return () => channel.close() }, [channelid.get()]) api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:22",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
+      "href": "/api/api/composition-api-helpers#useeffect",
+      "title": "组合式 API：辅助函数",
+      "sectionTitle": "useEffect()",
+      "type": "paragraph",
+      "text": "channelId 变化时先关闭旧频道，再打开新频道；组件销毁时关闭当前频道。若选择省略依赖数组，则转为 Rue 自动追踪，应重新核对回调中哪些响应式读取需要触发副作用。",
+      "searchText": "组合式 api：辅助函数 useeffect() channelid 变化时先关闭旧频道，再打开新频道；组件销毁时关闭当前频道。若选择省略依赖数组，则转为 rue 自动追踪，应重新核对回调中哪些响应式读取需要触发副作用。 api/composition-api-helpers"
+    },
+    {
+      "id": "api/composition-api-helpers:23",
+      "docId": "api/composition-api-helpers",
+      "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#template-refs-helper-note",
       "title": "组合式 API：辅助函数",
       "sectionTitle": "模板 Refs",
@@ -5548,7 +5812,7 @@
       "searchText": "组合式 api：辅助函数 模板 refs 模板 refs api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:2",
+      "id": "api/composition-api-helpers:24",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#template-refs-helper-note",
@@ -5559,7 +5823,7 @@
       "searchText": "组合式 api：辅助函数 模板 refs 在当前的 jsx / tsx 写法中，推荐直接使用 useref() 来持有元素或组件实例引用，而不是依赖额外的模板 ref 辅助函数。 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:3",
+      "id": "api/composition-api-helpers:25",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#template-refs-helper-note",
@@ -5570,7 +5834,7 @@
       "searchText": "组合式 api：辅助函数 模板 refs 类型 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:4",
+      "id": "api/composition-api-helpers:26",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#template-refs-helper-note",
@@ -5581,7 +5845,7 @@
       "searchText": "组合式 api：辅助函数 模板 refs function useref<t = any>(initial?: t): { current: t | undefined } api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:5",
+      "id": "api/composition-api-helpers:27",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#template-refs-helper-note",
@@ -5592,7 +5856,7 @@
       "searchText": "组合式 api：辅助函数 模板 refs 示例 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:6",
+      "id": "api/composition-api-helpers:28",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#template-refs-helper-note",
@@ -5603,7 +5867,7 @@
       "searchText": "组合式 api：辅助函数 模板 refs import { useeffect, useref } from '@rue-js/rue' const inputref = useref<htmlinputelement>() useeffect(() => { inputref.current?.focus?.() }, []) return <input ref={inputref} /> api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:7",
+      "id": "api/composition-api-helpers:29",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#template-refs-helper-note",
@@ -5614,7 +5878,7 @@
       "searchText": "组合式 api：辅助函数 模板 refs 另请参阅 - 指南 - 模板 refs - 指南 - 为模板 refs 添加类型 - 指南 - 为组件模板 refs 添加类型 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:8",
+      "id": "api/composition-api-helpers:30",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5625,7 +5889,7 @@
       "searchText": "组合式 api：辅助函数 useid() useid() api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:9",
+      "id": "api/composition-api-helpers:31",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5636,7 +5900,7 @@
       "searchText": "组合式 api：辅助函数 useid() 用于生成每个应用程序唯一的 id，用于无障碍属性或表单元素。 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:10",
+      "id": "api/composition-api-helpers:32",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5647,7 +5911,7 @@
       "searchText": "组合式 api：辅助函数 useid() 类型 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:11",
+      "id": "api/composition-api-helpers:33",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5658,7 +5922,7 @@
       "searchText": "组合式 api：辅助函数 useid() function useid(): string api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:12",
+      "id": "api/composition-api-helpers:34",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5669,7 +5933,7 @@
       "searchText": "组合式 api：辅助函数 useid() 示例 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:13",
+      "id": "api/composition-api-helpers:35",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5680,7 +5944,7 @@
       "searchText": "组合式 api：辅助函数 useid() import { useid } from '@rue-js/rue' const id = useid() return ( <form> <label htmlfor={id}>name:</label> <input id={id} type=\"text\" /> </form> ) api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:14",
+      "id": "api/composition-api-helpers:36",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5691,7 +5955,7 @@
       "searchText": "组合式 api：辅助函数 useid() 详情 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:15",
+      "id": "api/composition-api-helpers:37",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5702,7 +5966,7 @@
       "searchText": "组合式 api：辅助函数 useid() useid() 生成的 id 是每个应用程序唯一的。它可以用于生成表单元素和无障碍属性的 id。在同一组件中多次调用将生成不同的 id；同一组件的多个实例调用 useid() 也将具有不同的 id。 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:16",
+      "id": "api/composition-api-helpers:38",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -5713,7 +5977,7 @@
       "searchText": "组合式 api：辅助函数 useid() 如果您在同一页面上有多个 rue 应用程序实例，可以通过 app.config.idprefix 为每个应用程序提供 id 前缀来避免 id 冲突。 api/composition-api-helpers"
     },
     {
-      "id": "api/composition-api-helpers:17",
+      "id": "api/composition-api-helpers:39",
       "docId": "api/composition-api-helpers",
       "route": "/api/api/composition-api-helpers",
       "href": "/api/api/composition-api-helpers#useid",
@@ -14685,8 +14949,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "使用 memo 优化 (Using memo)",
       "type": "paragraph",
-      "text": "Rue 提供了 memo 工具来帮助优化组件重渲染。您可以使用它来记忆化组件或值：",
-      "searchText": "性能 (performance) 使用 memo 优化 (using memo) rue 提供了 memo 工具来帮助优化组件重渲染。您可以使用它来记忆化组件或值： guide/best-practices/performance"
+      "text": "Rue 提供了 memo 工具来帮助跳过 props 未变化时的组件更新：",
+      "searchText": "性能 (performance) 使用 memo 优化 (using memo) rue 提供了 memo 工具来帮助跳过 props 未变化时的组件更新： guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:54",
@@ -14696,8 +14960,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "使用 memo 优化 (Using memo)",
       "type": "code",
-      "text": "import { memo, useMemo } from '@rue-js/rue' import type { FC } from '@rue-js/rue' // 记忆化组件 const ExpensiveComponent: FC<{ data: Data }> = memo(({ data }) => { return <div>{/* 昂贵的渲染 */}</div> }) // 在组件内部记忆化值 const MyComponent: FC = () => { const expensiveValue = useMemo(() => { return computeExpensiveValue(deps) }, [deps]) return <div>{expensiveValue}</div> }",
-      "searchText": "性能 (performance) 使用 memo 优化 (using memo) import { memo, usememo } from '@rue-js/rue' import type { fc } from '@rue-js/rue' // 记忆化组件 const expensivecomponent: fc<{ data: data }> = memo(({ data }) => { return <div>{/* 昂贵的渲染 */}</div> }) // 在组件内部记忆化值 const mycomponent: fc = () => { const expensivevalue = usememo(() => { return computeexpensivevalue(deps) }, [deps]) return <div>{expensivevalue}</div> } guide/best-practices/performance"
+      "text": "import { memo } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const ExpensiveComponent: FC<{ data: Data }> = memo(({ data }) => { return <div>{/* 昂贵的渲染 */}</div> })",
+      "searchText": "性能 (performance) 使用 memo 优化 (using memo) import { memo } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const expensivecomponent: fc<{ data: data }> = memo(({ data }) => { return <div>{/* 昂贵的渲染 */}</div> }) guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:55",
@@ -14718,8 +14982,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "计算稳定性 (Computed Stability)",
       "type": "paragraph",
-      "text": "使用 useMemo 时，只有当计算值从前一个值发生变化时，Rue 才会触发更新。例如，以下 isEven 计算只在返回值从 true 变为 false 或反之亦然时触发效果：",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) 使用 usememo 时，只有当计算值从前一个值发生变化时，rue 才会触发更新。例如，以下 iseven 计算只在返回值从 true 变为 false 或反之亦然时触发效果： guide/best-practices/performance"
+      "text": "派生值应使用 computed 表达。Rue 会自动追踪计算过程中读取的响应式依赖，并在依赖变化后按需重新计算：",
+      "searchText": "性能 (performance) 计算稳定性 (computed stability) 派生值应使用 computed 表达。rue 会自动追踪计算过程中读取的响应式依赖，并在依赖变化后按需重新计算： guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:57",
@@ -14729,8 +14993,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "计算稳定性 (Computed Stability)",
       "type": "code",
-      "text": "import { useMemo, useState, useEffect } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const MyComponent: FC = () => { const [count, setCount] = useState(0) const isEven = useMemo(() => count % 2 === 0, [count]) useEffect(() => { console.log(isEven) }, [isEven]) // 只在 isEven 变化时触发 // 不会触发新的日志，因为计算值保持 `true` // count: 2, 4 都不会触发 return <div>{count}</div> }",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) import { usememo, usestate, useeffect } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const [count, setcount] = usestate(0) const iseven = usememo(() => count % 2 === 0, [count]) useeffect(() => { console.log(iseven) }, [iseven]) // 只在 iseven 变化时触发 // 不会触发新的日志，因为计算值保持 `true` // count: 2, 4 都不会触发 return <div>{count}</div> } guide/best-practices/performance"
+      "text": "import { computed, ref, watch } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const MyComponent: FC = () => { const count = ref(0) const isEven = computed(() => count.value % 2 === 0) watch(isEven, value => { console.log(value) }) return <button onClick={() => count.value++}>{count.value}</button> }",
+      "searchText": "性能 (performance) 计算稳定性 (computed stability) import { computed, ref, watch } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const count = ref(0) const iseven = computed(() => count.value % 2 === 0) watch(iseven, value => { console.log(value) }) return <button onclick={() => count.value++}>{count.value}</button> } guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:58",
@@ -14740,8 +15004,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "计算稳定性 (Computed Stability)",
       "type": "paragraph",
-      "text": "这减少了不必要的效果触发，但如果计算每次计算都创建一个新对象，则不起作用：",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) 这减少了不必要的效果触发，但如果计算每次计算都创建一个新对象，则不起作用： guide/best-practices/performance"
+      "text": "对于非常便宜、只在一个位置使用的派生值，也可以直接写成普通表达式，让意图保持清晰：",
+      "searchText": "性能 (performance) 计算稳定性 (computed stability) 对于非常便宜、只在一个位置使用的派生值，也可以直接写成普通表达式，让意图保持清晰： guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:59",
@@ -14751,8 +15015,8 @@
       "title": "性能 (Performance)",
       "sectionTitle": "计算稳定性 (Computed Stability)",
       "type": "code",
-      "text": "const computedObj = useMemo(() => { return { isEven: count % 2 === 0, } }, [count])",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) const computedobj = usememo(() => { return { iseven: count % 2 === 0, } }, [count]) guide/best-practices/performance"
+      "text": "const isEven = count.value % 2 === 0",
+      "searchText": "性能 (performance) 计算稳定性 (computed stability) const iseven = count.value % 2 === 0 guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:60",
@@ -14762,44 +15026,11 @@
       "title": "性能 (Performance)",
       "sectionTitle": "计算稳定性 (Computed Stability)",
       "type": "paragraph",
-      "text": "因为每次都创建一个新对象，所以新值在技术上总是与旧值不同。即使 isEven 属性保持不变，Rue 也无法知道，除非它对旧值和新值执行深度比较。这样的比较可能很昂贵，可能不值得。",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) 因为每次都创建一个新对象，所以新值在技术上总是与旧值不同。即使 iseven 属性保持不变，rue 也无法知道，除非它对旧值和新值执行深度比较。这样的比较可能很昂贵，可能不值得。 guide/best-practices/performance"
+      "text": "如果派生计算会创建对象，请只在确实需要这个对象时创建它，并优先让下游读取所需的标量字段。不要为了保持对象引用稳定而引入手动依赖数组。",
+      "searchText": "性能 (performance) 计算稳定性 (computed stability) 如果派生计算会创建对象，请只在确实需要这个对象时创建它，并优先让下游读取所需的标量字段。不要为了保持对象引用稳定而引入手动依赖数组。 guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/performance:61",
-      "docId": "guide/best-practices/performance",
-      "route": "/guide/guide/best-practices/performance",
-      "href": "/guide/guide/best-practices/performance#computed-stability",
-      "title": "性能 (Performance)",
-      "sectionTitle": "计算稳定性 (Computed Stability)",
-      "type": "paragraph",
-      "text": "相反，我们可以通过手动比较新值和旧值来优化，如果知道没有任何变化，则条件性地返回旧值：",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) 相反，我们可以通过手动比较新值和旧值来优化，如果知道没有任何变化，则条件性地返回旧值： guide/best-practices/performance"
-    },
-    {
-      "id": "guide/best-practices/performance:62",
-      "docId": "guide/best-practices/performance",
-      "route": "/guide/guide/best-practices/performance",
-      "href": "/guide/guide/best-practices/performance#computed-stability",
-      "title": "性能 (Performance)",
-      "sectionTitle": "计算稳定性 (Computed Stability)",
-      "type": "code",
-      "text": "const computedObj = useMemo( oldValue => { const newValue = { isEven: count % 2 === 0, } if (oldValue && oldValue.isEven === newValue.isEven) { return oldValue } return newValue }, [count], )",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) const computedobj = usememo( oldvalue => { const newvalue = { iseven: count % 2 === 0, } if (oldvalue && oldvalue.iseven === newvalue.iseven) { return oldvalue } return newvalue }, [count], ) guide/best-practices/performance"
-    },
-    {
-      "id": "guide/best-practices/performance:63",
-      "docId": "guide/best-practices/performance",
-      "route": "/guide/guide/best-practices/performance",
-      "href": "/guide/guide/best-practices/performance#computed-stability",
-      "title": "性能 (Performance)",
-      "sectionTitle": "计算稳定性 (Computed Stability)",
-      "type": "paragraph",
-      "text": "注意，您应该在比较和返回旧值之前始终执行完整的计算，以便在每次运行时收集相同的依赖项。",
-      "searchText": "性能 (performance) 计算稳定性 (computed stability) 注意，您应该在比较和返回旧值之前始终执行完整的计算，以便在每次运行时收集相同的依赖项。 guide/best-practices/performance"
-    },
-    {
-      "id": "guide/best-practices/performance:64",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#general-optimizations",
@@ -14810,7 +15041,7 @@
       "searchText": "性能 (performance) 一般优化 (general optimizations) 一般优化 (general optimizations) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:65",
+      "id": "guide/best-practices/performance:62",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#general-optimizations",
@@ -14821,7 +15052,7 @@
       "searchText": "性能 (performance) 一般优化 (general optimizations) 以下提示影响页面加载和更新性能。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:66",
+      "id": "guide/best-practices/performance:63",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14832,7 +15063,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 虚拟化大型列表 (virtualize large lists) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:67",
+      "id": "guide/best-practices/performance:64",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14843,7 +15074,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 所有前端应用中最常见的性能问题之一是渲染大型列表。无论框架多么高性能，渲染包含数千个项目的列表 都会 很慢，因为浏览器需要处理大量的 dom 节点。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:68",
+      "id": "guide/best-practices/performance:65",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14854,7 +15085,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 然而，我们不一定需要预先渲染所有这些节点。在大多数情况下，用户的屏幕大小只能显示我们大型列表的一小部分。我们可以通过 列表虚拟化 大大提高性能，该技术只渲染大型列表中当前在视口内或靠近视口的项目。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:69",
+      "id": "guide/best-practices/performance:66",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14865,7 +15096,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) 实现列表虚拟化并不容易，幸运的是有现有的社区库可以直接使用： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:70",
+      "id": "guide/best-practices/performance:67",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#virtualize-large-lists",
@@ -14876,7 +15107,7 @@
       "searchText": "性能 (performance) 虚拟化大型列表 (virtualize large lists) react-window react-virtualized @tanstack/react-virtual guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:71",
+      "id": "guide/best-practices/performance:68",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14887,7 +15118,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:72",
+      "id": "guide/best-practices/performance:69",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14898,7 +15129,7 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) rue 的响应式系统默认是深度的。虽然这使得状态管理直观，但当数据大小很大时，它确实会产生一定程度的开销，因为每次属性访问都会触发执行依赖跟踪的代理陷阱。这通常在处理深层嵌套对象的大型数组时变得明显，其中单个渲染需要访问 100,000 多个属性，因此它应该只影响非常特定的用例。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:73",
+      "id": "guide/best-practices/performance:70",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
@@ -14909,18 +15140,18 @@
       "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) rue 确实提供了一个逃生口，通过使用浅层状态选择退出深度响应式。浅层 api 创建仅在根级别具有响应式的状态，并暴露所有未更改的嵌套对象。这使嵌套属性访问保持快速，代价是我们现在必须将所有嵌套对象视为不可变的，并且更新只能通过替换根状态来触发： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:74",
+      "id": "guide/best-practices/performance:71",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#reduce-reactivity-overhead-for-large-immutable-structures",
       "title": "性能 (Performance)",
       "sectionTitle": "减少大型不可变结构的响应式开销 (Reduce Reactivity Overhead for Large Immutable Structures)",
       "type": "code",
-      "text": "import { useState } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const MyComponent: FC = () => { const [shallowArray, setShallowArray] = useState(() => [ /* 大量深层对象 */ ]) // 这不会触发更新... const handlePush = () => { shallowArray.push(newObject) } // 这会： const handleAdd = () => { setShallowArray([...shallowArray, newObject]) } return <div>{/* ... */}</div> }",
-      "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) import { usestate } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const [shallowarray, setshallowarray] = usestate(() => [ /* 大量深层对象 */ ]) // 这不会触发更新... const handlepush = () => { shallowarray.push(newobject) } // 这会： const handleadd = () => { setshallowarray([...shallowarray, newobject]) } return <div>{/* ... */}</div> } guide/best-practices/performance"
+      "text": "import { useState } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const MyComponent: FC = () => { const [shallowArray, setShallowArray] = useState(() => [ /* 大量深层对象 */ ]) // 这不会触发更新... const handlePush = () => { shallowArray.push(newObject) } // 这会： const handleAdd = () => { setShallowArray(previous => [...previous, newObject]) } return <div>{/* ... */}</div> }",
+      "searchText": "性能 (performance) 减少大型不可变结构的响应式开销 (reduce reactivity overhead for large immutable structures) import { usestate } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const mycomponent: fc = () => { const [shallowarray, setshallowarray] = usestate(() => [ /* 大量深层对象 */ ]) // 这不会触发更新... const handlepush = () => { shallowarray.push(newobject) } // 这会： const handleadd = () => { setshallowarray(previous => [...previous, newobject]) } return <div>{/* ... */}</div> } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:75",
+      "id": "guide/best-practices/performance:72",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14931,7 +15162,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 避免不必要的组件抽象 (avoid unnecessary component abstractions) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:76",
+      "id": "guide/best-practices/performance:73",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14942,7 +15173,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 有时我们可能会创建 无渲染组件 或高阶组件（即使用额外 props 渲染其他组件的组件）以获得更好的抽象或代码组织。虽然这没有错，但请记住，组件实例比纯 dom 节点昂贵得多，由于抽象模式创建太多组件实例会产生性能成本。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:77",
+      "id": "guide/best-practices/performance:74",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#avoid-unnecessary-component-abstractions",
@@ -14953,7 +15184,7 @@
       "searchText": "性能 (performance) 避免不必要的组件抽象 (avoid unnecessary component abstractions) 请注意，只减少几个实例不会有明显的效果，所以如果组件在应用中只渲染几次，请不要担心。考虑这种优化的最佳场景再次是大型列表。想象一下 100 个项目的列表，其中每个项目组件包含许多子组件。在这里删除一个不必要的组件抽象可能会导致数百个组件实例的减少。 guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:78",
+      "id": "guide/best-practices/performance:75",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#rue-specific-performance-tips",
@@ -14964,7 +15195,7 @@
       "searchText": "性能 (performance) rue 特定的性能提示 (rue-specific performance tips) rue 特定的性能提示 (rue-specific performance tips) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:79",
+      "id": "guide/best-practices/performance:76",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14975,7 +15206,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) 使用 key 属性 (using the key attribute) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:80",
+      "id": "guide/best-practices/performance:77",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14986,7 +15217,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) 在渲染列表时，始终使用稳定且唯一的 key 属性： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:81",
+      "id": "guide/best-practices/performance:78",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#using-the-key-attribute",
@@ -14997,7 +15228,7 @@
       "searchText": "性能 (performance) 使用 key 属性 (using the key attribute) // 好的做法 items.map(item => <div key={item.id}>{item.name}</div>) // 避免 - 使用索引作为 key 可能导致性能问题 items.map((item, index) => <div key={index}>{item.name}</div>) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:82",
+      "id": "guide/best-practices/performance:79",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -15008,7 +15239,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) 延迟加载非关键组件 (lazy load non-critical components) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:83",
+      "id": "guide/best-practices/performance:80",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -15019,7 +15250,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) 对于不需要立即显示的组件，使用 lazy 进行延迟加载： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:84",
+      "id": "guide/best-practices/performance:81",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#lazy-load-non-critical-components",
@@ -15030,7 +15261,7 @@
       "searchText": "性能 (performance) 延迟加载非关键组件 (lazy load non-critical components) import { lazy, suspense } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const heavycomponent = lazy(() => import('./heavycomponent')) const app: fc = () => { return ( <suspense fallback={<div>加载中...</div>}> <heavycomponent /> </suspense> ) } guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:85",
+      "id": "guide/best-practices/performance:82",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
@@ -15041,26 +15272,26 @@
       "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) 优化事件处理程序 (optimize event handlers) guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:86",
+      "id": "guide/best-practices/performance:83",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
       "title": "性能 (Performance)",
       "sectionTitle": "优化事件处理程序 (Optimize Event Handlers)",
       "type": "paragraph",
-      "text": "使用 useCallback 来记忆化事件处理程序，避免不必要的子组件重渲染：",
-      "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) 使用 usecallback 来记忆化事件处理程序，避免不必要的子组件重渲染： guide/best-practices/performance"
+      "text": "Rue 组件的初始化逻辑通常只执行一次，因此事件处理程序可以直接声明。让处理程序闭包读取响应式状态即可：",
+      "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) rue 组件的初始化逻辑通常只执行一次，因此事件处理程序可以直接声明。让处理程序闭包读取响应式状态即可： guide/best-practices/performance"
     },
     {
-      "id": "guide/best-practices/performance:87",
+      "id": "guide/best-practices/performance:84",
       "docId": "guide/best-practices/performance",
       "route": "/guide/guide/best-practices/performance",
       "href": "/guide/guide/best-practices/performance#optimize-event-handlers",
       "title": "性能 (Performance)",
       "sectionTitle": "优化事件处理程序 (Optimize Event Handlers)",
       "type": "code",
-      "text": "import { useCallback, useState } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const Parent: FC = () => { const [count, setCount] = useState(0) // 没有 useCallback，每次渲染都会创建新函数 const handleClick = useCallback(() => { setCount(c => c + 1) }, []) return <Child onClick={handleClick} /> } const Child: FC<{ onClick: () => void }> = memo(({ onClick }) => { return <button onClick={onClick}>点击</button> })",
-      "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) import { usecallback, usestate } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const parent: fc = () => { const [count, setcount] = usestate(0) // 没有 usecallback，每次渲染都会创建新函数 const handleclick = usecallback(() => { setcount(c => c + 1) }, []) return <child onclick={handleclick} /> } const child: fc<{ onclick: () => void }> = memo(({ onclick }) => { return <button onclick={onclick}>点击</button> }) guide/best-practices/performance"
+      "text": "import { memo, ref } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const Parent: FC = () => { const count = ref(0) const handleClick = () => { count.value++ } return <Child onClick={handleClick} /> } const Child: FC<{ onClick: () => void }> = memo(({ onClick }) => { return <button onClick={onClick}>点击</button> })",
+      "searchText": "性能 (performance) 优化事件处理程序 (optimize event handlers) import { memo, ref } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const parent: fc = () => { const count = ref(0) const handleclick = () => { count.value++ } return <child onclick={handleclick} /> } const child: fc<{ onclick: () => void }> = memo(({ onclick }) => { return <button onclick={onclick}>点击</button> }) guide/best-practices/performance"
     },
     {
       "id": "guide/best-practices/production-deployment:0",
@@ -17633,8 +17864,8 @@
       "title": "TransitionGroup (过渡组)",
       "sectionTitle": "进入/离开过渡 (Enter / Leave Transitions)",
       "type": "code",
-      "text": "import { useState } from '@rue-js/rue' import { TransitionGroup } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const App: FC = () => { const [items, setItems] = useState(['Item 1', 'Item 2', 'Item 3']) const addItem = () => { setItems([...items, `Item ${items.length + 1}`]) } const removeItem = (index: number) => { setItems(items.filter((_, i) => i !== index)) } return ( <> <button onClick={addItem}>添加项目</button> <TransitionGroup name=\"list\" tag=\"ul\"> {items.map((item, index) => ( <li key={item} onClick={() => removeItem(index)}> {item} </li> ))} </TransitionGroup> </> ) }",
-      "searchText": "transitiongroup (过渡组) 进入/离开过渡 (enter / leave transitions) import { usestate } from '@rue-js/rue' import { transitiongroup } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = () => { const [items, setitems] = usestate(['item 1', 'item 2', 'item 3']) const additem = () => { setitems([...items, `item ${items.length + 1}`]) } const removeitem = (index: number) => { setitems(items.filter((_, i) => i !== index)) } return ( <> <button onclick={additem}>添加项目</button> <transitiongroup name=\"list\" tag=\"ul\"> {items.map((item, index) => ( <li key={item} onclick={() => removeitem(index)}> {item} </li> ))} </transitiongroup> </> ) } guide/built-ins/transition-group"
+      "text": "import { useState } from '@rue-js/rue' import { TransitionGroup } from '@rue-js/rue' import type { FC } from '@rue-js/rue' const App: FC = () => { const [items, setItems] = useState(['Item 1', 'Item 2', 'Item 3']) const addItem = () => { setItems(previous => [...previous, `Item ${previous.length + 1}`]) } const removeItem = (index: number) => { setItems(previous => previous.filter((_, i) => i !== index)) } return ( <> <button onClick={addItem}>添加项目</button> <TransitionGroup name=\"list\" tag=\"ul\"> {items.map((item, index) => ( <li key={item} onClick={() => removeItem(index)}> {item} </li> ))} </TransitionGroup> </> ) }",
+      "searchText": "transitiongroup (过渡组) 进入/离开过渡 (enter / leave transitions) import { usestate } from '@rue-js/rue' import { transitiongroup } from '@rue-js/rue' import type { fc } from '@rue-js/rue' const app: fc = () => { const [items, setitems] = usestate(['item 1', 'item 2', 'item 3']) const additem = () => { setitems(previous => [...previous, `item ${previous.length + 1}`]) } const removeitem = (index: number) => { setitems(previous => previous.filter((_, i) => i !== index)) } return ( <> <button onclick={additem}>添加项目</button> <transitiongroup name=\"list\" tag=\"ul\"> {items.map((item, index) => ( <li key={item} onclick={() => removeitem(index)}> {item} </li> ))} </transitiongroup> </> ) } guide/built-ins/transition-group"
     },
     {
       "id": "guide/built-ins/transition-group:11",
@@ -32615,8 +32846,8 @@
       "title": "Composition API 常见问题",
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
-      "text": "昂贵的计算需要使用 useMemo，这再次需要手动传入正确的依赖数组。",
-      "searchText": "composition api 常见问题 与 react hooks 的比较 昂贵的计算需要使用 usememo，这再次需要手动传入正确的依赖数组。 guide/extras/composition-api-faq"
+      "text": "昂贵的计算需要显式记忆化，这再次需要手动传入正确的依赖数组。",
+      "searchText": "composition api 常见问题 与 react hooks 的比较 昂贵的计算需要显式记忆化，这再次需要手动传入正确的依赖数组。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:25",
@@ -32626,8 +32857,8 @@
       "title": "Composition API 常见问题",
       "sectionTitle": "与 React Hooks 的比较",
       "type": "list",
-      "text": "传递给子组件的事件处理程序默认会导致不必要的子更新，需要显式的 useCallback 作为优化。这几乎总是需要的，并且再次需要正确的依赖数组。忽视这一点会导致默认情况下的过度渲染应用，并可能在未意识到的情况下造成性能问题。",
-      "searchText": "composition api 常见问题 与 react hooks 的比较 传递给子组件的事件处理程序默认会导致不必要的子更新，需要显式的 usecallback 作为优化。这几乎总是需要的，并且再次需要正确的依赖数组。忽视这一点会导致默认情况下的过度渲染应用，并可能在未意识到的情况下造成性能问题。 guide/extras/composition-api-faq"
+      "text": "传递给子组件的事件处理程序默认会导致不必要的子更新，需要显式缓存回调作为优化。这几乎总是需要的，并且再次需要正确的依赖数组。忽视这一点会导致默认情况下的过度渲染应用，并可能在未意识到的情况下造成性能问题。",
+      "searchText": "composition api 常见问题 与 react hooks 的比较 传递给子组件的事件处理程序默认会导致不必要的子更新，需要显式缓存回调作为优化。这几乎总是需要的，并且再次需要正确的依赖数组。忽视这一点会导致默认情况下的过度渲染应用，并可能在未意识到的情况下造成性能问题。 guide/extras/composition-api-faq"
     },
     {
       "id": "guide/extras/composition-api-faq:26",
@@ -37433,8 +37664,8 @@
       "title": "简介",
       "sectionTitle": "简介",
       "type": "list",
-      "text": "Rue 是一个现代化的 WASM JavaScript 响应式框架，框架底层使用 Rust 开发，业务层使用 JavaScript 开发。 :::",
-      "searchText": "简介 简介 rue 是一个现代化的 wasm javascript 响应式框架，框架底层使用 rust 开发，业务层使用 javascript 开发。 ::: guide/introduction"
+      "text": "Rue 是一个现代化的编译型 JavaScript 响应式框架，通过编译优化 JSX/TSX 组件的更新过程。 :::",
+      "searchText": "简介 简介 rue 是一个现代化的编译型 javascript 响应式框架，通过编译优化 jsx/tsx 组件的更新过程。 ::: guide/introduction"
     },
     {
       "id": "guide/introduction:3",
@@ -37539,34 +37770,34 @@
       "id": "guide/introduction:12",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
-      "href": "/guide/guide/introduction#-wasm-框架",
+      "href": "/guide/guide/introduction#-编译型框架",
       "title": "简介",
-      "sectionTitle": "WASM 框架",
+      "sectionTitle": "编译型框架",
       "type": "heading",
-      "text": "WASM 框架",
-      "searchText": "简介 wasm 框架 wasm 框架 guide/introduction"
+      "text": "编译型框架",
+      "searchText": "简介 编译型框架 编译型框架 guide/introduction"
     },
     {
       "id": "guide/introduction:13",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
-      "href": "/guide/guide/introduction#-wasm-框架",
+      "href": "/guide/guide/introduction#-编译型框架",
       "title": "简介",
-      "sectionTitle": "WASM 框架",
+      "sectionTitle": "编译型框架",
       "type": "paragraph",
       "text": "Rue 是一个覆盖了前端开发中大部分常见功能需求的框架和生态系统。但 Web 极其多样化——我们在 Web 上构建的东西在形式和规模上可能千差万别。考虑到这一点，Rue 被设计成灵活且可逐步采用的。根据你的使用场景，Rue 可以以不同的方式使用：",
-      "searchText": "简介 wasm 框架 rue 是一个覆盖了前端开发中大部分常见功能需求的框架和生态系统。但 web 极其多样化——我们在 web 上构建的东西在形式和规模上可能千差万别。考虑到这一点，rue 被设计成灵活且可逐步采用的。根据你的使用场景，rue 可以以不同的方式使用： guide/introduction"
+      "searchText": "简介 编译型框架 rue 是一个覆盖了前端开发中大部分常见功能需求的框架和生态系统。但 web 极其多样化——我们在 web 上构建的东西在形式和规模上可能千差万别。考虑到这一点，rue 被设计成灵活且可逐步采用的。根据你的使用场景，rue 可以以不同的方式使用： guide/introduction"
     },
     {
       "id": "guide/introduction:14",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
-      "href": "/guide/guide/introduction#-wasm-框架",
+      "href": "/guide/guide/introduction#-编译型框架",
       "title": "简介",
-      "sectionTitle": "WASM 框架",
+      "sectionTitle": "编译型框架",
       "type": "list",
       "text": "无需构建步骤增强静态 HTML 在任何页面上嵌入为 Web 组件 单页应用（SPA）",
-      "searchText": "简介 wasm 框架 无需构建步骤增强静态 html 在任何页面上嵌入为 web 组件 单页应用（spa） guide/introduction"
+      "searchText": "简介 编译型框架 无需构建步骤增强静态 html 在任何页面上嵌入为 web 组件 单页应用（spa） guide/introduction"
     },
     {
       "id": "guide/introduction:15",
@@ -37708,8 +37939,8 @@
       "title": "简介",
       "sectionTitle": "使用 useState",
       "type": "paragraph",
-      "text": "如果你更喜欢 React 风格的 API，Rue 也提供了 useState：",
-      "searchText": "简介 使用 usestate 如果你更喜欢 react 风格的 api，rue 也提供了 usestate： guide/introduction"
+      "text": "如果你更喜欢 React 风格的 API，Rue 也提供了 useState。它返回当前的普通值和一个支持直接值或函数式更新的 setter：",
+      "searchText": "简介 使用 usestate 如果你更喜欢 react 风格的 api，rue 也提供了 usestate。它返回当前的普通值和一个支持直接值或函数式更新的 setter： guide/introduction"
     },
     {
       "id": "guide/introduction:28",
@@ -37719,11 +37950,33 @@
       "title": "简介",
       "sectionTitle": "使用 useState",
       "type": "code",
-      "text": "import { type FC, useState } from '@rue-js/rue' const App: FC = () => { const [count, setCount] = useState(0) return <button onClick={() => setCount(count.value + 1)}>计数：{count.value}</button> }",
-      "searchText": "简介 使用 usestate import { type fc, usestate } from '@rue-js/rue' const app: fc = () => { const [count, setcount] = usestate(0) return <button onclick={() => setcount(count.value + 1)}>计数：{count.value}</button> } guide/introduction"
+      "text": "useState<T>(initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>]",
+      "searchText": "简介 使用 usestate usestate<t>(initial: t | (() => t)): [t, dispatch<setstateaction<t>>] guide/introduction"
     },
     {
       "id": "guide/introduction:29",
+      "docId": "guide/introduction",
+      "route": "/guide/guide/introduction",
+      "href": "/guide/guide/introduction#using-usestate",
+      "title": "简介",
+      "sectionTitle": "使用 useState",
+      "type": "code",
+      "text": "import { type FC, useState } from '@rue-js/rue' const App: FC = () => { const [count, setCount] = useState(0) return <button onClick={() => setCount(previous => previous + 1)}>计数：{count}</button> }",
+      "searchText": "简介 使用 usestate import { type fc, usestate } from '@rue-js/rue' const app: fc = () => { const [count, setcount] = usestate(0) return <button onclick={() => setcount(previous => previous + 1)}>计数：{count}</button> } guide/introduction"
+    },
+    {
+      "id": "guide/introduction:30",
+      "docId": "guide/introduction",
+      "route": "/guide/guide/introduction",
+      "href": "/guide/guide/introduction#using-usestate",
+      "title": "简介",
+      "sectionTitle": "使用 useState",
+      "type": "paragraph",
+      "text": "在编译后的组件中，Rue 会用隐藏的 Signal 保存状态并驱动细粒度更新，但 useState 的用户 API 始终是普通值。如果需要显式的 Signal 句柄及 get()、set() 等细粒度操作，请使用 signal；偏好 .value 属性访问时则使用 ref。",
+      "searchText": "简介 使用 usestate 在编译后的组件中，rue 会用隐藏的 signal 保存状态并驱动细粒度更新，但 usestate 的用户 api 始终是普通值。如果需要显式的 signal 句柄及 get()、set() 等细粒度操作，请使用 signal；偏好 .value 属性访问时则使用 ref。 guide/introduction"
+    },
+    {
+      "id": "guide/introduction:31",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37734,7 +37987,7 @@
       "searchText": "简介 使用 signal 使用 signal guide/introduction"
     },
     {
-      "id": "guide/introduction:30",
+      "id": "guide/introduction:32",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37745,7 +37998,7 @@
       "searchText": "简介 使用 signal signal 是 rue 提供的底层响应式状态句柄。与 ref 主要通过 .value 读写不同，signal 提供了一组更细粒度的 api，包括： guide/introduction"
     },
     {
-      "id": "guide/introduction:31",
+      "id": "guide/introduction:33",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37756,7 +38009,7 @@
       "searchText": "简介 使用 signal get() / set() peek() / update() getpath() / setpath() / updatepath() / peekpath() value / tojson() / valueof() / tostring() guide/introduction"
     },
     {
-      "id": "guide/introduction:32",
+      "id": "guide/introduction:34",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37767,7 +38020,7 @@
       "searchText": "简介 使用 signal 它特别适合以下场景： guide/introduction"
     },
     {
-      "id": "guide/introduction:33",
+      "id": "guide/introduction:35",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37778,7 +38031,7 @@
       "searchText": "简介 使用 signal 你更喜欢 getter / setter 风格 你需要对嵌套对象按路径读写 你希望区分“读取并建立依赖”和“只读取但不建立依赖” 你希望用函数式更新复杂状态 guide/introduction"
     },
     {
-      "id": "guide/introduction:34",
+      "id": "guide/introduction:36",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37789,7 +38042,7 @@
       "searchText": "简介 使用 signal signal 的签名如下： guide/introduction"
     },
     {
-      "id": "guide/introduction:35",
+      "id": "guide/introduction:37",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37800,7 +38053,7 @@
       "searchText": "简介 使用 signal signal<t>(initial: t, options?: { equals?: (prev: t, next: t) => boolean }, forceglobal?: boolean) guide/introduction"
     },
     {
-      "id": "guide/introduction:36",
+      "id": "guide/introduction:38",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37811,7 +38064,7 @@
       "searchText": "简介 使用 signal initial：初始值 options.equals：自定义等值比较；返回 true 表示新旧值等价，不触发更新 forceglobal：在需要脱离组件 hook 上下文时强制创建全局 signal，一般场景下可忽略 guide/introduction"
     },
     {
-      "id": "guide/introduction:37",
+      "id": "guide/introduction:39",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-基本用法",
@@ -37822,7 +38075,7 @@
       "searchText": "简介 基本用法 基本用法 guide/introduction"
     },
     {
-      "id": "guide/introduction:38",
+      "id": "guide/introduction:40",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-基本用法",
@@ -37833,7 +38086,7 @@
       "searchText": "简介 基本用法 import { type fc, signal } from '@rue-js/rue' const app: fc = () => { const count = signal(0) const name = signal('rue') return ( <div> <p> {name.get()} 的计数：{count.get()} </p> <button onclick={() => count.set(count.get() + 1)}>加一</button> <button onclick={() => count.set(count.get() - 1)}>减一</button> <button onclick={() => count.set(0)}>重置</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:39",
+      "id": "guide/introduction:41",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -37844,7 +38097,7 @@
       "searchText": "简介 get / set / update / peek / value get / set / update / peek / value guide/introduction"
     },
     {
-      "id": "guide/introduction:40",
+      "id": "guide/introduction:42",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -37855,7 +38108,7 @@
       "searchText": "简介 get / set / update / peek / value 下面几个 api 是最常用的一组： guide/introduction"
     },
     {
-      "id": "guide/introduction:41",
+      "id": "guide/introduction:43",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -37866,7 +38119,7 @@
       "searchText": "简介 get / set / update / peek / value get()：读取值，并在响应式上下文中建立依赖 set(next)：直接设置新值 update(updater)：基于旧值计算新值 peek()：读取值，但不建立依赖 value：便捷属性；读取时等同于无依赖读取，写入时等价于 set() guide/introduction"
     },
     {
-      "id": "guide/introduction:42",
+      "id": "guide/introduction:44",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -37877,7 +38130,7 @@
       "searchText": "简介 get / set / update / peek / value import { type fc, signal, watcheffect } from '@rue-js/rue' const app: fc = () => { const count = signal(1) // get(): 建立依赖，count 变化时会重新执行 watcheffect(() => { console.log('count =', count.get()) }) const increment = () => { count.set(count.get() + 1) } const double = () => { count.update(prev => prev * 2) } const logsnapshot = () => { // peek(): 只读取，不建立依赖 console.log('snapshot =', count.peek()) // value: 读取当前值；写入等价于 set() console.log('value =', count.value) } const reset = () => { count.value = 0 } return ( <div> <p>计数：{count.get()}</p> <button onclick={increment}>加一</button> <button onclick={double}>翻倍</button> <button onclick={logsnapshot}>打印快照</button> <button onclick={reset}>重置</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:43",
+      "id": "guide/introduction:45",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-computed-配合",
@@ -37888,7 +38141,7 @@
       "searchText": "简介 与 computed 配合 与 computed 配合 guide/introduction"
     },
     {
-      "id": "guide/introduction:44",
+      "id": "guide/introduction:46",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-computed-配合",
@@ -37899,7 +38152,7 @@
       "searchText": "简介 与 computed 配合 signal 与 computed 无缝配合，计算属性会自动追踪所有访问过的 signal 依赖： guide/introduction"
     },
     {
-      "id": "guide/introduction:45",
+      "id": "guide/introduction:47",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-computed-配合",
@@ -37910,7 +38163,7 @@
       "searchText": "简介 与 computed 配合 import { type fc, signal, computed } from '@rue-js/rue' const app: fc = () => { const firstname = signal('张') const lastname = signal('三') // computed 自动追踪 firstname 和 lastname 的变化 const fullname = computed(() => `${firstname.get()}${lastname.get()}`) const greeting = computed(() => `你好，${fullname.value}！`) const initials = computed(() => `${firstname.get()[0]}${lastname.get()[0]}`) return ( <div> <div> <input value={firstname.get()} oninput={e => firstname.set((e.target as htmlinputelement).value)} placeholder=\"姓\" /> <input value={lastname.get()} oninput={e => lastname.set((e.target as htmlinputelement).value)} placeholder=\"名\" /> </div> <p>{greeting.value}</p> <p>缩写：{initials.value}</p> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:46",
+      "id": "guide/introduction:48",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37921,7 +38174,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath getpath / setpath / updatepath / peekpath guide/introduction"
     },
     {
-      "id": "guide/introduction:47",
+      "id": "guide/introduction:49",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37932,7 +38185,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 当 signal 内部存的是对象或数组时，可以按路径操作任意嵌套字段： guide/introduction"
     },
     {
-      "id": "guide/introduction:48",
+      "id": "guide/introduction:50",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37943,7 +38196,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath getpath(path)：读取路径值，并建立该路径的依赖 setpath(path, value)：设置路径值 updatepath(path, updater)：基于路径旧值更新 peekpath(path)：读取路径值，但不建立依赖 guide/introduction"
     },
     {
-      "id": "guide/introduction:49",
+      "id": "guide/introduction:51",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37954,7 +38207,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath path 同时支持两种写法： guide/introduction"
     },
     {
-      "id": "guide/introduction:50",
+      "id": "guide/introduction:52",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37965,7 +38218,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 数组路径：['user', 'profile', 'name'] 字符串路径：'user.profile.name' guide/introduction"
     },
     {
-      "id": "guide/introduction:51",
+      "id": "guide/introduction:53",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37976,7 +38229,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 数组下标同样支持： guide/introduction"
     },
     {
-      "id": "guide/introduction:52",
+      "id": "guide/introduction:54",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37987,7 +38240,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath ['items', 0] 'items.0' guide/introduction"
     },
     {
-      "id": "guide/introduction:53",
+      "id": "guide/introduction:55",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -37998,7 +38251,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath import { type fc, signal, watcheffect } from '@rue-js/rue' const app: fc = () => { const state = signal({ user: { profile: { name: 'rue', }, age: 20, }, items: ['苹果', '香蕉'], }) watcheffect(() => { // 订阅 user.profile.name 这条路径 console.log('当前用户名：', state.getpath('user.profile.name')) }) const rename = () => { state.setpath(['user', 'profile', 'name'], 'rue next') } const growup = () => { state.updatepath('user.age', prev => (prev ?? 0) + 1) } const replacefirstitem = () => { state.setpath('items.0', '西瓜') } const lograwname = () => { // 不建立依赖，适合调试或一次性读取 console.log(state.peekpath('user.profile.name')) } return ( <div> <p>姓名：{state.getpath('user.profile.name')}</p> <p>年龄：{state.getpath('user.age')}</p> <p>第一个水果：{state.getpath(['items', 0])}</p> <button onclick={rename}>改名</button> <button onclick={growup}>年龄 +1</button> <button onclick={replacefirstitem}>替换第一个水果</button> <button onclick={lograwname}>打印姓名快照</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:54",
+      "id": "guide/introduction:56",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38009,7 +38262,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 路径写入还有几个很实用的特性： guide/introduction"
     },
     {
-      "id": "guide/introduction:55",
+      "id": "guide/introduction:57",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38020,7 +38273,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 空路径 [] 或 '' 表示整个根值 缺失的中间路径会自动按对象补齐 写入数组越界索引时会自动扩展数组长度 函数会被当作普通值存储，不会自动执行 guide/introduction"
     },
     {
-      "id": "guide/introduction:56",
+      "id": "guide/introduction:58",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38031,7 +38284,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath import { signal } from '@rue-js/rue' const state = signal({ items: ['a'], }) state.setpath(['config', 'theme', 'mode'], 'dark') state.setpath('items.2', 'c') state.setpath('', { ok: true }) state.setpath('callback', () => 42) console.log(state.get()) // { // ok: true, // callback: [function] // } guide/introduction"
     },
     {
-      "id": "guide/introduction:57",
+      "id": "guide/introduction:59",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-watch-watcheffect-配合",
@@ -38042,7 +38295,7 @@
       "searchText": "简介 与 watch / watcheffect 配合 与 watch / watcheffect 配合 guide/introduction"
     },
     {
-      "id": "guide/introduction:58",
+      "id": "guide/introduction:60",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-watch-watcheffect-配合",
@@ -38053,7 +38306,7 @@
       "searchText": "简介 与 watch / watcheffect 配合 signal 可以直接传入 watch 进行监听，也可以在 watcheffect 中被自动追踪： guide/introduction"
     },
     {
-      "id": "guide/introduction:59",
+      "id": "guide/introduction:61",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-watch-watcheffect-配合",
@@ -38064,7 +38317,7 @@
       "searchText": "简介 与 watch / watcheffect 配合 import { type fc, signal, watch, watcheffect } from '@rue-js/rue' const app: fc = () => { const count = signal(0) const keyword = signal('') // 监听单个 signal：第一个参数传入 signal 本身 watch(count, (newval, oldval) => { console.log(`count 从 ${oldval} 变为 ${newval}`) }) // 同时监听多个 signal watch([count, keyword], ([newcount, newkeyword], [oldcount, oldkeyword]) => { console.log(`count: ${oldcount} → ${newcount}`) console.log(`keyword: \"${oldkeyword}\" → \"${newkeyword}\"`) }) // watcheffect 自动追踪内部用到的所有 signal watcheffect(() => { if (keyword.get()) { console.log(`正在搜索\"${keyword.get()}\"，当前计数：${count.get()}`) } }) return ( <div> <input value={keyword.get()} oninput={e => keyword.set((e.target as htmlinputelement).value)} placeholder=\"搜索关键词\" /> <p>计数：{count.get()}</p> <button onclick={() => count.set(count.get() + 1)}>加一</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:60",
+      "id": "guide/introduction:62",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-自定义-equals",
@@ -38075,7 +38328,7 @@
       "searchText": "简介 自定义 equals 自定义 equals guide/introduction"
     },
     {
-      "id": "guide/introduction:61",
+      "id": "guide/introduction:63",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-自定义-equals",
@@ -38086,7 +38339,7 @@
       "searchText": "简介 自定义 equals 默认情况下，signal 会根据内部的等值比较决定是否触发订阅者。你也可以通过 options.equals 自定义比较策略： guide/introduction"
     },
     {
-      "id": "guide/introduction:62",
+      "id": "guide/introduction:64",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-自定义-equals",
@@ -38097,7 +38350,7 @@
       "searchText": "简介 自定义 equals import { signal, watcheffect } from '@rue-js/rue' const user = signal( { id: 1, name: 'rue' }, { equals: (prev, next) => prev.id === next.id && prev.name === next.name, }, ) watcheffect(() => { console.log('user changed:', user.get()) }) user.set({ id: 1, name: 'rue' }) // equals 返回 true，不触发 user.set({ id: 1, name: 'rue next' }) // 触发 guide/introduction"
     },
     {
-      "id": "guide/introduction:63",
+      "id": "guide/introduction:65",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38108,7 +38361,7 @@
       "searchText": "简介 调试与序列化 调试与序列化 guide/introduction"
     },
     {
-      "id": "guide/introduction:64",
+      "id": "guide/introduction:66",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38119,7 +38372,7 @@
       "searchText": "简介 调试与序列化 signal 还提供了一些调试辅助 api： guide/introduction"
     },
     {
-      "id": "guide/introduction:65",
+      "id": "guide/introduction:67",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38130,7 +38383,7 @@
       "searchText": "简介 调试与序列化 tojson()：json.stringify(signal) 时返回内部值 valueof()：返回内部原始值 tostring()：返回 json 字符串；无法序列化时会退回占位文本 guide/introduction"
     },
     {
-      "id": "guide/introduction:66",
+      "id": "guide/introduction:68",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38141,7 +38394,7 @@
       "searchText": "简介 调试与序列化 import { signal } from '@rue-js/rue' const state = signal({ count: 1, nested: { ok: true }, }) console.log(state.tojson()) console.log(state.valueof()) console.log(state.tostring()) console.log(json.stringify(state)) guide/introduction"
     },
     {
-      "id": "guide/introduction:67",
+      "id": "guide/introduction:69",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-对象与数组类型",
@@ -38152,7 +38405,7 @@
       "searchText": "简介 对象与数组类型 对象与数组类型 guide/introduction"
     },
     {
-      "id": "guide/introduction:68",
+      "id": "guide/introduction:70",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-对象与数组类型",
@@ -38163,7 +38416,7 @@
       "searchText": "简介 对象与数组类型 signal 可以存储任意类型的值，包括对象和数组。更新引用类型时，传入新的引用以触发响应式更新： guide/introduction"
     },
     {
-      "id": "guide/introduction:69",
+      "id": "guide/introduction:71",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-对象与数组类型",
@@ -38174,7 +38427,7 @@
       "searchText": "简介 对象与数组类型 import { type fc, signal, computed } from '@rue-js/rue' interface todo { id: number text: string done: boolean } const todoapp: fc = () => { const todos = signal<todo[]>([ { id: 1, text: '学习 rue', done: false }, { id: 2, text: '构建应用', done: false }, ]) const input = signal('') // 从 signal 派生计算属性 const remaining = computed(() => todos.get().filter(t => !t.done).length) const total = computed(() => todos.get().length) const addtodo = () => { if (!input.get().trim()) return // 传入新数组引用来触发更新 todos.set([...todos.get(), { id: date.now(), text: input.get(), done: false }]) input.set('') } const toggletodo = (id: number) => { todos.set(todos.get().map(t => (t.id === id ? { ...t, done: !t.done } : t))) } const removetodo = (id: number) => { todos.set(todos.get().filter(t => t.id !== id)) } return ( <div> <h3> 待完成：{remaining.value} / {total.value} </h3> <div> <input value={input.get()} oninput={e => input.set((e.target as htmlinputelement).value)} onkeydown={e => e.key === 'enter' && addtodo()} placeholder=\"新待办事项，回车确认\" /> <button onclick={addtodo}>添加</button> </div> <ul> {todos.get().map(todo => ( <li key={todo.id}> <span style={{ textdecoration: todo.done ? 'line-through' : 'none', cursor: 'pointer' }} onclick={() => toggletodo(todo.id)} > {todo.text} </span> <button onclick={() => removetodo(todo.id)}>删除</button> </li> ))} </ul> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:70",
+      "id": "guide/introduction:72",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-signal-与-ref-的对比",
@@ -38185,7 +38438,7 @@
       "searchText": "简介 signal 与 ref 的对比 signal 与 ref 的对比 guide/introduction"
     },
     {
-      "id": "guide/introduction:71",
+      "id": "guide/introduction:73",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-signal-与-ref-的对比",
@@ -38196,7 +38449,7 @@
       "searchText": "简介 signal 与 ref 的对比 | 特性 | signal | ref | | -------- | -------------------- | ---------------------- | | 读取值 | count.get() | count.value | | 写入值 | count.set(newval) | count.value = newval | | 类型风格 | getter / setter 函数 | 属性访问 | | 适合场景 | 函数式编程偏好 | 属性访问偏好 | guide/introduction"
     },
     {
-      "id": "guide/introduction:72",
+      "id": "guide/introduction:74",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-signal-与-ref-的对比",
@@ -38207,7 +38460,7 @@
       "searchText": "简介 signal 与 ref 的对比 两者在响应式追踪能力上完全等价，可以在同一个项目中混合使用，按团队偏好选择即可。如果你需要路径级别的读取和更新、无依赖快照读取、函数式更新等能力，signal 会更灵活。 guide/introduction"
     },
     {
-      "id": "guide/introduction:73",
+      "id": "guide/introduction:75",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-使用-watch-和-watcheffect",
@@ -38218,7 +38471,7 @@
       "searchText": "简介 使用 watch 和 watcheffect 使用 watch 和 watcheffect guide/introduction"
     },
     {
-      "id": "guide/introduction:74",
+      "id": "guide/introduction:76",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-使用-watch-和-watcheffect",
@@ -38229,7 +38482,7 @@
       "searchText": "简介 使用 watch 和 watcheffect rue 提供了 watch 和 watcheffect 来监听响应式状态的变化： guide/introduction"
     },
     {
-      "id": "guide/introduction:75",
+      "id": "guide/introduction:77",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-使用-watch-和-watcheffect",
@@ -38240,7 +38493,7 @@
       "searchText": "简介 使用 watch 和 watcheffect import { type fc, ref, watch, watcheffect } from '@rue-js/rue' const app: fc = () => { const count = ref(0) // 监听特定值的变化 watch(count, (newvalue, oldvalue) => { console.log(`计数从 ${oldvalue} 变为 ${newvalue}`) }) // 自动追踪依赖 watcheffect(() => { console.log(`当前计数：${count.value}`) }) return <button onclick={() => count.value++}>计数：{count.value}</button> } guide/introduction"
     },
     {
-      "id": "guide/introduction:76",
+      "id": "guide/introduction:78",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#lifecycle-hooks",
@@ -38251,7 +38504,7 @@
       "searchText": "简介 生命周期钩子 生命周期钩子 guide/introduction"
     },
     {
-      "id": "guide/introduction:77",
+      "id": "guide/introduction:79",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#lifecycle-hooks",
@@ -38262,7 +38515,7 @@
       "searchText": "简介 生命周期钩子 rue 提供了完整的生命周期钩子： guide/introduction"
     },
     {
-      "id": "guide/introduction:78",
+      "id": "guide/introduction:80",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#lifecycle-hooks",
@@ -38273,7 +38526,7 @@
       "searchText": "简介 生命周期钩子 import { type fc, ref, onbeforemount, onmounted, onbeforeupdate, onupdated, onbeforeunmount, onunmounted, } from '@rue-js/rue' const app: fc = () => { const count = ref(0) onbeforemount(() => { console.log('组件即将挂载') }) onmounted(() => { console.log('组件已挂载') }) onbeforeupdate(() => { console.log('组件即将更新') }) onupdated(() => { console.log('组件已更新') }) return <button onclick={() => count.value++}>计数：{count.value}</button> } guide/introduction"
     },
     {
-      "id": "guide/introduction:79",
+      "id": "guide/introduction:81",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#component-communication",
@@ -38284,7 +38537,7 @@
       "searchText": "简介 组件通信 组件通信 guide/introduction"
     },
     {
-      "id": "guide/introduction:80",
+      "id": "guide/introduction:82",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#component-communication",
@@ -38295,7 +38548,7 @@
       "searchText": "简介 组件通信 rue 使用 props 和事件回调进行组件间通信： guide/introduction"
     },
     {
-      "id": "guide/introduction:81",
+      "id": "guide/introduction:83",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#component-communication",
@@ -38306,7 +38559,7 @@
       "searchText": "简介 组件通信 import { type fc, ref } from '@rue-js/rue' // 子组件 const child: fc<{ message: string onnotify?: (msg: string) => void }> = props => { return ( <div> <p>{props.message}</p> <button onclick={() => props.onnotify?.('来自子组件的消息')}>通知父组件</button> </div> ) } // 父组件 const parent: fc = () => { const parentmessage = ref('来自父组件的消息') const handlenotify = (msg: string) => { console.log('收到通知：', msg) } return <child message={parentmessage.value} onnotify={handlenotify} /> } guide/introduction"
     },
     {
-      "id": "guide/introduction:82",
+      "id": "guide/introduction:84",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38317,7 +38570,7 @@
       "searchText": "简介 选择哪种方式？ 选择哪种方式？ guide/introduction"
     },
     {
-      "id": "guide/introduction:83",
+      "id": "guide/introduction:85",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38328,7 +38581,7 @@
       "searchText": "简介 选择哪种方式？ 所有这些 api 风格都能完全覆盖常见的使用场景。rue 的灵活性允许你： guide/introduction"
     },
     {
-      "id": "guide/introduction:84",
+      "id": "guide/introduction:86",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38339,7 +38592,7 @@
       "searchText": "简介 选择哪种方式？ 如果你喜欢属性访问风格的响应式系统，使用 ref、reactive 和 computed 如果你熟悉 react，使用 usestate 如果你更习惯 getter / setter 风格，使用 signal 和 computed 可以根据项目需要混合使用不同的 api guide/introduction"
     },
     {
-      "id": "guide/introduction:85",
+      "id": "guide/introduction:87",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38350,7 +38603,7 @@
       "searchText": "简介 选择哪种方式？ 对于学习目的，选择看起来更容易理解的风格。大多数核心概念在不同风格之间是共享的。你可以随时在学习过程中切换到另一种风格。 guide/introduction"
     },
     {
-      "id": "guide/introduction:86",
+      "id": "guide/introduction:88",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38361,7 +38614,7 @@
       "searchText": "简介 选择哪种方式？ 对于生产使用： guide/introduction"
     },
     {
-      "id": "guide/introduction:87",
+      "id": "guide/introduction:89",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",

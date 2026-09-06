@@ -75,6 +75,7 @@ const evaluate = (): ControlFlowModule => {
   const module = { exports: {} as Record<string, unknown> }
   const runtimeRequire = (id: string): Record<string, unknown> => {
     if (id === '@rue-js/rue/internal/compiler') return compiledRuntime
+    if (id === '@rue-js/rue/internal/component') return compiledRuntime
     if (id === '@rue-js/rue') return runtimeRoot
     throw new Error(`Unexpected generated import: ${id}`)
   }
@@ -104,7 +105,7 @@ describe('compiled control-flow setup regions', () => {
       `,
     )
 
-    expect(output).toContain('from "@rue-js/rue/internal/compiler"')
+    expect(output).toContain('from "@rue-js/rue/internal/component"')
     expect(output).toContain('_$compiledBranch(')
     expect(output).not.toContain('_$withCompiledHookScope(')
     expect(output).not.toContain('useSetup(')

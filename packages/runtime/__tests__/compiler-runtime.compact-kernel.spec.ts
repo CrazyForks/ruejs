@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   _$compiledSetup,
+  __rueGetCompiledReactiveDebugState,
   adoptOwner,
   batch,
   createOwner,
@@ -27,6 +28,37 @@ afterEach(() => {
 })
 
 describe('compact compiler reactive kernel', () => {
+  it('finishes owner-tree disposal after lifecycle, effect and owner cleanup errors', () => {
+    const baseline = __rueGetCompiledReactiveDebugState()
+    const owner = createOwner()
+    const events: string[] = []
+    runWithOwner(owner, () => {
+      registerOwnerLifecycle('beforeUnmount', () => {
+        throw new Error('before')
+      })
+      registerOwnerLifecycle('beforeUnmount', () => events.push('before'))
+      const child = createOwner()
+      runWithOwner(child, () => {
+        effect(() => () => {
+          throw new Error('effect')
+        })
+        onOwnerCleanup(() => {
+          throw new Error('child')
+        })
+        onOwnerCleanup(() => events.push('child'))
+      })
+      onOwnerCleanup(() => events.push('parent'))
+      registerOwnerLifecycle('unmounted', () => {
+        throw new Error('unmounted')
+      })
+      registerOwnerLifecycle('unmounted', () => events.push('unmounted'))
+    })
+    expect(() => disposeOwner(owner)).toThrow(AggregateError)
+    expect(events).toEqual(['before', 'child', 'parent', 'unmounted'])
+    expect(disposeOwner(owner)).toBe(false)
+    expect(__rueGetCompiledReactiveDebugState()).toEqual(baseline)
+  })
+
   it('updates signals synchronously and deduplicates batched effects', () => {
     setReactiveScheduling('sync')
     const count = signal(0)

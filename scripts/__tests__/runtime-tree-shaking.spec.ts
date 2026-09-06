@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -10,9 +11,73 @@ import { build, type Rollup } from 'vite'
 import { afterAll, describe, expect, it } from 'vitest'
 
 import { BENCHMARK_GZIP_LIMIT } from '../js-framework-benchmark-size.js'
+import { compileRueStatic } from '../../packages/vite-plugin-rue/index.mjs'
 
 const projectRoot = process.cwd()
 const fixtureDir = path.resolve(projectRoot, 'temp/runtime-tree-shaking')
+
+const publicCapabilityConsumers = [
+  {
+    name: 'public-signal',
+    source: `export { signal } from '@rue-js/rue'`,
+    facade: '@rue-js/runtime/public/reactivity',
+    forbidden: [
+      /\/runtime\/dist\/public\/(?:rendering|builtins|hooks|custom-elements)\.js$/,
+      /\/runtime\/dist\/components\//,
+      /\/runtime\/dist\/custom-elements\.js$/,
+      /\/runtime\/dist\/hooks\//,
+      /\/runtime\/dist\/runtime-core\/js-reactive\/(?:facade\.js|hooks\/)/,
+      /\/runtime\/dist\/(?:server|server-island|island)\.js$/,
+    ],
+  },
+  {
+    name: 'public-ref-computed',
+    source: `export { ref, computed } from '@rue-js/rue'`,
+    facade: '@rue-js/runtime/public/reactivity',
+    forbidden: [
+      /\/runtime\/dist\/public\/(?:rendering|builtins|hooks|custom-elements)\.js$/,
+      /\/runtime\/dist\/components\//,
+      /\/runtime\/dist\/custom-elements\.js$/,
+      /\/runtime\/dist\/hooks\//,
+      /\/runtime\/dist\/runtime-core\/js-reactive\/(?:facade\.js|hooks\/)/,
+      /\/runtime\/dist\/(?:server|server-island|island)\.js$/,
+    ],
+  },
+  {
+    name: 'public-render',
+    source: `export { render } from '@rue-js/rue'`,
+    facade: '@rue-js/runtime/public/rendering',
+    forbidden: [
+      /\/runtime\/dist\/public\/(?:builtins|hooks|custom-elements)\.js$/,
+      /\/runtime\/dist\/components\//,
+      /\/runtime\/dist\/custom-elements\.js$/,
+      /\/runtime\/dist\/hooks\//,
+      /\/runtime\/dist\/(?:server|server-island|island)\.js$/,
+    ],
+  },
+  {
+    name: 'public-transition',
+    source: `export { Transition } from '@rue-js/rue'`,
+    facade: '@rue-js/runtime/public/builtins',
+    forbidden: [
+      /\/runtime\/dist\/public\/(?:hooks|custom-elements)\.js$/,
+      /\/runtime\/dist\/components\/(?:Component|KeepAlive|Slot|Suspense|Teleport|Template|TransitionGroup)\.js$/,
+      /\/runtime\/dist\/custom-elements\.js$/,
+      /\/runtime\/dist\/hooks\//,
+      /\/runtime\/dist\/(?:server|server-island|island)\.js$/,
+    ],
+  },
+  {
+    name: 'public-custom-element',
+    source: `export { useCustomElement } from '@rue-js/rue'`,
+    facade: '@rue-js/runtime/public/custom-elements',
+    forbidden: [
+      /\/runtime\/dist\/public\/builtins\.js$/,
+      /\/runtime\/dist\/components\/(?:Component|KeepAlive|Slot|Suspense|Teleport|Template|Transition|TransitionGroup)\.js$/,
+      /\/runtime\/dist\/(?:server|server-island|island)\.js$/,
+    ],
+  },
+] as const
 
 const getEntryChunk = (result: Rollup.RollupOutput | Rollup.RollupOutput[]) => {
   const outputs = Array.isArray(result) ? result : [result]
@@ -63,9 +128,7 @@ describe('published unified runtime tree-shaking', () => {
     expect(gzipSync(code).byteLength).toBeLessThanOrEqual(BENCHMARK_GZIP_LIMIT)
     expect(
       moduleIds.some(id =>
-        /\/(?:rue|runtime)\/(?:dist\/[^/]*internal-compiler[^/]*\.js|src\/compiler-internal\.ts)$/.test(
-          id,
-        ),
+        /\/runtime\/dist\/compiler-runtime\/compact-(?:root|keyed-list|reactivity)\.js$/.test(id),
       ),
     ).toBe(true)
     expect(
@@ -85,11 +148,111 @@ describe('published unified runtime tree-shaking', () => {
     expect(moduleIds.some(id => /runtime\.server|rue\.server-renderer/.test(id))).toBe(false)
   })
 
+  it('keeps builtins, hydration and compatibility modules out of component-only helpers', async () => {
+    const { moduleIds } = await buildConsumer(
+      'component-internal',
+      `export { _$compiledComponent, _$mountCompiledComponent } from '@rue-js/rue/internal/component'`,
+    )
+    const forbidden = moduleIds.filter(id =>
+      /\/runtime\/dist\/(?:components\/(?:KeepAlive|Suspense|Teleport|Template|Transition|TransitionGroup)|compiler-runtime\/builtins|compiled-(?:hook|reactive)-compat|island|server-island)\.js$/.test(
+        id,
+      ),
+    )
+    expect(forbidden).toEqual([])
+  })
+
+  it.each([
+    {
+      name: 'component',
+      source: `
+        import { type FC } from '@rue-js/rue'
+        const Child: FC = () => <span>component</span>
+        export const App: FC = () => <Child />
+      `,
+      expected: 'component',
+    },
+    {
+      name: 'builtin',
+      source: `
+        import { KeepAlive, type FC } from '@rue-js/rue'
+        const Child: FC = () => <span>builtin</span>
+        export const App: FC = () => <KeepAlive><Child /></KeepAlive>
+      `,
+      expected: 'builtin',
+    },
+  ])('runs generated $name output through the split private entries', async fixture => {
+    const code = await compileRueStatic(fixture.source, {
+      id: `/virtual/runtime-${fixture.name}.tsx`,
+      production: false,
+    })
+    await mkdir(fixtureDir, { recursive: true })
+    const outputFile = path.resolve(fixtureDir, `generated-${fixture.name}.mjs`)
+    await writeFile(outputFile, code, 'utf8')
+    const generated = await import(`${pathToFileURL(outputFile).href}?case=${fixture.name}`)
+    const parent = document.createElement('div')
+    const handle = generated.App()
+    handle.__rue_compiled_mount(parent)
+    expect(parent.textContent).toBe(fixture.expected)
+    handle.dispose()
+  })
+
+  it('consumes the published client facade through independently shakeable leaf modules', async () => {
+    const { moduleIds } = await buildConsumer(
+      'published-public-signal',
+      `export { signal } from '@rue-js/rue'`,
+    )
+    const publishedRuntimeModules = moduleIds.filter(id =>
+      /\/packages\/runtime\/dist\/.*\.js$/.test(id),
+    )
+
+    expect(publishedRuntimeModules.length).toBeGreaterThan(1)
+    expect(publishedRuntimeModules.some(id => id.endsWith('/dist/reactivity/index.js'))).toBe(true)
+    expect(publishedRuntimeModules.some(id => id.endsWith('/dist/runtime.esm-bundler.js'))).toBe(
+      false,
+    )
+  })
+
+  it.each(publicCapabilityConsumers)(
+    'keeps forbidden modules out of the $name public consumer',
+    async ({ name, source, facade, forbidden }) => {
+      const { moduleIds } = await buildConsumer(name, source)
+      const runtimeModules = moduleIds.filter(id => /\/packages\/runtime\/dist\/.*\.js$/.test(id))
+
+      expect(readFileSync('packages/rue/dist/index.js', 'utf8')).toContain(facade)
+      expect(runtimeModules.filter(id => forbidden.some(pattern => pattern.test(id)))).toEqual([])
+    },
+  )
+
+  it('imports the client facade in isolation without adding Rue globals', async () => {
+    const { code, moduleIds } = await buildConsumer(
+      'client-facade-import-side-effects',
+      `export { Fragment } from '../../packages/runtime/src/rue.ts'`,
+    )
+    expect(moduleIds.some(id => /\/client-runtime\.ts$|\/runtime-core\/index\.ts$/.test(id))).toBe(
+      false,
+    )
+    const outputFile = path.resolve(fixtureDir, 'client-facade-import-side-effects.bundle.mjs')
+    await writeFile(outputFile, code, 'utf8')
+
+    const output = execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `const before = new Set(Object.getOwnPropertyNames(globalThis).filter(key => key.startsWith('__rue')))
+await import(${JSON.stringify(pathToFileURL(outputFile).href)})
+const added = Object.getOwnPropertyNames(globalThis).filter(key => key.startsWith('__rue') && !before.has(key)).sort()
+process.stdout.write(JSON.stringify(added))`,
+      ],
+      { cwd: projectRoot, encoding: 'utf8' },
+    )
+
+    expect(JSON.parse(output)).toEqual([])
+  })
+
   it('runs compact root reactivity and keyed-list behavior from the built artifact', async () => {
     const runtime = await import(
-      pathToFileURL(
-        path.resolve(projectRoot, 'packages/runtime/dist/runtime.internal-compiler.esm-bundler.js'),
-      ).href
+      pathToFileURL(path.resolve(projectRoot, 'packages/runtime/dist/compiler-internal.js')).href
     )
     runtime.setReactiveScheduling('sync')
     const value = runtime.signal('one')

@@ -24,8 +24,8 @@ export default function ClientTodoApp() {
 
   const visibleTodos = computed(() =>
     todos.filter(todo => {
-      if (filter.value === 'active') return !todo.completed
-      if (filter.value === 'done') return todo.completed
+      if (filter === 'active') return !todo.completed
+      if (filter === 'done') return todo.completed
       return true
     }),
   )
@@ -33,11 +33,11 @@ export default function ClientTodoApp() {
   const completedCount = computed(() => todos.length - remainingCount.get())
 
   function addTodo() {
-    const title = draft.value.trim()
+    const title = draft.trim()
     if (!title) return
 
-    setTodos(previous => [...previous, { id: nextId.value, title, completed: false }])
-    setNextId(nextId.value + 1)
+    setTodos(previous => [...previous, { id: nextId, title, completed: false }])
+    setNextId(value => value + 1)
     setDraft('')
   }
 
@@ -71,7 +71,7 @@ export default function ClientTodoApp() {
           <label className="field todo-field">
             <span>New task</span>
             <input
-              value={draft.value}
+              value={draft}
               placeholder="Add something for the client to track"
               onInput={(event: InputEvent) => {
                 setDraft((event.target as HTMLInputElement).value)
@@ -92,9 +92,9 @@ export default function ClientTodoApp() {
           <div className="filter-tabs" role="group" aria-label="Todo filter">
             {(['all', 'active', 'done'] as TodoFilter[]).map(item => (
               <button
-                className={`tab-button${filter.value === item ? ' active' : ''}`}
+                className={`tab-button${filter === item ? ' active' : ''}`}
                 type="button"
-                aria-pressed={filter.value === item}
+                aria-pressed={filter === item}
                 onClick={() => setFilter(item)}
                 key={item}
               >

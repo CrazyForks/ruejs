@@ -7,6 +7,7 @@ export type EffectScheduler = (runner: () => void) => void
 export interface EffectOptions {
   readonly lazy?: boolean
   readonly scheduler?: EffectScheduler
+  readonly onDispose?: EffectCleanup
 }
 
 export interface SignalOptions<T> {
@@ -56,6 +57,7 @@ interface EffectRecord {
   owner: CompiledOwner | undefined
   dependencies: Set<DependencyRecord>
   cleanups: EffectCleanup[]
+  onDispose: EffectCleanup | undefined
   active: boolean
   running: boolean
 }
@@ -91,6 +93,20 @@ const pendingRootLifecycle: Record<CompiledLifecyclePhase, EffectCleanup[]> = {
   beforeUnmount: [],
   unmounted: [],
 }
+
+export interface CompiledReactiveDebugState {
+  activeOwners: number
+  activeEffects: number
+}
+
+/** Test/development-only visibility into compact reactive resource retention. */
+export const __rueGetCompiledReactiveDebugState = (): CompiledReactiveDebugState => ({
+  activeOwners: owners.size,
+  activeEffects: Array.from(owners.values()).reduce(
+    (count, owner) => count + owner.effects.size,
+    0,
+  ),
+})
 
 const lifecycleRecord = (): Record<CompiledLifecyclePhase, EffectCleanup[]> =>
   Object.fromEntries(
@@ -178,8 +194,16 @@ const disposeEffect = (effect: EffectRecord): void => {
   effect.active = false
   if (pendingEffects.size > 0) pendingEffects.delete(effect)
   detachDependencies(effect)
-  runCleanups(effect.cleanups)
-  if (effect.owner !== undefined) owners.get(effect.owner)?.effects.delete(effect)
+  try {
+    runCleanups(effect.cleanups)
+  } finally {
+    try {
+      effect.onDispose?.()
+    } finally {
+      effect.onDispose = undefined
+      if (effect.owner !== undefined) owners.get(effect.owner)?.effects.delete(effect)
+    }
+  }
 }
 
 export const setReactiveScheduling = (mode: ReactiveSchedulingMode): void => {
@@ -251,6 +275,7 @@ export const effect = (callback: EffectCallback, options?: EffectOptions | null)
     owner: currentOwner,
     dependencies: new Set(),
     cleanups: [],
+    onDispose: options?.onDispose,
     active: true,
     running: false,
   }
@@ -410,26 +435,39 @@ export const _$compiledSetup = <T>(id: string, factory: () => T): T => {
 export const disposeOwner = (owner: CompiledOwner): boolean => {
   const record = owners.get(owner)
   if (record === undefined || record.disposed) return false
+  let errors: unknown[] | undefined
+  const attempt = <T>(cleanup: (value: T) => unknown, value: T) => {
+    try {
+      cleanup(value)
+    } catch (error) {
+      ;(errors ??= []).push(error)
+    }
+  }
   ownerDisposalDepth += 1
   try {
-    runWithOwner(owner, () =>
-      record.lifecycle.beforeUnmount.slice().forEach(callback => callback()),
-    )
+    if (record.lifecycle.beforeUnmount.length)
+      runWithOwner(owner, () => {
+        for (const callback of record.lifecycle.beforeUnmount.slice()) attempt(callback, undefined)
+      })
     record.disposed = true
     // eslint-disable-next-line unicorn/no-useless-spread -- disposal mutates the iterated owner set
-    for (const child of [...record.children]) disposeOwner(child)
+    for (const child of [...record.children]) attempt(disposeOwner, child)
     // eslint-disable-next-line unicorn/no-useless-spread -- disposal mutates the iterated owner set
-    for (const ownedEffect of [...record.effects]) disposeEffect(ownedEffect)
-    runCleanups(record.cleanups)
+    for (const ownedEffect of [...record.effects]) attempt(disposeEffect, ownedEffect)
+    for (const cleanup of record.cleanups.splice(0)) attempt(cleanup, undefined)
     const previous = currentOwner
     currentOwner = owner
     try {
-      record.lifecycle.unmounted.slice().forEach(callback => callback())
+      if (record.lifecycle.unmounted.length)
+        for (const callback of record.lifecycle.unmounted.slice()) attempt(callback, undefined)
     } finally {
       currentOwner = previous
     }
     if (record.parent !== undefined) owners.get(record.parent)?.children.delete(owner)
     owners.delete(owner)
+    if (errors?.length === 1) throw errors[0]
+    if (errors !== undefined && errors.length > 1)
+      throw new AggregateError(errors, '[rue] owner cleanup failed')
     return true
   } finally {
     ownerDisposalDepth -= 1

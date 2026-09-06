@@ -3,6 +3,7 @@ import type { CompiledOwner } from '../reactive-core'
 export interface CompiledTarget {
   parent: ParentNode
   before: Node | null
+  batch?: true
 }
 
 export interface CompiledBlock {

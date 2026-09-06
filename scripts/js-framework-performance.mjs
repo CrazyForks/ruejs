@@ -264,7 +264,7 @@ export const validateFixtureAssetIsolation = report => {
   }
 
   const forbiddenSignalModules = moduleIds['rue-signal'].filter(moduleId =>
-    /runtime\.internal\.esm-bundler|runtime-core\/js-reactive|runtime\.(?:server|island)\.esm-bundler|server-renderer|runtime-vapor|\.wasm(?:$|\?)/i.test(
+    /runtime\.internal\.esm-bundler|packages\/(?:runtime|rue)\/(?:src|dist)\/(?:internal|component-internal|builtins-internal|server|server-island|island)\.[jt]s|runtime-core\/js-reactive|runtime\.(?:server|island)\.esm-bundler|server-renderer|runtime-vapor|\.wasm(?:$|\?)/i.test(
       moduleId,
     ),
   )
@@ -352,6 +352,11 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
       }),
     )
     const cpuWeightedMedianRatio = weightedMedian(weightedRatios)
+    const create1kRatio = ratio(
+      measurementValue(current, 'cpu', 'create1k', 'medianMs'),
+      measurementValue(previous, 'cpu', 'create1k', 'medianMs'),
+      `${entryName}.cpu.create1k`,
+    )
     const select1kRatio = ratio(
       measurementValue(current, 'cpu', 'select1k', 'medianMs'),
       measurementValue(previous, 'cpu', 'select1k', 'medianMs'),
@@ -375,6 +380,7 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
     const firstPaintRatio = environmentAdjustedFirstPaintRatio(current, previous, vue)
     const result = {
       cpuWeightedMedianRatio,
+      create1kRatio,
       select1kRatio,
       swap1kRatio,
       createClearHeapRatio,
@@ -385,6 +391,7 @@ export const checkPerformanceBudget = (report, baseline, budget) => {
 
     const limits = [
       ['cpu.weightedMedianRatio', cpuWeightedMedianRatio, budget.cpu.maxWeightedMedianRatio],
+      ['cpu.create1kRatio', create1kRatio, budget.operations.create1k.maxRatio],
       ['cpu.select1kRatio', select1kRatio, budget.operations.select1k.maxRatio],
       ['cpu.swap1kRatio', swap1kRatio, budget.operations.swap1k.maxRatio],
       ['heap.createClearRatio', createClearHeapRatio, budget.heap.createClear.maxRatio],
@@ -629,15 +636,20 @@ const prepareWorkspaceBuild = async () => {
   ])
 }
 
-const workspaceArtifactPaths = [
-  'packages/shared/dist/shared.esm-bundler.js',
-  'packages/runtime/dist/runtime.esm-bundler.js',
-  'packages/runtime/dist/runtime.internal.esm-bundler.js',
-  'packages/runtime/dist/runtime.internal-compiler.esm-bundler.js',
-  'packages/rue/dist/rue.esm-bundler.js',
-  'packages/rue/dist/rue.internal.esm-bundler.js',
-  'packages/rue/dist/rue.internal-compiler.esm-bundler.js',
-].map(relative => path.resolve(workspaceRoot, relative))
+export const collectWorkspaceArtifactPaths = async (root = workspaceRoot) => {
+  const artifacts = []
+  const visit = async directory => {
+    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+      const entryPath = path.join(directory, entry.name)
+      if (entry.isDirectory()) await visit(entryPath)
+      else if (entry.isFile() && entry.name.endsWith('.js')) artifacts.push(entryPath)
+    }
+  }
+  for (const name of ['shared', 'runtime', 'rue']) {
+    await visit(path.resolve(root, 'packages', name, 'dist'))
+  }
+  return artifacts.sort()
+}
 
 const readPackageSource = async () => {
   const rootPackage = JSON.parse(
@@ -652,7 +664,7 @@ const readPackageSource = async () => {
   const lockfileText = await fs.readFile(lockfilePath, 'utf8')
   const lockfileSha256 = sha256Buffer(lockfileText)
   const artifacts = await Promise.all(
-    workspaceArtifactPaths.map(async artifactPath => ({
+    (await collectWorkspaceArtifactPaths()).map(async artifactPath => ({
       path: artifactPath,
       beforeSha256: await sha256File(artifactPath),
     })),

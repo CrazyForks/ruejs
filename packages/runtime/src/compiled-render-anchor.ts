@@ -1,4 +1,4 @@
-import { createOwner, disposeOwner, onOwnerCleanup } from './internal-reactive'
+import { createOwner, disposeOwner, effect, onOwnerCleanup } from './internal-reactive'
 import type { CompiledSlotFactory } from './compiler-runtime/mount'
 import { _$createComponent } from './compiled-component-call'
 import { _$compiledRoot, type CompiledRootHandle } from './compiled-root'
@@ -10,6 +10,7 @@ import {
 } from './compiler-runtime/dom.browser'
 import { isHydrationStagingActive, markHydrationStaging } from './compiler-runtime/dom.hydrate'
 import { getCompiledKey } from './compiled-legacy-dom'
+import { unwrapDisplayRef } from './display-value'
 import {
   RUE_ISLAND_ELEMENT,
   RUE_ISLAND_PROPS_SCRIPT_TYPE,
@@ -32,6 +33,21 @@ type AnchorMount = {
 }
 
 const anchorMounts = new WeakMap<Node, AnchorMount>()
+
+type AnchorDisplayEffect = {
+  source: unknown
+  dispose(): void
+}
+
+const anchorDisplayEffects = new WeakMap<Node, AnchorDisplayEffect>()
+
+const containsDisplayRef = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.some(containsDisplayRef)
+  return (
+    ((typeof value === 'object' && value !== null) || typeof value === 'function') &&
+    Reflect.get(value, '__rue_ref__') === true
+  )
+}
 
 const disposeAnchorEntry = (entry: AnchorMount['entries'][number]): void => {
   entry.handle.dispose()
@@ -101,8 +117,10 @@ const replayCompiledComponent = (
   return true
 }
 
-const anchorValues = (value: unknown): unknown[] =>
-  Array.isArray(value) ? value.flatMap(anchorValues) : [value]
+const anchorValues = (value: unknown): unknown[] => {
+  const displayed = unwrapDisplayRef(value)
+  return Array.isArray(displayed) ? displayed.flatMap(anchorValues) : [displayed]
+}
 
 const mountPortableComponent = (
   value: unknown,
@@ -248,6 +266,8 @@ const cloneServerLikeNode = (value: Record<string, any>, document: Document): No
 }
 
 const appendValue = (value: unknown, parent: ParentNode): Array<() => void> => {
+  const displayed = unwrapDisplayRef(value)
+  if (displayed !== value) return appendValue(displayed, parent)
   if (value == null || value === false || value === true) return []
   if (isRueServerIslandDescriptor(value)) {
     const bridge = (globalThis as Record<PropertyKey, unknown>)[RUE_SERVER_ISLAND_SSR_BRIDGE]
@@ -378,8 +398,7 @@ export const _$compiledValue = (value: unknown): CompiledRootHandle => {
   return root
 }
 
-/** Mount one closed compiler value before an anchor. */
-export const renderAnchor = (value: unknown, parent: ParentNode, anchor: Node | null): void => {
+const renderAnchorValue = (value: unknown, parent: ParentNode, anchor: Node | null): void => {
   const adoptedParent = (parent as ParentNode & { __rue_hydrated_adopted_target?: ParentNode })
     .__rue_hydrated_adopted_target
   const redirectedHydrationParent = adoptedParent != null && adoptedParent !== parent
@@ -513,6 +532,33 @@ export const renderAnchor = (value: unknown, parent: ParentNode, anchor: Node | 
     if (mountKey == null || anchorMounts.get(mountKey) === current) {
       entries.forEach(disposeAnchorEntry)
       if (mountKey != null) anchorMounts.delete(mountKey)
+    }
+  })
+}
+
+/** Mount one closed compiler value before an anchor. */
+export const renderAnchor = (value: unknown, parent: ParentNode, anchor: Node | null): void => {
+  const displayEffectKey =
+    anchor ?? (typeof Node !== 'undefined' && parent instanceof Node ? parent : null)
+  const previousDisplayEffect =
+    displayEffectKey == null ? undefined : anchorDisplayEffects.get(displayEffectKey)
+
+  if (previousDisplayEffect?.source === value) return
+  previousDisplayEffect?.dispose()
+  if (displayEffectKey != null) anchorDisplayEffects.delete(displayEffectKey)
+
+  if (!containsDisplayRef(value)) {
+    renderAnchorValue(value, parent, anchor)
+    return
+  }
+
+  const handle = effect(() => renderAnchorValue(value, parent, anchor))
+  const current: AnchorDisplayEffect = { source: value, dispose: () => handle.dispose() }
+  if (displayEffectKey != null) anchorDisplayEffects.set(displayEffectKey, current)
+  onOwnerCleanup(() => {
+    current.dispose()
+    if (displayEffectKey != null && anchorDisplayEffects.get(displayEffectKey) === current) {
+      anchorDisplayEffects.delete(displayEffectKey)
     }
   })
 }

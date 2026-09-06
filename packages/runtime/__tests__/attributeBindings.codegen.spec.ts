@@ -32,7 +32,7 @@ describe('AttributeBindings actual page codegen', () => {
     expect(readFileSync(pluginPath).byteLength).toBeGreaterThan(0)
     const generated = compileActualPage()
 
-    expect(generated).toContain('from "@rue-js/rue/internal/compiler"')
+    expect(generated).toContain('from "@rue-js/rue/internal/component"')
     expect(generated).not.toContain('from "@rue-js/rue/internal"')
     expect(generated).not.toMatch(/\bvapor\(/)
     expect(generated).not.toContain('watchEffect')

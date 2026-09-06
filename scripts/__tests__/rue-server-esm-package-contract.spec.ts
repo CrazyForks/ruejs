@@ -37,6 +37,8 @@ const packages = [
     directory: 'server-renderer',
     name: '@rue-js/server-renderer',
     entry: 'server-renderer',
+    indexTarget: './dist/server-renderer.esm-bundler.js',
+    preservedEntries: null,
     subpaths: ['.', './island', './server-island', './static'],
     subEntryCount: 3,
   },
@@ -44,8 +46,26 @@ const packages = [
     directory: 'rue',
     name: '@rue-js/rue',
     entry: 'rue',
-    subpaths: ['.', './internal', './internal/compiler', './server-renderer', './island'],
-    subEntryCount: 4,
+    indexTarget: './dist/runtime.js',
+    preservedEntries: {
+      '.': './dist/runtime.js',
+      './internal': './dist/internal.js',
+      './internal/compiler': './dist/compiler-internal.js',
+      './internal/component': './dist/component-internal.js',
+      './internal/builtins': './dist/builtins-internal.js',
+      './server-renderer': './dist/server-renderer.js',
+      './island': './dist/island.js',
+    },
+    subpaths: [
+      '.',
+      './internal',
+      './internal/compiler',
+      './internal/component',
+      './internal/builtins',
+      './server-renderer',
+      './island',
+    ],
+    subEntryCount: 6,
   },
 ] as const
 
@@ -102,7 +122,7 @@ describe('server and Rue facade ESM package contract', () => {
     expect(JSON.stringify(manifest.exports)).not.toContain('"require"')
     expect(JSON.stringify(manifest.exports)).not.toContain('"node"')
     expect(readFileSync(path.resolve(packageDir, 'index.js'), 'utf8')).toBe(
-      `export * from './dist/${pkg.entry}.esm-bundler.js'\n`,
+      `export * from '${pkg.indexTarget}'\n`,
     )
     expect(packedFiles.filter(file => /(?:^|\/)\S*\.cjs(?:\.|$)/.test(file))).toEqual([])
     expect(packedFiles).not.toContain('index.mjs')
@@ -113,9 +133,10 @@ describe('server and Rue facade ESM package contract', () => {
 
     for (const subpath of pkg.subpaths) {
       const exportEntry = manifest.exports[subpath]
+      const preservedTarget = pkg.preservedEntries?.[subpath]
       expect(exportEntry, `${pkg.name}${subpath}`).toEqual(
         expect.objectContaining({
-          import: expect.stringMatching(/^\.\/dist\/.*\.esm-bundler\.js$/),
+          import: preservedTarget ?? expect.stringMatching(/^\.\/dist\/.*\.esm-bundler\.js$/),
         }),
       )
 
@@ -142,13 +163,42 @@ describe('server and Rue facade ESM package contract', () => {
     expect(manifest.files).not.toContain('jsx-dev-runtime')
   })
 
+  it('publishes the Rue bundler facade as a preserved module tree', () => {
+    const manifest = readManifest('rue')
+    const expectedEntries = {
+      '.': './dist/runtime.js',
+      './internal': './dist/internal.js',
+      './internal/compiler': './dist/compiler-internal.js',
+      './internal/component': './dist/component-internal.js',
+      './internal/builtins': './dist/builtins-internal.js',
+      './server-renderer': './dist/server-renderer.js',
+      './island': './dist/island.js',
+    }
+
+    expect(manifest.buildOptions).toEqual(expect.objectContaining({ preserveModules: true }))
+    for (const [subpath, target] of Object.entries(expectedEntries)) {
+      expect(manifest.exports[subpath]).toEqual(
+        expect.objectContaining({ module: target, import: target }),
+      )
+    }
+
+    const packedFiles = packFiles('rue')
+    expect(packedFiles).toEqual(expect.arrayContaining(['dist/index.js', 'dist/runtime.js']))
+  })
+
   it('keeps the legacy public compiled entry unavailable', () => {
     const manifest = readManifest('rue')
     expect(manifest.exports).not.toHaveProperty('./compiled')
     expect(() => resolveEsm('@rue-js/rue/compiled')).toThrow()
   })
 
-  it('includes the private Rue compiler facade in the npm tarball', () => {
-    expect(packFiles('rue')).toContain('dist/rue.internal-compiler.esm-bundler.js')
+  it('includes the private Rue compiler facades in the npm tarball', () => {
+    expect(packFiles('rue')).toEqual(
+      expect.arrayContaining([
+        'dist/rue.internal-compiler.esm-bundler.js',
+        'dist/rue.internal-component.esm-bundler.js',
+        'dist/rue.internal-builtins.esm-bundler.js',
+      ]),
+    )
   })
 })

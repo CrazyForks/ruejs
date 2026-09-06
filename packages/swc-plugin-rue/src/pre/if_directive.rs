@@ -197,7 +197,7 @@ fn empty_array_expr() -> Expr {
 }
 
 fn use_memo_expr(el: JSXElement, deps: Expr) -> Expr {
-    let hook_id = emit::string_expr(&format!("useMemo:{}:{}", el.span.lo.0, el.span.hi.0));
+    let hook_id = emit::string_expr(&format!("memo:{}:{}", el.span.lo.0, el.span.hi.0));
     let arrow = Expr::Arrow(ArrowExpr {
         span: DUMMY_SP,
         params: vec![],
@@ -209,34 +209,13 @@ fn use_memo_expr(el: JSXElement, deps: Expr) -> Expr {
         ctxt: swc_core::common::SyntaxContext::empty(),
     });
 
-    let memo_call = Expr::Call(CallExpr {
-        span: DUMMY_SP,
-        callee: Callee::Expr(Box::new(Expr::Ident(emit::ident("useMemo")))),
-        args: vec![
-            ExprOrSpread { spread: None, expr: Box::new(arrow) },
-            ExprOrSpread { spread: None, expr: Box::new(deps) },
-        ],
-        type_args: None,
-        ctxt: swc_core::common::SyntaxContext::empty(),
-    });
-
-    let runner = Expr::Arrow(ArrowExpr {
-        span: DUMMY_SP,
-        params: vec![],
-        body: Box::new(BlockStmtOrExpr::Expr(Box::new(memo_call))),
-        is_async: false,
-        is_generator: false,
-        type_params: None,
-        return_type: None,
-        ctxt: swc_core::common::SyntaxContext::empty(),
-    });
-
     Expr::Call(CallExpr {
         span: DUMMY_SP,
-        callee: Callee::Expr(Box::new(Expr::Ident(emit::ident("_$compiledWithHookId")))),
+        callee: Callee::Expr(Box::new(Expr::Ident(emit::ident("_$compiledMemo")))),
         args: vec![
             ExprOrSpread { spread: None, expr: Box::new(hook_id) },
-            ExprOrSpread { spread: None, expr: Box::new(runner) },
+            ExprOrSpread { spread: None, expr: Box::new(arrow) },
+            ExprOrSpread { spread: None, expr: Box::new(deps) },
         ],
         type_args: None,
         ctxt: swc_core::common::SyntaxContext::empty(),

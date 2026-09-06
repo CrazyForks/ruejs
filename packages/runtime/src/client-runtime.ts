@@ -30,11 +30,28 @@ const clientRuntimeGlobal = globalThis as ClientRuntimeGlobal
 const runtimeDOMBridgeByInstance = new WeakMap<object, unknown>()
 const registeredDOMBridgeConsumers = new WeakSet<object>()
 const runtimeErrorHandlers = new WeakMap<object, Set<(error: any, instance?: any) => void>>()
-const clientErrorHandlers = (clientRuntimeGlobal.__rue_client_error_handlers__ ??= new Set())
+
+const getClientErrorHandlers = () =>
+  (clientRuntimeGlobal.__rue_client_error_handlers__ ??= new Set())
+
+export const installClientErrorBridge = (): void => {
+  const target = clientRuntimeGlobal as ClientRuntimeGlobal & {
+    __rue_report_client_error__?: (error: any, instance?: any) => boolean
+  }
+  if (typeof target.__rue_report_client_error__ === 'function') return
+
+  target.__rue_report_client_error__ = (error, instance) => {
+    const handlers = getClientErrorHandlers()
+    for (const handler of handlers) handler(error, instance)
+    return handlers.size > 0
+  }
+}
 
 export const registerClientErrorHandler = (
   handler: (error: any, instance?: any) => void,
 ): (() => void) => {
+  installClientErrorBridge()
+  const clientErrorHandlers = getClientErrorHandlers()
   clientErrorHandlers.add(handler)
   return () => clientErrorHandlers.delete(handler)
 }
@@ -50,15 +67,6 @@ export const runWithRootMountErrorRethrow = <T>(runner: () => T): T => {
     if (depth === 0) delete clientRuntimeGlobal.__rue_root_mount_error_rethrow_depth__
     else clientRuntimeGlobal.__rue_root_mount_error_rethrow_depth__ = depth
   }
-}
-
-;(
-  clientRuntimeGlobal as ClientRuntimeGlobal & {
-    __rue_report_client_error__?: (error: any, instance?: any) => boolean
-  }
-).__rue_report_client_error__ = (error, instance) => {
-  for (const handler of clientErrorHandlers) handler(error, instance)
-  return clientErrorHandlers.size > 0
 }
 
 const canTrackRuntime = (runtime: unknown): runtime is object =>
@@ -79,6 +87,8 @@ const installRuntimeErrorBridge = <T>(runtime: T): T => {
     return runtime
   }
 
+  installClientErrorBridge()
+
   ;(
     globalThis as typeof globalThis & {
       __rue_dispatch_error_captured?: (error: any, instance?: any, info?: string) => boolean
@@ -91,6 +101,7 @@ const installRuntimeErrorBridge = <T>(runtime: T): T => {
   }
 
   const handlers = new Set<(error: any, instance?: any) => void>()
+  const clientErrorHandlers = getClientErrorHandlers()
   runtimeErrorHandlers.set(runtime, handlers)
 
   const runtimeWithErrorHandler = runtime as { handleError?: (error: any, instance?: any) => void }

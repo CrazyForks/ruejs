@@ -1,9 +1,7 @@
 import {
   createContext as createNativeTextContext,
-  useCallback as useNativeTextCallback,
   useContext as useNativeTextContext,
   useEffect as useNativeTextEffect,
-  useMemo as useNativeTextMemo,
   useRef as useNativeTextRef,
   useState as useNativeTextState,
 } from '@rue-js/rue'
@@ -24,15 +22,10 @@ type TextCompatHookRuntime = {
     ...children: unknown[]
   ) => unknown
   startTransition: (callback: () => void) => void
-  useCallback: <T extends (...args: never[]) => unknown>(callback: T, deps: readonly unknown[]) => T
   useContext: <T>(context: unknown) => T
   useEffect: (effect: () => void | (() => void), deps?: readonly unknown[]) => void
-  useMemo: <T>(factory: () => T, deps: readonly unknown[]) => T
   useRef: <T>(initialValue: T) => { current: T }
-  useState: <T>(
-    initialState: T | (() => T),
-    options?: { kind?: 'reactive' | 'ref' | 'signal' },
-  ) => [T, (value: T | ((previous: T) => T)) => void]
+  useState: <T>(initialState: T | (() => T)) => [T, (value: T | ((previous: T) => T)) => void]
   useSyncExternalStore?: <T>(
     subscribe: (onStoreChange: () => void) => () => void,
     getSnapshot: () => T,
@@ -168,10 +161,8 @@ function isCompleteTextCompatHookRuntime(value: unknown): value is TextCompatHoo
     typeof runtime.createContext === 'function' &&
     typeof runtime.createElement === 'function' &&
     typeof runtime.startTransition === 'function' &&
-    typeof runtime.useCallback === 'function' &&
     typeof runtime.useContext === 'function' &&
     typeof runtime.useEffect === 'function' &&
-    typeof runtime.useMemo === 'function' &&
     typeof runtime.useRef === 'function' &&
     typeof runtime.useState === 'function'
   )
@@ -204,21 +195,16 @@ function getCompatRenderRuntime(): TextCompatHookRuntime | null {
     readTextCompatRuntimeExport<TextCompatHookRuntime['createElement']>('createElement')
   const startTransition =
     readTextCompatRuntimeExport<TextCompatHookRuntime['startTransition']>('startTransition')
-  const useCallback =
-    readTextCompatRuntimeExport<TextCompatHookRuntime['useCallback']>('useCallback')
   const useContext = readTextCompatRuntimeExport<TextCompatHookRuntime['useContext']>('useContext')
   const useEffect = readTextCompatRuntimeExport<TextCompatHookRuntime['useEffect']>('useEffect')
-  const useMemo = readTextCompatRuntimeExport<TextCompatHookRuntime['useMemo']>('useMemo')
   const useRef = readTextCompatRuntimeExport<TextCompatHookRuntime['useRef']>('useRef')
   const useState = readTextCompatRuntimeExport<TextCompatHookRuntime['useState']>('useState')
   if (
     !createContext ||
     !createElement ||
     !startTransition ||
-    !useCallback ||
     !useContext ||
     !useEffect ||
-    !useMemo ||
     !useRef ||
     !useState
   ) {
@@ -228,10 +214,8 @@ function getCompatRenderRuntime(): TextCompatHookRuntime | null {
     createContext,
     createElement,
     startTransition,
-    useCallback,
     useContext,
     useEffect,
-    useMemo,
     useRef,
     useState,
     useSyncExternalStore:
@@ -345,80 +329,37 @@ export const useRef = (<T>(initialValue: T) => {
   return runtime ? runtime.useRef(initialValue) : useNativeTextRef(initialValue)
 }) as typeof useNativeTextRef
 
-function useNativeTextStateCompat<T>(
-  initialState: T | (() => T),
-): [T, (value: T | ((previous: T) => T)) => void] {
-  const [state, setState] = (
-    useNativeTextState as never as (
-      initial: T | (() => T),
-      options: { kind: 'ref' },
-    ) => [{ value: T }, (value: T | ((ref: { value: T }) => T | void)) => void]
-  )(initialState, { kind: 'ref' })
-
-  return [
-    state.value,
-    value => {
-      if (typeof value === 'function') {
-        setState(ref => (value as (previous: T) => T)(ref.value))
-        return
-      }
-      setState(value)
-    },
-  ]
-}
-
-function unwrapTextStateValue<T>(value: T | { value: T }): T {
-  if (value && typeof value === 'object') {
-    try {
-      const refValue = (value as { value?: T }).value
-      if (refValue !== undefined && refValue !== value) {
-        return refValue
-      }
-    } catch {}
-  }
-  return value as T
-}
-
-function useRuntimeTextStateCompat<T>(
-  runtime: TextCompatHookRuntime,
-  initialState: T | (() => T),
-): [T, (value: T | ((previous: T) => T)) => void] {
-  const [state, setState] = runtime.useState(initialState, { kind: 'ref' }) as [
-    T | { value: T },
-    (value: T | ((previous: T | { value: T }) => T | void)) => void,
-  ]
-
-  return [
-    unwrapTextStateValue(state),
-    value => {
-      if (typeof value === 'function') {
-        setState(previous => (value as (previous: T) => T)(unwrapTextStateValue(previous)))
-        return
-      }
-      setState(value)
-    },
-  ]
-}
-
 export const useState = (<T>(initialState: T | (() => T)) => {
   const runtime = getActiveTextCompatHookRuntime()
-  return runtime
-    ? useRuntimeTextStateCompat(runtime, initialState)
-    : useNativeTextStateCompat(initialState)
+  return runtime ? runtime.useState(initialState) : useNativeTextState(initialState)
 }) as typeof useNativeTextState
 
-export const useMemo = (<T>(factory: () => T, deps: readonly unknown[]) => {
-  const runtime = getActiveTextCompatHookRuntime()
-  return runtime ? runtime.useMemo(factory, deps) : useNativeTextMemo(factory, deps)
-}) as typeof useNativeTextMemo
+type TextMemoCache<T> = { deps: readonly unknown[]; value: T }
 
-export const useCallback = (<T extends (...args: never[]) => unknown>(
+function haveHookDependenciesChanged(
+  previous: readonly unknown[],
+  next: readonly unknown[],
+): boolean {
+  return (
+    previous.length !== next.length ||
+    previous.some((value, index) => !Object.is(value, next[index]))
+  )
+}
+
+export function useMemo<T>(factory: () => T, deps: readonly unknown[]): T {
+  const cache = useRef<TextMemoCache<T> | null>(null)
+  if (cache.current === null || haveHookDependenciesChanged(cache.current.deps, deps)) {
+    cache.current = { deps: [...deps], value: factory() }
+  }
+  return cache.current.value
+}
+
+export function useCallback<T extends (...args: never[]) => unknown>(
   callback: T,
   deps: readonly unknown[],
-) => {
-  const runtime = getActiveTextCompatHookRuntime()
-  return runtime ? runtime.useCallback(callback, deps) : useNativeTextCallback(callback, deps)
-}) as typeof useNativeTextCallback
+): T {
+  return useMemo(() => callback, deps)
+}
 
 export const useLayoutEffect = useEffect
 

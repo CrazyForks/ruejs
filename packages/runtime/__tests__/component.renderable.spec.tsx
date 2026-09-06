@@ -579,13 +579,13 @@ describe('Component renderable boundary', () => {
     expect(host.textContent).toContain('channel')
   })
 
-  it('keeps ref props read by compiled child components live across updates', async () => {
+  it('keeps state value props read by compiled child components live across updates', async () => {
     const host = document.createElement('div')
-    let setCount: (value: number | ((ref: { value: number }) => number | void)) => void = () => {}
+    let setCount: (value: number | ((previous: number) => number)) => void = () => {}
 
     document.body.appendChild(host)
 
-    const CounterValue: FC<{ count: { value: number } }> = props =>
+    const CounterValue: FC<{ count: number }> = props =>
       vapor(() => {
         const root = document.createElement('span')
         const anchor = document.createComment('rue:counter-value')
@@ -594,14 +594,14 @@ describe('Component renderable boundary', () => {
         root.appendChild(anchor)
 
         _$compiledWatchEffect(() => {
-          renderAnchor(props.count.value, root as any, anchor as any)
+          renderAnchor(props.count, root as any, anchor as any)
         })
 
         return root as any
       }) as any
 
-    const App: FC = () => {
-      const [count, updateCount] = useState(0, { kind: 'ref' })
+    const App: FC = _$compiledMarkComponentRenderReactive(() => {
+      const [count, updateCount] = useState(0)
       setCount = updateCount
 
       return _$compiledVapor(_$parentContext => {
@@ -617,23 +617,19 @@ describe('Component renderable boundary', () => {
         })
         return _$root
       })
-    }
+    })
 
     render(_$createDynamic(App, null), host)
     await flush()
 
     expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('0')
 
-    setCount(ref => {
-      ref.value += 1
-    })
+    setCount(previous => previous + 1)
     await flush()
 
     expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('1')
 
-    setCount(ref => {
-      ref.value += 1
-    })
+    setCount(previous => previous + 1)
     await flush()
 
     expect(host.querySelector('[data-testid="counter-value"]')?.textContent).toBe('2')
@@ -697,7 +693,7 @@ describe('Component renderable boundary', () => {
 
     document.body.appendChild(host)
 
-    const CounterValue: FC<{ count: { value: number } }> = props =>
+    const CounterValue: FC<{ count: number }> = props =>
       vapor(() => {
         const root = document.createElement('span')
         const anchor = document.createComment('rue:counter-value')
@@ -706,32 +702,14 @@ describe('Component renderable boundary', () => {
         root.appendChild(anchor)
 
         _$compiledWatchEffect(() => {
-          renderAnchor(props.count.value, root as any, anchor as any)
+          renderAnchor(props.count, root as any, anchor as any)
         })
 
         return root as any
       }) as any
 
-    const CounterDemo: FC = () => {
-      const setupState = _$compiledWithHookId('useSetup:counter-demo', () =>
-        useSetup(() => {
-          const [count, setCount] = _$compiledWithHookId('useState:counter-demo', () =>
-            useState(0, { kind: 'ref' }),
-          )
-          _$compiledWithHookId('useSetup:counter-demo-watch', () =>
-            useSetup(() => {
-              _$compiledWithHookId('watchEffect:counter-demo', () =>
-                _$compiledWatchEffect(() => {
-                  void count.value
-                }),
-              )
-            }),
-          )
-
-          return { count, setCount }
-        }),
-      )
-      const { count, setCount } = setupState
+    const CounterDemo: FC = _$compiledMarkComponentRenderReactive(() => {
+      const [count, setCount] = useState(0)
 
       return _$compiledVapor(_$parentContext => {
         const _$root = _$compiledCreateElement('div', _$parentContext)
@@ -747,10 +725,7 @@ describe('Component renderable boundary', () => {
                 _$compiledAppendChild(_$root, _$anchor)
                 _$compiledWatchEffect(() => {
                   const { children: _$children, ..._$attributes } = {
-                    onClick: () =>
-                      setCount(value => {
-                        value.value += 1
-                      }),
+                    onClick: () => setCount(previous => previous + 1),
                     children: '+1',
                   } as Record<string, any>
                   _$compiledSpreadAttributes(_$root, _$attributes)
@@ -765,7 +740,7 @@ describe('Component renderable boundary', () => {
         })
         return _$root
       })
-    }
+    })
 
     const renderPlaygroundContent = (props: { children?: unknown }) => {
       const createContent = (testId: string, children: unknown) =>

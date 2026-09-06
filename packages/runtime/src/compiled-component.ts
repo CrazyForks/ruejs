@@ -603,6 +603,7 @@ export const _$mountCompiledComponent = <Props>(
         nextHandle.dispose()
         return
       }
+      const focus = captureBranchFocus(liveParent as Node)
       const staging = createDocumentFragment(liveParent)
       const nextResult = untrack(() => mountComponentHandle(nextHandle, staging))
       if (nextResult != null && nextResult.parentNode !== staging) appendChild(staging, nextResult)
@@ -615,6 +616,7 @@ export const _$mountCompiledComponent = <Props>(
       insertBefore(liveParent, staging, componentAnchor ?? null)
       mountedHandle = nextHandle
       mountedNodes = nextNodes
+      restoreBranchFocus(liveParent as Node, focus)
     }
     let initialRun = true
     runWithOwner(owner, () => {

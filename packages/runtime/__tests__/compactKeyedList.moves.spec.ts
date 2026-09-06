@@ -1,0 +1,1003 @@
+// @vitest-environment jsdom
+
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  _$mountCompiledKeyedRow,
+  _$mountCompiledKeyedRowSetup,
+  _$reconcileKeyed,
+  type CompactCompiledKeyedMountTarget,
+  type CompactCompiledKeyedRow,
+} from '../src/compiler-runtime/compact-keyed-list'
+import {
+  createOwner,
+  runWithOwner,
+  getCurrentOwner,
+  getOwnerParent,
+  registerOwnerLifecycle,
+  __rueGetCompiledReactiveDebugState,
+  disposeOwner,
+  onOwnerCleanup,
+} from '../src/runtime-core/compiled'
+
+type Item = { id: number; label: string }
+
+const fixture = (range = false) => {
+  const parent = document.createElement('div')
+  const insertBefore = parent.insertBefore.bind(parent)
+  let insertions = 0
+  vi.spyOn(parent, 'insertBefore').mockImplementation((node, before) => {
+    if (++insertions > 2500) throw new Error('range movement did not terminate')
+    return insertBefore(node, before)
+  })
+  const anchor = document.createComment('end')
+  parent.appendChild(anchor)
+  let previous: CompactCompiledKeyedRow<Item, number>[] = []
+  const mount = (item: Item) => {
+    const node = document.createElement('span')
+    node.textContent = item.label
+    const last = range ? document.createTextNode('tail') : node
+    const staging = document.createDocumentFragment()
+    staging.appendChild(node)
+    if (range) staging.appendChild(last)
+    return {
+      node,
+      last,
+      patch: (next: Item) => {
+        node.textContent = next.label
+      },
+      dispose() {},
+    }
+  }
+  const render = (items: Item[]) => {
+    previous = _$reconcileKeyed(parent, anchor, previous, items, item => item.id, mount)
+    return previous
+  }
+  return { parent, anchor, render }
+}
+
+const batchFixture = (range = false, throwOnId?: number) => {
+  const parent = document.createElement('div')
+  const anchor = document.createComment('end')
+  parent.appendChild(anchor)
+  let previous: CompactCompiledKeyedRow<Item, number>[] = []
+  const disposed: number[] = []
+  const mount = (item: Item, _index: number, target?: CompactCompiledKeyedMountTarget) => {
+    if (item.id === throwOnId) throw new Error(`failed to mount ${item.id}`)
+    const staging = target?.parent ?? document.createDocumentFragment()
+    const node = document.createElement('span')
+    node.textContent = item.label
+    const last = range ? document.createTextNode(`tail:${item.id}`) : node
+    staging.insertBefore(node, target?.before ?? null)
+    if (range) staging.insertBefore(last, target?.before ?? null)
+    return {
+      node,
+      last,
+      patch: (next: Item) => {
+        node.textContent = next.label
+      },
+      dispose: () => disposed.push(item.id),
+    }
+  }
+  const render = (items: Item[]) => {
+    previous = _$reconcileKeyed(parent, anchor, previous, items, item => item.id, mount)
+    return previous
+  }
+  return { parent, anchor, disposed, render }
+}
+
+afterEach(() => vi.restoreAllMocks())
+
+describe('compact keyed list DOM moves', () => {
+  it.each(['direct', 'plain', 'frozen', 'wrong target'] as const)(
+    'batch creation, append and replacement preserve ranges with %s results',
+    mode => {
+      const parent = document.createElement('div')
+      const anchor = document.createComment('end')
+      parent.append(anchor)
+      const mounts: ReturnType<typeof _$mountCompiledKeyedRowSetup<Item>>[] = []
+      const disposed: number[] = []
+      const mount = (item: Item, _index: number, target?: CompactCompiledKeyedMountTarget) => {
+        const actualTarget =
+          mode === 'wrong target'
+            ? { parent: document.createDocumentFragment(), before: null, batch: true as const }
+            : target
+        const result = _$mountCompiledKeyedRowSetup<Item>(
+          () => {
+            const fragment = document.createDocumentFragment()
+            const node = document.createElement('span')
+            node.textContent = item.label
+            fragment.append(node, document.createTextNode('tail'))
+            onOwnerCleanup(() => disposed.push(item.id))
+            return fragment
+          },
+          () => {},
+          actualTarget,
+        )
+        const returned =
+          mode === 'plain'
+            ? { node: result.node, last: result.last, patch: result.patch, dispose: result.dispose }
+            : mode === 'frozen'
+              ? Object.freeze(result)
+              : result
+        mounts.push(returned)
+        return returned
+      }
+      let rows: CompactCompiledKeyedRow<Item, number>[] = []
+      let items: Item[] = []
+      for (const phase of ['create', 'append', 'replace']) {
+        const added = Array.from({ length: 1000 }, (_, i) => ({
+          id: mounts.length + i,
+          label: String(mounts.length + i),
+        }))
+        items = phase === 'append' ? items.concat(added) : added
+        const start = mounts.length
+        rows = _$reconcileKeyed(parent, anchor, rows, items, item => item.id, mount)
+        for (let i = 0; i < added.length; i++) {
+          const row = rows[phase === 'append' ? i + 1000 : i]
+          if (mode === 'direct') expect(row).toBe(mounts[start + i])
+          else {
+            expect(row).not.toBe(mounts[start + i])
+            expect(mounts[start + i]).not.toHaveProperty('key')
+          }
+          expect(row.key).toBe(added[i].id)
+          expect(row.item).toBe(added[i])
+          expect(row.index).toBe(phase === 'append' ? i + 1000 : i)
+        }
+        expect([...parent.childNodes]).toEqual([
+          ...rows.flatMap(row => [row.node, row.last!]),
+          anchor,
+        ])
+      }
+      expect(disposed).toEqual(Array.from({ length: 2000 }, (_, i) => i))
+      _$reconcileKeyed(parent, anchor, rows, [], item => item.id, mount)
+      expect(disposed).toHaveLength(3000)
+    },
+  )
+
+  it.each(['create', 'append', 'replace'])(
+    'rolls back every direct row after a mid-%s mount failure',
+    phase => {
+      const parent = document.createElement('div')
+      const disposed: number[] = []
+      const nodes: Node[] = []
+      const error = new Error('mount failed')
+      const mount = (item: Item, _index: number, target?: CompactCompiledKeyedMountTarget) =>
+        _$mountCompiledKeyedRowSetup<Item>(
+          () => {
+            onOwnerCleanup(() => disposed.push(item.id))
+            if (item.id === 4) throw error
+            const node = document.createElement('span')
+            nodes.push(node)
+            return node
+          },
+          () => {},
+          target,
+        )
+      const items = [0, 1].map(id => ({ id, label: String(id) }))
+      const old = _$reconcileKeyed(
+        parent,
+        null,
+        [],
+        phase === 'create' ? [] : items,
+        item => item.id,
+        mount,
+      )
+      const added = [2, 3, 4].map(id => ({ id, label: String(id) }))
+      expect(() =>
+        _$reconcileKeyed(
+          parent,
+          null,
+          old,
+          phase === 'append' ? items.concat(added) : added,
+          item => item.id,
+          mount,
+        ),
+      ).toThrow(error)
+      expect(disposed).toEqual([4, 2, 3])
+      expect([...parent.childNodes]).toEqual(old.map(row => row.node))
+      expect(nodes.slice(old.length).every(node => node.parentNode === null)).toBe(true)
+      _$reconcileKeyed(parent, null, old, [], item => item.id, mount)
+    },
+  )
+
+  it.each([false, true])(
+    'full replacement deletes contiguous old rows with one Range (range=%s)',
+    multi => {
+      const { parent, anchor, disposed, render } = batchFixture(multi)
+      render(Array.from({ length: 1000 }, (_, id) => ({ id, label: String(id) })))
+      const range = document.createRange()
+      const deletion = vi.spyOn(range, 'deleteContents')
+      vi.spyOn(document, 'createRange').mockReturnValue(range)
+      const remove = vi.spyOn(parent, 'removeChild')
+      const insert = vi.spyOn(parent, 'insertBefore')
+      const next = render(
+        Array.from({ length: 1000 }, (_, i) => ({ id: i + 1000, label: String(i) })),
+      )
+      expect(deletion).toHaveBeenCalledTimes(1)
+      expect(remove).not.toHaveBeenCalled()
+      expect(insert).toHaveBeenCalledExactlyOnceWith(expect.any(DocumentFragment), anchor)
+      expect(disposed).toEqual(Array.from({ length: 1000 }, (_, id) => id))
+      expect([...parent.childNodes]).toEqual([
+        ...next.flatMap(row => (multi ? [row.node, row.last!] : [row.node])),
+        anchor,
+      ])
+    },
+  )
+
+  it.each(['gap', 'no Range'])('full replacement safely falls back for %s', mode => {
+    const { parent, anchor, disposed, render } = batchFixture(true)
+    const old = render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    const unrelated = document.createElement('i')
+    if (mode === 'gap') parent.insertBefore(unrelated, old[1].node)
+    if (mode === 'no Range')
+      Object.defineProperty(document, 'createRange', { configurable: true, value: undefined })
+    const remove = vi.spyOn(parent, 'removeChild')
+    let next: CompactCompiledKeyedRow<Item, number>[]
+    try {
+      next = render([{ id: 3, label: 'three' }])
+    } finally {
+      if (mode === 'no Range')
+        delete (document as unknown as { createRange?: () => Range }).createRange
+    }
+    expect(disposed).toEqual([1, 2])
+    expect(remove).toHaveBeenCalledTimes(4)
+    expect([...parent.childNodes]).toEqual([
+      ...(mode === 'gap' ? [unrelated] : []),
+      next[0].node,
+      next[0].last,
+      anchor,
+    ])
+  })
+
+  it.each([false, true])(
+    'cleans all old and staged rows after replacement cleanup failure (rollback throws=%s)',
+    rollbackThrows => {
+      const parent = document.createElement('div')
+      const anchor = document.createComment('end')
+      parent.append(anchor)
+      const disposed: number[] = []
+      const nodes: Node[] = []
+      const originalError = new Error('old cleanup failed')
+      const rollbackError = new Error('new cleanup failed')
+      const mount = (item: Item) => {
+        const node = document.createElement('span')
+        nodes.push(node)
+        return {
+          node,
+          patch() {},
+          dispose() {
+            disposed.push(item.id)
+            if (item.id === 1) throw originalError
+            if (item.id === 3 && rollbackThrows) throw rollbackError
+          },
+        }
+      }
+      const old = _$reconcileKeyed(
+        parent,
+        anchor,
+        [],
+        [1, 2].map(id => ({ id, label: String(id) })),
+        item => item.id,
+        mount,
+      )
+      let caught: unknown
+      try {
+        _$reconcileKeyed(
+          parent,
+          anchor,
+          old,
+          [3, 4].map(id => ({ id, label: String(id) })),
+          item => item.id,
+          mount,
+        )
+      } catch (error) {
+        caught = error
+      }
+      if (rollbackThrows) {
+        expect(caught).toBeInstanceOf(AggregateError)
+        expect((caught as AggregateError).errors).toEqual([originalError, rollbackError])
+      } else expect(caught).toBe(originalError)
+      expect(disposed).toEqual([1, 2, 3, 4])
+      expect([...parent.childNodes]).toEqual([anchor])
+      expect(nodes.every(node => node.parentNode === null)).toBe(true)
+    },
+  )
+
+  it('clears 1k contiguous rows with one Range deletion and no per-node removal', () => {
+    const { parent, anchor, disposed, render } = batchFixture(true)
+    render(Array.from({ length: 1000 }, (_, id) => ({ id, label: String(id) })))
+    const range = document.createRange()
+    const deleteContents = vi.spyOn(range, 'deleteContents')
+    vi.spyOn(document, 'createRange').mockReturnValue(range)
+    const remove = vi.spyOn(parent, 'removeChild')
+
+    const rows = render([])
+
+    expect(rows).toEqual([])
+    expect([...parent.childNodes]).toEqual([anchor])
+    expect(disposed).toHaveLength(1000)
+    expect(new Set(disposed).size).toBe(1000)
+    expect(deleteContents).toHaveBeenCalledTimes(1)
+    expect(remove).not.toHaveBeenCalled()
+  })
+
+  it('falls back to per-node removal when createRange is unavailable', () => {
+    const { parent, anchor, disposed, render } = batchFixture(true)
+    render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    const hadOwnCreateRange = Object.hasOwn(document, 'createRange')
+    const originalCreateRange = document.createRange
+    Object.defineProperty(document, 'createRange', { configurable: true, value: undefined })
+    const remove = vi.spyOn(parent, 'removeChild')
+
+    try {
+      expect(render([])).toEqual([])
+    } finally {
+      if (hadOwnCreateRange) {
+        Object.defineProperty(document, 'createRange', {
+          configurable: true,
+          value: originalCreateRange,
+        })
+      } else {
+        delete (document as unknown as { createRange?: () => Range }).createRange
+      }
+    }
+
+    expect([...parent.childNodes]).toEqual([anchor])
+    expect(disposed).toEqual([1, 2])
+    expect(remove).toHaveBeenCalledTimes(4)
+  })
+
+  it('falls back without deleting unrelated DOM when rows are not contiguous', () => {
+    const { parent, anchor, disposed, render } = batchFixture()
+    const rows = render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    const unrelated = document.createElement('i')
+    parent.insertBefore(unrelated, rows[1].node)
+    const createRange = vi.spyOn(document, 'createRange')
+    const remove = vi.spyOn(parent, 'removeChild')
+
+    expect(render([])).toEqual([])
+
+    expect([...parent.childNodes]).toEqual([unrelated, anchor])
+    expect(disposed).toEqual([1, 2])
+    expect(createRange).not.toHaveBeenCalled()
+    expect(remove).toHaveBeenCalledTimes(2)
+  })
+
+  it('deletes the contiguous DOM range and releases every sibling when cleanup throws', () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const disposed: number[] = []
+    const mount = (item: Item) => {
+      const node = document.createElement('span')
+      node.textContent = item.label
+      return {
+        node,
+        patch() {},
+        dispose() {
+          disposed.push(item.id)
+          if (item.id === 2) throw new Error('row cleanup failed')
+        },
+      }
+    }
+    const previous = _$reconcileKeyed(
+      parent,
+      anchor,
+      [],
+      [
+        { id: 1, label: 'one' },
+        { id: 2, label: 'two' },
+        { id: 3, label: 'three' },
+      ],
+      item => item.id,
+      mount,
+    )
+    const range = document.createRange()
+    const deleteContents = vi.spyOn(range, 'deleteContents')
+    vi.spyOn(document, 'createRange').mockReturnValue(range)
+    const remove = vi.spyOn(parent, 'removeChild')
+
+    expect(() => _$reconcileKeyed(parent, anchor, previous, [], item => item.id, mount)).toThrow(
+      'row cleanup failed',
+    )
+    expect(disposed).toEqual([1, 2, 3])
+    expect([...parent.childNodes]).toEqual([anchor])
+    expect(deleteContents).toHaveBeenCalledTimes(1)
+    expect(remove).not.toHaveBeenCalled()
+  })
+
+  it('appends 1k rows without patching, refreshing or moving the stable 1k prefix', () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const initial = Array.from({ length: 1000 }, (_, id) => ({ id, label: String(id) }))
+    let mounts = 0
+    let patches = 0
+    let refreshes = 0
+    const mount = (item: Item, _index: number, target?: CompactCompiledKeyedMountTarget) => {
+      mounts += 1
+      const staging = target?.parent ?? document.createDocumentFragment()
+      const node = document.createElement('span')
+      node.textContent = item.label
+      staging.insertBefore(node, target?.before ?? null)
+      return {
+        node,
+        patch: () => {
+          patches += 1
+        },
+        memo: {
+          read: <T>(read: () => T) => read(),
+          refresh: () => {
+            refreshes += 1
+            return false
+          },
+          dispose() {},
+        },
+        dispose() {},
+      }
+    }
+    const previous = _$reconcileKeyed(parent, anchor, [], initial, item => item.id, mount)
+    const prefixNodes = previous.map(row => row.node)
+    const insert = vi.spyOn(parent, 'insertBefore')
+    insert.mockClear()
+    mounts = 0
+
+    const next = _$reconcileKeyed(
+      parent,
+      anchor,
+      previous,
+      [
+        ...initial,
+        ...Array.from({ length: 1000 }, (_, offset) => ({
+          id: offset + 1000,
+          label: String(offset + 1000),
+        })),
+      ],
+      item => item.id,
+      mount,
+    )
+
+    expect(next.slice(0, 1000).map(row => row.node)).toEqual(prefixNodes)
+    expect(next).toHaveLength(2000)
+    expect(mounts).toBe(1000)
+    expect(patches).toBe(0)
+    expect(refreshes).toBe(0)
+    expect(insert).toHaveBeenCalledTimes(1)
+    expect(insert).toHaveBeenCalledWith(expect.any(DocumentFragment), anchor)
+  })
+
+  it('falls back when an append-like update replaces a prefix object', () => {
+    const { parent, anchor, render } = fixture()
+    const a = { id: 1, label: 'one' }
+    const b = { id: 2, label: 'two' }
+    const previous = render([a, b])
+
+    const next = render([{ ...a, label: 'ONE' }, b, { id: 3, label: 'three' }])
+
+    expect(next.slice(0, 2).map(row => row.node)).toEqual(previous.map(row => row.node))
+    expect(next[0].node.textContent).toBe('ONE')
+    expect([...parent.childNodes]).toEqual([next[0].node, next[1].node, next[2].node, anchor])
+  })
+
+  it('falls back for a middle insertion and preserves the surrounding row identities', () => {
+    const { parent, anchor, render } = fixture()
+    const a = { id: 1, label: 'one' }
+    const b = { id: 2, label: 'two' }
+    const previous = render([a, b])
+
+    const next = render([a, { id: 3, label: 'three' }, b])
+
+    expect(next[0].node).toBe(previous[0].node)
+    expect(next[2].node).toBe(previous[1].node)
+    expect([...parent.childNodes]).toEqual([next[0].node, next[1].node, next[2].node, anchor])
+  })
+
+  it('rejects a duplicate tail key before mounting any appended rows', () => {
+    const { parent, anchor, render } = batchFixture()
+    const previous = render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+
+    expect(() =>
+      render([
+        previous[0].item,
+        previous[1].item,
+        { id: 3, label: 'three' },
+        { id: 1, label: 'duplicate' },
+      ]),
+    ).toThrow('duplicate keys')
+    expect([...parent.childNodes]).toEqual([previous[0].node, previous[1].node, anchor])
+
+    expect(() =>
+      render([
+        previous[0].item,
+        previous[1].item,
+        { id: 3, label: 'three' },
+        { id: 3, label: 'duplicate tail' },
+      ]),
+    ).toThrow('duplicate keys')
+    expect([...parent.childNodes]).toEqual([previous[0].node, previous[1].node, anchor])
+  })
+
+  it('falls back and restores a prefix range from another parent before appending', () => {
+    const { parent, anchor, render } = fixture(true)
+    const initial = [
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ]
+    const previous = render(initial)
+    const other = document.createElement('div')
+    other.append(previous[1].node, previous[1].last!)
+
+    const next = render([...initial, { id: 3, label: 'three' }])
+
+    expect([...parent.childNodes]).toEqual([
+      next[0].node,
+      next[0].last,
+      next[1].node,
+      next[1].last,
+      next[2].node,
+      next[2].last,
+      anchor,
+    ])
+  })
+
+  it('batch appends ordered multi-node ranges and rolls them back on mount failure', () => {
+    const successful = batchFixture(true)
+    const initialItems = [
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ]
+    const previous = successful.render(initialItems)
+    const insert = vi.spyOn(successful.parent, 'insertBefore')
+    insert.mockClear()
+    const next = successful.render([...initialItems, { id: 3, label: 'three' }])
+    expect([...successful.parent.childNodes]).toEqual([
+      previous[0].node,
+      previous[0].last,
+      previous[1].node,
+      previous[1].last,
+      next[2].node,
+      next[2].last,
+      successful.anchor,
+    ])
+    expect(insert).toHaveBeenCalledTimes(1)
+
+    const failing = batchFixture(true, 4)
+    const original = failing.render(initialItems)
+    expect(() =>
+      failing.render([...initialItems, { id: 3, label: 'three' }, { id: 4, label: 'four' }]),
+    ).toThrow('failed to mount 4')
+    expect([...failing.parent.childNodes]).toEqual([
+      original[0].node,
+      original[0].last,
+      original[1].node,
+      original[1].last,
+      failing.anchor,
+    ])
+    expect(failing.disposed).toContain(3)
+  })
+
+  it('patches only changed items for a 1k stable-key sparse update without Map or Set', () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const initial = Array.from({ length: 1000 }, (_, id) => ({ id, label: String(id) }))
+    let keyReads = 0
+    let patches = 0
+    const mount = (item: Item) => {
+      const node = document.createElement('span')
+      node.textContent = item.label
+      return {
+        node,
+        patch: (next: Item) => {
+          patches += 1
+          node.textContent = next.label
+        },
+        dispose() {},
+      }
+    }
+    const getKey = (item: Item) => {
+      keyReads += 1
+      return item.id
+    }
+    const previous = _$reconcileKeyed(parent, anchor, [], initial, getKey, mount)
+    const updated = initial.map((item, index) =>
+      index % 10 === 0 ? { ...item, label: `updated:${item.id}` } : item,
+    )
+    const NativeMap = globalThis.Map
+    const NativeSet = globalThis.Set
+    let keyedMapAllocations = 0
+    let keyedSetAllocations = 0
+    class CountingMap<K, V> extends NativeMap<K, V> {
+      constructor(entries?: readonly (readonly [K, V])[] | null) {
+        super(entries)
+        if (entries?.length === 1000) keyedMapAllocations += 1
+      }
+    }
+    class CountingSet<T> extends NativeSet<T> {
+      override add(value: T): this {
+        super.add(value)
+        if (this.size === 1000 && [...this].every(entry => typeof entry === 'number')) {
+          keyedSetAllocations += 1
+        }
+        return this
+      }
+    }
+    vi.stubGlobal('Map', CountingMap)
+    vi.stubGlobal('Set', CountingSet)
+    keyReads = 0
+    let next: CompactCompiledKeyedRow<Item, number>[]
+
+    try {
+      next = _$reconcileKeyed(parent, anchor, previous, updated, getKey, mount)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+    expect(next!.map(row => row.node)).toEqual(previous.map(row => row.node))
+    expect(next![0].node.textContent).toBe('updated:0')
+    expect(next![1].node.textContent).toBe('1')
+    expect(keyReads).toBe(1000)
+    expect(patches).toBe(100)
+    expect(keyedMapAllocations).toBe(0)
+    expect(keyedSetAllocations).toBe(0)
+  })
+
+  it('patches reused rows whose index changed but skips stable item/index pairs', () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const patched: Array<[number, number]> = []
+    const mount = (item: Item) => {
+      const node = document.createElement('span')
+      node.textContent = item.label
+      return {
+        node,
+        patch: (next: Item, index: number) => patched.push([next.id, index]),
+        dispose() {},
+      }
+    }
+    const a = { id: 1, label: 'one' }
+    const b = { id: 2, label: 'two' }
+    const c = { id: 3, label: 'three' }
+    const inserted = { id: 4, label: 'four' }
+    const previous = _$reconcileKeyed(parent, anchor, [], [a, b, c], item => item.id, mount)
+
+    _$reconcileKeyed(parent, anchor, previous, [a, inserted, b, c], item => item.id, mount)
+
+    expect(patched).toEqual([
+      [2, 2],
+      [3, 3],
+    ])
+  })
+
+  it.each([false, true])('does not move unchanged ranges during text updates (range=%s)', range => {
+    const { parent, anchor, render } = fixture(range)
+    const nodes = render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ]).map(row => row.node)
+    const insert = vi.mocked(parent.insertBefore)
+    insert.mockClear()
+    const updated = render([
+      { id: 1, label: 'ONE' },
+      { id: 2, label: 'two' },
+    ])
+    expect(updated.map(row => row.node)).toEqual(nodes)
+    expect(nodes[0].textContent).toBe('ONE')
+    expect(parent.lastChild).toBe(anchor)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('restores a range that moved to a different parent', () => {
+    const { parent, render } = fixture(true)
+    const items = [{ id: 1, label: 'one' }]
+    const row = render(items)[0]
+    const other = document.createElement('div')
+    other.append(row.node, row.last!)
+    render(items)
+    expect(row.node.parentNode).toBe(parent)
+    expect(row.last!.parentNode).toBe(parent)
+    expect(row.node.nextSibling).toBe(row.last)
+  })
+
+  it('keeps multi-node ranges ordered through insertion, removal and reversal', () => {
+    const { parent, anchor, render } = fixture(true)
+    const a = { id: 1, label: 'one' },
+      b = { id: 2, label: 'two' },
+      c = { id: 3, label: 'three' }
+    const original = render([a, b])
+    render([c, a, b])
+    const next = render([b, a])
+    expect(next[0].node).toBe(original[1].node)
+    expect(next[1].node).toBe(original[0].node)
+    expect([...parent.childNodes]).toEqual([
+      next[0].node,
+      next[0].last,
+      next[1].node,
+      next[1].last,
+      anchor,
+    ])
+    render([])
+    expect([...parent.childNodes]).toEqual([anchor])
+  })
+
+  it('moves at most two single-node rows for distant and adjacent swaps', () => {
+    const { parent, render } = fixture()
+    const items = Array.from({ length: 1000 }, (_, id) => ({ id, label: String(id) }))
+    const original = render(items)
+    const insert = vi.mocked(parent.insertBefore)
+
+    insert.mockClear()
+    const distant = items.slice()
+    ;[distant[1], distant[998]] = [distant[998], distant[1]]
+    const swapped = render(distant)
+    expect(insert).toHaveBeenCalledTimes(2)
+    expect(swapped[1].node).toBe(original[998].node)
+    expect(swapped[998].node).toBe(original[1].node)
+
+    insert.mockClear()
+    const adjacent = distant.slice()
+    ;[adjacent[500], adjacent[501]] = [adjacent[501], adjacent[500]]
+    render(adjacent)
+    expect(insert.mock.calls.length).toBeLessThanOrEqual(2)
+  })
+
+  it('counts each node once when swapping multi-node rows and still patches content', () => {
+    const { parent, render } = fixture(true)
+    const items = Array.from({ length: 12 }, (_, id) => ({ id, label: String(id) }))
+    const original = render(items)
+    const insert = vi.mocked(parent.insertBefore)
+    insert.mockClear()
+    const swapped = items.map(item => ({ ...item }))
+    ;[swapped[2], swapped[9]] = [swapped[9], swapped[2]]
+    swapped[5] = { ...swapped[5], label: 'updated' }
+    const next = render(swapped)
+    expect(insert).toHaveBeenCalledTimes(4)
+    expect(next[2].node).toBe(original[9].node)
+    expect(next[9].node).toBe(original[2].node)
+    expect(next[5].node.textContent).toBe('updated')
+  })
+
+  it.each([1000, 10_000])(
+    'assembles %i initial rows in one list fragment and commits once',
+    count => {
+      const createFragment = vi.spyOn(document, 'createDocumentFragment')
+      const { parent, anchor, render } = batchFixture()
+      const insert = vi.spyOn(parent, 'insertBefore')
+
+      const rows = render(Array.from({ length: count }, (_, id) => ({ id, label: String(id) })))
+
+      expect(rows).toHaveLength(count)
+      expect(parent.childNodes).toHaveLength(count + 1)
+      expect(parent.lastChild).toBe(anchor)
+      expect(createFragment).toHaveBeenCalledTimes(1)
+      expect(insert).toHaveBeenCalledTimes(1)
+      expect(insert).toHaveBeenCalledWith(expect.any(DocumentFragment), anchor)
+    },
+  )
+
+  it('batch commits a full-key replacement with ordered multi-node ranges', () => {
+    const createFragment = vi.spyOn(document, 'createDocumentFragment')
+    const { parent, anchor, disposed, render } = batchFixture(true)
+    render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    const insert = vi.spyOn(parent, 'insertBefore')
+    insert.mockClear()
+    createFragment.mockClear()
+
+    const next = render([
+      { id: 3, label: 'three' },
+      { id: 4, label: 'four' },
+    ])
+
+    expect([...parent.childNodes]).toEqual([
+      next[0].node,
+      next[0].last,
+      next[1].node,
+      next[1].last,
+      anchor,
+    ])
+    expect(disposed).toEqual([1, 2])
+    expect(createFragment).toHaveBeenCalledTimes(1)
+    expect(insert).toHaveBeenCalledTimes(1)
+    expect(insert).toHaveBeenCalledWith(expect.any(DocumentFragment), anchor)
+  })
+
+  it('rolls back already-mounted rows when a batched replacement throws', () => {
+    const { parent, anchor, disposed, render } = batchFixture(false, 4)
+    const original = render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+
+    expect(() =>
+      render([
+        { id: 3, label: 'three' },
+        { id: 4, label: 'four' },
+        { id: 5, label: 'five' },
+      ]),
+    ).toThrow('failed to mount 4')
+    expect([...parent.childNodes]).toEqual([original[0].node, original[1].node, anchor])
+    expect(disposed).toEqual([3])
+  })
+
+  it('validates every initial key before mounting and rejects a duplicate at row 1000', () => {
+    const parent = document.createElement('div')
+    const items = Array.from({ length: 1000 }, (_, id) => id)
+    let keyReads = 0
+    let mounts = 0
+    const getKey = (item: number) => {
+      keyReads += 1
+      return item
+    }
+    const mount = (item: number) => {
+      expect(keyReads).toBe(1000)
+      mounts += 1
+      const node = document.createElement('span')
+      node.textContent = String(item)
+      return { node, patch() {}, dispose() {} }
+    }
+    expect(() =>
+      _$reconcileKeyed(parent, null, [], [...items.slice(0, -1), 0], getKey, mount),
+    ).toThrow('[rue] duplicate keys are not supported by compiled keyed lists')
+    expect(keyReads).toBe(1000)
+    expect(mounts).toBe(0)
+    expect(parent.childNodes).toHaveLength(0)
+    keyReads = 0
+    const rows = _$reconcileKeyed(parent, null, [], items, getKey, mount)
+    expect(mounts).toBe(1000)
+    expect(rows.map(row => row.key)).toEqual(items)
+    expect([...parent.childNodes]).toEqual(rows.map(row => row.node))
+  })
+
+  it('rolls back initial native rows and resources even when one cleanup throws', () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const baseline = __rueGetCompiledReactiveDebugState()
+    const cleaned: number[] = []
+    const nodes: Node[] = []
+    const failure = new Error('initial mount failed')
+    const cleanupFailure = new Error('initial cleanup failed')
+    let caught: unknown
+    try {
+      _$reconcileKeyed(
+        parent,
+        anchor,
+        [],
+        Array.from({ length: 1000 }, (_, i) => i),
+        item => item,
+        (item, _index, target) =>
+          _$mountCompiledKeyedRowSetup(
+            () => {
+              onOwnerCleanup(() => {
+                cleaned.push(item)
+                if (item === 0) throw cleanupFailure
+              })
+              if (item === 500) throw failure
+              const node = document.createElement('span')
+              nodes.push(node)
+              return node
+            },
+            () => {},
+            target,
+          ),
+      )
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(AggregateError)
+    expect((caught as AggregateError).errors).toEqual([failure, cleanupFailure])
+    expect(cleaned.slice().sort((a, b) => a - b)).toEqual(Array.from({ length: 501 }, (_, i) => i))
+    expect(nodes.every(node => node.parentNode === null)).toBe(true)
+    expect([...parent.childNodes]).toEqual([anchor])
+    expect(__rueGetCompiledReactiveDebugState()).toEqual(baseline)
+  })
+
+  it('disposes compiled row owners when a batched mount fails', () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const cleaned: number[] = []
+    const mount = (item: Item, _index: number, target?: CompactCompiledKeyedMountTarget) =>
+      _$mountCompiledKeyedRow<Item>(
+        (rowTarget, _props, owner) => {
+          onOwnerCleanup(() => cleaned.push(item.id))
+          const node = document.createElement('span')
+          rowTarget.parent.insertBefore(node, rowTarget.before)
+          if (item.id === 2) throw new Error('compiled row failed')
+          return {
+            first: node,
+            last: node,
+            dispose: () => disposeOwner(owner),
+          }
+        },
+        () => {},
+        target,
+      )
+
+    expect(() =>
+      _$reconcileKeyed(
+        parent,
+        anchor,
+        [],
+        [
+          { id: 1, label: 'one' },
+          { id: 2, label: 'two' },
+        ],
+        item => item.id,
+        mount,
+      ),
+    ).toThrow('compiled row failed')
+    expect([...parent.childNodes]).toEqual([anchor])
+    expect(cleaned.sort()).toEqual([1, 2])
+  })
+})
+
+describe('single owner native setup lifecycle', () => {
+  it('parents the owner, mounts explicit roots and aggregates failed cleanup during rollback', () => {
+    const baseline = __rueGetCompiledReactiveDebugState()
+    const parentOwner = createOwner()
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const events: string[] = []
+    const roots = [document.createElement('span'), document.createTextNode('tail')]
+    const row = runWithOwner(parentOwner, () =>
+      _$mountCompiledKeyedRowSetup(
+        () => {
+          expect(getOwnerParent(getCurrentOwner()!)).toBe(parentOwner)
+          registerOwnerLifecycle('mounted', () => events.push('mounted'))
+          onOwnerCleanup(() => events.push('cleanup'))
+          return { __rue_compiled_host: roots[0], __rue_compiled_roots: roots }
+        },
+        () => {},
+        { parent, before: anchor },
+      ),
+    )!
+    expect([...parent.childNodes]).toEqual([...roots, anchor])
+    expect(row.node).toBe(roots[0])
+    expect(row.last).toBe(roots[1])
+    expect(events).toEqual(['mounted'])
+    disposeOwner(parentOwner)
+    row.dispose()
+    expect(events).toEqual(['mounted', 'cleanup'])
+    expect(__rueGetCompiledReactiveDebugState()).toEqual(baseline)
+
+    const failedRoot = document.createElement('span')
+    expect(() =>
+      _$mountCompiledKeyedRowSetup(
+        () => {
+          parent.insertBefore(failedRoot, anchor)
+          onOwnerCleanup(() => {
+            throw new Error('cleanup failed')
+          })
+          onOwnerCleanup(() => events.push('second cleanup'))
+          return {
+            __rue_compiled_host: failedRoot,
+            __rue_compiled_roots: [failedRoot],
+            __rue_compiled_error: new Error('setup failed'),
+          }
+        },
+        () => {},
+        { parent, before: anchor },
+      ),
+    ).toThrow(AggregateError)
+    expect(failedRoot.parentNode).toBeNull()
+    expect(events).toContain('second cleanup')
+    expect(__rueGetCompiledReactiveDebugState()).toEqual(baseline)
+  })
+})

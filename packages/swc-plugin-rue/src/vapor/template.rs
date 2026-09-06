@@ -25,6 +25,7 @@ struct TextHolePlan {
     index: usize,
     path: Vec<usize>,
     kind: TemplateHoleKind,
+    reuse_text: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,6 +42,7 @@ struct AttrTargetPlan {
 pub(crate) struct MarkedTextHole<'a> {
     pub(crate) index: usize,
     pub(crate) path: Vec<usize>,
+    pub(crate) reuse_text: bool,
     pub(crate) source: MarkedHoleSource<'a>,
 }
 
@@ -63,6 +65,14 @@ pub(crate) struct HoistedTemplate {
 
 impl StaticTemplate {
     pub(crate) fn classify(element: &JSXElement) -> Option<Self> {
+        Self::classify_with_row_text(element, false)
+    }
+
+    pub(crate) fn classify_simple_row(element: &JSXElement) -> Option<Self> {
+        Self::classify_with_row_text(element, true)
+    }
+
+    fn classify_with_row_text(element: &JSXElement, row_text: bool) -> Option<Self> {
         let mut html = String::new();
         let mut text_holes = Vec::new();
         let mut attr_targets = Vec::new();
@@ -78,6 +88,13 @@ impl StaticTemplate {
         )?;
         if text_holes.is_empty() && has_static_expr_text {
             return None;
+        }
+        for hole in &mut text_holes {
+            hole.reuse_text &= row_text;
+            if hole.reuse_text {
+                html =
+                    html.replace(&format!("<!--rue:text-hole:{}-->", hole.index), "rue:row-text");
+            }
         }
         let kind = if text_holes.is_empty() && attr_targets.is_empty() {
             StaticTemplateKind::Pure
@@ -460,6 +477,7 @@ fn serialize_children_at(
                         index: hole_index,
                         path: path.clone(),
                         kind: TemplateHoleKind::OpaqueElement,
+                        reuse_text: false,
                     });
                     out.push_str(&format!("<!--rue:opaque-hole:{hole_index}-->"));
                 }
@@ -508,6 +526,7 @@ fn serialize_children_at(
                     index: hole_index,
                     path: hole_path,
                     kind: TemplateHoleKind::Expression,
+                    reuse_text: false,
                 });
                 out.push_str(&format!("<!--rue:text-hole:{hole_index}-->"));
                 *child_node_index += 1;
@@ -553,6 +572,7 @@ fn serialize_element(
     out.push('>');
 
     let children_start = out.len();
+    let holes_start = text_holes.len();
     serialize_children(
         &element.children,
         out,
@@ -561,6 +581,16 @@ fn serialize_element(
         has_static_expr_text,
         path,
     )?;
+    // Only one literal JSX expression in an ordinary text container: no parser
+    // coalescing, foster parenting, raw text, fragments, or whitespace ambiguity.
+    if matches!(
+        tag,
+        "a" | "span" | "li" | "div" | "p" | "b" | "strong" | "em" | "td" | "th" | "button"
+    ) && matches!(element.children.as_slice(), [JSXElementChild::JSXExprContainer(_)])
+        && text_holes.len() == holes_start + 1
+    {
+        text_holes[holes_start].reuse_text = true;
+    }
     if is_void_tag(tag) {
         if out.len() != children_start {
             return None;
@@ -655,7 +685,12 @@ pub(crate) fn marked_dynamic_template(
     }
 
     let id = marker_id(element)?;
-    let template = StaticTemplate::classify(element)?;
+    // The million-and-up namespace is reserved for compiler-proven simple rows.
+    let template = if id >= 1_000_000 {
+        StaticTemplate::classify_simple_row(element)?
+    } else {
+        StaticTemplate::classify(element)?
+    };
     let StaticTemplateKind::Dynamic { holes, targets } = template.kind else {
         return None;
     };
@@ -675,6 +710,7 @@ pub(crate) fn marked_dynamic_template(
             (plan.kind == source_kind).then_some(MarkedTextHole {
                 index: plan.index,
                 path: plan.path,
+                reuse_text: plan.reuse_text,
                 source,
             })
         })
@@ -954,6 +990,16 @@ pub(crate) fn emit_marked_template_child(
                 anchor.clone(),
                 child_node_path(Expr::Ident(root.clone()), &hole.path),
             ));
+            if hole.reuse_text {
+                stmts.push(expr_stmt(Expr::Assign(AssignExpr {
+                    span: DUMMY_SP,
+                    op: AssignOp::Assign,
+                    left: Box::new(member_expr(Expr::Ident(anchor.clone()), "data"))
+                        .try_into()
+                        .unwrap(),
+                    right: Box::new(string_expr("")),
+                })));
+            }
             let hole_parent = transform.next_el_ident();
             stmts.push(crate::emit::const_decl(
                 hole_parent.clone(),
@@ -975,6 +1021,15 @@ pub(crate) fn emit_marked_template_child(
             return false;
         }
         match &hole.source {
+            MarkedHoleSource::Expression(container) if hole.reuse_text => {
+                if super::block::expr_container::emit_compiled_text_effect(
+                    transform, &anchor, container, stmts,
+                )
+                .is_none()
+                {
+                    return false;
+                }
+            }
             MarkedHoleSource::Expression(container) => {
                 crate::element_expr::emit_element_expr_container_child_at(
                     transform,
@@ -1021,6 +1076,16 @@ pub(crate) fn dynamic_template_to_vapor_block(
                 anchor.clone(),
                 child_node_path(Expr::Ident(root.clone()), &hole.path),
             ));
+            if hole.reuse_text {
+                stmts.push(expr_stmt(Expr::Assign(AssignExpr {
+                    span: DUMMY_SP,
+                    op: AssignOp::Assign,
+                    left: Box::new(member_expr(Expr::Ident(anchor.clone()), "data"))
+                        .try_into()
+                        .unwrap(),
+                    right: Box::new(string_expr("")),
+                })));
+            }
             let hole_parent = transform.next_el_ident();
             stmts.push(crate::emit::const_decl(
                 hole_parent.clone(),
@@ -1037,6 +1102,11 @@ pub(crate) fn dynamic_template_to_vapor_block(
             return None;
         }
         match &hole.source {
+            MarkedHoleSource::Expression(container) if hole.reuse_text => {
+                super::block::expr_container::emit_compiled_text_effect(
+                    transform, &anchor, container, &mut stmts,
+                )?;
+            }
             MarkedHoleSource::Expression(container) => {
                 crate::element_expr::emit_element_expr_container_child_at(
                     transform,

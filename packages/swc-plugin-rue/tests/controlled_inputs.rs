@@ -18,11 +18,11 @@ const ControlledInputs: FC = () => {
       <h3 className="text-xl font-semibold">受控输入</h3>
       <input
         className="border rounded-md px-2 py-1"
-        value={text.value}
+        value={text}
         onInput={(e) => setText((e.target as HTMLInputElement).value)}
         placeholder="输入试试"
       />
-      <div>当前：{text.value}</div>
+      <div>当前：{text}</div>
       <RouterLink to="/jsx" className="text-blue-600 hover:underline">返回目录</RouterLink>
     </div>
   );
@@ -62,14 +62,14 @@ const ControlledInputs: FC = ()=>{
         const _el5 = _el4.parentNode;
         _$setClassName(_el1, "border rounded-md px-2 py-1");
         watchEffect(()=>{
-            _$setValue(_el1, text.value);
+            _$setValue(_el1, text);
         });
         const _el1_event_2 = ($event)=>(e)=>setText((e.target as HTMLInputElement).value)($event);
         _el1.addEventListener("input", _el1_event_2);
         onScopeDispose(()=>_el1.removeEventListener("input", _el1_event_2));
         _$setAttribute(_el1, "placeholder", "输入试试");
         watchEffect(()=>{
-            const __slot = (text.value);
+            const __slot = (text);
             untrack(()=>renderAnchor(__slot, _el3, _el2));
         });
         const _el6 = _$createElement("a", _el5);
@@ -106,9 +106,8 @@ export default ControlledInputs;
     std::fs::write("target/vapor_outputs/controlled_inputs.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
     assert!(normalized.contains("_$compiledSetup"), "{normalized}");
-    assert!(normalized.contains("_$compiledRoot"), "{normalized}");
     assert!(normalized.contains("_$setValue"), "{normalized}");
-    assert!(normalized.contains("_$compiledText"), "{normalized}");
+    assert!(normalized.contains("renderAnchor"), "{normalized}");
     assert!(normalized.contains("RouterLink.__rueHref"), "{normalized}");
     assert!(!normalized.contains("watchEffect"), "{normalized}");
 }

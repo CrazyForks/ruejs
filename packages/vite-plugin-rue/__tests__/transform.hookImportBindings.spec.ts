@@ -30,11 +30,11 @@ describe('vite-plugin-rue hook import bindings', () => {
         const [theme] = useState('light')
         const count = ref(0)
 
-        watch(() => theme.value, () => {
+        watch(() => theme, () => {
           count.value += 1
         })
 
-        return <div>{theme.value}-{count.value}</div>
+        return <div>{theme}-{count.value}</div>
       }
 
       export default Demo
@@ -55,7 +55,7 @@ describe('vite-plugin-rue hook import bindings', () => {
     expect(code).not.toContain('useState as useState1')
     expect(code).not.toContain('ref as ref1')
     expect(code).toContain('_$compiledUseState("Demo:hook:0", \'light\')')
-    expect(code).toContain('watch(()=>theme.value')
+    expect(code).toMatch(/watch\(\(\)=>_\$state\d*\.get\(\)/)
     expect(code).toContain('const count = ref(0)')
   })
 })

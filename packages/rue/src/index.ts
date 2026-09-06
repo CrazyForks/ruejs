@@ -21,6 +21,15 @@ export type {
   FC,
   /** 组件实例类型，当前与函数组件保持一致。 */
   ComponentInstance,
+  /** Rue 应用实例类型，代表 createRue 创建的运行时对象。 */
+  Rue,
+  /** Rue context 对象，包含 Provider 与默认值。 */
+  RueContext,
+  /** Context Provider 组件属性，负责向子树传递 context 值。 */
+  ContextProviderProps,
+} from '@rue-js/runtime/public/rendering'
+
+export type {
   /** 异步组件 loader 函数类型。 */
   AsyncComponentLoader,
   /** useComponent 对象写法的异步组件配置类型。 */
@@ -31,8 +40,9 @@ export type {
   HydrationStrategy,
   /** 异步组件懒水合策略工厂类型。 */
   HydrationStrategyFactory,
-  /** Rue 应用实例类型，代表 createRue 创建的运行时对象。 */
-  Rue,
+} from '@rue-js/runtime/public/hooks'
+
+export type {
   /** 插槽集合，按插槽名称保存插槽值或渲染函数。 */
   SlotBag,
   /** Slot 组件属性，包含插槽名称、传参和默认 children。 */
@@ -59,6 +69,9 @@ export type {
   TransitionMode,
   /** TransitionGroup 组件属性，用于列表元素过渡。 */
   TransitionGroupProps,
+} from '@rue-js/runtime/public/builtins'
+
+export type {
   /** 响应式信号句柄，提供 value/get/set 等读写能力。 */
   SignalHandle,
   /** watcher 刷新时机。 */
@@ -85,17 +98,16 @@ export type {
   DebuggerEvent,
   /** 渲染依赖调试回调。 */
   DebuggerHook,
+} from '@rue-js/runtime/public/reactivity'
+
+export type {
   /** defineCustomElement/useCustomElement 的配置项。 */
   CustomElementsOptions,
   /** Rue 自定义元素实例类型。 */
   RueCustomElement,
   /** Rue 自定义元素构造器类型。 */
   RueCustomElementConstructor,
-  /** Rue context 对象，包含 Provider 与默认值。 */
-  RueContext,
-  /** Context Provider 组件属性，负责向子树传递 context 值。 */
-  ContextProviderProps,
-} from '@rue-js/runtime'
+} from '@rue-js/runtime/public/custom-elements'
 
 export {
   /** 当前 @rue-js/rue 包版本。 */
@@ -148,12 +160,13 @@ export {
   onError,
   /** 注册组件树错误捕获回调。 */
   onErrorCaptured,
-  /** 注册渲染依赖收集调试回调。 */
-  onRenderTracked,
   /** 读取当前渲染上下文正在操作的容器。 */
   getCurrentContainer,
   /** 创建独立 Rue 应用实例。 */
   createRue,
+} from '@rue-js/runtime/public/rendering'
+
+export {
   /** 动态组件入口，根据 is/component 参数选择实际组件。 */
   Component,
   /** 缓存动态组件实例，保留组件状态。 */
@@ -162,12 +175,6 @@ export {
   Suspense,
   /** 透传 children 的模板组件，不引入额外包装节点。 */
   Template,
-  /** 读取当前自定义元素宿主实例。 */
-  useCustomElement,
-  /** 读取当前自定义元素的 host 元素。 */
-  useHost,
-  /** 读取当前自定义元素的 shadowRoot。 */
-  useShadowRoot,
   /** 把 children 传送渲染到外部 DOM 容器。 */
   Teleport,
   /** 创建 transition 执行器，供 Transition/TransitionGroup 复用。 */
@@ -178,6 +185,22 @@ export {
   Transition,
   /** 列表元素进入、离开和移动过渡组件。 */
   TransitionGroup,
+  /** 渲染命名插槽或默认插槽的内置组件。 */
+  Slot,
+} from '@rue-js/runtime/public/builtins'
+
+export {
+  /** 读取当前自定义元素宿主实例。 */
+  useCustomElement,
+  /** 读取当前自定义元素的 host 元素。 */
+  useHost,
+  /** 读取当前自定义元素的 shadowRoot。 */
+  useShadowRoot,
+} from '@rue-js/runtime/public/custom-elements'
+
+export {
+  /** 注册渲染依赖收集调试回调。 */
+  onRenderTracked,
   /** 创建响应式副作用，依赖变化时自动重新执行。 */
   effect,
   /** 创建 effect scope，可批量停止其中创建的 computed/watch/effect。 */
@@ -222,8 +245,6 @@ export {
   watch,
   /** 创建组件本地状态，兼容基础值和对象。 */
   useState,
-  /** 创建组件本地 signal。 */
-  useSignal,
   /** 注册组件副作用 Hook。 */
   useEffect,
   /** 创建响应式 signal 句柄。 */
@@ -262,6 +283,19 @@ export {
   toRaw,
   /** 将组件 props 包装成响应式读取对象。 */
   propsReactive,
+  /** 在组件 setup 阶段初始化并缓存值。 */
+  useSetup,
+  /** 创建稳定引用对象，适合保存 DOM 或可变实例。 */
+  useRef,
+  /** 解包 ref/signal 为普通值。 */
+  unref,
+  /** 等待响应式调度队列完成后的下一个 tick。 */
+  nextTick,
+  /** 配置响应式调度策略，例如同步、微任务或帧调度。 */
+  setReactiveScheduling,
+} from '@rue-js/runtime/public/reactivity'
+
+export {
   /** 读取当前 Rue 应用实例和插件上下文。 */
   useApp,
   /** 读取或配置运行时错误处理能力。 */
@@ -276,22 +310,9 @@ export {
   hydrateOnMediaQuery,
   /** 当用户触发指定事件时激活异步组件。 */
   hydrateOnInteraction,
-  /** 基于依赖数组缓存计算结果。 */
-  useMemo,
-  /** 基于依赖数组缓存回调函数。 */
-  useCallback,
-  /** 在组件 setup 阶段初始化并缓存值。 */
-  useSetup,
+} from '@rue-js/runtime/public/hooks'
+
+export {
   /** 读取指定 Rue context 的当前值。 */
   useContext,
-  /** 创建稳定引用对象，适合保存 DOM 或可变实例。 */
-  useRef,
-  /** 解包 ref/signal 为普通值。 */
-  unref,
-  /** 等待响应式调度队列完成后的下一个 tick。 */
-  nextTick,
-  /** 配置响应式调度策略，例如同步、微任务或帧调度。 */
-  setReactiveScheduling,
-  /** 渲染命名插槽或默认插槽的内置组件。 */
-  Slot,
-} from '@rue-js/runtime'
+} from '@rue-js/runtime/public/rendering'

@@ -207,7 +207,7 @@ export const _$compiledText = (node: CompiledTextTarget, read: () => unknown): E
 export const createOwner = (): CompiledOwner => {
   const parent = currentOwner
   const owner = {}
-  const scope = effectScope(parent === undefined)
+  const scope = effectScope(true)
   owners.set(owner, {
     scope,
     parent,

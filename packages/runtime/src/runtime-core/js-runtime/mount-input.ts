@@ -9,6 +9,7 @@ import {
   RUE_PORTABLE_VAPOR_SETUP_KEY,
   RUE_REPEATABLE_MOUNT_FACTORY_KEY,
 } from '../protocol.js'
+import { unwrapDisplayRef } from '../../display-value.js'
 import { isObjectLike } from './types.js'
 import type {
   ComponentProps,
@@ -155,6 +156,11 @@ const normalizeChildren = <HostNode>(
 ): MountChild<HostNode>[] => {
   const children: MountChild<HostNode>[] = []
   const push = (child: unknown): void => {
+    const displayed = unwrapDisplayRef(child)
+    if (displayed !== child) {
+      push(displayed)
+      return
+    }
     if (Array.isArray(child)) {
       child.forEach(push)
       return

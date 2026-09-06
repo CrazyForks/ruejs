@@ -22,10 +22,6 @@ export function useState(): never {
   throwClientHookError('useState()')
 }
 
-export function useSignal(): never {
-  throwClientHookError('useSignal()')
-}
-
 export function useEffect(): never {
   throwClientHookError('useEffect()')
 }

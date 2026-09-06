@@ -23,7 +23,7 @@ const Events: FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-4 rounded-lg border bg-white shadow-sm">
       <h3 className="text-xl font-semibold">事件处理</h3>
-      <div>count: {count.value}</div>
+      <div>count: {count}</div>
       <button
         className="px-3 py-2 rounded-md bg-blue-600 text-white"
         onClick={() => setCount(c => c + 1)}
@@ -78,7 +78,7 @@ const Events: FC = () => {
 
       <h3 className="text-xl font-semibold">函数状态</h3>
       <div>
-        formatted count: {((format as any).valueOf())(count)}
+        formatted count: {format(count)}
       </div>
       <div className="space-x-2">
         <button
@@ -232,7 +232,7 @@ const Events: FC = ()=>{
         _el9.addEventListener("click", _el9_event_1);
         onScopeDispose(()=>_el9.removeEventListener("click", _el9_event_1));
         watchEffect(()=>{
-            const __slot = (count.value);
+            const __slot = (count);
             untrack(()=>renderAnchor(__slot, _el11, _el10));
         });
         watchEffect(()=>{
@@ -248,7 +248,7 @@ const Events: FC = ()=>{
             untrack(()=>renderAnchor(__slot, _el17, _el16));
         });
         watchEffect(()=>{
-            const __slot = ((format as any).valueOf())(count);
+            const __slot = format(count);
             untrack(()=>renderAnchor(__slot, _el19, _el18));
         });
         const _el22 = _$createElement("a", _el21);

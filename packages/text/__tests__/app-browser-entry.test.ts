@@ -16,6 +16,7 @@ import {
   createTextRueRootOptions,
   mountRueRoot,
   mountRueRootInTransition,
+  useRueState,
 } from '../src/server/app-browser-hydration.js'
 import { createAppBrowserNavigationController } from '../src/server/app-browser-navigation-controller.js'
 import { createPopstateRestoreHandler } from '../src/server/app-browser-popstate.js'
@@ -546,18 +547,10 @@ beforeEach(() => {
     render() {},
     useEffect() {},
     useState(initial) {
-      const state = {
-        value: typeof initial === 'function' ? (initial as () => unknown)() : initial,
-      }
+      let state = typeof initial === 'function' ? (initial as () => unknown)() : initial
       const setState = (value: unknown) => {
-        if (typeof value === 'function') {
-          const result = (value as (ref: { value: unknown }) => unknown)(state)
-          if (result !== undefined) {
-            state.value = result
-          }
-          return
-        }
-        state.value = value
+        state =
+          typeof value === 'function' ? (value as (previous: unknown) => unknown)(state) : value
       }
       return [state, setState]
     },
@@ -4296,6 +4289,44 @@ describe('createOnUncaughtError (Rue root uncaught handler)', () => {
 })
 
 describe('app browser form-state hydration', () => {
+  it('forwards standard state values and updater functions through hydration', () => {
+    const initializer = vi.fn(() => 4)
+    let currentState = 4
+    let updaterPrevious: number | undefined
+    const runtimeSetter = vi.fn((update: number | ((previous: number) => number)) => {
+      currentState = typeof update === 'function' ? update(currentState) : update
+    })
+    const runtimeUseState = vi.fn((initial: number | (() => number)) => [
+      typeof initial === 'function' ? initial() : initial,
+      runtimeSetter,
+    ])
+
+    configureAppBrowserRueRuntime({
+      batch(action) {
+        action()
+      },
+      mount() {},
+      render() {},
+      useEffect() {},
+      useState: runtimeUseState,
+    })
+
+    const [state, setState] = useRueState(initializer)
+    const updater = (previous: number) => {
+      updaterPrevious = previous
+      return previous + 2
+    }
+
+    expect(runtimeUseState).toHaveBeenCalledWith(initializer)
+    expect(initializer).toHaveBeenCalledTimes(1)
+    expect(state).toBe(4)
+    expect(setState).toBe(runtimeSetter)
+
+    setState(updater)
+    expect(updaterPrevious).toBe(4)
+    expect(currentState).toBe(6)
+  })
+
   it('mounts, updates, and unmounts the App Router root through the Rue browser runtime', () => {
     const target = { nodeType: 1 } as Element
     const detachErrorHandler = vi.fn()
@@ -4312,14 +4343,10 @@ describe('app browser form-state hydration', () => {
       render,
       useEffect() {},
       useState(initial) {
-        const state = {
-          value: typeof initial === 'function' ? (initial as () => unknown)() : initial,
-        }
+        let state = typeof initial === 'function' ? (initial as () => unknown)() : initial
         const setState = (value: unknown) => {
-          state.value =
-            typeof value === 'function'
-              ? ((value as (ref: { value: unknown }) => unknown)(state) ?? state.value)
-              : value
+          state =
+            typeof value === 'function' ? (value as (previous: unknown) => unknown)(state) : value
         }
         return [state, setState]
       },

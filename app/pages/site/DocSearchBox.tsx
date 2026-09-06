@@ -57,7 +57,7 @@ const DocSearch: FC = () => {
   const resultsScrollRef = useRef<HTMLDivElement | null>(null)
   const requestVersionRef = useRef(0)
   const searchDebounceTimerRef = useRef<number | null>(null)
-  const trimmedQuery = computed(() => query.value.trim())
+  const trimmedQuery = computed(() => query.trim())
   const hasQuery = computed(() => trimmedQuery.get().length > 0)
 
   const focusInput = () => {
@@ -180,7 +180,7 @@ const DocSearch: FC = () => {
   }
 
   const commitSelectedResult = () => {
-    const selected = results[selectedIndex.value]
+    const selected = results[selectedIndex]
     if (!selected) {
       return
     }
@@ -196,7 +196,7 @@ const DocSearch: FC = () => {
         openSearch()
       }
 
-      if (event.key === 'Escape' && open.value) {
+      if (event.key === 'Escape' && open) {
         event.preventDefault()
         closeSearch()
       }
@@ -231,7 +231,7 @@ const DocSearch: FC = () => {
         <span className="relative inline-block h-5 w-5 rounded-full border-2 border-current after:absolute after:-bottom-1 after:-right-1 after:h-2 after:w-0.5 after:rotate-[-45deg] after:rounded after:bg-current" />
       </button>
 
-      {open.value && (
+      {open && (
         <div className="fixed inset-0 z-[120] bg-slate-900/55 px-4 pb-8 pt-16 backdrop-blur-[1px] md:pt-24">
           <div
             aria-hidden="true"
@@ -248,7 +248,7 @@ const DocSearch: FC = () => {
                   }}
                   className="h-full min-w-0 flex-1 bg-transparent text-2xl outline-none placeholder:text-base-content/35"
                   type="search"
-                  value={query.value}
+                  value={query}
                   placeholder="Search docs"
                   aria-label="搜索文档块"
                   onInput={(event: any) => {
@@ -281,10 +281,7 @@ const DocSearch: FC = () => {
 
                     if (event.key === 'ArrowDown') {
                       event.preventDefault()
-                      const nextIndex = Math.min(
-                        selectedIndex.value + 1,
-                        Math.max(results.length - 1, 0),
-                      )
+                      const nextIndex = Math.min(selectedIndex + 1, Math.max(results.length - 1, 0))
                       setSelectedIndex(nextIndex)
                       scrollResultIntoView(nextIndex)
                       return
@@ -292,7 +289,7 @@ const DocSearch: FC = () => {
 
                     if (event.key === 'ArrowUp') {
                       event.preventDefault()
-                      const nextIndex = Math.max(selectedIndex.value - 1, 0)
+                      const nextIndex = Math.max(selectedIndex - 1, 0)
                       setSelectedIndex(nextIndex)
                       scrollResultIntoView(nextIndex)
                       return
@@ -314,7 +311,7 @@ const DocSearch: FC = () => {
               className="min-h-0 flex-1 overflow-auto px-4 pb-4"
             >
               {hasQuery.get() ? (
-                searching.value ? (
+                searching ? (
                   <div className="px-1 py-8 text-sm text-base-content/60">正在搜索文档块...</div>
                 ) : results.length ? (
                   <div className="space-y-3">
@@ -323,7 +320,7 @@ const DocSearch: FC = () => {
                         key={result.id}
                         data-doc-search-result-index={index}
                         className={`block rounded-md border px-5 py-4 shadow-sm transition focus:outline-none ${
-                          index === selectedIndex.value
+                          index === selectedIndex
                             ? 'border-emerald-500 bg-emerald-500 text-white'
                             : 'border-base-300 bg-base-100 hover:border-emerald-400 hover:bg-base-200'
                         }`}
@@ -340,7 +337,7 @@ const DocSearch: FC = () => {
                           </div>
                           <span
                             className={`badge badge-sm shrink-0 ${
-                              index === selectedIndex.value
+                              index === selectedIndex
                                 ? 'border-white/40 bg-white/20 text-white'
                                 : 'badge-ghost'
                             }`}
@@ -350,14 +347,14 @@ const DocSearch: FC = () => {
                         </div>
                         <div
                           className={`mt-1 truncate text-sm ${
-                            index === selectedIndex.value ? 'text-white/80' : 'text-base-content/50'
+                            index === selectedIndex ? 'text-white/80' : 'text-base-content/50'
                           }`}
                         >
                           {result.title}
                         </div>
                         <p
                           className={`mt-2 line-clamp-2 text-sm leading-6 ${
-                            index === selectedIndex.value ? 'text-white/85' : 'text-base-content/70'
+                            index === selectedIndex ? 'text-white/85' : 'text-base-content/70'
                           }`}
                         >
                           {result.snippet}

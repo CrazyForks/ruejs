@@ -11,7 +11,10 @@ import { _$createDynamic, _$createFragment } from './legacy-test-render'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  computed,
+  customRef,
   onServerPrefetch,
+  ref,
   renderAnchor,
   runServerPrefetch,
   setReactiveScheduling,
@@ -50,10 +53,51 @@ import {
 } from '@rue-js/router'
 
 void watchEffect
-import { renderToString } from '@rue-js/server-renderer'
+import { _$serverElement, renderToString } from '@rue-js/server-renderer'
 import { renderToString as renderToStringFromRue } from '@rue-js/rue/server-renderer'
 
 describe('server renderToString', () => {
+  it('unwraps branded refs only at final child positions', async () => {
+    const direct = ref('direct')
+    const source = ref(2)
+    const derived = computed(() => source.value * 2)
+    let customValue = 'custom'
+    const customized = customRef<string>(() => ({
+      get: () => customValue,
+      set: value => {
+        customValue = value
+      },
+    }))
+    const conditional = true ? ref('conditional') : 'fallback'
+    const arrayLeaf = ref('array-leaf')
+    const heldArray = ref(['held-array', ref('nested-ref')])
+    const attributeRef = ref('attribute-value')
+
+    const html = await renderToString(
+      _$serverElement('div', { 'data-ref': attributeRef }, [
+        direct,
+        '|',
+        derived,
+        '|',
+        customized,
+        '|',
+        conditional,
+        '|',
+        ['array:', arrayLeaf],
+        '|',
+        heldArray,
+      ]),
+    )
+
+    expect(html).toBe(
+      '<div data-ref="{&quot;value&quot;:&quot;attribute-value&quot;}">direct|4|custom|conditional|array:array-leaf|held-arraynested-ref</div>',
+    )
+    expect(html).not.toContain('data-ref="attribute-value"')
+
+    const plainValueObject = { value: 'plain' }
+    await expect(renderToString(plainValueObject as any)).resolves.toBe('')
+  })
+
   it('renders every child from a compiled Fragment protocol snapshot', async () => {
     const fragment = createCompiledFragmentHandle([
       _$compiledVapor(_$parentContext => {

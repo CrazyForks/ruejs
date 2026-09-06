@@ -23,8 +23,8 @@ mod template_directive;
 mod transform;
 
 pub(crate) use helpers::{
-    collect_setup_region, has_component_render_return_in_block, is_fc_pat,
-    is_untyped_arrow_component_decl,
+    block_requires_custom_composable_render_effect, collect_setup_region,
+    has_component_render_return_in_block, is_fc_pat, is_untyped_arrow_component_decl,
 };
 pub(crate) use on_setup::build_compiled_setup_with_binds;
 

@@ -539,10 +539,7 @@ fn is_custom_composable_call_name(name: &str) -> bool {
         return false;
     }
 
-    !matches!(
-        name,
-        "useMemo" | "useEffect" | "useCallback" | "useRef" | "useState" | "useSignal" | "useSetup"
-    )
+    !matches!(name, "useEffect" | "useRef" | "useState" | "useSetup")
 }
 
 struct CustomComposableCallDetector {
@@ -677,7 +674,6 @@ fn is_phase2_reactive_source_call_name(name: &str) -> bool {
             | "toRefs"
             | "useRef"
             | "useState"
-            | "useSignal"
     )
 }
 
@@ -732,9 +728,6 @@ fn expr_is_phase2_nonlowerable(expr: &Expr) -> bool {
                     | "signal"
                     | "useRef"
                     | "useState"
-                    | "useSignal"
-                    | "useMemo"
-                    | "useCallback"
                     | "watch"
                     | "watchEffect"
                     | "createEffect"
@@ -1238,7 +1231,6 @@ fn expr_is_snapshot_initializer(expr: &Expr) -> bool {
                 | "signal"
                 | "useRef"
                 | "useState"
-                | "useSignal"
                 | "shallowReactive"
                 | "readonly"
                 | "shallowReadonly"

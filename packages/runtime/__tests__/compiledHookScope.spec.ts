@@ -11,16 +11,202 @@ afterEach(() => {
 })
 
 describe('compiled hook owner', () => {
+  it('brands compiler refs as readonly Rue refs', () => {
+    const state = compiledRuntime.ref('ready')
+
+    expect(state.__rue_ref__).toBe(true)
+    expect(Object.getOwnPropertyDescriptor(state, '__rue_ref__')).toMatchObject({
+      value: true,
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    })
+  })
+
+  it('honors automatic, empty, and explicit compiled effect dependencies', () => {
+    compiledRuntime.setReactiveScheduling('sync')
+    const incidental = compiledRuntime.signal(0)
+    const declared = compiledRuntime.signal(0)
+    const ref = compiledRuntime.ref(0)
+    const revision = compiledRuntime.signal(0)
+    let functionCalls = 0
+    const functionValue = () => ++functionCalls
+    let automaticRuns = 0
+    let emptyRuns = 0
+    let emptyCleanups = 0
+    const events: string[] = []
+    const handle = compiledRuntime._$withCompiledHookScope(() => {
+      compiledRuntime._$compiledUseEffect('automatic', () => {
+        incidental.get()
+        automaticRuns++
+      })
+      compiledRuntime._$compiledUseEffect(
+        'empty',
+        () => {
+          incidental.get()
+          emptyRuns++
+          return () => {
+            emptyCleanups++
+          }
+        },
+        () => [],
+      )
+      compiledRuntime._$compiledUseEffect(
+        'explicit',
+        () => {
+          incidental.get()
+          const value = declared.get()
+          events.push(`run:${value}:${ref.value}`)
+          return () => {
+            incidental.get()
+            events.push(`cleanup:${value}`)
+          }
+        },
+        () => {
+          revision.get()
+          return [declared, ref, declared.get() % 2, functionValue, NaN]
+        },
+      )
+      return compiledRuntime._$compiledRoot(() => document.createTextNode('effects'))
+    })
+
+    expect([automaticRuns, emptyRuns, events.length]).toEqual([0, 0, 0])
+    declared.set(1)
+    handle.__rue_compiled_mount(document.createElement('main'))
+    expect(events).toEqual(['run:1:0'])
+    incidental.set(1)
+    expect([automaticRuns, emptyRuns]).toEqual([2, 1])
+    expect(events).toEqual(['run:1:0'])
+    revision.set(1)
+    expect(events).toEqual(['run:1:0'])
+    declared.set(2)
+    ref.value = 1
+    expect(events).toEqual(['run:1:0', 'cleanup:1', 'run:2:0', 'cleanup:2', 'run:2:1'])
+    incidental.set(2)
+    expect(events).toHaveLength(5)
+    expect(functionCalls).toBe(0)
+    handle.dispose()
+    handle.dispose()
+    expect(events.at(-1)).toBe('cleanup:2')
+    expect(events).toHaveLength(6)
+    expect(emptyCleanups).toBe(1)
+    incidental.set(3)
+    declared.set(3)
+    ref.value = 2
+    expect([automaticRuns, emptyRuns, events.length]).toEqual([3, 1, 6])
+  })
+
+  it('compares lazy dependency snapshots by length and Object.is without calling functions', () => {
+    compiledRuntime.setReactiveScheduling('sync')
+    let functionCalls = 0
+    const firstFunction = () => ++functionCalls
+    const secondFunction = () => ++functionCalls
+    const object = {}
+    const dependencies = compiledRuntime.signal<readonly unknown[] | null>([
+      NaN,
+      0,
+      firstFunction,
+      object,
+    ])
+    let runs = 0
+    let cleanups = 0
+    const handle = compiledRuntime._$withCompiledHookScope(() => {
+      const register = () =>
+        compiledRuntime._$compiledUseEffect(
+          'snapshot',
+          () => {
+            runs++
+            return () => {
+              cleanups++
+            }
+          },
+          () => dependencies.get(),
+        )
+      register()
+      register()
+      return compiledRuntime._$compiledRoot(() => document.createTextNode('snapshots'))
+    })
+    handle.__rue_compiled_mount(document.createElement('main'))
+    expect(runs).toBe(1)
+    dependencies.set([NaN, 0, firstFunction, object])
+    expect([runs, cleanups]).toEqual([1, 0])
+    dependencies.set([NaN, -0, firstFunction, object])
+    dependencies.set([NaN, -0, secondFunction, object])
+    dependencies.set([NaN, -0, secondFunction, {}])
+    dependencies.set([NaN, -0, secondFunction])
+    expect([runs, cleanups, functionCalls]).toEqual([5, 4, 0])
+    dependencies.set(null)
+    dependencies.set([])
+    expect([runs, cleanups]).toEqual([6, 5])
+    handle.dispose()
+    expect(cleanups).toBe(6)
+    dependencies.set([1])
+    expect(runs).toBe(6)
+  })
+
+  it('implements React useState updates in a compiled slot', () => {
+    compiledRuntime.setReactiveScheduling('sync')
+    const owner = compiledRuntime.createOwner()
+    let initializerRuns = 0
+    const initialCallable = (value: number) => `initial:${value}`
+    const replacementCallable = (value: number) => `replacement:${value}`
+    const render = () =>
+      compiledRuntime.runWithOwner(owner, () => ({
+        count: compiledRuntime._$compiledUseState('state:count', () => {
+          initializerRuns += 1
+          return 0
+        }),
+        object: compiledRuntime._$compiledUseState('state:object', { count: 0 }),
+        callable: compiledRuntime._$compiledUseState('state:callable', () => initialCallable),
+      }))!
+
+    const first = render()
+    const second = render()
+    const updaterValues: number[] = []
+
+    expect(initializerRuns).toBe(1)
+    expect(second.count[0]).toBe(first.count[0])
+    expect(second.count[1]).toBe(first.count[1])
+
+    first.count[1](previous => {
+      updaterValues.push(previous)
+      return previous + 1
+    })
+    first.count[1](previous => {
+      updaterValues.push(previous)
+      return previous + 1
+    })
+    expect(updaterValues).toEqual([0, 1])
+    expect(first.count[0].get()).toBe(2)
+
+    first.count[1](10)
+    expect(first.count[0].get()).toBe(10)
+
+    const initialObject = first.object[0].get()
+    first.object[1]({ count: 1 })
+    expect(first.object[0].get()).toEqual({ count: 1 })
+    expect(first.object[0].get()).not.toBe(initialObject)
+    first.object[1](previous => ({ count: previous.count + 1 }))
+    expect(first.object[0].get()).toEqual({ count: 2 })
+
+    expect(first.callable[0].get()(1)).toBe('initial:1')
+    first.callable[1](() => replacementCallable)
+    expect(first.callable[0].get()).toBe(replacementCallable)
+    expect(first.callable[0].get()(2)).toBe('replacement:2')
+
+    compiledRuntime.disposeOwner(owner)
+  })
+
   it('caches compiler-assigned hook slots on one owner', () => {
     const owner = compiledRuntime.createOwner()
     let memoRuns = 0
     const first = compiledRuntime.runWithOwner(owner, () => ({
-      memo: compiledRuntime._$compiledUseMemo('memo:0', () => ({ run: ++memoRuns })),
+      memo: compiledRuntime._$compiledMemo('memo:0', () => ({ run: ++memoRuns }), []),
       ref: compiledRuntime._$compiledUseRef('ref:1', 'first'),
     }))!
     first.ref.current = 'persisted'
     const second = compiledRuntime.runWithOwner(owner, () => ({
-      memo: compiledRuntime._$compiledUseMemo('memo:0', () => ({ run: ++memoRuns })),
+      memo: compiledRuntime._$compiledMemo('memo:0', () => ({ run: ++memoRuns }), []),
       ref: compiledRuntime._$compiledUseRef('ref:1', 'ignored'),
     }))!
 
@@ -28,6 +214,12 @@ describe('compiled hook owner', () => {
     expect(second.ref).toBe(first.ref)
     expect(second.ref.current).toBe('persisted')
     expect(memoRuns).toBe(1)
+
+    const third = compiledRuntime.runWithOwner(owner, () => ({
+      memo: compiledRuntime._$compiledMemo('memo:0', () => ({ run: ++memoRuns }), [1]),
+    }))!
+    expect(third.memo).not.toBe(first.memo)
+    expect(memoRuns).toBe(2)
     compiledRuntime.disposeOwner(owner)
   })
 

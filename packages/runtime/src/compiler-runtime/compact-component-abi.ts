@@ -43,14 +43,18 @@ export const _$mountCompiledSlotFactory = (
   owner: CompiledOwner,
   create: () => CompactCompiledRootHandle,
 ): CompiledBlock => {
-  const staging = createDocumentFragment(target.parent)
+  const staging = target.batch ? target.parent : createDocumentFragment(target.parent)
+  const previousLast = staging.lastChild
   const handle = untrack(create)
-  const result = untrack(() => handle.__rue_compiled_mount(staging))
+  const result = untrack(() => handle.__rue_compiled_mount(staging, target.batch))
   if (result != null && result.parentNode !== staging) appendChild(staging, result)
-  if (staging.firstChild == null) appendChild(staging, createComment('rue:empty-slot'))
-  const first = staging.firstChild!
+  let first = previousLast?.nextSibling ?? staging.firstChild
+  if (first == null) {
+    first = createComment('rue:empty-slot')
+    appendChild(staging, first)
+  }
   const last = staging.lastChild!
-  insertBefore(target.parent, staging, target.before)
+  if (!target.batch) insertBefore(target.parent, staging, target.before)
   let disposed = false
   return {
     first,

@@ -21,7 +21,7 @@ export type CompactCompiledRootSetup = (
 export interface CompactCompiledRootHandle {
   __rue_compiled_js_root: true
   __rue_cleanup_bucket: Array<() => void>
-  __rue_compiled_mount(parent: ParentNode | null): Node | null | undefined
+  __rue_compiled_mount(parent: ParentNode | null, batch?: boolean): Node | null | undefined
   __rue_compiled_clone(): CompactCompiledRootHandle
   __rue_compiled_mountable(): boolean
   __rue_compiled_freeze_effects(): void
@@ -58,13 +58,25 @@ export const _$compiledRoot = (setup: CompactCompiledRootSetup): CompactCompiled
     roots = []
   }
 
-  const mount = (parent: ParentNode | null): Node | null | undefined => {
+  const mount = (parent: ParentNode | null, batch = false): Node | null | undefined => {
     if (disposed) throw new Error('Cannot mount a disposed compiled root')
     if (mounted) throw new Error('A compiled root can only be mounted once')
     mounted = true
     mountParent = parent
     adoptOwner(owner, getCurrentOwner())
-    const existing = new Set(Array.from(parent?.childNodes ?? []))
+    const previousLast = batch ? (parent?.lastChild ?? null) : null
+    const existing = batch ? undefined : new Set(Array.from(parent?.childNodes ?? []))
+    const insertedNodes = (): Node[] => {
+      if (parent == null) return []
+      if (existing != null) return Array.from(parent.childNodes).filter(node => !existing.has(node))
+      const inserted: Node[] = []
+      let cursor = previousLast?.nextSibling ?? parent.firstChild
+      while (cursor != null) {
+        inserted.push(cursor)
+        cursor = cursor.nextSibling
+      }
+      return inserted
+    }
     try {
       runOwnerLifecycle(owner, 'beforeMount')
       let result: Node | null | undefined | CompactCompiledRootSetupResult
@@ -78,12 +90,12 @@ export const _$compiledRoot = (setup: CompactCompiledRootSetup): CompactCompiled
         runOwnerLifecycle(owner, 'mounted')
         return result.__rue_compiled_host
       }
-      const inserted = Array.from(parent?.childNodes ?? []).filter(node => !existing.has(node))
+      const inserted = insertedNodes()
       roots = Array.from(new Set([...resultNodes(result), ...inserted]))
       runOwnerLifecycle(owner, 'mounted')
       return result
     } catch (error) {
-      roots = Array.from(parent?.childNodes ?? []).filter(node => !existing.has(node))
+      roots = insertedNodes()
       dispose()
       throw error
     }

@@ -24,13 +24,9 @@ export type RuntimeVaporHookModule = {
     deps?: unknown[],
     options?: { scheduler?: (run: () => void) => void },
   ): void
-  useMemo<T>(factory: () => T, deps: unknown[]): T
   useRef<T>(initial: T): { current: T }
   useSetup<T>(factory: () => T): T
-  useState<T>(
-    initial: T,
-    options: { kind: 'signal' },
-  ): [RuntimeVaporSignal<T>, (value: T | ((current: RuntimeVaporSignal<T>) => T)) => void]
+  useState<T>(initial: T): [T, (value: T | ((previous: T) => T)) => void]
   vaporWithHookId<T>(id: string, runner: () => T): T
 }
 
@@ -81,23 +77,21 @@ export const createControlledScheduler = () => {
 export const exerciseHookSlots = (backend: RuntimeVaporBackend) => {
   const host = backend.createHookHost()
   const { module } = backend
-  let memoRuns = 0
   let setupRuns = 0
 
-  const render = (memoDependency: number, stateInitial: number) =>
+  const render = (stateInitial: number) =>
     backend.renderHooks(host, () => ({
       currentInstanceMatches: module.getCurrentInstance() === host,
       ref: module.useRef('initial'),
-      memo: module.useMemo(() => ({ run: ++memoRuns }), [memoDependency]),
       setup: module.useSetup(() => ({ run: ++setupRuns })),
-      state: module.useState(stateInitial, { kind: 'signal' }),
+      state: module.useState(stateInitial),
     }))
 
-  const first = render(1, 1)
+  const first = render(1)
   first.ref.current = 'persisted'
-  first.state[1](2)
-  const second = render(1, 99)
-  const third = render(2, 100)
+  first.state[1](previous => previous + 1)
+  const second = render(99)
+  const third = render(100)
 
   return {
     currentInstanceMatches: [
@@ -108,13 +102,9 @@ export const exerciseHookSlots = (backend: RuntimeVaporBackend) => {
     currentInstanceRestored: module.getCurrentInstance() == null,
     refStable: first.ref === second.ref && second.ref === third.ref,
     refValue: third.ref.current,
-    memoStableForEqualDeps: first.memo === second.memo,
-    memoChangesWithDeps: second.memo !== third.memo,
-    memoRuns,
     setupStable: first.setup === second.setup && second.setup === third.setup,
     setupRuns,
-    signalStable: first.state[0] === second.state[0] && second.state[0] === third.state[0],
-    signalValue: third.state[0].get(),
+    stateSnapshots: [first.state[0], second.state[0], third.state[0]],
     slotCount: host.__hooks?.states?.length,
   }
 }

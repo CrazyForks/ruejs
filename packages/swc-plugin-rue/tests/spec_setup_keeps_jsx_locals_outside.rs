@@ -12,7 +12,7 @@ import { type FC, useState } from '@rue-js/rue'
 
 const Comp: FC = () => {
   const [open, setOpen] = useState(false)
-  const content = <>{open.value ? <span>open</span> : null}</>
+  const content = <>{open ? <span>open</span> : null}</>
   return <div onClick={() => setOpen(true)}>{content}</div>
 }
 "##;
@@ -26,7 +26,7 @@ const Comp: FC = () => {
     assert!(normalized.contains("return { open: open, setOpen: setOpen }"), "{normalized}");
 
     assert!(normalized.contains(&utils::normalize(
-        r#"const content = <>{open.value ? <span>open</span> : null}</>;"#,
+        r#"const content = <>{open ? <span>open</span> : null}</>;"#,
     )));
 
     let setup_destructure = normalized.find("const { open: open, setOpen: setOpen }").unwrap();

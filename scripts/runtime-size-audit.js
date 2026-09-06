@@ -31,7 +31,7 @@ const clientInput = Object.freeze({
 })
 
 const componentInput = Object.freeze({
-  entry: '@rue-js/rue/internal',
+  entry: '@rue-js/rue/internal/component',
   imports: Object.freeze(['_$compiledComponent', '_$mountCompiledComponent']),
 })
 const listInput = Object.freeze({
@@ -39,7 +39,7 @@ const listInput = Object.freeze({
   imports: Object.freeze(['signal', 'effect', '_$reconcileKeyed', '_$mountCompiledKeyedRow']),
 })
 const builtinsInput = Object.freeze({
-  entry: '@rue-js/rue/internal',
+  entry: '@rue-js/rue/internal/builtins',
   imports: Object.freeze(['KeepAlive', 'Suspense', 'Teleport', 'Transition', 'TransitionGroup']),
 })
 const hydrateInput = Object.freeze({
@@ -496,7 +496,7 @@ function detectRuntimeSources(moduleIds, code, renderedModules) {
   const defaultPattern =
     /(?:^|\/)packages\/(?:rue\/dist\/rue\.runtime|runtime\/(?:dist\/runtime\.esm-bundler|src\/rue))\.(?:js|ts)$/
   const compiledPattern =
-    /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.internal(?:-compiler)?\.esm-bundler\.js|src\/(?:compiler-internal|internal)\.ts)|runtime\/(?:dist\/runtime\.internal(?:-compiler)?\.esm-bundler\.js|src\/(?:compiler-internal|internal|reactive-core\/index|runtime-core\/compiled)\.ts))$/
+    /(?:^|\/)packages\/(?:rue\/(?:dist\/(?:rue\.internal(?:-(?:compiler|component|builtins))?\.esm-bundler|compiler-internal|component-internal|builtins-internal|internal)\.js|src\/(?:compiler-internal|component-internal|builtins-internal|internal)\.ts)|runtime\/(?:dist\/(?:runtime\.internal(?:-(?:compiler|component|builtins))?\.esm-bundler|compiler-internal|component-internal|builtins-internal|internal)\.js|src\/(?:compiler-internal|component-internal|builtins-internal|internal|reactive-core\/index|runtime-core\/compiled)\.ts))$/
   const ssrRendererPattern =
     /(?:^|\/)packages\/(?:rue\/(?:dist\/rue\.server-renderer\.esm-bundler\.js|src\/server-renderer\.ts)|runtime\/(?:dist\/runtime\.server\.esm-bundler\.js|src\/server\.ts)|server-renderer\/(?:dist\/server-renderer\.esm-bundler\.js|src\/index\.ts))$/
   const modules = normalized.filter(id => defaultPattern.test(id) || compiledPattern.test(id))
@@ -590,6 +590,34 @@ async function buildPreset(preset) {
           {
             find: /^@rue-js\/runtime\/internal\/compiler$/,
             replacement: path.resolve(projectRoot, 'packages/runtime/src/compiler-internal.ts'),
+          },
+          {
+            find: /^@rue-js\/rue\/internal\/component$/,
+            replacement: path.resolve(
+              projectRoot,
+              'packages/rue/dist/rue.internal-component.esm-bundler.js',
+            ),
+          },
+          {
+            find: /^@rue-js\/runtime\/internal\/component$/,
+            replacement: path.resolve(
+              projectRoot,
+              'packages/runtime/dist/runtime.internal-component.esm-bundler.js',
+            ),
+          },
+          {
+            find: /^@rue-js\/rue\/internal\/builtins$/,
+            replacement: path.resolve(
+              projectRoot,
+              'packages/rue/dist/rue.internal-builtins.esm-bundler.js',
+            ),
+          },
+          {
+            find: /^@rue-js\/runtime\/internal\/builtins$/,
+            replacement: path.resolve(
+              projectRoot,
+              'packages/runtime/dist/runtime.internal-builtins.esm-bundler.js',
+            ),
           },
           {
             find: /^@rue-js\/rue\/internal$/,

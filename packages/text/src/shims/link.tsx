@@ -164,9 +164,7 @@ const __trailingSlash: boolean = process.env.__TEXT_TRAILING_SLASH === 'true'
 const linkPrefetchRouteTrieCache = createRouteTrieCache<TextLinkPrefetchRoute>()
 
 type LinkTextHookRuntime = {
-  useCallback?: unknown
   useEffect?: unknown
-  useMemo?: unknown
   useRef?: unknown
   useState?: unknown
 }
@@ -200,9 +198,7 @@ export function clearCurrentSsrLinkRendering(): void {
 function hasServerLinkHookRuntime(): boolean {
   const runtime = readContextRuntime<LinkTextHookRuntime>()
   return (
-    typeof runtime?.useCallback === 'function' &&
-    typeof runtime.useEffect === 'function' &&
-    typeof runtime.useMemo === 'function' &&
+    typeof runtime?.useEffect === 'function' &&
     typeof runtime.useRef === 'function' &&
     typeof runtime.useState === 'function'
   )

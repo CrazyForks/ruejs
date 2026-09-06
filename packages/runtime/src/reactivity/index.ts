@@ -14,7 +14,6 @@ import {
   propsReactive as compiledPropsReactive,
   reactive as compiledReactive,
   readonly as compiledReadonly,
-  ref as compiledRef,
   setCurrentInstance,
   shallowReactive as compiledShallowReactive,
   shallowReadonly as compiledShallowReadonly,
@@ -25,12 +24,9 @@ import {
   toValue as compiledToValue,
   triggerRef as compiledTriggerRef,
   unref,
-  useCallback,
   useEffect as useRueEffect,
-  useMemo,
   useRef,
   useSetup,
-  useSignal as useRueSignal,
   useState as useRueState,
   watch as compiledWatch,
   watchDeepSignal,
@@ -44,18 +40,17 @@ import {
 import type { SignalHandle } from '../runtime-core/reactive'
 import {
   batch as compiledBatch,
-  computed as compiledComputed,
   effect as compiledEffect,
   onCleanup as compiledOnCleanup,
   setReactiveScheduling,
-  signal as compiledSignal,
   untrack as compiledUntrack,
   watchEffect as compiledWatchEffect,
 } from '../internal-reactive'
+import { reactiveKernel } from '../runtime-core/reactive-kernel/shared'
 
 type VaporReactiveModule = typeof import('../runtime-core/reactive')
 const batch = compiledBatch as VaporReactiveModule['batch']
-const computed = compiledComputed as unknown as VaporReactiveModule['computed']
+const computed = reactiveKernel.createComputed as unknown as VaporReactiveModule['computed']
 const customRef = compiledCustomRef as VaporReactiveModule['customRef']
 const effect = compiledEffect as VaporReactiveModule['createEffect']
 const isProxy = compiledIsProxy as VaporReactiveModule['isProxy']
@@ -67,11 +62,11 @@ const onRenderTracked = compiledOnRenderTracked as VaporReactiveModule['onRender
 const propsReactive = compiledPropsReactive as VaporReactiveModule['propsReactive']
 const reactive = compiledReactive as VaporReactiveModule['reactive']
 const readonly = compiledReadonly as VaporReactiveModule['readonly']
-const ref = compiledRef as unknown as VaporReactiveModule['ref']
+const ref = reactiveKernel.createRef as unknown as VaporReactiveModule['ref']
 const shallowReactive = compiledShallowReactive as VaporReactiveModule['shallowReactive']
 const shallowReadonly = compiledShallowReadonly as VaporReactiveModule['shallowReadonly']
 const shallowRef = compiledShallowRef as unknown as VaporReactiveModule['shallowRef']
-const signal = compiledSignal as VaporReactiveModule['signal']
+const signal = reactiveKernel.createSignal as unknown as VaporReactiveModule['signal']
 const toRaw = compiledToRaw as VaporReactiveModule['toRaw']
 const toRef = compiledToRef as unknown as VaporReactiveModule['toRef']
 const toRefs = compiledToRefs as VaporReactiveModule['toRefs']
@@ -107,23 +102,6 @@ type Resource<TData = any> = {
 }
 
 type BoundaryRef = SuspenseBoundary | WeakRef<SuspenseBoundary>
-
-type Primitive = string | number | boolean | bigint | symbol | null | undefined
-type Widen<T> = T extends string
-  ? string
-  : T extends number
-    ? number
-    : T extends boolean
-      ? boolean
-      : T
-type UseStateOptions<T = any> = {
-  equals?: (prev: T, next: T) => boolean
-  kind?: 'reactive' | 'ref' | 'signal'
-}
-type StateRef<T> = { value: T }
-type RefStateSetter<T> = (value: T | ((ref: StateRef<T>) => T | void)) => void
-type ReactiveStateSetter<T> = (value: T | ((state: T) => T | void)) => void
-type SignalStateSetter<T> = (value: T | ((signal: SignalHandle<T>) => T | void)) => void
 
 type SuspenseResourceState = {
   boundaries: Map<symbol, BoundaryRef>
@@ -163,54 +141,11 @@ function createClientHookError(hookName: string): Error {
   )
 }
 
-function useState<T extends Primitive>(
-  initial: T | (() => T),
-  options?: UseStateOptions<T> & { kind?: 'reactive' | 'ref' },
-): [StateRef<Widen<T>>, RefStateSetter<Widen<T>>]
-function useState<T extends Primitive>(
-  initial: T | (() => T),
-  options: UseStateOptions<T> & { kind: 'signal' },
-): [SignalHandle<Widen<T>>, SignalStateSetter<Widen<T>>]
-function useState<T extends object | Function>(
-  initial: T | (() => T),
-  options?: UseStateOptions<T> & { kind?: 'reactive' },
-): [T, ReactiveStateSetter<T>]
-function useState<T extends object | Function>(
-  initial: T | (() => T),
-  options: UseStateOptions<T> & { kind: 'ref' },
-): [StateRef<T>, RefStateSetter<T>]
-function useState<T extends object | Function>(
-  initial: T | (() => T),
-  options: UseStateOptions<T> & { kind: 'signal' },
-): [SignalHandle<T>, SignalStateSetter<T>]
-function useState<T>(initial: T | (() => T), options?: UseStateOptions<T>) {
-  if (isTextClientReferenceSsrActive() && options?.kind !== 'signal') {
-    const [state, setState] = (useRueState as any)(initial, { ...options, kind: 'ref' }) as [
-      { value: T },
-      (value: T | ((ref: { value: T }) => T | void)) => void,
-    ]
-    return [
-      state.value as T,
-      (value: T | ((previous: T) => T)) => {
-        if (typeof value === 'function') {
-          setState(ref => (value as (previous: T) => T)(ref.value as T))
-          return
-        }
-        setState(value)
-      },
-    ]
-  }
-  if (isTextServerElementRuntimeActive()) {
+function useState<T>(initial: T | (() => T)): [T, (action: T | ((previous: T) => T)) => void] {
+  if (isTextServerElementRuntimeActive() && !isTextClientReferenceSsrActive()) {
     throw createClientHookError('useState()')
   }
-  return useRueState(initial as never, options as never)
-}
-
-function useSignal<T>(initial: T, options?: any): any {
-  if (isTextServerElementRuntimeActive() && !isTextClientReferenceSsrActive()) {
-    throw createClientHookError('useSignal()')
-  }
-  return (useRueSignal as any)(initial, options)
+  return useRueState(initial)
 }
 
 function useEffect(...args: any[]): any {
@@ -371,10 +306,7 @@ export {
   watchPath,
   watch,
   useState,
-  useSignal,
   useEffect,
-  useMemo,
-  useCallback,
   useSetup,
   useRef,
   signal,

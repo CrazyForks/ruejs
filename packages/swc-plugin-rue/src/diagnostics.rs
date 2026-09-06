@@ -97,10 +97,7 @@ fn is_vapor_hook(name: &str) -> bool {
     matches!(
         name,
         "useState"
-            | "useSignal"
             | "useEffect"
-            | "useMemo"
-            | "useCallback"
             | "useSetup"
             | "useRef"
             | "watch"

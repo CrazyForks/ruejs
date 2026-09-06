@@ -60,6 +60,16 @@ export const View = () => (
 )
 `
 
+const directRowSource = `
+export const View = () => (
+  <ul>
+    {rows.get().map(row => (
+      <li key={row.id} className={row.label} onClick={() => capture(row)}>{row.label}</li>
+    ))}
+  </ul>
+)
+`
+
 const stripModuleSyntax = (output: string): string =>
   output
     .replace(/import\s*\{[^}]*\}\s*from\s*["'][^"']+["'];?/g, '')
@@ -104,6 +114,43 @@ afterEach(() => {
 })
 
 describe('compiled keyed list codegen', () => {
+  it('omits unused index resources while preserving event closure index reads', async () => {
+    const withoutIndex = compile(source)
+    expect(withoutIndex).not.toContain('_$rowIndex')
+
+    const withEventIndex = compile(`export const View = () => <tbody>{rows.get().map((row, index) =>
+      <tr key={row.id} data-id={row.id} onClick={() => capture(row.id, index)}>
+        <td>{row.label}</td>
+      </tr>)}</tbody>`)
+    expect(withEventIndex).toContain('_$rowIndex')
+
+    const rows = signal<Row[]>([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    const calls: Array<[number, number]> = []
+    const owner = createOwner()
+    const host = document.createElement('table')
+    runWithOwner(owner, () => {
+      const handle = evaluateView(withEventIndex, rows, {
+        capture: (id: number, index: number) => calls.push([id, index]),
+      })()
+      host.appendChild(handle.__rue_compiled_mount(host)!)
+    })
+    const original = [...host.querySelectorAll('tr')]
+
+    rows.set([rows.peek()[1], rows.peek()[0]])
+    await flushCompiledEffects()
+    expect([...host.querySelectorAll('tr')]).toEqual([original[1], original[0]])
+    original[0].click()
+    original[1].click()
+    expect(calls).toEqual([
+      [1, 1],
+      [2, 0],
+    ])
+    disposeOwner(owner)
+  })
+
   it.each(
     ['v-memo', 'r-memo'].flatMap(directive =>
       ['map', 'block', 'for'].map(shape => [directive, shape]),
@@ -158,15 +205,22 @@ describe('compiled keyed list codegen', () => {
     async (directive, runtime) => {
       const { signal } = runtime
       const output = compile(`export const View = () => <tbody>{rows.get().map(row =>
-      <tr key={row.id} ${directive}={[row.label, row.id === selected.get()]} data-id={row.id}>
+      <tr key={row.id} ${directive}={[row.label, row.id === selected.get()]}
+        className={row.id === selected.get() ? 'selected' : ''} data-id={row.id}>
         <td>{capture(row.id, row.label + ':' + (row.id === selected.get()) + ':' + unrelated.get())}</td>
       </tr>)}</tbody>`)
-      const rows = signal<Row[]>([
-        { id: 1, label: 'same' },
-        { id: 2, label: 'same' },
-        { id: 3, label: 'same' },
-      ])
-      const selected = signal(1)
+      const rows = signal<Row[]>(
+        Array.from({ length: 1_000 }, (_, index) => ({ id: index + 1, label: 'same' })),
+      )
+      const selectedSignal = signal(1)
+      let selectedDependencyReads = 0
+      const selected = {
+        get: () => {
+          selectedDependencyReads += 1
+          return selectedSignal.get()
+        },
+        set: (value: number) => selectedSignal.set(value),
+      }
       const unrelated = signal(0)
       const calls: number[] = []
       const capture = (id: number, text: string) => {
@@ -206,8 +260,10 @@ describe('compiled keyed list codegen', () => {
       await flushCompiledEffects()
       expect(calls).toEqual([])
       expect(original[0].textContent).toBe('same:true:0')
+      selectedDependencyReads = 0
       selected.set(2)
       await flushCompiledEffects()
+      expect(selectedDependencyReads).toBe(3)
       expect(calls.sort()).toEqual([1, 2])
       expect(original[0].textContent).toBe('same:false:1')
       expect(original[1].textContent).toBe('same:true:1')
@@ -217,16 +273,18 @@ describe('compiled keyed list codegen', () => {
       await flushCompiledEffects()
       expect([...host.querySelectorAll('tr')]).toEqual([original[2], original[1], original[0]])
       expect(calls).toEqual([])
-      rows.set([{ id: 4, label: 'same' }, rows.peek()[1]])
+      rows.set([{ id: 1_001, label: 'same' }, rows.peek()[1]])
       await flushCompiledEffects()
       expect(host.querySelectorAll('tr')[0]).not.toBe(original[2])
       calls.length = 0
+      selectedDependencyReads = 0
       selected.set(3)
       await flushCompiledEffects()
+      expect(selectedDependencyReads).toBe(2)
       expect(calls).toEqual([2])
       owned.dispose()
       calls.length = 0
-      selected.set(4)
+      selected.set(1_001)
       await flushCompiledEffects()
       expect(calls).toEqual([])
     },
@@ -262,14 +320,48 @@ describe('compiled keyed list codegen', () => {
     },
   )
 
+  it.each(['v-memo', 'r-memo'])(
+    'keeps mixed in-place dependency updates visible during a %s swap',
+    async directive => {
+      const output = compile(
+        source.replace('key={row.id}', `key={row.id} ${directive}={[row.label, row.active]}`),
+      )
+      const rows = signal<Row[]>([
+        { id: 1, label: 'one' },
+        { id: 2, label: 'two' },
+        { id: 3, label: 'three' },
+      ])
+      const owner = createOwner()
+      const host = document.createElement('table')
+      runWithOwner(owner, () => {
+        const handle = evaluateView(output, rows)()
+        host.appendChild(handle.__rue_compiled_mount(host)!)
+      })
+      const original = [...host.querySelectorAll('tr')]
+      const mixed = rows.peek().slice()
+      ;[mixed[0], mixed[2]] = [mixed[2], mixed[0]]
+      mixed[1].label = 'TWO'
+
+      rows.set(mixed)
+      await flushCompiledEffects()
+
+      expect([...host.querySelectorAll('tr')]).toEqual([original[2], original[1], original[0]])
+      expect(original[1].textContent).toBe('TWO')
+      disposeOwner(owner)
+    },
+  )
+
   it('executes the real SWC output through nine keyed operations without the generic list', async () => {
     const output = compile(source)
+    const directRowOutput = compile(directRowSource)
     const compiledImport = output.match(
       /import\s*\{([^}]*)\}\s*from\s*["']@rue-js\/rue\/internal\/compiler["']/,
     )
     expect(compiledImport?.[1]).toContain('effect')
     expect(compiledImport?.[1]).toContain('_$reconcileKeyed')
     expect(compiledImport?.[1]).toContain('_$compiledSignal')
+    expect(directRowOutput).toContain('_$rowPatch')
+    expect(directRowOutput).not.toMatch(/_\$rowItem\d+\s*=\s*_\$compiledSignal\s*\(/)
     expect(output).not.toContain('watchEffect')
     expect(output).not.toContain('_$compiledKeyedList')
     expect(output).not.toContain(['direct', 'Root'].join(''))

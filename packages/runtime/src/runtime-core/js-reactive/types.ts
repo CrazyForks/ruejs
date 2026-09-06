@@ -163,17 +163,6 @@ export type PortableRenderable =
   | PortableBlockFactory
   | readonly PortableRenderable[]
 
-export type StateKind = 'reactive' | 'ref' | 'signal'
-
-export interface StateOptions<T> extends EqualityOptions<T> {
-  kind?: StateKind
-}
-
-export interface ResolvedStateOptions {
-  equals?: EqualityComparator<unknown>
-  kind: StateKind
-}
-
 export interface SignalHandle<T> extends KernelSignalHandle<T>, ObjectLike {}
 
 export interface RefState<T> extends RefLike<T> {}
@@ -182,23 +171,17 @@ export type ReactiveState<T> = T extends object ? T : RefState<T>
 
 export type StateInitializer<T> = T | (() => T)
 
-export type StateUpdate<TState, TValue> = TValue | ((state: TState) => TValue | void)
+export type SetStateAction<T> = T | ((previous: T) => T)
 
-export type StateSetter<TState, TValue> = (update: StateUpdate<TState, TValue>) => void
+export type Dispatch<TAction> = (action: TAction) => void
 
-export type StateTuple<TState, TValue> = [TState, StateSetter<TState, TValue>]
+export type StateSetter<T> = Dispatch<SetStateAction<T>>
 
-export interface StateSlot {
-  created: boolean
-  state: unknown
-  __wrapped__?: boolean
-}
+export type StateTuple<T> = [T, StateSetter<T>]
 
-export type HookDependencies = readonly unknown[]
-
-export interface MemoSlot<T> {
-  value: T | undefined
-  deps: unknown
+export interface StateSlot<T> {
+  signal: SignalHandle<T>
+  setter: StateSetter<T>
 }
 
 export interface RefSlot<T> {
@@ -532,38 +515,12 @@ export interface UseEffectFunction {
   ): void
 }
 
-export interface UseMemoFunction {
-  <T>(factory: () => T, dependencies?: readonly unknown[]): T
-}
-
-export interface UseCallbackFunction {
-  <TArgs extends unknown[], TResult>(
-    callback: (...args: TArgs) => TResult,
-    dependencies?: readonly unknown[],
-  ): (...args: TArgs) => TResult
-}
-
 export interface UseRefFunction {
   <T = undefined>(initial?: T): RefSlot<T | undefined>
 }
 
-export interface UseSignalFunction {
-  <T>(initial: StateInitializer<T>, options?: StateOptions<T>): StateTuple<SignalHandle<T>, T>
-}
-
 export interface UseStateFunction {
-  <T>(
-    initial: StateInitializer<T>,
-    options: StateOptions<T> & { kind: 'signal' },
-  ): StateTuple<SignalHandle<T>, T>
-  <T>(
-    initial: StateInitializer<T>,
-    options: StateOptions<T> & { kind: 'ref' },
-  ): StateTuple<RefState<T>, T>
-  <T>(
-    initial: StateInitializer<T>,
-    options?: StateOptions<T> & { kind?: 'reactive' },
-  ): StateTuple<ReactiveState<T>, T>
+  <T>(initial: StateInitializer<T>): StateTuple<T>
 }
 
 export interface ReactiveFacadeRuntime {
@@ -620,12 +577,9 @@ export interface ReactiveHookRuntime {
   shallowReadonly<T>(initial: T, forceGlobal?: boolean): ReactiveState<T>
   toRaw<T>(value: unknown): T
   unref<T>(value: T | RefLike<T>): T
-  useCallback: UseCallbackFunction
   useEffect: UseEffectFunction
-  useMemo: UseMemoFunction
   useRef: UseRefFunction
   useSetup<T>(factory: () => T): T
-  useSignal: UseSignalFunction
   useState: UseStateFunction
   vaporWithHookId<T>(id: unknown, runner: () => T): T
   withHookSlot<T>(factory: () => T): T
@@ -638,10 +592,7 @@ export interface ReactiveFacade<
   __rueGetSignalWrapperRegistryDebugState(): SignalWrapperRegistryDebugState
   normalizeRenderTriggeredEvent(event: unknown): DebuggerEvent
   useEffect: UseEffectFunction
-  useCallback: UseCallbackFunction
-  useMemo: UseMemoFunction
   useRef: UseRefFunction
-  useSignal: UseSignalFunction
   useState: UseStateFunction
   default: TRuntime & ReactiveFacadeRuntime
 }

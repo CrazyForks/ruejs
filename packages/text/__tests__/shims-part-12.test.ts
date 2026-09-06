@@ -638,6 +638,55 @@ describe('Rue hook compatibility adapter', () => {
     expect(typeof adapter.useActionState).toBe('function')
     expect(typeof adapter.startTransition).toBe('function')
   })
+
+  it('forwards the React useState contract to the active Rue runtime', async () => {
+    const { deleteContextRuntime, readContextRuntime, setContextRuntime } =
+      await import('../src/shims/context-runtime-global.js')
+    const previousRuntime = readContextRuntime()
+    const initializer = vi.fn(() => 2)
+    let currentState = 2
+    const runtimeSetter = vi.fn((update: number | ((previous: number) => number)) => {
+      currentState = typeof update === 'function' ? update(currentState) : update
+    })
+    const runtimeUseState = vi.fn((initial: number | (() => number)) => [
+      typeof initial === 'function' ? initial() : initial,
+      runtimeSetter,
+    ])
+
+    setContextRuntime({
+      createContext: vi.fn(),
+      createElement: vi.fn(),
+      startTransition: (callback: () => void) => callback(),
+      useCallback: <T extends (...args: never[]) => unknown>(callback: T) => callback,
+      useContext: vi.fn(),
+      useEffect: vi.fn(),
+      useMemo: <T>(factory: () => T) => factory(),
+      useRef: <T>(initialValue: T) => ({ current: initialValue }),
+      useState: runtimeUseState,
+    })
+
+    try {
+      const adapter = await import('../src/shims/hooks-adapter.js')
+      const [state, setState] = adapter.useState(initializer)
+      let updaterPrevious: number | undefined
+      const updater = (previous: number) => {
+        updaterPrevious = previous
+        return previous + 1
+      }
+
+      expect(runtimeUseState).toHaveBeenCalledWith(initializer)
+      expect(initializer).toHaveBeenCalledTimes(1)
+      expect(state).toBe(2)
+      expect(setState).toBe(runtimeSetter)
+
+      setState(updater)
+      expect(updaterPrevious).toBe(2)
+      expect(currentState).toBe(3)
+    } finally {
+      if (previousRuntime === undefined) deleteContextRuntime()
+      else setContextRuntime(previousRuntime)
+    }
+  })
 })
 
 describe('Rue SSR compatibility facade', () => {

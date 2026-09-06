@@ -340,16 +340,16 @@ describe('KeepAlive renderable boundary', () => {
     const A: FC = () => {
       const [text] = useState('alpha')
       onDeactivated(() => {
-        aDeactivated(text.value)
+        aDeactivated(text)
       })
-      return <div data-testid="panel-A">{text.value}</div>
+      return <div data-testid="panel-A">{text}</div>
     }
     const B: FC = () => {
       const [count] = useState(1)
       onDeactivated(() => {
-        bDeactivated(count.value)
+        bDeactivated(count)
       })
-      return <div data-testid="panel-B">{count.value}</div>
+      return <div data-testid="panel-B">{count}</div>
     }
 
     mountKeepAliveSwitch(host, {
@@ -380,21 +380,21 @@ describe('KeepAlive renderable boundary', () => {
       const state = useSetup(() => {
         const [text] = useState('alpha')
         onDeactivated(() => {
-          aDeactivated(text.value)
+          aDeactivated(text)
         })
         return { text }
       })
-      return <div data-testid="panel-A">{state.text.value}</div>
+      return <div data-testid="panel-A">{state.text}</div>
     }
     const B: FC = () => {
       const state = useSetup(() => {
         const [count] = useState(1)
         onDeactivated(() => {
-          bDeactivated(count.value)
+          bDeactivated(count)
         })
         return { count }
       })
-      return <div data-testid="panel-B">{state.count.value}</div>
+      return <div data-testid="panel-B">{state.count}</div>
     }
 
     mountKeepAliveSwitch(host, {
@@ -426,7 +426,7 @@ describe('KeepAlive renderable boundary', () => {
         useSetup(() => {
           const [text] = _$compiledWithHookId('useState:keep-alive:A', () => useState('alpha'))
           onDeactivated(() => {
-            aDeactivated(text.value)
+            aDeactivated(text)
           })
           return { text }
         }),
@@ -435,7 +435,7 @@ describe('KeepAlive renderable boundary', () => {
         const root = _$createElement('div', parent) as HTMLElement
         root.setAttribute('data-testid', 'panel-A')
         watchEffect(() => {
-          _$settextContent(root, state.text.value)
+          _$settextContent(root, state.text)
         })
         return root as any
       }) as any
@@ -446,7 +446,7 @@ describe('KeepAlive renderable boundary', () => {
         useSetup(() => {
           const [count] = _$compiledWithHookId('useState:keep-alive:B', () => useState(1))
           onDeactivated(() => {
-            bDeactivated(count.value)
+            bDeactivated(count)
           })
           return { count }
         }),
@@ -455,7 +455,7 @@ describe('KeepAlive renderable boundary', () => {
         const root = _$createElement('div', parent) as HTMLElement
         root.setAttribute('data-testid', 'panel-B')
         watchEffect(() => {
-          _$settextContent(root, String(state.count.value))
+          _$settextContent(root, String(state.count))
         })
         return root as any
       }) as any
@@ -554,7 +554,7 @@ describe('KeepAlive renderable boundary', () => {
             useStateFromRueVapor('alpha'),
           )
           onDeactivatedFromRue(() => {
-            aDeactivated(text.value)
+            aDeactivated(text)
           })
           return { text }
         }),
@@ -563,7 +563,7 @@ describe('KeepAlive renderable boundary', () => {
         const root = _$createElementFromRueVapor('div', parent) as HTMLElement
         root.setAttribute('data-testid', 'panel-A')
         watchEffectFromRueVapor(() => {
-          _$settextContentFromRueVapor(root, state.text.value)
+          _$settextContentFromRueVapor(root, state.text)
         })
         return root as any
       }) as any
@@ -576,7 +576,7 @@ describe('KeepAlive renderable boundary', () => {
             useStateFromRueVapor(1),
           )
           onDeactivatedFromRue(() => {
-            bDeactivated(count.value)
+            bDeactivated(count)
           })
           return { count }
         }),
@@ -585,7 +585,7 @@ describe('KeepAlive renderable boundary', () => {
         const root = _$createElementFromRueVapor('div', parent) as HTMLElement
         root.setAttribute('data-testid', 'panel-B')
         watchEffectFromRueVapor(() => {
-          _$settextContentFromRueVapor(root, String(state.count.value))
+          _$settextContentFromRueVapor(root, String(state.count))
         })
         return root as any
       }) as any
@@ -640,7 +640,7 @@ describe('KeepAlive renderable boundary', () => {
             useStateFromRueVapor('alpha'),
           )
           onDeactivatedFromRue(() => {
-            props.writeLog(text.value)
+            props.writeLog(text)
           })
           return { text }
         }),
@@ -649,7 +649,7 @@ describe('KeepAlive renderable boundary', () => {
         const root = _$createElementFromRueVapor('div', parent) as HTMLElement
         root.setAttribute('data-testid', 'panel-A')
         watchEffectFromRueVapor(() => {
-          _$settextContentFromRueVapor(root, state.text.value)
+          _$settextContentFromRueVapor(root, state.text)
         })
         return root as any
       }) as any
@@ -661,7 +661,7 @@ describe('KeepAlive renderable boundary', () => {
             useStateFromRueVapor(1),
           )
           onDeactivatedFromRue(() => {
-            props.writeLog(String(count.value))
+            props.writeLog(String(count))
           })
           return { count }
         }),
@@ -670,7 +670,7 @@ describe('KeepAlive renderable boundary', () => {
         const root = _$createElementFromRueVapor('div', parent) as HTMLElement
         root.setAttribute('data-testid', 'panel-B')
         watchEffectFromRueVapor(() => {
-          _$settextContentFromRueVapor(root, String(state.count.value))
+          _$settextContentFromRueVapor(root, String(state.count))
         })
         return root as any
       }) as any

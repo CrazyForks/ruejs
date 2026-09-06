@@ -134,7 +134,7 @@ const Header: FC<{ theme: string; setTheme: (t: string) => void }> = p => {
               </RouterLink>
             </li>
             <li
-              className={`dropdown relative ${open.value === 'docs' ? 'dropdown-open' : ''}`}
+              className={`dropdown relative ${open === 'docs' ? 'dropdown-open' : ''}`}
               onMouseEnter={() => setOpen('docs')}
               onMouseLeave={() => setOpen(null)}
             >
@@ -183,7 +183,7 @@ const Header: FC<{ theme: string; setTheme: (t: string) => void }> = p => {
               </RouterLink>
             </li>
             <li
-              className={`dropdown relative ${open.value === 'ecosystem' ? 'dropdown-open' : ''}`}
+              className={`dropdown relative ${open === 'ecosystem' ? 'dropdown-open' : ''}`}
               onMouseEnter={() => setOpen('ecosystem')}
               onMouseLeave={() => setOpen(null)}
             >
@@ -222,7 +222,7 @@ const Header: FC<{ theme: string; setTheme: (t: string) => void }> = p => {
               </ul>
             </li>
             <li
-              className={`dropdown relative ${open.value === 'about' ? 'dropdown-open' : ''}`}
+              className={`dropdown relative ${open === 'about' ? 'dropdown-open' : ''}`}
               onMouseEnter={() => setOpen('about')}
               onMouseLeave={() => setOpen(null)}
             >
@@ -383,11 +383,11 @@ const SiteLayout: FC<{ title?: string }> = props => {
     return saved || 'light'
   })
   useEffect(() => {
-    localStorage.setItem('rue.theme', theme.value)
-  }, [theme.value])
+    localStorage.setItem('rue.theme', theme)
+  }, [theme])
   return (
-    <div className="min-h-screen bg-base-100 text-base-content" data-theme={theme.value}>
-      <Header theme={theme.value} setTheme={t => setTheme(t)} />
+    <div className="min-h-screen bg-base-100 text-base-content" data-theme={theme}>
+      <Header theme={theme} setTheme={t => setTheme(t)} />
       <main className="min-h-[60vh] pt-24">
         <div className="max-w-[1100px] mx-auto px-6 py-10">{props.children}</div>
       </main>
@@ -539,7 +539,7 @@ const Header: FC<{
                 首页
               </RouterLink>
             </li>
-            <li className={`dropdown relative ${open.value === 'docs' ? 'dropdown-open' : ''}`} onMouseEnter={()=>setOpen('docs')} onMouseLeave={()=>setOpen(null)}>
+            <li className={`dropdown relative ${open === 'docs' ? 'dropdown-open' : ''}`} onMouseEnter={()=>setOpen('docs')} onMouseLeave={()=>setOpen(null)}>
               <RouterLink to="/page" className="btn btn-ghost btn-sm">
                 文档
               </RouterLink>
@@ -581,7 +581,7 @@ const Header: FC<{
                 API
               </RouterLink>
             </li>
-            <li className={`dropdown relative ${open.value === 'ecosystem' ? 'dropdown-open' : ''}`} onMouseEnter={()=>setOpen('ecosystem')} onMouseLeave={()=>setOpen(null)}>
+            <li className={`dropdown relative ${open === 'ecosystem' ? 'dropdown-open' : ''}`} onMouseEnter={()=>setOpen('ecosystem')} onMouseLeave={()=>setOpen(null)}>
               <RouterLink to="" className="btn btn-ghost btn-sm">
                 生态
               </RouterLink>
@@ -613,7 +613,7 @@ const Header: FC<{
                 </li>
               </ul>
             </li>
-            <li className={`dropdown relative ${open.value === 'about' ? 'dropdown-open' : ''}`} onMouseEnter={()=>setOpen('about')} onMouseLeave={()=>setOpen(null)}>
+            <li className={`dropdown relative ${open === 'about' ? 'dropdown-open' : ''}`} onMouseEnter={()=>setOpen('about')} onMouseLeave={()=>setOpen(null)}>
               <RouterLink to="/rue/guide" className="btn btn-ghost btn-sm">
                 关于
               </RouterLink>
@@ -766,9 +766,9 @@ const SiteLayout: FC<{
                     return saved || 'light';
                 }));
             _$compiledWithHookId("useEffect:1:4", ()=>useEffect(()=>{
-                    localStorage.setItem('rue.theme', theme.value);
+                    localStorage.setItem('rue.theme', theme);
                 }, [
-                    theme.value
+                    theme
                 ]));
             return {
                 theme: theme,
@@ -776,8 +776,8 @@ const SiteLayout: FC<{
             };
         }));
     const { theme: theme, setTheme: setTheme } = _$useSetup;
-    return (<div className="min-h-screen bg-base-100 text-base-content" data-theme={theme.value}>
-      <Header theme={theme.value} setTheme={(t)=>setTheme(t)}/>
+    return (<div className="min-h-screen bg-base-100 text-base-content" data-theme={theme}>
+      <Header theme={theme} setTheme={(t)=>setTheme(t)}/>
       <main className="min-h-[60vh] pt-24">
         <div className="max-w-[1100px] mx-auto px-6 py-10">{props.children}</div>
       </main>

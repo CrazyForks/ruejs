@@ -28,7 +28,7 @@ const ParentChildCounterControlDemo: FC = () => {
   const [parentCount, setParentCount] = useState(0)
 
   const increase = () => {
-    setParentCount(parentCount.value + 1)
+    setParentCount(value => value + 1)
   }
 
   const reset = () => {
@@ -53,8 +53,8 @@ const ParentChildCounterControlDemo: FC = () => {
             父触发子重置
           </button>
         </div>
-        <p className="mt-2 text-gray-700">（父视图展示子计数）：{parentCount.value}</p>
-        <ChildCounter count={parentCount.value} onInc={increase} onReset={reset} />
+        <p className="mt-2 text-gray-700">（父视图展示子计数）：{parentCount}</p>
+        <ChildCounter count={parentCount} onInc={increase} onReset={reset} />
       </div>
     </div>
   )

@@ -6,6 +6,7 @@ import {
   getCurrentOwner,
   getOwnerValue,
   onCleanup,
+  onOwnerCleanup,
   registerOwnerLifecycle,
   runOwnerLifecycle,
   runWithOwner,
@@ -16,7 +17,7 @@ import {
   untrack,
 } from '../reactive-core'
 import type { CompiledRootHandle } from '../compiled-root'
-import { isReactive, isRef, reactive } from '../compiled-reactive-compat'
+import { isReactive, isRef, reactive, watch } from '../compiled-reactive-compat'
 import { getCurrentCompiledHookId } from '../compiled-hook-compat'
 import { hasCompiledHookRun } from '../runtime-context'
 
@@ -35,6 +36,9 @@ type StateOptions<T> = {
   equals?: (previous: T, next: T) => boolean
   kind?: 'reactive' | 'ref' | 'signal'
 }
+type SetStateAction<T> = T | ((previous: T) => T)
+type Dispatch<T> = (value: T) => void
+type CompiledRefState<T> = CompiledSignalHandle<T> & { readonly __rue_ref__: true }
 
 const initialValue = <T>(initial: T | (() => T)): T =>
   typeof initial === 'function' ? (initial as () => T)() : initial
@@ -51,25 +55,33 @@ const setSignalState = <T>(
 const createRefState = <T>(
   state: CompiledSignalHandle<T>,
   normalize: (value: T) => T = value => value,
-): CompiledSignalHandle<T> => ({
-  get __rue_signal_id__() {
-    return state.__rue_signal_id__
-  },
-  get value() {
-    return state.get()
-  },
-  set value(next: T) {
-    state.set(normalize(next))
-  },
-  get: () => state.get(),
-  peek: () => state.peek(),
-  set: next => state.set(normalize(next)),
-  update: updater => state.update(current => normalize(updater(current))),
-  trigger: () => state.trigger(),
-  dispose: () => state.dispose(),
-  free: () => state.free(),
-  [Symbol.dispose]: () => state[Symbol.dispose](),
-})
+): CompiledRefState<T> => {
+  const refState: CompiledSignalHandle<T> = {
+    get __rue_signal_id__() {
+      return state.__rue_signal_id__
+    },
+    get value() {
+      return state.get()
+    },
+    set value(next: T) {
+      state.set(normalize(next))
+    },
+    get: () => state.get(),
+    peek: () => state.peek(),
+    set: next => state.set(normalize(next)),
+    update: updater => state.update(current => normalize(updater(current))),
+    trigger: () => state.trigger(),
+    dispose: () => state.dispose(),
+    free: () => state.free(),
+    [Symbol.dispose]: () => state[Symbol.dispose](),
+  }
+  Object.defineProperty(refState, '__rue_ref__', {
+    value: true,
+    enumerable: false,
+    configurable: false,
+  })
+  return refState as CompiledRefState<T>
+}
 
 const createObjectState = <T extends object>(state: CompiledSignalHandle<T>): T =>
   new Proxy({} as T, {
@@ -124,27 +136,36 @@ export const _$compiledUseSetup = <T>(slot: string, factory: () => T): T =>
 export const _$compiledUseRef = <T>(slot: string, value: T): { current: T } =>
   _$compiledSetup(slot, () => ({ current: value }))
 
-export const _$compiledUseMemo = <T>(
+export const _$compiledMemo = <T>(
   slot: string,
   factory: () => T,
-  _dependencies?: readonly unknown[],
-): T => _$compiledSetup(slot, factory)
-
-export const _$compiledUseCallback = <T extends (...args: never[]) => unknown>(
-  slot: string,
-  callback: T,
-  _dependencies?: readonly unknown[],
-): T => _$compiledSetup(slot, () => callback)
-
-export const _$compiledUseSignal = <T>(
-  slot: string,
-  initial: T | (() => T),
-  options?: StateOptions<T>,
-): [CompiledSignalHandle<T>, (next: T | ((state: CompiledSignalHandle<T>) => T | void)) => void] =>
-  _$compiledSetup(slot, () => {
-    const state = signal(initialValue(initial), options)
-    return [state, next => setSignalState(state, next)]
-  })
+  dependencies: readonly unknown[],
+): T => {
+  const record = _$compiledSetup(slot, () => ({
+    initialized: false,
+    dependencies: undefined as readonly unknown[] | undefined,
+    value: undefined as T | undefined,
+  }))
+  const changed =
+    !record.initialized ||
+    record.dependencies === undefined ||
+    dependencies.length !== record.dependencies.length ||
+    dependencies.some((value, index) => !Object.is(value, record.dependencies![index]))
+  if (changed) {
+    record.value = untrack(factory)
+    if (
+      record.value != null &&
+      typeof record.value === 'object' &&
+      '__rue_compiled_freeze_effects' in record.value &&
+      typeof record.value.__rue_compiled_freeze_effects === 'function'
+    ) {
+      record.value.__rue_compiled_freeze_effects()
+    }
+    record.dependencies = [...dependencies]
+    record.initialized = true
+  }
+  return record.value as T
+}
 
 const createState = <T>(initial: T | (() => T), options?: StateOptions<T>) => {
   const value = initialValue(initial)
@@ -197,11 +218,22 @@ export const _$compiledUseState = <T>(
   slot: string,
   initial: T | (() => T),
   options?: StateOptions<T>,
-): [unknown, (next: T | ((state: unknown) => T | void)) => void] =>
-  _$compiledSetup(slot, () => createState(initial, options)) as [
-    unknown,
-    (next: T | ((state: unknown) => T | void)) => void,
-  ]
+): [CompiledSignalHandle<T>, Dispatch<SetStateAction<T>>] =>
+  _$compiledSetup(slot, () => {
+    const state = signal(initialValue(initial), options)
+    const setState: Dispatch<SetStateAction<T>> = next => {
+      state.set(typeof next === 'function' ? (next as (previous: T) => T)(state.peek()) : next)
+    }
+    return [state, setState]
+  })
+
+const createReactState = <T>(initial: T | (() => T), options?: StateOptions<T>) => {
+  const state = signal(initialValue(initial), options)
+  const setState: Dispatch<SetStateAction<T>> = next => {
+    state.set(typeof next === 'function' ? (next as (previous: T) => T)(state.peek()) : next)
+  }
+  return [state, setState] as const
+}
 
 const startCompiledEffect = (callback: () => void | (() => void)): void => {
   effect(callback)
@@ -226,13 +258,46 @@ const registerLifecycle = (
 export const _$compiledUseEffect = (
   slot: string,
   callback: () => void | (() => void),
-  _dependencies?: readonly unknown[],
+  dependencies?: () => readonly unknown[] | null,
 ): void => {
   _$compiledSetup(slot, () => {
+    const start = () => {
+      if (dependencies === undefined) {
+        startCompiledEffect(callback)
+        return
+      }
+      let previous: readonly unknown[] | undefined
+      let cleanup: void | (() => void)
+      const disposeCleanup = () => {
+        const current = cleanup
+        cleanup = undefined
+        if (current) untrack(current)
+      }
+      onOwnerCleanup(disposeCleanup)
+      watch(
+        () =>
+          (dependencies() ?? []).map(value =>
+            isRef(value) ? (value as { get(): unknown }).get() : value,
+          ),
+        value => {
+          const next = value as readonly unknown[]
+          if (
+            previous !== undefined &&
+            previous.length === next.length &&
+            next.every((item, index) => Object.is(item, previous![index]))
+          )
+            return
+          previous = next
+          disposeCleanup()
+          cleanup = callback()
+        },
+        { immediate: true },
+      )
+    }
     const owner = getCurrentOwner()
-    if (owner === undefined) startCompiledEffect(callback)
-    else if (getOwnerValue(owner, COMPILED_MOUNTED) === true) startCompiledEffect(callback)
-    else registerOwnerLifecycle('mounted', () => startCompiledEffect(callback))
+    if (owner === undefined) start()
+    else if (getOwnerValue(owner, COMPILED_MOUNTED) === true) start()
+    else registerOwnerLifecycle('mounted', start)
     return true
   })
 }
@@ -326,49 +391,14 @@ export function useRef<T = undefined>(): { current: T | undefined }
 export function useRef<T>(value?: T): { current: T | undefined } {
   return { current: value }
 }
-export const useMemo = <T>(factory: () => T, dependencies?: readonly unknown[]): T => {
+export const useState = <T>(initial: T | (() => T), options?: StateOptions<T>) => {
   const hookId = getCurrentCompiledHookId()
-  if (hookId === undefined) return factory()
-  const record = _$compiledSetup(`useMemo:${hookId}`, () => ({
-    initialized: false,
-    dependencies: undefined as readonly unknown[] | undefined,
-    value: undefined as T | undefined,
-  }))
-  const changed =
-    !record.initialized ||
-    dependencies === undefined ||
-    record.dependencies === undefined ||
-    dependencies.length !== record.dependencies.length ||
-    dependencies.some((value, index) => !Object.is(value, record.dependencies![index]))
-  if (changed) {
-    record.value = untrack(factory)
-    if (
-      record.value != null &&
-      typeof record.value === 'object' &&
-      '__rue_compiled_freeze_effects' in record.value &&
-      typeof record.value.__rue_compiled_freeze_effects === 'function'
-    ) {
-      record.value.__rue_compiled_freeze_effects()
-    }
-    record.dependencies = dependencies == null ? undefined : [...dependencies]
-    record.initialized = true
-  }
-  return record.value as T
+  const [state, setState] =
+    hookId === undefined
+      ? createReactState(initial, options)
+      : _$compiledSetup(`useState:${hookId}`, () => createReactState(initial, options))
+  return [state.get(), setState] as const
 }
-export const useCallback = <T extends (...args: any[]) => unknown>(
-  callback: T,
-  _dependencies?: readonly unknown[],
-): T => callback
-export const useSignal = <T>(initial: T | (() => T), options?: StateOptions<T>) =>
-  (() => {
-    const state = signal(initialValue(initial), options)
-    return [
-      state,
-      (next: T | ((state: CompiledSignalHandle<T>) => T | void)) => setSignalState(state, next),
-    ] as const
-  })()
-export const useState = <T>(initial: T | (() => T), options?: StateOptions<T>) =>
-  createState(initial, options)
 export const useEffect = (callback: () => void | (() => void)): void =>
   startCompiledEffect(callback)
 

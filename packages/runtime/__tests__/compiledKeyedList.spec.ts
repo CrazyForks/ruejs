@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from 'vitest'
-import { _$reconcileKeyed, type CompiledKeyedRow } from '../src/compiled-keyed-list'
+import {
+  _$compiledListMemo,
+  _$reconcileKeyed,
+  type CompiledKeyedRow,
+} from '../src/compiled-keyed-list'
 
 type Row = {
   id: number
@@ -283,6 +287,83 @@ describe('_$reconcileKeyed', () => {
     expect(previous[1].node.textContent).toBe('moved high')
     expect(previous[998].node.textContent).toBe('moved low')
     expect(rowIds(parent)).toEqual(swapped.map(item => item.id))
+  })
+
+  it('keeps the two-row swap fast path when memo dependencies stay equal', () => {
+    const parent = document.createElement('tbody')
+    const before = document.createComment('list:end')
+    parent.appendChild(before)
+    const patches: number[] = []
+    const mount = (item: Row) => {
+      let current = item
+      const node = document.createElement('tr')
+      node.dataset.id = String(item.id)
+      const memo = _$compiledListMemo(() => [current.label])
+      memo.read(() => undefined)
+      return {
+        node,
+        memo,
+        patch(next: Row) {
+          current = next
+          patches.push(next.id)
+          node.textContent = next.label
+        },
+        dispose: vi.fn(),
+      }
+    }
+    const rows = Array.from({ length: 1_000 }, (_, index) => ({
+      id: index + 1,
+      label: `row ${index + 1}`,
+    }))
+    let previous = _$reconcileKeyed(parent, before, [], rows, item => item.id, mount)
+    const swapped = rows.slice()
+    ;[swapped[1], swapped[998]] = [swapped[998], swapped[1]]
+
+    previous = _$reconcileKeyed(parent, before, previous, swapped, item => item.id, mount)
+
+    expect(patches).toEqual(expect.arrayContaining([2, 999]))
+    expect(patches).toHaveLength(2)
+    expect(rowIds(parent)).toEqual(swapped.map(item => item.id))
+  })
+
+  it('patches an in-place memo dependency change while retaining the swap fast path', () => {
+    const parent = document.createElement('tbody')
+    const before = document.createComment('list:end')
+    parent.appendChild(before)
+    const patches: number[] = []
+    const mount = (item: Row) => {
+      let current = item
+      const node = document.createElement('tr')
+      node.dataset.id = String(item.id)
+      node.textContent = item.label
+      const memo = _$compiledListMemo(() => [current.label])
+      memo.read(() => undefined)
+      return {
+        node,
+        memo,
+        patch(next: Row) {
+          current = next
+          patches.push(next.id)
+          node.textContent = next.label
+        },
+        dispose: vi.fn(),
+      }
+    }
+    const rows = Array.from({ length: 1_000 }, (_, index) => ({
+      id: index + 1,
+      label: `row ${index + 1}`,
+    }))
+    let previous = _$reconcileKeyed(parent, before, [], rows, item => item.id, mount)
+    const mixed = rows.slice()
+    ;[mixed[1], mixed[998]] = [mixed[998], mixed[1]]
+    mixed[500].label = 'changed in place'
+
+    previous = _$reconcileKeyed(parent, before, previous, mixed, item => item.id, mount)
+
+    expect(patches).toEqual(expect.arrayContaining([2, 501, 999]))
+    expect(patches).toHaveLength(3)
+    expect(previous[500].node.textContent).toBe('changed in place')
+    expect(rowIds(parent)).toEqual(mixed.map(item => item.id))
   })
 
   it('patches only changed identities for same-order and two-item swap updates', () => {

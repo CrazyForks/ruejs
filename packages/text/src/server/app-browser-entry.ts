@@ -7,10 +7,8 @@ import {
   onError,
   render,
   toRaw,
-  useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from '@rue-js/rue'
@@ -172,10 +170,8 @@ setContextRuntime({
   startTransition(action: () => void) {
     batch(action)
   },
-  useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
 })

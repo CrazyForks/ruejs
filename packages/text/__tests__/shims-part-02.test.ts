@@ -399,9 +399,6 @@ describe('text/router withRouter HOC', () => {
         useEffect(effect: () => void | (() => void)) {
           effect()
         },
-        useMemo(factory: () => unknown) {
-          return factory()
-        },
       }
       return { ...rue, default: rue }
     })

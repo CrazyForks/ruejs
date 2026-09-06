@@ -124,35 +124,17 @@ const cases: ReactiveCase[] = [
     update: 'state.set(value)',
   },
   {
-    name: 'useSignal',
-    setup: "const [state, setState] = useSignal('one')",
-    read: 'state.get()',
-    update: 'setState(value)',
-  },
-  {
-    name: 'useState-reactive',
-    setup: "const [state, setState] = useState({ value: 'one' })",
-    read: 'state.value',
-    update: 'setState({ value })',
-  },
-  {
-    name: 'useState-ref',
-    setup: "const [state, setState] = useState('one', { kind: 'ref' })",
-    read: 'state.value',
-    update: 'setState(value)',
-  },
-  {
-    name: 'useState-signal',
-    setup: "const [state, setState] = useState('one', { kind: 'signal' })",
-    read: 'state.get()',
-    update: 'setState(value)',
+    name: 'useState',
+    setup: "const [state, setState] = useState(() => 'one')",
+    read: 'state',
+    update: 'setState(previous => previous === value ? previous : value)',
   },
 ]
 
 const sourceFor = ({ read, setup, update }: ReactiveCase): string => `
 import {
   computed, customRef, onScopeDispose, propsReactive, reactive, readonly, ref,
-  shallowReactive, shallowReadonly, shallowRef, signal, toRef, toRefs, useSignal, useState,
+  shallowReactive, shallowReadonly, shallowRef, signal, toRef, toRefs, useState,
 } from '@rue-js/rue'
 
 export const trace = { cleanupRuns: 0, set: value => {}, setupRuns: 0 }
@@ -205,6 +187,7 @@ const compile = (reactiveCase: ReactiveCase, moduleType: 'es6' | 'commonjs'): st
 
 const runtimeRequire = (id: string): Record<string, unknown> => {
   if (id === '@rue-js/rue/internal/compiler') return compiledRuntime
+  if (id === '@rue-js/rue/internal/component') return compiledRuntime
   if (id === '@rue-js/rue/internal') return compiledRuntime
   if (id === '@rue-js/rue') return runtimeRoot
   throw new Error(`Unexpected generated import: ${id}`)
@@ -315,9 +298,9 @@ export function Example() {
       const esm = compile(reactiveCase, 'es6')
       expect(esm, reactiveCase.name).toContain('_$compiledRoot(')
       expect(esm, reactiveCase.name).toContain('_$compiledBranchAt(')
-      expect(esm, reactiveCase.name).toContain('_$compiledText(')
+      expect(esm, reactiveCase.name).toMatch(/(?:_\$compiledText|renderAnchor)\(/)
       expect(esm, reactiveCase.name).toContain('effect(')
-      expect(esm, reactiveCase.name).not.toMatch(/\bvapor\(/)
+      expect(esm, reactiveCase.name).toContain('@rue-js/rue/internal/component')
 
       const compiled = evaluate(reactiveCase)
       const host = document.createElement('main')

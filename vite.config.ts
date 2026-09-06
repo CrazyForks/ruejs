@@ -320,6 +320,22 @@ export default defineConfig(({ command, isSsrBuild }) => {
     resolve: {
       conditions: ['development', 'browser'],
       alias: {
+        '@rue-js/rue/internal/component': path.resolve(
+          rootDir,
+          'packages/runtime/src/component-internal.ts',
+        ),
+        '@rue-js/runtime/internal/component': path.resolve(
+          rootDir,
+          'packages/runtime/src/component-internal.ts',
+        ),
+        '@rue-js/rue/internal/builtins': path.resolve(
+          rootDir,
+          'packages/runtime/src/builtins-internal.ts',
+        ),
+        '@rue-js/runtime/internal/builtins': path.resolve(
+          rootDir,
+          'packages/runtime/src/builtins-internal.ts',
+        ),
         '@rue-js/rue/internal/compiler': path.resolve(rootDir, 'packages/runtime/src/internal.ts'),
         '@rue-js/runtime/internal/compiler': path.resolve(
           rootDir,

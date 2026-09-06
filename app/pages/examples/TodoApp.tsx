@@ -772,7 +772,7 @@ const PreviewPanel: FC = () => {
   watchEffect(() => {
     persistTodoState({
       todos,
-      search: search.value,
+      search,
       activeFilter: activeFilter.value,
     })
   })
@@ -827,7 +827,7 @@ const PreviewPanel: FC = () => {
   })
 
   const visibleTodos = computed(() => {
-    const keyword = search.value.trim().toLowerCase()
+    const keyword = search.trim().toLowerCase()
 
     return todos
       .filter(item => {
@@ -854,7 +854,7 @@ const PreviewPanel: FC = () => {
   })
 
   const addTodo = () => {
-    const title = draft.value.trim()
+    const title = draft.trim()
     if (!title) {
       return
     }
@@ -874,7 +874,7 @@ const PreviewPanel: FC = () => {
 
   const removeTodo = (id: number) => {
     setTodos(current => current.filter(item => item.id !== id))
-    if (editingId.value === id) {
+    if (editingId === id) {
       setEditingId(null)
       setEditingTitle('')
     }
@@ -903,7 +903,7 @@ const PreviewPanel: FC = () => {
   }
 
   const saveEditing = (id: number, titleOverride?: string) => {
-    const title = (titleOverride ?? editingTitle.value).trim()
+    const title = (titleOverride ?? editingTitle).trim()
 
     if (!title) {
       return
@@ -950,7 +950,7 @@ const PreviewPanel: FC = () => {
               <div className="join w-full">
                 <input
                   className="input input-bordered join-item w-full"
-                  value={draft.value}
+                  value={draft}
                   placeholder="例如：实现 Todo 应用的归档功能"
                   onInput={(e: any) => {
                     setDraft((e.target as HTMLInputElement).value)
@@ -974,7 +974,7 @@ const PreviewPanel: FC = () => {
               </div>
               <input
                 className="input input-bordered w-full"
-                value={search.value}
+                value={search}
                 placeholder="按标题筛选任务"
                 onInput={(e: any) => {
                   setSearch((e.target as HTMLInputElement).value)
@@ -1016,8 +1016,8 @@ const PreviewPanel: FC = () => {
 
       <div className="grid gap-4">
         {visibleTodos.get().map(item => {
-          const isEditing = editingId.value === item.id
-          const editingValue = isEditing ? editingTitle.value : item.title
+          const isEditing = editingId === item.id
+          const editingValue = isEditing ? editingTitle : item.title
           const meta = STATUS_META[item.status]
 
           const commitEditing = (latestValue: string) => {

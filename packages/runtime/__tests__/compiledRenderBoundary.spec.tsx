@@ -103,6 +103,7 @@ const evaluate = (): BoundaryModule => {
   const module = { exports: {} as Record<string, unknown> }
   const runtimeRequire = (id: string): Record<string, unknown> => {
     if (id === '@rue-js/rue/internal/compiler') return compiledRuntime
+    if (id === '@rue-js/rue/internal/component') return internalRuntime
     if (id === '@rue-js/rue/internal') return internalRuntime
     if (id === '@rue-js/rue') return runtimeRoot
     throw new Error(`Unexpected generated import: ${id}`)

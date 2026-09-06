@@ -16,7 +16,7 @@ const About: FC<{ theme: string; setTheme: (t: string) => void }> = p => {
 
   return (
     <div>
-      打开状态: {!!open.value ? '是' : '否'}
+      打开状态: {!!open ? '是' : '否'}
       <ul>
         <li>
           <RouterLink to="/page/about/faq" onMouseDown={() => setOpen(false)}>
@@ -51,7 +51,7 @@ const About: FC<{ theme: string; setTheme: (t: string) => void }> = p => {
         <li><RouterLink to="/page/about/number" onMouseDown={() => setOpen(false)}>{48}</RouterLink></li>
         <li><RouterLink to="/page/about/expr" onMouseDown={() => setOpen(false)}>{1 + 2}</RouterLink></li>
         <li><RouterLink to="/page/about/template" onMouseDown={() => setOpen(false)}>{`模板-${p.theme}`}</RouterLink></li>
-        <li><RouterLink to="/page/about/cond" onMouseDown={() => setOpen(false)}>{!!open.value ? '开' : '关'}</RouterLink></li>
+        <li><RouterLink to="/page/about/cond" onMouseDown={() => setOpen(false)}>{!!open ? '开' : '关'}</RouterLink></li>
       </ul>
 
       <div>
@@ -114,7 +114,7 @@ const About: FC<{
         const _el25 = _root.childNodes[3].childNodes[3];
         const _el26 = _el25.parentNode;
         watchEffect(()=>{
-            const __slot = !!open.value ? '是' : '否';
+            const __slot = !!open ? '是' : '否';
             untrack(()=>renderAnchor(__slot, _el2, _el1));
         });
         const _el27 = _$createElement("a", _el4);
@@ -382,7 +382,7 @@ const About: FC<{
         const _el40 = _$createTextWrapper(_el39);
         _$appendChild(_el39, _el40);
         watchEffect(()=>{
-            _$settextContent(_el40, !!open.value ? '开' : '关');
+            _$settextContent(_el40, !!open ? '开' : '关');
         });
         watchEffect(()=>{
             const __slot = new Date().getFullYear();
@@ -402,14 +402,14 @@ export default About;
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec49.out.js", strip_marker(&out)).ok();
     let output = normalize(&strip_marker(&out));
-    assert_eq!(output.matches("_$compiledBranchAt(").count(), 0, "{output}");
-    assert!(output.contains("const __slot = !!open.value ? '是' : '否'"), "{output}");
+    assert_eq!(output.matches("_$compiledBranchAt(").count(), 1, "{output}");
+    assert!(output.contains("if (!!open)"), "{output}");
     assert!(output.contains("renderAnchor(__slot"), "{output}");
     assert_eq!(output.matches("RouterLink.__rueHref(").count(), 10, "{output}");
     assert_eq!(output.matches("RouterLink.__rueOnClick(").count(), 10, "{output}");
     assert_eq!(output.matches("RouterLink.__rueOnPrefetch(").count(), 40, "{output}");
     assert_eq!(output.matches("setOpen(false)").count(), 10, "{output}");
-    assert!(output.contains("_$settextContent(_el40, !!open.value ? '开' : '关')"), "{output}");
+    assert!(output.contains("_$settextContent(_el40, !!open ? '开' : '关')"), "{output}");
     assert!(output.contains("new Date().getFullYear()"), "{output}");
     assert!(output.contains("const __slot = 1 + 1"), "{output}");
 }

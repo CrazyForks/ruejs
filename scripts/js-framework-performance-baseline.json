@@ -1,68 +1,68 @@
 {
   "schemaVersion": 3,
-  "generatedAt": "2026-09-03T22:48:24.822Z",
+  "generatedAt": "2026-09-05T15:56:54.638Z",
   "source": {
-    "workspaceVersion": "0.8.21",
-    "packageVersion": "0.8.21",
+    "workspaceVersion": "0.9.3",
+    "packageVersion": "0.9.3",
     "packagePath": "/Users/Shared/work/dir/data/codes/ruejs/packages/rue/package.json",
     "vueVersion": "3.5.40",
     "vuePackagePath": "/Users/Shared/work/dir/data/codes/ruejs/node_modules/vue/package.json",
     "vuePackageSha256": "36152efc62db43cd37a9bf71c20a263eae6f5f72d91f5a94ceca4e7ae7eadc4c",
-    "fixtureManifestSha256": "5568fa42d6ef05dec3a583a5c4dc3dff349312ee8c413e268f0fe37acf56ff4b",
-    "fixtureModuleManifestSha256": "e2e1ebd6afa18d2bd416c9f170488bcc4103aa3ef682b76c722a607f9bc2717f",
+    "fixtureManifestSha256": "dbcedd871b1424b63200edf7fc6fabc089c0b4c0908fd70e9bfcdb0f555b453f",
+    "fixtureModuleManifestSha256": "f46ca461239118653d8cbc9b8a8b291e7ecc6c224bec499a86cb05a8f585983a",
     "lockfileSha256": "77ed7e2d6fe13061a6dc4f861b6f58e5d93efe250688026a4b4f743dc9452109",
     "javascriptSha256": [
       "418c206484b89b68ef5f067277831e583fc9193a62aadf4de269acaaeb12a85f",
-      "13bd70c3fe315fee88efefa6d4c0da94eead32529c18b1c72075f49419cce77f",
-      "9479b7931f8988e43334f0e0f97c5fa02edb3ccf7b8c79e2283a5e7e2eb27912",
-      "7e8d7edd941aeea9fbf84db2c9dbb1714d7d11958f35f2f764fbfd93ce1caf90",
-      "0aad84a3e343d3ca904b019f3c5ff266c9944e6df2998e5a467f06c1e0703eaa",
+      "5ed7f0b92abf2130a8f8e1cd8f6da1b9c86f8cc2012bb234e7789cef23bfc978",
+      "013c1c36e1d0f16be241901d0e49c37f64615fe289e8d59a290758cc50d38419",
+      "84c7d1e7f3b36b7615ac919a155676206990eb85356c9ee1f98c3fa293d38ff9",
+      "fbdf471f731cc3caf152e995120bc8ea2a4aa3899549ac90c0ff478dc7cc9220",
       "9e2b81c73a05bf52857c968d3849d2da16dda21a0210bd71f4500c846aefee69",
       "7a17aa6fbb59d284ac8afe67b3ddb2641dfe9251c0f1fe12e4a6e4a9f1123bef"
     ],
     "workspaceArtifacts": [
       {
         "path": "packages/shared/dist/shared.esm-bundler.js",
-        "sha256": "1dcf31cdfb450719f0a4de3200a7387c1e566fb0f1105c7ebe5c3fc3b0cb9e5c"
+        "sha256": "1e99549ded80e73621ea9aa7dbedee3a6097e26f80e9326aa94c2deab6c9f50b"
       },
       {
         "path": "packages/runtime/dist/runtime.esm-bundler.js",
-        "sha256": "5a5f73ad718b7de3ab1d330ccbbd117cb2f86519e03d6d0b40d28c2dffde058a"
+        "sha256": "93595a67bc31ad496114f478b1bacd408f4fd138e88a0437f0f67148c25d81c0"
       },
       {
         "path": "packages/runtime/dist/runtime.internal.esm-bundler.js",
-        "sha256": "e3968f3d1d883778aa8cd66ecaeb17d2da9065820df151f84b52ee9ac262256b"
+        "sha256": "9965c48641a645a5fbe917bc697baab8f394e2aa98c8bdf09a16dcb4fbb236bf"
       },
       {
         "path": "packages/runtime/dist/runtime.internal-compiler.esm-bundler.js",
-        "sha256": "aa3190105879ffbcb648c46045891b891a6742cbc6292ff5d4e8aeb7cf8016fa"
+        "sha256": "816c5f25394dd4de0428f1fb7352f62f7f61cda4d67b9afdebdf84c35b9cc96e"
       },
       {
         "path": "packages/rue/dist/rue.esm-bundler.js",
-        "sha256": "fe8e1fefcc0d791d1506463b0f51eb27184c58e75bb3dc33144af2831704629a"
+        "sha256": "555d036f7025643f2c9449c8516d9e1b9b7e215dcbfc19f8e849d132c249878a"
       },
       {
         "path": "packages/rue/dist/rue.internal.esm-bundler.js",
-        "sha256": "9d894069074726b38694e8071cb7ef297f591c09a9714c128091a325ddb46102"
+        "sha256": "3c8530f4344567a18be1163ffa50476387a9f3a3b0c6c3e30821e0ece8043cb9"
       },
       {
         "path": "packages/rue/dist/rue.internal-compiler.esm-bundler.js",
-        "sha256": "986033b18e35211457bea4eddb837f2fbe6dbe544efb6977029b34e3e4af014a"
+        "sha256": "d58d5a400562a78057c7114f3b8603b9fb163379143f020cc7f3ea9d919f8e95"
       }
     ],
     "chromeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "chromeVersion": "148.0.7778.97",
-    "gitCommit": "dd635c01d17802387ba87d8bde4dcf0f502b7f3e",
+    "gitCommit": "74a425fda48c5e26d0a7f695bc55b59dc0ca786f",
     "validation": {
-      "version": "0.8.21",
+      "version": "0.9.3",
       "packagePath": "/Users/Shared/work/dir/data/codes/ruejs/packages/rue/package.json",
       "artifactCount": 7,
       "hashesStable": true
     },
     "fixtureValidation": {
       "entrySha256": {
-        "rue": "13bd70c3fe315fee88efefa6d4c0da94eead32529c18b1c72075f49419cce77f",
-        "rue-signal": "0aad84a3e343d3ca904b019f3c5ff266c9944e6df2998e5a467f06c1e0703eaa",
+        "rue": "5ed7f0b92abf2130a8f8e1cd8f6da1b9c86f8cc2012bb234e7789cef23bfc978",
+        "rue-signal": "fbdf471f731cc3caf152e995120bc8ea2a4aa3899549ac90c0ff478dc7cc9220",
         "vue": "7a17aa6fbb59d284ac8afe67b3ddb2641dfe9251c0f1fe12e4a6e4a9f1123bef"
       },
       "moduleIds": {
@@ -71,6 +71,7 @@
           "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/__benchmarks__/js-framework/index.html",
           "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/__benchmarks__/js-framework/main-ref.tsx",
           "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/__benchmarks__/js-framework/shared.ts",
+          "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/dist/runtime.internal-compiler.esm-bundler.js",
           "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/dist/runtime.internal.esm-bundler.js"
         ],
         "rue-signal": [
@@ -112,68 +113,59 @@
     "rue": {
       "cpu": {
         "create1k": {
-          "medianMs": 31.09999990463257,
+          "medianMs": 30.700000047683716,
           "validSamples": 5,
           "samplesMs": [
-            31, 31.09999990463257, 31.09999990463257, 31.200000047683716, 31.399999856948853
+            24.90000009536743, 30.300000190734863, 30.700000047683716, 31.299999952316284,
+            32.700000047683716
           ]
         },
         "replace1k": {
-          "medianMs": 24.42999999523163,
+          "medianMs": 24.540000009536744,
           "validSamples": 5,
           "samplesMs": [
-            23.829999995231628, 24.37999999523163, 24.42999999523163, 24.62000000476837,
-            24.720000004768373
+            24.410000014305115, 24.420000004768372, 24.540000009536744, 24.60999999046326, 24.85
           ]
         },
         "update10th": {
-          "medianMs": 0.6799999952316285,
+          "medianMs": 0.7700000047683716,
           "validSamples": 5,
           "samplesMs": [
-            0.6700000047683716, 0.6700000047683716, 0.6799999952316285, 0.6799999952316285,
-            0.6799999952316285
+            0.7200000047683716, 0.7299999952316284, 0.7700000047683716, 0.7700000047683716, 0.8
           ]
         },
         "select1k": {
-          "medianMs": 2.3999998569488525,
+          "medianMs": 3,
           "validSamples": 5,
-          "samplesMs": [
-            2.299999952316284, 2.3999998569488525, 2.3999998569488525, 2.4000000953674316,
-            2.4000000953674316
-          ]
+          "samplesMs": [2.799999952316284, 3, 3, 7.1000001430511475, 7.3999998569488525]
         },
         "swap1k": {
-          "medianMs": 0.10999999046325684,
+          "medianMs": 0.15,
           "validSamples": 5,
-          "samplesMs": [
-            0.10999999046325684, 0.10999999046325684, 0.10999999046325684, 0.11999998092651368,
-            0.12000000476837158
-          ]
+          "samplesMs": [0.13000001907348632, 0.14000000953674316, 0.15, 0.15, 0.15999999046325683]
         },
         "remove1k": {
-          "medianMs": 0.7999999523162842,
+          "medianMs": 0.5,
           "validSamples": 5,
-          "samplesMs": [
-            0.5999999046325684, 0.7999999523162842, 0.7999999523162842, 0.8000001907348633,
-            6.700000047683716
-          ]
+          "samplesMs": [0.5, 0.5, 0.5, 0.6000001430511475, 0.7999999523162842]
         },
         "create10k": {
-          "medianMs": 220.39999985694885,
+          "medianMs": 188.60000014305115,
           "validSamples": 5,
-          "samplesMs": [213.5, 218.5, 220.39999985694885, 220.60000014305115, 224.79999995231628]
+          "samplesMs": [171.70000004768372, 175.70000004768372, 188.60000014305115, 195, 198]
         },
         "append1k": {
-          "medianMs": 16.299999952316284,
+          "medianMs": 14.899999856948853,
           "validSamples": 5,
-          "samplesMs": [
-            14.799999952316284, 15.599999904632568, 16.299999952316284, 20.100000143051147, 20.5
-          ]
+          "samplesMs": [14.100000143051147, 14.5, 14.899999856948853, 15.299999952316284, 15.5]
         },
         "clear1k": {
-          "medianMs": 3.799999952316284,
+          "medianMs": 4.799999952316284,
           "validSamples": 5,
-          "samplesMs": [3.5, 3.700000047683716, 3.799999952316284, 3.799999952316284, 4]
+          "samplesMs": [
+            4.299999952316284, 4.400000095367432, 4.799999952316284, 5.199999809265137,
+            5.800000190734863
+          ]
         }
       },
       "dom": {
@@ -225,25 +217,25 @@
       },
       "heap": {
         "ready": {
-          "medianBytes": 48900948,
+          "medianBytes": 13784292,
           "validSamples": 5,
-          "samplesBytes": [42778912, 48892220, 48900948, 48901204, 54707616]
+          "samplesBytes": [13344672, 13435828, 13784292, 13786572, 13801100]
         },
         "create1k": {
-          "medianBytes": 47185220,
+          "medianBytes": 16303248,
           "validSamples": 5,
-          "samplesBytes": [47173668, 47177400, 47185220, 47349284, 51566540]
+          "samplesBytes": [16297092, 16297636, 16303248, 16468240, 16548460]
         },
         "createClear": {
-          "medianBytes": 42756280,
+          "medianBytes": 11260248,
           "validSamples": 5,
-          "samplesBytes": [42746960, 42749248, 42756280, 42905996, 47139908]
+          "samplesBytes": [11254116, 11254544, 11260248, 11325396, 11505296]
         }
       },
       "firstPaint": {
-        "medianMs": 36,
+        "medianMs": 40,
         "validSamples": 5,
-        "samplesMs": [36, 36, 36, 40, 44]
+        "samplesMs": [32, 36, 40, 40, 40]
       },
       "size": {
         "javascript": [
@@ -259,14 +251,15 @@
             "name": "modulepreload-polyfill"
           },
           {
-            "path": "temp/js-framework-performance/dist/assets/rue-CeXBEZWB.js",
-            "rawBytes": 3944,
-            "brotliBytes": 1302,
-            "sha256": "13bd70c3fe315fee88efefa6d4c0da94eead32529c18b1c72075f49419cce77f",
+            "path": "temp/js-framework-performance/dist/assets/rue-CxEBSttb.js",
+            "rawBytes": 3994,
+            "brotliBytes": 1320,
+            "sha256": "5ed7f0b92abf2130a8f8e1cd8f6da1b9c86f8cc2012bb234e7789cef23bfc978",
             "facadeModuleId": "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/__benchmarks__/js-framework/index.html",
             "imports": [
               "assets/modulepreload-polyfill-P2Xu9kJm.js",
-              "assets/rue-internal-runtime-C86SK4S-.js",
+              "assets/rue-internal-runtime-QMXyTips.js",
+              "assets/rue-compiler-runtime-DsZS9bMP.js",
               "assets/shared-CA9S0i64.js"
             ],
             "isEntry": true,
@@ -277,10 +270,23 @@
             "name": "rue"
           },
           {
-            "path": "temp/js-framework-performance/dist/assets/rue-internal-runtime-C86SK4S-.js",
-            "rawBytes": 162338,
-            "brotliBytes": 42426,
-            "sha256": "7e8d7edd941aeea9fbf84db2c9dbb1714d7d11958f35f2f764fbfd93ce1caf90",
+            "path": "temp/js-framework-performance/dist/assets/rue-compiler-runtime-DsZS9bMP.js",
+            "rawBytes": 13182,
+            "brotliBytes": 4623,
+            "sha256": "013c1c36e1d0f16be241901d0e49c37f64615fe289e8d59a290758cc50d38419",
+            "facadeModuleId": null,
+            "imports": [],
+            "isEntry": false,
+            "moduleIds": [
+              "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/dist/runtime.internal-compiler.esm-bundler.js"
+            ],
+            "name": "rue-compiler-runtime"
+          },
+          {
+            "path": "temp/js-framework-performance/dist/assets/rue-internal-runtime-QMXyTips.js",
+            "rawBytes": 163533,
+            "brotliBytes": 42740,
+            "sha256": "84c7d1e7f3b36b7615ac919a155676206990eb85356c9ee1f98c3fa293d38ff9",
             "facadeModuleId": null,
             "imports": [],
             "isEntry": false,
@@ -308,67 +314,66 @@
     "rue-signal": {
       "cpu": {
         "create1k": {
-          "medianMs": 17.299999952316284,
+          "medianMs": 15.700000047683716,
           "validSamples": 5,
           "samplesMs": [
-            17.100000143051147, 17.100000143051147, 17.299999952316284, 17.300000190734863,
-            17.40000009536743
+            14.899999856948853, 15.299999952316284, 15.700000047683716, 17.299999952316284,
+            18.90000009536743
           ]
         },
         "replace1k": {
-          "medianMs": 12.740000009536743,
-          "validSamples": 5,
-          "samplesMs": [12.7, 12.7, 12.740000009536743, 12.779999995231629, 12.840000009536743]
-        },
-        "update10th": {
-          "medianMs": 1.0700000047683715,
+          "medianMs": 13.740000009536743,
           "validSamples": 5,
           "samplesMs": [
-            1.0699999809265137, 1.0700000047683715, 1.0700000047683715, 1.0799999952316284,
-            1.109999990463257
+            13.65, 13.659999990463257, 13.740000009536743, 13.770000004768372, 13.770000004768372
+          ]
+        },
+        "update10th": {
+          "medianMs": 0.27999999523162844,
+          "validSamples": 5,
+          "samplesMs": [
+            0.25999999046325684, 0.2700000047683716, 0.27999999523162844, 0.2899999856948853, 0.3
           ]
         },
         "select1k": {
-          "medianMs": 0.19999980926513672,
+          "medianMs": 0.20000004768371582,
           "validSamples": 5,
           "samplesMs": [
-            0.09999990463256836, 0.09999990463256836, 0.19999980926513672, 0.20000004768371582,
+            0.09999990463256836, 0.19999980926513672, 0.20000004768371582, 0.20000004768371582,
             0.20000004768371582
           ]
         },
         "swap1k": {
-          "medianMs": 0.9199999809265137,
+          "medianMs": 0.2200000047683716,
           "validSamples": 5,
           "samplesMs": [
-            0.9099999904632569, 0.9100000143051148, 0.9199999809265137, 0.9299999952316285,
-            0.9300000190734863
+            0.20999999046325685, 0.21000001430511475, 0.2200000047683716, 0.22999999523162842,
+            0.23999998569488526
           ]
         },
         "remove1k": {
-          "medianMs": 1.1999998092651367,
+          "medianMs": 0.5,
           "validSamples": 5,
-          "samplesMs": [
-            1, 1.0999999046325684, 1.1999998092651367, 1.2000000476837158, 1.2000000476837158
-          ]
+          "samplesMs": [0.40000009536743164, 0.5, 0.5, 0.6000001430511475, 0.6000001430511475]
         },
         "create10k": {
-          "medianMs": 89.29999995231628,
-          "validSamples": 5,
-          "samplesMs": [88.29999995231628, 89, 89.29999995231628, 89.5, 90.40000009536743]
-        },
-        "append1k": {
-          "medianMs": 8.299999952316284,
+          "medianMs": 96.79999995231628,
           "validSamples": 5,
           "samplesMs": [
-            7.8999998569488525, 8.100000143051147, 8.299999952316284, 9.200000047683716,
-            9.299999952316284
+            95.29999995231628, 96.59999990463257, 96.79999995231628, 97.29999995231628, 100
           ]
         },
+        "append1k": {
+          "medianMs": 7.699999809265137,
+          "validSamples": 5,
+          "samplesMs": [7.5, 7.5, 7.699999809265137, 7.700000047683716, 8.099999904632568]
+        },
         "clear1k": {
-          "medianMs": 1.3999998569488525,
+          "medianMs": 1.3000001907348633,
           "validSamples": 5,
           "samplesMs": [
-            1.2999999523162842, 1.3000001907348633, 1.3999998569488525, 1.5, 1.5999999046325684
+            1.2999999523162842, 1.2999999523162842, 1.3000001907348633, 1.4000000953674316,
+            1.6000001430511475
           ]
         }
       },
@@ -421,25 +426,25 @@
       },
       "heap": {
         "ready": {
-          "medianBytes": 2797956,
+          "medianBytes": 2855672,
           "validSamples": 5,
-          "samplesBytes": [2797872, 2797956, 2797956, 2797956, 2798100]
+          "samplesBytes": [2845744, 2855672, 2855672, 2855672, 2856292]
         },
         "create1k": {
-          "medianBytes": 6985684,
+          "medianBytes": 6394888,
           "validSamples": 5,
-          "samplesBytes": [6985524, 6985684, 6985684, 6985684, 6985692]
+          "samplesBytes": [6385520, 6394852, 6394888, 6395240, 6395672]
         },
         "createClear": {
-          "medianBytes": 2797736,
+          "medianBytes": 2855484,
           "validSamples": 5,
-          "samplesBytes": [2797652, 2797736, 2797736, 2797736, 2797880]
+          "samplesBytes": [2845556, 2855484, 2855484, 2855484, 2856104]
         }
       },
       "firstPaint": {
-        "medianMs": 40,
+        "medianMs": 36,
         "validSamples": 5,
-        "samplesMs": [40, 40, 40, 44, 64]
+        "samplesMs": [36, 36, 36, 40, 40]
       },
       "size": {
         "javascript": [
@@ -455,10 +460,10 @@
             "name": "modulepreload-polyfill"
           },
           {
-            "path": "temp/js-framework-performance/dist/assets/rue-compiler-runtime-sbp3kxb6.js",
-            "rawBytes": 9865,
-            "brotliBytes": 3619,
-            "sha256": "9479b7931f8988e43334f0e0f97c5fa02edb3ccf7b8c79e2283a5e7e2eb27912",
+            "path": "temp/js-framework-performance/dist/assets/rue-compiler-runtime-DsZS9bMP.js",
+            "rawBytes": 13182,
+            "brotliBytes": 4623,
+            "sha256": "013c1c36e1d0f16be241901d0e49c37f64615fe289e8d59a290758cc50d38419",
             "facadeModuleId": null,
             "imports": [],
             "isEntry": false,
@@ -468,15 +473,15 @@
             "name": "rue-compiler-runtime"
           },
           {
-            "path": "temp/js-framework-performance/dist/assets/rue-signal-COe1TU6M.js",
-            "rawBytes": 4126,
-            "brotliBytes": 1400,
-            "sha256": "0aad84a3e343d3ca904b019f3c5ff266c9944e6df2998e5a467f06c1e0703eaa",
+            "path": "temp/js-framework-performance/dist/assets/rue-signal-C7zxoPVx.js",
+            "rawBytes": 4133,
+            "brotliBytes": 1422,
+            "sha256": "fbdf471f731cc3caf152e995120bc8ea2a4aa3899549ac90c0ff478dc7cc9220",
             "facadeModuleId": "/Users/Shared/work/dir/data/codes/ruejs/packages/runtime/__benchmarks__/js-framework/rue-signal.html",
             "imports": [
               "assets/modulepreload-polyfill-P2Xu9kJm.js",
-              "assets/shared-CA9S0i64.js",
-              "assets/rue-compiler-runtime-sbp3kxb6.js"
+              "assets/rue-compiler-runtime-DsZS9bMP.js",
+              "assets/shared-CA9S0i64.js"
             ],
             "isEntry": true,
             "moduleIds": [
@@ -504,64 +509,72 @@
     "vue": {
       "cpu": {
         "create1k": {
-          "medianMs": 9,
-          "validSamples": 5,
-          "samplesMs": [8.900000095367432, 9, 9, 9, 9.099999904632568]
-        },
-        "replace1k": {
-          "medianMs": 4.910000014305115,
+          "medianMs": 9.400000095367432,
           "validSamples": 5,
           "samplesMs": [
-            4.809999990463257, 4.879999995231628, 4.910000014305115, 4.920000004768371,
-            4.970000004768371
+            8.099999904632568, 8.200000047683716, 9.400000095367432, 9.900000095367432,
+            10.399999856948853
+          ]
+        },
+        "replace1k": {
+          "medianMs": 5.479999995231628,
+          "validSamples": 5,
+          "samplesMs": [
+            5.420000004768371, 5.440000009536743, 5.479999995231628, 5.660000014305115, 5.7
           ]
         },
         "update10th": {
-          "medianMs": 1.3200000047683715,
+          "medianMs": 1.4599999904632568,
           "validSamples": 5,
           "samplesMs": [
-            1.3099999904632569, 1.3100000143051147, 1.3200000047683715, 1.3399999856948852, 1.35
+            1.4099999904632567, 1.4299999952316285, 1.4599999904632568, 1.4899999856948853, 1.5
           ]
         },
         "select1k": {
-          "medianMs": 1.7999999523162842,
+          "medianMs": 2,
           "validSamples": 5,
           "samplesMs": [
-            1.7000000476837158, 1.7999999523162842, 1.7999999523162842, 1.7999999523162842,
-            1.9000000953674316
+            1.8999998569488525, 1.8999998569488525, 2, 2.1000001430511475, 2.1000001430511475
           ]
         },
         "swap1k": {
-          "medianMs": 1.2,
-          "validSamples": 5,
-          "samplesMs": [1.1799999952316285, 1.1900000095367431, 1.2, 1.2, 1.2]
-        },
-        "remove1k": {
-          "medianMs": 1.2000000476837158,
+          "medianMs": 1.3300000190734864,
           "validSamples": 5,
           "samplesMs": [
-            1.0999999046325684, 1.0999999046325684, 1.2000000476837158, 1.2000000476837158,
-            1.2000000476837158
+            1.3200000047683715, 1.3299999952316284, 1.3300000190734864, 1.3400000095367433,
+            1.3700000047683716
+          ]
+        },
+        "remove1k": {
+          "medianMs": 1.2999999523162842,
+          "validSamples": 5,
+          "samplesMs": [
+            1.2000000476837158, 1.2000000476837158, 1.2999999523162842, 1.3000001907348633,
+            1.4000000953674316
           ]
         },
         "create10k": {
-          "medianMs": 36.30000019073486,
+          "medianMs": 35.799999952316284,
           "validSamples": 5,
           "samplesMs": [
-            35.799999952316284, 36.299999952316284, 36.30000019073486, 36.39999985694885,
-            36.799999952316284
+            35.700000047683716, 35.799999952316284, 35.799999952316284, 35.89999985694885,
+            39.39999985694885
           ]
         },
         "append1k": {
-          "medianMs": 4.6000001430511475,
-          "validSamples": 5,
-          "samplesMs": [4.5, 4.5, 4.6000001430511475, 4.699999809265137, 4.700000047683716]
-        },
-        "clear1k": {
-          "medianMs": 0.5999999046325684,
+          "medianMs": 4.700000047683716,
           "validSamples": 5,
           "samplesMs": [
-            0.5, 0.5999999046325684, 0.5999999046325684, 0.6000001430511475, 0.6000001430511475
+            4.6000001430511475, 4.700000047683716, 4.700000047683716, 4.799999952316284,
+            4.800000190734863
+          ]
+        },
+        "clear1k": {
+          "medianMs": 0.7999999523162842,
+          "validSamples": 5,
+          "samplesMs": [
+            0.5999999046325684, 0.5999999046325684, 0.7999999523162842, 0.7999999523162842,
+            0.7999999523162842
           ]
         }
       },
@@ -614,25 +627,25 @@
       },
       "heap": {
         "ready": {
-          "medianBytes": 2519736,
+          "medianBytes": 2523664,
           "validSamples": 5,
-          "samplesBytes": [2519576, 2519736, 2519736, 2523664, 2523664]
+          "samplesBytes": [2520368, 2520368, 2523664, 2523664, 2523664]
         },
         "create1k": {
-          "medianBytes": 4302108,
+          "medianBytes": 4305176,
           "validSamples": 5,
-          "samplesBytes": [4301044, 4302060, 4302108, 4305572, 4306012]
+          "samplesBytes": [4301904, 4302624, 4305176, 4305920, 4306036]
         },
         "createClear": {
-          "medianBytes": 2519344,
+          "medianBytes": 2523272,
           "validSamples": 5,
-          "samplesBytes": [2519184, 2519344, 2519344, 2523272, 3049996]
+          "samplesBytes": [2519976, 2519976, 2523272, 2523272, 2523272]
         }
       },
       "firstPaint": {
-        "medianMs": 40,
+        "medianMs": 36,
         "validSamples": 5,
-        "samplesMs": [36, 40, 40, 40, 40]
+        "samplesMs": [36, 36, 36, 40, 40]
       },
       "size": {
         "javascript": [

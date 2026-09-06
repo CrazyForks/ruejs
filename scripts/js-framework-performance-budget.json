@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "baselineWorkspaceVersion": "0.8.21",
+  "baselineWorkspaceVersion": "0.9.3",
   "requiredEntries": ["rue", "rue-signal", "vue"],
   "minimumValidSamples": 5,
   "rueEntries": ["rue", "rue-signal"],
   "cpu": {
-    "maxWeightedMedianRatio": 1.5,
+    "maxWeightedMedianRatio": 1.25,
     "weights": {
       "create1k": 1,
       "replace1k": 1,
@@ -20,12 +20,12 @@
   },
   "operations": {
     "create1k": { "maxRatio": 1.1 },
-    "select1k": { "maxRatio": 2 },
-    "swap1k": { "maxRatio": 2 }
+    "select1k": { "maxRatio": 1.5 },
+    "swap1k": { "maxRatio": 1.5 }
   },
   "heap": { "createClear": { "maxRatio": 1.1 } },
   "size": { "brotli": { "maxRatio": 1.1 } },
-  "firstPaint": { "maxRatio": 2.5 },
+  "firstPaint": { "maxRatio": 1.25 },
   "dom": {
     "select1k": { "maxMutations": 2 },
     "swap1k": { "maxMutations": 6 }
@@ -34,7 +34,7 @@
     "entry": "rue-signal",
     "referenceEntry": "vue",
     "cpu": {
-      "maxWeightedGeometricMeanRatio": 2,
+      "maxWeightedGeometricMeanRatio": 1.2,
       "weights": {
         "create1k": 0.64280248137063,
         "replace1k": 0.5607178150466176,
@@ -48,17 +48,17 @@
       }
     },
     "operations": {
-      "update10th": { "maxRatio": 1.5 },
+      "update10th": { "maxRatio": 1.05 },
       "select1k": { "maxRatio": 1.05 },
-      "swap1k": { "maxRatio": 1.5 },
-      "clear1k": { "maxRatio": 3.5 }
+      "swap1k": { "maxRatio": 1.05 },
+      "clear1k": { "maxRatio": 2.5 }
     },
     "heap": {
-      "ready": { "maxRatio": 1.23 },
-      "create1k": { "maxRatio": 1.79 },
-      "createClear": { "maxRatio": 1.23 }
+      "ready": { "maxRatio": 1.2 },
+      "create1k": { "maxRatio": 1.6 },
+      "createClear": { "maxRatio": 1.2 }
     },
     "size": { "brotli": { "maxRatio": 1 } },
-    "firstPaint": { "maxRatio": 1.25 }
+    "firstPaint": { "maxRatio": 1.1 }
   }
 }

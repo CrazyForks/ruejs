@@ -283,14 +283,15 @@ export default UseCart;
     std::fs::write("target/vapor_outputs/spec5.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
     assert_eq!(normalized.matches("_$reconcileKeyed(").count(), 2);
-    assert_eq!(normalized.matches("_$mountCompiledKeyedRow(").count(), 2);
-    assert_eq!(normalized.matches("_$compiledSignal(pr)").count(), 1);
-    assert_eq!(normalized.matches("_$compiledSignal(i)").count(), 1);
-    assert!(normalized.contains("_$compiledText(_el9, ()=>_$rowItem1.get().name)"));
-    assert!(normalized.contains("_$compiledText(_el10, ()=>_$rowItem1.get().price)"));
-    assert!(normalized.contains("_$compiledText(_el13, ()=>_$rowItem2.get().name)"));
-    assert!(normalized.contains("_$compiledText(_el14, ()=>_$rowItem2.get().qty)"));
-    assert!(normalized.contains("()=>cart.add(_$rowItem1.get())"));
-    assert!(normalized.contains("()=>cart.remove(_$rowItem2.get().id)"));
+    assert_eq!(normalized.matches("_$mountCompiledKeyedRowSetup(").count(), 2);
+    assert!(normalized.contains("let _$rowItem1 = pr"));
+    assert!(normalized.contains("let _$rowItem2 = i"));
+    for field in ["_$rowItem1.name", "_$rowItem1.price", "_$rowItem2.name", "_$rowItem2.qty"] {
+        assert!(normalized.contains(field), "{normalized}");
+    }
+    assert!(!normalized.contains("_$rowItem1.get()"));
+    assert!(!normalized.contains("_$rowItem2.get()"));
+    assert!(normalized.contains("()=>cart.add(_$rowItem1)"));
+    assert!(normalized.contains("()=>cart.remove(_$rowItem2.id)"));
     assert!(!normalized.contains("_$compiledKeyedList"));
 }

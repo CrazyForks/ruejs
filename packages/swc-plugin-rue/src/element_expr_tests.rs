@@ -150,9 +150,12 @@ fn compiles_slot_factory_with_target_props_owner_abi_without_renderable_helpers(
 
 #[test]
 fn detects_renderable_calls_empty_memos_and_local_aliases() {
-    assert!(contains_jsx_in_expr(&parse_expr("useMemo(() => ok ? <span /> : null, [])", true)));
     assert!(contains_jsx_in_expr(&parse_expr(
-        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
+        "_$compiledMemo('memo', () => ok ? <span /> : null, [])",
+        true
+    )));
+    assert!(contains_jsx_in_expr(&parse_expr(
+        "_$compiledWithHookId(\"memo:0:0\", () => _$compiledMemo('memo', () => <span />, []))",
         true,
     )));
     assert!(contains_jsx_in_expr(&parse_expr(
@@ -161,15 +164,21 @@ fn detects_renderable_calls_empty_memos_and_local_aliases() {
     )));
     assert!(expr_returns_jsx_renderable(&parse_expr("(fallback ?? <span />)", true)));
     assert!(expr_returns_jsx_renderable(&parse_expr("(fallback || <span />)", true)));
-    assert!(!contains_jsx_in_expr(&parse_expr("useMemo(() => value, [])", false)));
+    assert!(!contains_jsx_in_expr(&parse_expr("_$compiledMemo('memo', () => value, [])", false)));
     assert!(!contains_jsx_in_expr(&parse_expr("String(value)", false)));
 
-    assert!(is_empty_deps_memoized_jsx_expr(&parse_expr("useMemo(() => <span />, [])", true)));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => <span />, []))",
+        "_$compiledMemo('memo', () => <span />, [])",
+        true
+    )));
+    assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
+        "_$compiledWithHookId(\"memo:0:0\", () => _$compiledMemo('memo', () => <span />, []))",
         true,
     )));
-    assert!(!is_empty_deps_memoized_jsx_expr(&parse_expr("useMemo(() => <span />, deps)", true,)));
+    assert!(!is_empty_deps_memoized_jsx_expr(&parse_expr(
+        "_$compiledMemo('memo', () => <span />, deps)",
+        true,
+    )));
 
     let stmts = parse_module_stmts(
         "
@@ -216,13 +225,13 @@ const empty = null;
 fn rewrites_hook_wrapped_memo_calls_for_slot_with_empty_fallbacks() {
     let mut vt = new_vt();
     let expr = parse_expr(
-        "_$compiledWithHookId(\"memo:0:0\", () => useMemo(() => ok ? <span /> : null, []))",
+        "_$compiledWithHookId(\"memo:0:0\", () => _$compiledMemo('memo', () => ok ? <span /> : null, []))",
         true,
     );
 
     let out = compact(&emit_expr(make_expr_for_slot(&mut vt, &expr)));
 
-    assert!(out.contains("_$compiledWithHookId(\"memo:0:0\",()=>useMemo(()"));
+    assert!(out.contains("_$compiledWithHookId(\"memo:0:0\",()=>_$compiledMemo('memo',()"));
     assert!(out.contains("_$compiledRoot(Object.assign((__rue_parent_context)=>{"));
     assert!(out.contains("_$compiledCreateElement(\"span\",__rue_parent_context)"));
     assert!(out.contains(":\"\""));
@@ -255,7 +264,7 @@ fn emits_slot_render_once_and_style_text_paths_for_expr_children() {
     emit_element_expr_container_child(
         &mut memo_vt,
         &ident("root"),
-        &expr_container("useMemo(() => <span />, [])", true),
+        &expr_container("_$compiledMemo('memo', () => <span />, [])", true),
         &mut memo_stmts,
     );
 
@@ -453,9 +462,9 @@ fn rewrites_fragments_logicals_maps_and_fallback_calls_for_slot_values() {
 
     let block_body_memo = compact(&emit_expr(make_expr_for_slot(
         &mut logical_vt,
-        &parse_expr("useMemo(() => { return <span />; }, [])", true),
+        &parse_expr("_$compiledMemo('memo', () => { return <span />; }, [])", true),
     )));
-    assert!(block_body_memo.contains("useMemo(()=>{return<span/>;},[]);"));
+    assert!(block_body_memo.contains("_$compiledMemo('memo',()=>{return<span/>;},[]);"));
     assert!(!block_body_memo.contains("vapor(()=>{"));
 }
 
@@ -480,7 +489,10 @@ fn detects_renderable_returns_across_nested_statement_shapes() {
     assert!(!arrow_returns_jsx_renderable(&parse_expr("() => { return value; }", false)));
 
     assert!(contains_jsx_in_expr(&parse_expr("(ok || <span />)", true)));
-    assert!(contains_jsx_in_expr(&parse_expr("(ok ? value : useMemo(() => <span />, []))", true)));
+    assert!(contains_jsx_in_expr(&parse_expr(
+        "(ok ? value : _$compiledMemo('memo', () => <span />, []))",
+        true
+    )));
     assert!(!contains_jsx_in_expr(&parse_expr("(ok ? value : other)", false)));
 }
 
@@ -615,15 +627,15 @@ fn detects_nested_opaque_renderables_and_svg_ref_exceptions() {
 #[test]
 fn finds_empty_memo_deps_inside_nested_expressions() {
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "ok ? value : useMemo(() => <span />, [])",
+        "ok ? value : _$compiledMemo('memo', () => <span />, [])",
         true,
     )));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "left || _$compiledWithHookId('memo:0:0', () => useMemo(() => <span />, []))",
+        "left || _$compiledWithHookId('memo:0:0', () => _$compiledMemo('memo', () => <span />, []))",
         true,
     )));
     assert!(is_empty_deps_memoized_jsx_expr(&parse_expr(
-        "(() => useMemo(() => <span />, []))",
+        "(() => _$compiledMemo('memo', () => <span />, []))",
         true,
     )));
     assert!(!is_empty_deps_memoized_jsx_expr(&parse_expr("ok ? value : other", false,)));
@@ -639,7 +651,10 @@ fn covers_parenthesized_contains_jsx_and_renderable_expr_branches() {
 
     assert!(expr_returns_jsx_renderable(&parse_expr("ok || <span />", true)));
     assert!(expr_returns_jsx_renderable(&parse_expr("ok ?? <span />", true)));
-    assert!(expr_returns_jsx_renderable(&parse_expr("ok && useMemo(() => <span />, [])", true)));
+    assert!(expr_returns_jsx_renderable(&parse_expr(
+        "ok && _$compiledMemo('memo', () => <span />, [])",
+        true
+    )));
     assert!(!expr_returns_jsx_renderable(&parse_expr("ok && value", false)));
 
     assert!(expr_is_renderable_local_alias_source(
@@ -682,38 +697,37 @@ fn rewrites_slot_conditionals_with_renderable_calls_and_plain_fallbacks() {
     let mut vt = new_vt();
     let cond_out = compact(&emit_expr(make_expr_for_slot(
         &mut vt,
-        &parse_expr("ok ? useMemo(() => <span />, []) : null", true),
+        &parse_expr("ok ? _$compiledMemo('memo', () => <span />, []) : null", true),
     )));
-    assert!(
-        cond_out.contains("ok?useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
-    );
+    assert!(cond_out.contains(
+        "ok?_$compiledMemo('memo',()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+    ));
     assert!(cond_out.contains(":\"\""));
 
     let and_out = compact(&emit_expr(make_expr_for_slot(
         &mut vt,
-        &parse_expr("ok && useMemo(() => <span />, [])", true),
+        &parse_expr("ok && _$compiledMemo('memo', () => <span />, [])", true),
     )));
-    assert!(
-        and_out.contains("ok?useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
-    );
+    assert!(and_out.contains(
+        "ok?_$compiledMemo('memo',()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+    ));
     assert!(and_out.contains(":\"\""));
 
     let or_out = compact(&emit_expr(make_expr_for_slot(
         &mut vt,
-        &parse_expr("renderFallback() || useMemo(() => <span />, [])", true),
+        &parse_expr("renderFallback() || _$compiledMemo('memo', () => <span />, [])", true),
     )));
     assert!(or_out.contains(
-        "renderFallback()||useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+        "renderFallback()||_$compiledMemo('memo',()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
     ));
 
     let left_renderable_or = compact(&emit_expr(make_expr_for_slot(
         &mut vt,
-        &parse_expr("useMemo(() => <span />, []) || fallback", true),
+        &parse_expr("_$compiledMemo('memo', () => <span />, []) || fallback", true),
     )));
-    assert!(
-        left_renderable_or
-            .contains("useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
-    );
+    assert!(left_renderable_or.contains(
+        "_$compiledMemo('memo',()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+    ));
     assert!(left_renderable_or.contains("||fallback"));
 }
 
@@ -731,12 +745,11 @@ fn covers_fragment_once_nested_opaque_and_rewrite_false_edges() {
     let mut branch_vt = new_vt();
     let cond_out = compact(&emit_expr(make_expr_for_slot(
         &mut branch_vt,
-        &parse_expr("ok ? null : useMemo(() => <span />, [])", true),
+        &parse_expr("ok ? null : _$compiledMemo('memo', () => <span />, [])", true),
     )));
-    assert!(
-        cond_out
-            .contains("ok?\"\":useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
-    );
+    assert!(cond_out.contains(
+        "ok?\"\":_$compiledMemo('memo',()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+    ));
 
     let or_left_out = compact(&emit_expr(make_expr_for_slot(
         &mut branch_vt,
@@ -750,7 +763,7 @@ fn covers_fragment_once_nested_opaque_and_rewrite_false_edges() {
         true,
     )));
     assert!(!hook_wrapped_call_has_empty_memo_deps(&parse_call(
-        "_$compiledWithHookId('memo:0:0', function () { return useMemo(() => <span />, []); })",
+        "_$compiledWithHookId('memo:0:0', function () { return _$compiledMemo('memo', () => <span />, []); })",
         true,
     )));
 
@@ -794,7 +807,7 @@ fn covers_helper_false_edges_plain_slot_branches_and_list_early_return() {
     assert!(contains_jsx_in_expr(&parse_expr("ok && <span />", true)));
 
     assert!(!hook_wrapped_call_has_empty_memo_deps(&parse_call(
-        "_$compiledWithHookId('memo', () => { return useMemo(() => <span />, []); })",
+        "_$compiledWithHookId('memo', () => { return _$compiledMemo('memo', () => <span />, []); })",
         true,
     )));
     assert!(!hook_wrapped_call_has_empty_memo_deps(&parse_call(
@@ -811,8 +824,11 @@ fn covers_helper_false_edges_plain_slot_branches_and_list_early_return() {
     );
     assert!(rewrite_use_memo_call_for_slot(&mut vt, &parse_call("useMemo()", true)).is_none());
     assert!(
-        rewrite_use_memo_call_for_slot(&mut vt, &parse_call("useMemo(() => value)", false))
-            .is_none()
+        rewrite_use_memo_call_for_slot(
+            &mut vt,
+            &parse_call("_$compiledMemo('memo', () => value)", false)
+        )
+        .is_none()
     );
     assert!(
         rewrite_hook_wrapped_call_for_slot(

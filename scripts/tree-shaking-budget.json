@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "scenarios": {
+    "public-signal": {
+      "max": { "minified": 35150, "gzip": 9850, "brotli": 8900 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island",
+        "packages/runtime/dist/custom-elements",
+        "packages/runtime/dist/components/",
+        "packages/runtime/dist/compiler-runtime/",
+        "packages/runtime/dist/compiled-",
+        "packages/runtime/dist/dom.js",
+        "packages/runtime/dist/runtime-core/js-reactive/facade.js",
+        "packages/runtime/dist/runtime-core/js-reactive/hooks/"
+      ]
+    },
+    "public-ref-computed": {
+      "max": { "minified": 35150, "gzip": 9850, "brotli": 8950 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island",
+        "packages/runtime/dist/custom-elements",
+        "packages/runtime/dist/components/",
+        "packages/runtime/dist/compiler-runtime/",
+        "packages/runtime/dist/compiled-",
+        "packages/runtime/dist/dom.js",
+        "packages/runtime/dist/runtime-core/js-reactive/facade.js",
+        "packages/runtime/dist/runtime-core/js-reactive/hooks/"
+      ]
+    },
+    "public-create-rue": {
+      "max": { "minified": 129000, "gzip": 37450, "brotli": 33050 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island",
+        "packages/runtime/dist/custom-elements",
+        "packages/runtime/dist/components/",
+        "packages/runtime/dist/compiler-runtime/builtins/"
+      ]
+    },
+    "public-render": {
+      "max": { "minified": 158950, "gzip": 46300, "brotli": 40650 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island.js",
+        "packages/runtime/dist/custom-elements",
+        "packages/runtime/dist/compiler-runtime/builtins/"
+      ]
+    },
+    "public-transition": {
+      "max": { "minified": 93950, "gzip": 27000, "brotli": 24350 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island.js",
+        "packages/runtime/dist/custom-elements"
+      ]
+    },
+    "public-custom-element": {
+      "max": { "minified": 164950, "gzip": 48250, "brotli": 42250 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island.js",
+        "packages/runtime/dist/compiler-runtime/builtins/"
+      ]
+    },
+    "compiler-internal": {
+      "max": { "minified": 4150, "gzip": 1750, "brotli": 1600 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island",
+        "packages/runtime/dist/custom-elements",
+        "packages/runtime/dist/components/",
+        "packages/runtime/dist/runtime-core/js-reactive/",
+        "packages/runtime/dist/dom.js"
+      ]
+    },
+    "internal": {
+      "max": { "minified": 89500, "gzip": 25700, "brotli": 23050 },
+      "forbidModules": [
+        "packages/runtime/dist/server",
+        "packages/server-renderer/",
+        "packages/runtime/dist/island.js",
+        "packages/runtime/dist/custom-elements",
+        "packages/runtime/dist/compiler-runtime/builtins/"
+      ]
+    }
+  }
+}

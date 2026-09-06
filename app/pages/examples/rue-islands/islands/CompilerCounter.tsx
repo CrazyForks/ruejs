@@ -11,13 +11,9 @@ const CompilerCounter: FC<CompilerCounterProps> = props => {
     <button
       type="button"
       className="btn btn-outline btn-primary"
-      onClick={() =>
-        setCount(value => {
-          value.value += 1
-        })
-      }
+      onClick={() => setCount(value => value + 1)}
     >
-      {props.label}: {count.value}
+      {props.label}: {count}
     </button>
   )
 }

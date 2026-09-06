@@ -42,7 +42,7 @@ use super::template_directive;
      - 收集 return 之前的“安全声明与副作用”（常量/函数/已知 watcher 等），插入到返回 JSX 前
      - 白名单与纯度分析结合，避免把带副作用的表达式错误地移动
   3) Hook 包装：
-     - 将 `useMemo/useEffect/useRef/reactive/ref/useState/watchEffect` 包裹为 `_$compiledWithHookId(id, () => innerCall)`
+     - 将 `useEffect/useRef/reactive/ref/useState/watchEffect` 包裹为 `_$compiledWithHookId(id, () => innerCall)`
      - `id` 构成：`<kind>:<scope-chain>:<index>`，作用域链与递增索引用于区分同函数内的调用
 - Import 注入：预处理已可能引入运行时符号，模块尾部调用 `ensure_runtime_imports` 合并导入。
 */
@@ -455,9 +455,7 @@ impl VisitMut for PreTransform {
         {
             let name = id.sym.as_ref();
             if !self.compiled_runtime_bindings.contains(name)
-                && (name == "useMemo"
-                    || name == "useEffect"
-                    || name == "useCallback"
+                && (name == "useEffect"
                     || name == "useRef"
                     || name == "reactive"
                     || name == "ref"
@@ -472,7 +470,6 @@ impl VisitMut for PreTransform {
                     || name == "signal"
                     || name == "readonly"
                     || name == "shallowReactive"
-                    || name == "useSignal"
                     || name == "useSetup"
                     || name == "shallowReadonly")
             {
@@ -495,7 +492,7 @@ impl VisitMut for PreTransform {
             } else {
                 0
             };
-            // 形如 "useMemo:1.2:0" 的 ID 字符串表达式
+            // 形如 "useEffect:1.2:0" 的 ID 字符串表达式
             let id_expr = crate::emit::string_expr(&format!("{}:{}:{}", kind, scope, idx));
             // inner：原始调用表达式
             let inner = Expr::Call(c.clone());

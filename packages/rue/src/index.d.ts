@@ -209,8 +209,6 @@ export {
   watch,
   /** 创建组件本地状态，兼容基础值和对象。 */
   useState,
-  /** 创建组件本地 signal。 */
-  useSignal,
   /** 注册组件副作用 Hook。 */
   useEffect,
   /** 创建响应式 signal 句柄。 */
@@ -263,10 +261,6 @@ export {
   hydrateOnMediaQuery,
   /** 当用户触发指定事件时激活异步组件。 */
   hydrateOnInteraction,
-  /** 基于依赖数组缓存计算结果。 */
-  useMemo,
-  /** 基于依赖数组缓存回调函数。 */
-  useCallback,
   /** 在组件 setup 阶段初始化并缓存值。 */
   useSetup,
   /** 读取指定 Rue context 的当前值。 */

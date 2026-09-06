@@ -140,80 +140,44 @@ list.map(item => <ListItem key={item.id} id={item.id} active={item.id === active
 
 ### 使用 `memo` 优化 (Using memo) {#using-memo}
 
-Rue 提供了 `memo` 工具来帮助优化组件重渲染。您可以使用它来记忆化组件或值：
+Rue 提供了 `memo` 工具来帮助跳过 props 未变化时的组件更新：
 
 ```tsx
-import { memo, useMemo } from '@rue-js/rue'
+import { memo } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
-// 记忆化组件
 const ExpensiveComponent: FC<{ data: Data }> = memo(({ data }) => {
   return <div>{/* 昂贵的渲染 */}</div>
 })
-
-// 在组件内部记忆化值
-const MyComponent: FC = () => {
-  const expensiveValue = useMemo(() => {
-    return computeExpensiveValue(deps)
-  }, [deps])
-
-  return <div>{expensiveValue}</div>
-}
 ```
 
 ### 计算稳定性 (Computed Stability) {#computed-stability}
 
-使用 `useMemo` 时，只有当计算值从前一个值发生变化时，Rue 才会触发更新。例如，以下 `isEven` 计算只在返回值从 `true` 变为 `false` 或反之亦然时触发效果：
+派生值应使用 `computed` 表达。Rue 会自动追踪计算过程中读取的响应式依赖，并在依赖变化后按需重新计算：
 
 ```tsx
-import { useMemo, useState, useEffect } from '@rue-js/rue'
+import { computed, ref, watch } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
 const MyComponent: FC = () => {
-  const [count, setCount] = useState(0)
-  const isEven = useMemo(() => count % 2 === 0, [count])
+  const count = ref(0)
+  const isEven = computed(() => count.value % 2 === 0)
 
-  useEffect(() => {
-    console.log(isEven)
-  }, [isEven]) // 只在 isEven 变化时触发
+  watch(isEven, value => {
+    console.log(value)
+  })
 
-  // 不会触发新的日志，因为计算值保持 `true`
-  // count: 2, 4 都不会触发
-
-  return <div>{count}</div>
+  return <button onClick={() => count.value++}>{count.value}</button>
 }
 ```
 
-这减少了不必要的效果触发，但如果计算每次计算都创建一个新对象，则不起作用：
+对于非常便宜、只在一个位置使用的派生值，也可以直接写成普通表达式，让意图保持清晰：
 
 ```tsx
-const computedObj = useMemo(() => {
-  return {
-    isEven: count % 2 === 0,
-  }
-}, [count])
+const isEven = count.value % 2 === 0
 ```
 
-因为每次都创建一个新对象，所以新值在技术上总是与旧值不同。即使 `isEven` 属性保持不变，Rue 也无法知道，除非它对旧值和新值执行深度比较。这样的比较可能很昂贵，可能不值得。
-
-相反，我们可以通过手动比较新值和旧值来优化，如果知道没有任何变化，则条件性地返回旧值：
-
-```tsx
-const computedObj = useMemo(
-  oldValue => {
-    const newValue = {
-      isEven: count % 2 === 0,
-    }
-    if (oldValue && oldValue.isEven === newValue.isEven) {
-      return oldValue
-    }
-    return newValue
-  },
-  [count],
-)
-```
-
-注意，您应该在比较和返回旧值之前始终执行完整的计算，以便在每次运行时收集相同的依赖项。
+如果派生计算会创建对象，请只在确实需要这个对象时创建它，并优先让下游读取所需的标量字段。不要为了保持对象引用稳定而引入手动依赖数组。
 
 ## 一般优化 (General Optimizations) {#general-optimizations}
 
@@ -253,7 +217,7 @@ const MyComponent: FC = () => {
 
   // 这会：
   const handleAdd = () => {
-    setShallowArray([...shallowArray, newObject])
+    setShallowArray(previous => [...previous, newObject])
   }
 
   return <div>{/* ... */}</div>
@@ -301,19 +265,18 @@ const App: FC = () => {
 
 ### 优化事件处理程序 (Optimize Event Handlers) {#optimize-event-handlers}
 
-使用 `useCallback` 来记忆化事件处理程序，避免不必要的子组件重渲染：
+Rue 组件的初始化逻辑通常只执行一次，因此事件处理程序可以直接声明。让处理程序闭包读取响应式状态即可：
 
 ```tsx
-import { useCallback, useState } from '@rue-js/rue'
+import { memo, ref } from '@rue-js/rue'
 import type { FC } from '@rue-js/rue'
 
 const Parent: FC = () => {
-  const [count, setCount] = useState(0)
+  const count = ref(0)
 
-  // 没有 useCallback，每次渲染都会创建新函数
-  const handleClick = useCallback(() => {
-    setCount(c => c + 1)
-  }, [])
+  const handleClick = () => {
+    count.value++
+  }
 
   return <Child onClick={handleClick} />
 }

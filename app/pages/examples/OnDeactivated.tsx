@@ -23,7 +23,7 @@ const EditorPanel: FC<PanelProps> = props => {
   const [text, setText] = useState('切到计数器后再回来，这段文字还在。')
 
   onDeactivated(() => {
-    props.writeLog(`EditorPanel deactivated: "${text.value.slice(0, 12)}"`)
+    props.writeLog(`EditorPanel deactivated: "${text.slice(0, 12)}"`)
   })
 
   return (
@@ -33,7 +33,7 @@ const EditorPanel: FC<PanelProps> = props => {
         <span className="label-text">草稿内容</span>
         <textarea
           className="textarea textarea-bordered mt-2 min-h-28"
-          value={text.value}
+          value={text}
           onInput={(event: Event) => {
             setText((event.target as HTMLTextAreaElement).value)
           }}
@@ -47,19 +47,17 @@ const CounterPanel: FC<PanelProps> = props => {
   const [count, setCount] = useState(0)
 
   onDeactivated(() => {
-    props.writeLog(`CounterPanel deactivated: count = ${count.value}`)
+    props.writeLog(`CounterPanel deactivated: count = ${count}`)
   })
 
   return (
     <section className="rounded-box border border-success/25 bg-success/10 p-5">
       <div className="text-xs font-semibold uppercase opacity-60">CounterPanel</div>
-      <div className="mt-4 text-5xl font-semibold">{count.value}</div>
+      <div className="mt-4 text-5xl font-semibold">{count}</div>
       <button
         className="btn btn-success btn-sm mt-5"
         onClick={() => {
-          setCount(value => {
-            value.value += 1
-          })
+          setCount(value => value + 1)
         }}
       >
         增加
@@ -86,12 +84,12 @@ const EditorPanel: FC<{ writeLog: (message: string) => void }> = props => {
   const [text, setText] = useState('draft');
 
   onDeactivated(() => {
-    props.writeLog(\`EditorPanel deactivated: "\${text.value}"\`);
+    props.writeLog(\`EditorPanel deactivated: "\${text}"\`);
   });
 
   return (
     <textarea
-      value={text.value}
+      value={text}
       onInput={(event: Event) => {
         setText((event.target as HTMLTextAreaElement).value);
       }}
@@ -103,12 +101,12 @@ const CounterPanel: FC<{ writeLog: (message: string) => void }> = props => {
   const [count, setCount] = useState(0);
 
   onDeactivated(() => {
-    props.writeLog(\`CounterPanel deactivated: count = \${count.value}\`);
+    props.writeLog(\`CounterPanel deactivated: count = \${count}\`);
   });
 
   return (
-    <button onClick={() => setCount(value => { value.value += 1 })}>
-      count: {count.value}
+    <button onClick={() => setCount(value => value + 1)}>
+      count: {count}
     </button>
   );
 };

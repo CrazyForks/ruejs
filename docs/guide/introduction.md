@@ -2,7 +2,7 @@
 
 :::info 你正在阅读 Rue 的文档！
 
-- Rue 是一个现代化的 WASM JavaScript 响应式框架，框架底层使用 Rust 开发，业务层使用 JavaScript 开发。
+- Rue 是一个现代化的编译型 JavaScript 响应式框架，通过编译优化 JSX/TSX 组件的更新过程。
   :::
 
 ## Rue 是什么？ {#what-is-rue}
@@ -19,7 +19,7 @@ import { type FC, ref } from '@rue-js/rue'
 const App: FC = () => {
   const count = ref(0)
 
-  return <button onClick={() => count.value++}>计数：{count.value}</button>
+  return <button onClick={() => count.value++}>计数：{count}</button>
 }
 
 export default App
@@ -27,13 +27,15 @@ export default App
 
 **效果**：按钮会显示当前计数，点击后递增。
 
+这里的 `{count}` 位于 JSX child 的最终展示位置，Rue 会自动解包 Ref。写入、计算或条件判断仍使用 `count.value`；DOM 属性仍写作 `<input value={count.value}>`，而 Signal 仍写作 `{count.get()}`。
+
 上面的示例展示了 Rue 的两个核心特性：
 
 - **声明式渲染**：Rue 使用 JSX 扩展了 JavaScript，允许我们基于 JavaScript 状态声明式地描述 UI 输出。
 
 - **响应式**：Rue 会自动追踪 JavaScript 状态的变化，并在状态变化时高效地更新 DOM。
 
-## WASM 框架
+## 编译型框架
 
 Rue 是一个覆盖了前端开发中大部分常见功能需求的框架和生态系统。但 Web 极其多样化——我们在 Web 上构建的东西在形式和规模上可能千差万别。考虑到这一点，Rue 被设计成灵活且可逐步采用的。根据你的使用场景，Rue 可以以不同的方式使用：
 
@@ -55,7 +57,7 @@ const App: FC = () => {
     count.value++
   }
 
-  return <button onClick={increment}>计数：{count.value}</button>
+  return <button onClick={increment}>计数：{count}</button>
 }
 
 export default App
@@ -90,8 +92,8 @@ const App: FC = () => {
   return (
     <div>
       <p>{state.message}</p>
-      <p>计数：{count.value}</p>
-      <p>双倍计数：{doubleCount.value}</p>
+      <p>计数：{count}</p>
+      <p>双倍计数：{doubleCount}</p>
       <ul>
         {state.items.map(item => (
           <li key={item}>{item}</li>
@@ -101,6 +103,8 @@ const App: FC = () => {
   )
 }
 ```
+
+`ref()`、`computed()` 和 `customRef()` 创建的 Rue Ref 都会在 JSX child 的最终展示位置自动解包。这个规则不会改变普通 JavaScript：上面的 `computed(() => count.value * 2)` 仍需显式读取 `.value`；组件 Props 也保持原对象，例如 `<Child value={count}>` 会把 Ref 本身传给子组件。
 
 如果你更喜欢 getter / setter 风格，也可以直接使用 `signal`：
 
@@ -123,7 +127,11 @@ const App: FC = () => {
 
 ### 使用 useState {#using-usestate}
 
-如果你更喜欢 React 风格的 API，Rue 也提供了 `useState`：
+如果你更喜欢 React 风格的 API，Rue 也提供了 `useState`。它返回当前的普通值和一个支持直接值或函数式更新的 setter：
+
+```ts
+useState<T>(initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>]
+```
 
 ```tsx
 import { type FC, useState } from '@rue-js/rue'
@@ -131,9 +139,11 @@ import { type FC, useState } from '@rue-js/rue'
 const App: FC = () => {
   const [count, setCount] = useState(0)
 
-  return <button onClick={() => setCount(count.value + 1)}>计数：{count.value}</button>
+  return <button onClick={() => setCount(previous => previous + 1)}>计数：{count}</button>
 }
 ```
+
+在编译后的组件中，Rue 会用隐藏的 Signal 保存状态并驱动细粒度更新，但 `useState` 的用户 API 始终是普通值。如果需要显式的 Signal 句柄及 `get()`、`set()` 等细粒度操作，请使用 `signal`；偏好 `.value` 属性访问时则使用 `ref`。
 
 ### 使用 signal {#using-signal}
 

@@ -68,19 +68,13 @@ export const createTestCompiledBlock = (
   })
   return Object.assign(handle, { kind: 'block' as const, mount: block.mount })
 }
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useSetup,
-  useState as useCompiledState,
-} from '../src/compiler-runtime/hooks'
+import { useRef, useSetup, useState as useCompiledState } from '../src/compiler-runtime/hooks'
 import {
   _$compiledMarkComponentRenderReactive,
   _$compiledWithHookId,
 } from '../src/compiled-hook-compat'
 
-export { vapor, useCallback, useMemo, useRef, useSetup }
+export { vapor, useRef, useSetup }
 export const _$createComponent = (type: ComponentInstance<any>, props?: ComponentProps | null) =>
   createCompiledComponent(type, props ?? {})
 export const renderAnchor: any = renderCompiledAnchor

@@ -16,7 +16,7 @@ const About: FC<{ theme: string; setTheme: (t: string) => void }> = p => {
 
   return (
     <div>
-      打开状态: {!!open.value ? '是' : '否'}
+      打开状态: {!!open ? '是' : '否'}
       <ul>
         <li>
           <RouterLink to="/page/about/faq" onMouseDown={() => setOpen(false)}>
@@ -102,7 +102,7 @@ const About: FC<{
         const _el17 = _root.childNodes[3].childNodes[3];
         const _el18 = _el17.parentNode;
         watchEffect(()=>{
-            const __slot = !!open.value ? '是' : '否';
+            const __slot = !!open ? '是' : '否';
             untrack(()=>renderAnchor(__slot, _el2, _el1));
         });
         const _el19 = _$createElement("a", _el4);
@@ -276,8 +276,8 @@ export default About;
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec48.out.js", strip_marker(&out)).ok();
     let output = normalize(&strip_marker(&out));
-    assert_eq!(output.matches("_$compiledBranchAt(").count(), 0, "{output}");
-    assert!(output.contains("const __slot = !!open.value ? '是' : '否'"), "{output}");
+    assert_eq!(output.matches("_$compiledBranchAt(").count(), 1, "{output}");
+    assert!(output.contains("if (!!open)"), "{output}");
     assert!(output.contains("renderAnchor(__slot"), "{output}");
     assert_eq!(output.matches("RouterLink.__rueHref(").count(), 6, "{output}");
     assert_eq!(output.matches("RouterLink.__rueOnClick(").count(), 6, "{output}");

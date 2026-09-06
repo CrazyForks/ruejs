@@ -451,11 +451,9 @@ const Fab: FC<FabProps> = props => {
 
   const isControlled = typeof open === 'boolean'
   const uncontrolledOpen = ref(defaultOpen)
-  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value, {
-    kind: 'ref',
-  })
+  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value)
   const currentTrigger = ref(mergedTrigger)
-  const mergedOpen = currentOpen.value
+  const mergedOpen = currentOpen
   let rootElement: HTMLDivElement | null = null
 
   const syncMenuDom = (nextOpen: boolean) => {
@@ -487,7 +485,7 @@ const Fab: FC<FabProps> = props => {
   const requestOpenChange = (nextOpen: boolean) => {
     const liveTrigger = rootElement?.querySelector('[aria-expanded]') as HTMLElement | null
     const domOpen = liveTrigger?.getAttribute('aria-expanded') === 'true'
-    if ((liveTrigger ? domOpen : currentOpen.value) === nextOpen) return
+    if ((liveTrigger ? domOpen : currentOpen) === nextOpen) return
     if (isControlled) setCurrentOpen(nextOpen)
     syncMenuDom(nextOpen)
     if (onOpenChange) onOpenChange(nextOpen)
@@ -524,7 +522,7 @@ const Fab: FC<FabProps> = props => {
     }
 
     const handleWindowKeydown = (event: KeyboardEvent) => {
-      if (!currentOpen.value || currentTrigger.value !== 'click' || event.key !== 'Escape') return
+      if (!currentOpen || currentTrigger.value !== 'click' || event.key !== 'Escape') return
       requestOpenChange(false)
     }
 

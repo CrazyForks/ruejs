@@ -1438,6 +1438,30 @@ const TreeBodyContent: FC<TreeBodyContentProps> = ({
               style={styles?.label}
               disabled={disabled || node.disabled || !selectable || !node.selectable}
               draggable={canDragNode}
+              onDragStart={(event: DragEvent) => {
+                event.stopPropagation()
+                handleDragStartNode(node, event)
+              }}
+              onDragEnter={(event: DragEvent) => {
+                event.stopPropagation()
+                handleDragEnterNode(node, event)
+              }}
+              onDragOver={(event: DragEvent) => {
+                event.stopPropagation()
+                handleDragOverNode(node, event)
+              }}
+              onDragLeave={(event: DragEvent) => {
+                event.stopPropagation()
+                handleDragLeaveNode(node, event)
+              }}
+              onDragEnd={(event: DragEvent) => {
+                event.stopPropagation()
+                handleDragEndNode(node, event)
+              }}
+              onDrop={(event: DragEvent) => {
+                event.stopPropagation()
+                handleDropNode(node, event)
+              }}
               onMouseDown={(event: MouseEvent) => handleLabelMouseDown(node, event)}
               onClick={(event: MouseEvent) => handleLabelActivate(node, event, 'click')}
               onDblClick={(event: MouseEvent) => handleLabelActivate(node, event, 'doubleClick')}
@@ -2134,7 +2158,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
       overKeyText: keyText,
       dropPosition,
     }
-    requestRender()
+    queueMicrotask(requestRender)
   }
 
   const updateDragHoverDepth = (keyText: string, delta: 1 | -1) => {
@@ -2146,14 +2170,14 @@ const TreeRoot: FC<InternalTreeProps> = ({
     else delete nextDepths[keyText]
 
     dragHoverDepthRef.value = nextDepths
-    requestRender()
+    queueMicrotask(requestRender)
     return nextDepth
   }
 
   const resetDragState = () => {
     dragHoverDepthRef.value = {}
     dragStateRef.value = {}
-    requestRender()
+    queueMicrotask(requestRender)
   }
 
   const resolveDropContext = (
@@ -2240,7 +2264,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
     suppressNextLabelClick(state.keyText)
     dragHoverDepthRef.value = {}
     dragStateRef.value = { dragKeyText: state.keyText }
-    requestRender()
+    queueMicrotask(requestRender)
 
     if (onDragStart) {
       onDragStart({ event: event as unknown as DragEvent, node: dragNode })
@@ -2324,6 +2348,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
   }
 
   const handleDragStartNode = (node: TreeNode, event: DragEvent) => {
+    event.stopPropagation()
     const currentDragConfig = resolveDraggableConfig(draggable)
     if (
       !currentDragConfig.enabled ||
@@ -2340,7 +2365,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
 
     dragHoverDepthRef.value = {}
     dragStateRef.value = { dragKeyText: node.keyText }
-    requestRender()
+    queueMicrotask(requestRender)
 
     if (onDragStart) {
       onDragStart({ event, node })
@@ -2418,6 +2443,7 @@ const TreeRoot: FC<InternalTreeProps> = ({
   }
 
   const handleDropNode = (node: TreeNode, event: DragEvent) => {
+    event.stopPropagation()
     const dropContext = resolveDropContext(node, event, event.currentTarget as HTMLElement)
     if (!dropContext) {
       resetDragState()
@@ -2425,8 +2451,6 @@ const TreeRoot: FC<InternalTreeProps> = ({
     }
 
     event.preventDefault()
-    event.stopPropagation()
-
     const dropPosition =
       dragStateRef.value.overKeyText === node.keyText &&
       dragStateRef.value.dropPosition !== undefined

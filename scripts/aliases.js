@@ -59,6 +59,14 @@ entries.push({
   replacement: resolveSubEntryForPkg('rue', 'compiler-internal'),
 })
 entries.push({
+  find: /^@rue-js\/rue\/internal\/component$/,
+  replacement: resolveSubEntryForPkg('rue', 'component-internal'),
+})
+entries.push({
+  find: /^@rue-js\/rue\/internal\/builtins$/,
+  replacement: resolveSubEntryForPkg('rue', 'builtins-internal'),
+})
+entries.push({
   find: /^@rue-js\/rue\/internal$/,
   replacement: resolveSubEntryForPkg('rue', 'internal'),
 })

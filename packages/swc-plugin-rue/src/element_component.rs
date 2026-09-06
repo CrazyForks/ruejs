@@ -320,7 +320,7 @@ fn lower_expr_slot_value(vt: &mut VaporTransform, expr: &Expr) -> Option<Lowered
         Expr::Call(call)
             if crate::element_expr::contains_jsx_in_expr(&Expr::Call(call.clone())) =>
         {
-            // useMemo/map/自定义 render helper 若返回 JSX，统一转成可挂载 slot 表达式。
+            // memoized/map/自定义 render helper 若返回 JSX，统一转成可挂载 slot 表达式。
             Some(LoweredSlotValue {
                 stmts: vec![],
                 expr: crate::element_expr::make_expr_for_slot(vt, expr),

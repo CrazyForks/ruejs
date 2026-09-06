@@ -14,7 +14,6 @@ import {
   ref,
   render as renderRue,
   useRef,
-  useState,
   watch,
 } from '@rue-js/rue'
 
@@ -1510,7 +1509,7 @@ const FormItem: FC<FormItemProps> = props => {
   const unregisterRef = useRef<(() => void) | null>(null)
   const subscriptionFormRef = useRef<InternalFormInstance | undefined>(undefined)
   const unsubscribeRenderRef = useRef<(() => void) | null>(null)
-  const [renderVersion, setRenderVersion] = useState(0, { kind: 'ref' })
+  const renderVersion = ref(0)
   const renderCacheRef = useRef<any>()
   const previousValuesRef = useRef<any>()
   const lastRegisteredKeyRef = useRef<string>()
@@ -1718,7 +1717,7 @@ const FormItem: FC<FormItemProps> = props => {
     subscriptionFormRef.current = formInstance
     unsubscribeRenderRef.current = formInstance
       ? formInstance.__INTERNAL__.subscribe(() => {
-          setRenderVersion(renderVersion.value + 1)
+          renderVersion.value += 1
         })
       : null
   }
@@ -1829,7 +1828,7 @@ const FormList: FC<FormListProps> = props => {
   const unregisterRef = useRef<(() => void) | null>(null)
   const subscriptionFormRef = useRef<InternalFormInstance | undefined>(undefined)
   const unsubscribeRenderRef = useRef<(() => void) | null>(null)
-  const [renderVersion, setRenderVersion] = useState(0, { kind: 'ref' })
+  const renderVersion = ref(0)
   const latestRulesRef = useRef<FormRule[] | undefined>(rules)
   const latestInitialValueRef = useRef<any[] | undefined>(initialValue)
   const keyListRef = useRef<number[]>([])
@@ -1861,7 +1860,7 @@ const FormList: FC<FormListProps> = props => {
     unsubscribeRenderRef.current?.()
     subscriptionFormRef.current = formInstance
     unsubscribeRenderRef.current = formInstance.__INTERNAL__.subscribe(() => {
-      setRenderVersion(renderVersion.value + 1)
+      renderVersion.value += 1
     })
   }
 
@@ -1972,7 +1971,7 @@ const useWatch = (name: NamePath, form?: FormInstance) => {
     ?.propsRO as Record<string, any> | undefined
   const context = instanceProps?.[FORM_CONTEXT_PROP] as FormContextValue | undefined
   const targetForm = (form ?? context?.form) as InternalFormInstance | undefined
-  const [renderVersion, setRenderVersion] = useState(0, { kind: 'ref' })
+  const renderVersion = ref(0)
   const observedFormRef = useRef<InternalFormInstance | undefined>(undefined)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
@@ -1981,7 +1980,7 @@ const useWatch = (name: NamePath, form?: FormInstance) => {
     observedFormRef.current = targetForm
     unsubscribeRef.current = targetForm
       ? targetForm.__INTERNAL__.subscribe(() => {
-          setRenderVersion(renderVersion.value + 1)
+          renderVersion.value += 1
         })
       : null
   }
@@ -2038,7 +2037,7 @@ const FormRoot: FC<FormProps> = ({
   const rootElementRef = useRef<HTMLElement | null>(null)
   const subscriptionFormRef = useRef<InternalFormInstance | undefined>(undefined)
   const unsubscribeRenderRef = useRef<(() => void) | null>(null)
-  const [renderVersion, setRenderVersion] = useState(0, { kind: 'ref' })
+  const renderVersion = ref(0)
 
   if (!internalFormRef.current) {
     internalFormRef.current = (form as InternalFormInstance | undefined) ?? createFormInstance()
@@ -2069,7 +2068,7 @@ const FormRoot: FC<FormProps> = ({
     unsubscribeRenderRef.current?.()
     subscriptionFormRef.current = resolvedForm
     unsubscribeRenderRef.current = resolvedForm.__INTERNAL__.subscribe(() => {
-      setRenderVersion(renderVersion.value + 1)
+      renderVersion.value += 1
     })
   }
 

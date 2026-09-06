@@ -1,0 +1,1646 @@
+{
+  "schemaVersion": 1,
+  "build": {
+    "mode": "production",
+    "target": "es2020",
+    "minifier": "@swc/core"
+  },
+  "scenarios": {
+    "public-signal": {
+      "name": "public-signal",
+      "entry": "@rue-js/rue",
+      "imports": ["signal"],
+      "resolvedEntry": "packages/rue/dist/runtime.js",
+      "sizes": {
+        "raw": 82872,
+        "minified": 33453,
+        "gzip": 9366,
+        "brotli": 8477
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/graph.js",
+          "renderedBytes": 19115
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/effect.js",
+          "renderedBytes": 10974
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/signal.js",
+          "renderedBytes": 10701
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/reactive.js",
+          "renderedBytes": 8404
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scheduler.js",
+          "renderedBytes": 6911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/runtime-state.js",
+          "renderedBytes": 5620
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/watch.js",
+          "renderedBytes": 4415
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/index.js",
+          "renderedBytes": 3995
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scope.js",
+          "renderedBytes": 3856
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/computed.js",
+          "renderedBytes": 2980
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/resource.js",
+          "renderedBytes": 1262
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/shared.js",
+          "renderedBytes": 572
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPrimitive.js",
+          "renderedBytes": 539
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/typeof.js",
+          "renderedBytes": 532
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/assertClassBrand.js",
+          "renderedBytes": 415
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/defineProperty.js",
+          "renderedBytes": 405
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/checkPrivateRedeclaration.js",
+          "renderedBytes": 374
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPropertyKey.js",
+          "renderedBytes": 324
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldInitSpec.js",
+          "renderedBytes": 323
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateMethodInitSpec.js",
+          "renderedBytes": 319
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldSet2.js",
+          "renderedBytes": 313
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldGet2.js",
+          "renderedBytes": 304
+        },
+        {
+          "id": "packages/runtime/dist/reactivity/index.js",
+          "renderedBytes": 290
+        }
+      ]
+    },
+    "public-ref-computed": {
+      "name": "public-ref-computed",
+      "entry": "@rue-js/rue",
+      "imports": ["ref", "computed"],
+      "resolvedEntry": "packages/rue/dist/runtime.js",
+      "sizes": {
+        "raw": 82956,
+        "minified": 33464,
+        "gzip": 9369,
+        "brotli": 8483
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/graph.js",
+          "renderedBytes": 19115
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/effect.js",
+          "renderedBytes": 10974
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/signal.js",
+          "renderedBytes": 10701
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/reactive.js",
+          "renderedBytes": 8404
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scheduler.js",
+          "renderedBytes": 6911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/runtime-state.js",
+          "renderedBytes": 5620
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/watch.js",
+          "renderedBytes": 4415
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/index.js",
+          "renderedBytes": 3995
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scope.js",
+          "renderedBytes": 3856
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/computed.js",
+          "renderedBytes": 2980
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/resource.js",
+          "renderedBytes": 1262
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/shared.js",
+          "renderedBytes": 572
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPrimitive.js",
+          "renderedBytes": 539
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/typeof.js",
+          "renderedBytes": 532
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/assertClassBrand.js",
+          "renderedBytes": 415
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/defineProperty.js",
+          "renderedBytes": 405
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/checkPrivateRedeclaration.js",
+          "renderedBytes": 374
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPropertyKey.js",
+          "renderedBytes": 324
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldInitSpec.js",
+          "renderedBytes": 323
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateMethodInitSpec.js",
+          "renderedBytes": 319
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldSet2.js",
+          "renderedBytes": 313
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldGet2.js",
+          "renderedBytes": 304
+        },
+        {
+          "id": "packages/runtime/dist/reactivity/index.js",
+          "renderedBytes": 290
+        }
+      ]
+    },
+    "public-create-rue": {
+      "name": "public-create-rue",
+      "entry": "@rue-js/rue",
+      "imports": ["createRue"],
+      "resolvedEntry": "packages/rue/dist/runtime.js",
+      "sizes": {
+        "raw": 311903,
+        "minified": 122813,
+        "gzip": 35637,
+        "brotli": 31460
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/dom.js",
+          "renderedBytes": 36779
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/facade.js",
+          "renderedBytes": 20370
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/graph.js",
+          "renderedBytes": 19115
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/values.js",
+          "renderedBytes": 17068
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/effect.js",
+          "renderedBytes": 10980
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/signal.js",
+          "renderedBytes": 10707
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/component.js",
+          "renderedBytes": 10310
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/owned-mount.js",
+          "renderedBytes": 10274
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount-input.js",
+          "renderedBytes": 8823
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/create-rue-base.js",
+          "renderedBytes": 8709
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/reactive.js",
+          "renderedBytes": 8416
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount.js",
+          "renderedBytes": 8382
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/vapor-bridge.js",
+          "renderedBytes": 8170
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/state.js",
+          "renderedBytes": 7047
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scheduler.js",
+          "renderedBytes": 6911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/instance.js",
+          "renderedBytes": 6479
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/runtime-entry-wrap.js",
+          "renderedBytes": 6042
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/helpers.js",
+          "renderedBytes": 5972
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/runtime-state.js",
+          "renderedBytes": 5620
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount-compat.js",
+          "renderedBytes": 5459
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/props.js",
+          "renderedBytes": 5403
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/effect.js",
+          "renderedBytes": 5197
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/computed.js",
+          "renderedBytes": 4864
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/watch.js",
+          "renderedBytes": 4427
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/index.js",
+          "renderedBytes": 4074
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/app.js",
+          "renderedBytes": 3889
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scope.js",
+          "renderedBytes": 3856
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/context.js",
+          "renderedBytes": 3841
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/index.js",
+          "renderedBytes": 3758
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/lifecycle.js",
+          "renderedBytes": 3656
+        },
+        {
+          "id": "packages/runtime/dist/error-capture.js",
+          "renderedBytes": 3581
+        },
+        {
+          "id": "packages/runtime/dist/client-runtime.js",
+          "renderedBytes": 3286
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/computed.js",
+          "renderedBytes": 2984
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/component.js",
+          "renderedBytes": 2965
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/range.js",
+          "renderedBytes": 2309
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/plugins.js",
+          "renderedBytes": 2088
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.shared.js",
+          "renderedBytes": 2049
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/container.js",
+          "renderedBytes": 1805
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/protocol.js",
+          "renderedBytes": 1704
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/errors.js",
+          "renderedBytes": 1619
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/host.js",
+          "renderedBytes": 1530
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/kernel-bridge.js",
+          "renderedBytes": 1521
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/types.js",
+          "renderedBytes": 1459
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/anchor.js",
+          "renderedBytes": 1435
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/resource.js",
+          "renderedBytes": 1272
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/index.js",
+          "renderedBytes": 1155
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/keep-alive.js",
+          "renderedBytes": 1048
+        },
+        {
+          "id": "packages/runtime/dist/runtime-context.js",
+          "renderedBytes": 1007
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/static.js",
+          "renderedBytes": 946
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/state.js",
+          "renderedBytes": 900
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/replace.js",
+          "renderedBytes": 631
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/runtime-entry.js",
+          "renderedBytes": 577
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/shared.js",
+          "renderedBytes": 572
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPrimitive.js",
+          "renderedBytes": 539
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/typeof.js",
+          "renderedBytes": 532
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/text.js",
+          "renderedBytes": 521
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/assertClassBrand.js",
+          "renderedBytes": 415
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/defineProperty.js",
+          "renderedBytes": 405
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/create-rue.js",
+          "renderedBytes": 386
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/checkPrivateRedeclaration.js",
+          "renderedBytes": 374
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom-host-operations.js",
+          "renderedBytes": 360
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPropertyKey.js",
+          "renderedBytes": 324
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldInitSpec.js",
+          "renderedBytes": 323
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateMethodInitSpec.js",
+          "renderedBytes": 319
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldSet2.js",
+          "renderedBytes": 313
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.js",
+          "renderedBytes": 307
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldGet2.js",
+          "renderedBytes": 304
+        },
+        {
+          "id": "packages/runtime/dist/rue.js",
+          "renderedBytes": 298
+        },
+        {
+          "id": "packages/runtime/dist/reactive-core/index.js",
+          "renderedBytes": 272
+        }
+      ]
+    },
+    "public-render": {
+      "name": "public-render",
+      "entry": "@rue-js/rue",
+      "imports": ["render"],
+      "resolvedEntry": "packages/rue/dist/runtime.js",
+      "sizes": {
+        "raw": 378613,
+        "minified": 151343,
+        "gzip": 44053,
+        "brotli": 38674
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/dom.js",
+          "renderedBytes": 38026
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/facade.js",
+          "renderedBytes": 20370
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/graph.js",
+          "renderedBytes": 19115
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/values.js",
+          "renderedBytes": 17068
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component.js",
+          "renderedBytes": 15513
+        },
+        {
+          "id": "packages/runtime/dist/compiled-render-anchor.js",
+          "renderedBytes": 14968
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/effect.js",
+          "renderedBytes": 10980
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/signal.js",
+          "renderedBytes": 10707
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/component.js",
+          "renderedBytes": 10310
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/owned-mount.js",
+          "renderedBytes": 10274
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount-input.js",
+          "renderedBytes": 8823
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/create-rue-base.js",
+          "renderedBytes": 8709
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/reactive.js",
+          "renderedBytes": 8416
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount.js",
+          "renderedBytes": 8382
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/vapor-bridge.js",
+          "renderedBytes": 8170
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/state.js",
+          "renderedBytes": 7047
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scheduler.js",
+          "renderedBytes": 6911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/instance.js",
+          "renderedBytes": 6479
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/runtime-entry-wrap.js",
+          "renderedBytes": 6042
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/helpers.js",
+          "renderedBytes": 5972
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/runtime-state.js",
+          "renderedBytes": 5620
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount-compat.js",
+          "renderedBytes": 5459
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/props.js",
+          "renderedBytes": 5403
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/effect.js",
+          "renderedBytes": 5197
+        },
+        {
+          "id": "packages/runtime/dist/island-protocol.js",
+          "renderedBytes": 4953
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/computed.js",
+          "renderedBytes": 4864
+        },
+        {
+          "id": "packages/runtime/dist/client-runtime.js",
+          "renderedBytes": 4660
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/watch.js",
+          "renderedBytes": 4427
+        },
+        {
+          "id": "packages/runtime/dist/reactive-core/index.js",
+          "renderedBytes": 4194
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/index.js",
+          "renderedBytes": 4074
+        },
+        {
+          "id": "packages/runtime/dist/compiled-root.js",
+          "renderedBytes": 3983
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/app.js",
+          "renderedBytes": 3889
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scope.js",
+          "renderedBytes": 3856
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/context.js",
+          "renderedBytes": 3841
+        },
+        {
+          "id": "packages/runtime/dist/error-capture.js",
+          "renderedBytes": 3794
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/index.js",
+          "renderedBytes": 3758
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/lifecycle.js",
+          "renderedBytes": 3656
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component-call.js",
+          "renderedBytes": 3440
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.browser.js",
+          "renderedBytes": 3394
+        },
+        {
+          "id": "packages/runtime/dist/compiled-dom-bindings.js",
+          "renderedBytes": 3129
+        },
+        {
+          "id": "packages/runtime/dist/compiled-props.js",
+          "renderedBytes": 3077
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/computed.js",
+          "renderedBytes": 2984
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/component.js",
+          "renderedBytes": 2965
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/range.js",
+          "renderedBytes": 2309
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom-host-operations.js",
+          "renderedBytes": 2216
+        },
+        {
+          "id": "packages/runtime/dist/runtime-context.js",
+          "renderedBytes": 2139
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/plugins.js",
+          "renderedBytes": 2088
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.shared.js",
+          "renderedBytes": 2059
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/container.js",
+          "renderedBytes": 1805
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/protocol.js",
+          "renderedBytes": 1704
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/errors.js",
+          "renderedBytes": 1619
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.hydrate.js",
+          "renderedBytes": 1608
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/host.js",
+          "renderedBytes": 1530
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/kernel-bridge.js",
+          "renderedBytes": 1521
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/types.js",
+          "renderedBytes": 1459
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/anchor.js",
+          "renderedBytes": 1435
+        },
+        {
+          "id": "packages/runtime/dist/rue.js",
+          "renderedBytes": 1382
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/resource.js",
+          "renderedBytes": 1272
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/index.js",
+          "renderedBytes": 1150
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/keep-alive.js",
+          "renderedBytes": 1048
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/static.js",
+          "renderedBytes": 946
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/state.js",
+          "renderedBytes": 900
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/replace.js",
+          "renderedBytes": 631
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/runtime-entry.js",
+          "renderedBytes": 577
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/shared.js",
+          "renderedBytes": 572
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPrimitive.js",
+          "renderedBytes": 539
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/typeof.js",
+          "renderedBytes": 532
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/text.js",
+          "renderedBytes": 521
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/assertClassBrand.js",
+          "renderedBytes": 415
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/defineProperty.js",
+          "renderedBytes": 405
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/create-rue.js",
+          "renderedBytes": 386
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/checkPrivateRedeclaration.js",
+          "renderedBytes": 374
+        },
+        {
+          "id": "packages/runtime/dist/compiled-legacy-dom.js",
+          "renderedBytes": 361
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPropertyKey.js",
+          "renderedBytes": 324
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldInitSpec.js",
+          "renderedBytes": 323
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateMethodInitSpec.js",
+          "renderedBytes": 319
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldSet2.js",
+          "renderedBytes": 313
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.js",
+          "renderedBytes": 307
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldGet2.js",
+          "renderedBytes": 304
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/hooks.js",
+          "renderedBytes": 287
+        }
+      ]
+    },
+    "public-transition": {
+      "name": "public-transition",
+      "entry": "@rue-js/rue",
+      "imports": ["Transition"],
+      "resolvedEntry": "packages/rue/dist/runtime.js",
+      "sizes": {
+        "raw": 232134,
+        "minified": 89457,
+        "gzip": 25698,
+        "brotli": 23163
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/facade.js",
+          "renderedBytes": 20355
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/graph.js",
+          "renderedBytes": 19115
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/values.js",
+          "renderedBytes": 17052
+        },
+        {
+          "id": "packages/runtime/dist/compiled-render-anchor.js",
+          "renderedBytes": 15549
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component.js",
+          "renderedBytes": 15497
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/builtins/index.js",
+          "renderedBytes": 11358
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/effect.js",
+          "renderedBytes": 10980
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/signal.js",
+          "renderedBytes": 10707
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/reactive.js",
+          "renderedBytes": 8416
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/state.js",
+          "renderedBytes": 7047
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scheduler.js",
+          "renderedBytes": 6911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/runtime-state.js",
+          "renderedBytes": 5620
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/effect.js",
+          "renderedBytes": 5190
+        },
+        {
+          "id": "packages/runtime/dist/island-protocol.js",
+          "renderedBytes": 4953
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/computed.js",
+          "renderedBytes": 4859
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/watch.js",
+          "renderedBytes": 4427
+        },
+        {
+          "id": "packages/runtime/dist/reactive-core/index.js",
+          "renderedBytes": 4182
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/index.js",
+          "renderedBytes": 4068
+        },
+        {
+          "id": "packages/runtime/dist/compiled-root.js",
+          "renderedBytes": 3981
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scope.js",
+          "renderedBytes": 3856
+        },
+        {
+          "id": "packages/runtime/dist/error-capture.js",
+          "renderedBytes": 3776
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/index.js",
+          "renderedBytes": 3758
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.browser.js",
+          "renderedBytes": 3505
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component-call.js",
+          "renderedBytes": 3438
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/context.js",
+          "renderedBytes": 3263
+        },
+        {
+          "id": "packages/runtime/dist/compiled-dom-bindings.js",
+          "renderedBytes": 3121
+        },
+        {
+          "id": "packages/runtime/dist/compiled-props.js",
+          "renderedBytes": 3075
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/computed.js",
+          "renderedBytes": 2984
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom-host-operations.js",
+          "renderedBytes": 2489
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/mount.js",
+          "renderedBytes": 2038
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/protocol.js",
+          "renderedBytes": 1704
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.hydrate.js",
+          "renderedBytes": 1608
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.shared.js",
+          "renderedBytes": 1521
+        },
+        {
+          "id": "packages/runtime/dist/runtime-context.js",
+          "renderedBytes": 1295
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/resource.js",
+          "renderedBytes": 1272
+        },
+        {
+          "id": "packages/runtime/dist/components/suspenseContext.js",
+          "renderedBytes": 774
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/shared.js",
+          "renderedBytes": 572
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPrimitive.js",
+          "renderedBytes": 539
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/typeof.js",
+          "renderedBytes": 532
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/assertClassBrand.js",
+          "renderedBytes": 415
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/defineProperty.js",
+          "renderedBytes": 405
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/checkPrivateRedeclaration.js",
+          "renderedBytes": 374
+        },
+        {
+          "id": "packages/runtime/dist/compiled-legacy-dom.js",
+          "renderedBytes": 361
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPropertyKey.js",
+          "renderedBytes": 324
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldInitSpec.js",
+          "renderedBytes": 323
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateMethodInitSpec.js",
+          "renderedBytes": 319
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldSet2.js",
+          "renderedBytes": 313
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldGet2.js",
+          "renderedBytes": 304
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/hooks.js",
+          "renderedBytes": 287
+        },
+        {
+          "id": "packages/runtime/dist/components/Transition.js",
+          "renderedBytes": 268
+        }
+      ]
+    },
+    "public-custom-element": {
+      "name": "public-custom-element",
+      "entry": "@rue-js/rue",
+      "imports": ["useCustomElement"],
+      "resolvedEntry": "packages/rue/dist/runtime.js",
+      "sizes": {
+        "raw": 397526,
+        "minified": 157146,
+        "gzip": 45948,
+        "brotli": 40238
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/dom.js",
+          "renderedBytes": 39343
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/facade.js",
+          "renderedBytes": 20370
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/graph.js",
+          "renderedBytes": 19115
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/values.js",
+          "renderedBytes": 17068
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component.js",
+          "renderedBytes": 15515
+        },
+        {
+          "id": "packages/runtime/dist/compiled-render-anchor.js",
+          "renderedBytes": 14968
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/effect.js",
+          "renderedBytes": 10980
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/signal.js",
+          "renderedBytes": 10707
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/component.js",
+          "renderedBytes": 10310
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/owned-mount.js",
+          "renderedBytes": 10274
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount-input.js",
+          "renderedBytes": 8823
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/create-rue-base.js",
+          "renderedBytes": 8709
+        },
+        {
+          "id": "packages/runtime/dist/custom-elements.js",
+          "renderedBytes": 8707
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/reactive.js",
+          "renderedBytes": 8416
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount.js",
+          "renderedBytes": 8382
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/vapor-bridge.js",
+          "renderedBytes": 8170
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/state.js",
+          "renderedBytes": 7047
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scheduler.js",
+          "renderedBytes": 6911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/instance.js",
+          "renderedBytes": 6479
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/runtime-entry-wrap.js",
+          "renderedBytes": 6042
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/helpers.js",
+          "renderedBytes": 5972
+        },
+        {
+          "id": "packages/runtime/dist/client-runtime.js",
+          "renderedBytes": 5730
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/runtime-state.js",
+          "renderedBytes": 5620
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/mount-compat.js",
+          "renderedBytes": 5459
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/props.js",
+          "renderedBytes": 5403
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/effect.js",
+          "renderedBytes": 5197
+        },
+        {
+          "id": "packages/runtime/dist/island-protocol.js",
+          "renderedBytes": 4953
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/computed.js",
+          "renderedBytes": 4864
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/watch.js",
+          "renderedBytes": 4427
+        },
+        {
+          "id": "packages/runtime/dist/reactive-core/index.js",
+          "renderedBytes": 4196
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/index.js",
+          "renderedBytes": 4074
+        },
+        {
+          "id": "packages/runtime/dist/hooks/useApp.js",
+          "renderedBytes": 4071
+        },
+        {
+          "id": "packages/runtime/dist/compiled-root.js",
+          "renderedBytes": 3983
+        },
+        {
+          "id": "packages/runtime/dist/error-capture.js",
+          "renderedBytes": 3911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/app.js",
+          "renderedBytes": 3889
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scope.js",
+          "renderedBytes": 3856
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/context.js",
+          "renderedBytes": 3841
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/index.js",
+          "renderedBytes": 3762
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/lifecycle.js",
+          "renderedBytes": 3656
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component-call.js",
+          "renderedBytes": 3442
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.browser.js",
+          "renderedBytes": 3394
+        },
+        {
+          "id": "packages/runtime/dist/compiled-dom-bindings.js",
+          "renderedBytes": 3129
+        },
+        {
+          "id": "packages/runtime/dist/compiled-props.js",
+          "renderedBytes": 3081
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/computed.js",
+          "renderedBytes": 2984
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/component.js",
+          "renderedBytes": 2965
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom-host-operations.js",
+          "renderedBytes": 2317
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/range.js",
+          "renderedBytes": 2309
+        },
+        {
+          "id": "packages/runtime/dist/runtime-context.js",
+          "renderedBytes": 2139
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/plugins.js",
+          "renderedBytes": 2088
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.shared.js",
+          "renderedBytes": 2071
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/container.js",
+          "renderedBytes": 1805
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/protocol.js",
+          "renderedBytes": 1704
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/errors.js",
+          "renderedBytes": 1619
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.hydrate.js",
+          "renderedBytes": 1608
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/host.js",
+          "renderedBytes": 1530
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/kernel-bridge.js",
+          "renderedBytes": 1521
+        },
+        {
+          "id": "packages/runtime/dist/hooks/app-container-ownership.js",
+          "renderedBytes": 1462
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/types.js",
+          "renderedBytes": 1459
+        },
+        {
+          "id": "packages/runtime/dist/context.js",
+          "renderedBytes": 1437
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/anchor.js",
+          "renderedBytes": 1435
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/resource.js",
+          "renderedBytes": 1272
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/index.js",
+          "renderedBytes": 1188
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/keep-alive.js",
+          "renderedBytes": 1048
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/render/static.js",
+          "renderedBytes": 946
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/state.js",
+          "renderedBytes": 900
+        },
+        {
+          "id": "packages/runtime/dist/component-registry.js",
+          "renderedBytes": 780
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/replace.js",
+          "renderedBytes": 631
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/runtime-entry.js",
+          "renderedBytes": 577
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/shared.js",
+          "renderedBytes": 572
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPrimitive.js",
+          "renderedBytes": 539
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/typeof.js",
+          "renderedBytes": 532
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/patch/text.js",
+          "renderedBytes": 521
+        },
+        {
+          "id": "packages/runtime/dist/custom-elements.shared.js",
+          "renderedBytes": 425
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/assertClassBrand.js",
+          "renderedBytes": 415
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/defineProperty.js",
+          "renderedBytes": 405
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-runtime/create-rue.js",
+          "renderedBytes": 386
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/checkPrivateRedeclaration.js",
+          "renderedBytes": 374
+        },
+        {
+          "id": "packages/runtime/dist/compiled-legacy-dom.js",
+          "renderedBytes": 361
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/hooks.js",
+          "renderedBytes": 337
+        },
+        {
+          "id": "packages/runtime/dist/reactivity/index.js",
+          "renderedBytes": 331
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPropertyKey.js",
+          "renderedBytes": 324
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldInitSpec.js",
+          "renderedBytes": 323
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateMethodInitSpec.js",
+          "renderedBytes": 319
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldSet2.js",
+          "renderedBytes": 313
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.js",
+          "renderedBytes": 307
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldGet2.js",
+          "renderedBytes": 304
+        }
+      ]
+    },
+    "compiler-internal": {
+      "name": "compiler-internal",
+      "entry": "@rue-js/rue/internal/compiler",
+      "imports": ["_$compiledRoot"],
+      "resolvedEntry": "packages/rue/dist/compiler-internal.js",
+      "sizes": {
+        "raw": 9751,
+        "minified": 3932,
+        "gzip": 1651,
+        "brotli": 1518
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/runtime-core/compiled.js",
+          "renderedBytes": 4209
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/compact-root.js",
+          "renderedBytes": 2789
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom-host-operations.js",
+          "renderedBytes": 1859
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.browser.js",
+          "renderedBytes": 867
+        }
+      ]
+    },
+    "internal": {
+      "name": "internal",
+      "entry": "@rue-js/rue/internal",
+      "imports": ["_$compiledComponent"],
+      "resolvedEntry": "packages/rue/dist/internal.js",
+      "sizes": {
+        "raw": 216510,
+        "minified": 85228,
+        "gzip": 24441,
+        "brotli": 21951
+      },
+      "modules": [
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/facade.js",
+          "renderedBytes": 20355
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/graph.js",
+          "renderedBytes": 19115
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/values.js",
+          "renderedBytes": 17052
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component.js",
+          "renderedBytes": 15497
+        },
+        {
+          "id": "packages/runtime/dist/compiled-render-anchor.js",
+          "renderedBytes": 14964
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/effect.js",
+          "renderedBytes": 10980
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/signal.js",
+          "renderedBytes": 10707
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/reactive.js",
+          "renderedBytes": 8416
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/state.js",
+          "renderedBytes": 7047
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scheduler.js",
+          "renderedBytes": 6911
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/runtime-state.js",
+          "renderedBytes": 5620
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/effect.js",
+          "renderedBytes": 5190
+        },
+        {
+          "id": "packages/runtime/dist/island-protocol.js",
+          "renderedBytes": 4953
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/computed.js",
+          "renderedBytes": 4859
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/watch.js",
+          "renderedBytes": 4427
+        },
+        {
+          "id": "packages/runtime/dist/reactive-core/index.js",
+          "renderedBytes": 4182
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/index.js",
+          "renderedBytes": 4068
+        },
+        {
+          "id": "packages/runtime/dist/compiled-root.js",
+          "renderedBytes": 3981
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/scope.js",
+          "renderedBytes": 3856
+        },
+        {
+          "id": "packages/runtime/dist/error-capture.js",
+          "renderedBytes": 3776
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/index.js",
+          "renderedBytes": 3758
+        },
+        {
+          "id": "packages/runtime/dist/compiled-component-call.js",
+          "renderedBytes": 3438
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.browser.js",
+          "renderedBytes": 3394
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/js-reactive/hooks/context.js",
+          "renderedBytes": 3263
+        },
+        {
+          "id": "packages/runtime/dist/compiled-dom-bindings.js",
+          "renderedBytes": 3121
+        },
+        {
+          "id": "packages/runtime/dist/compiled-props.js",
+          "renderedBytes": 3075
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/computed.js",
+          "renderedBytes": 2984
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom-host-operations.js",
+          "renderedBytes": 2080
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/protocol.js",
+          "renderedBytes": 1704
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/dom.hydrate.js",
+          "renderedBytes": 1608
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive.shared.js",
+          "renderedBytes": 1521
+        },
+        {
+          "id": "packages/runtime/dist/runtime-context.js",
+          "renderedBytes": 1295
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/resource.js",
+          "renderedBytes": 1272
+        },
+        {
+          "id": "packages/runtime/dist/runtime-core/reactive-kernel/shared.js",
+          "renderedBytes": 572
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPrimitive.js",
+          "renderedBytes": 539
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/typeof.js",
+          "renderedBytes": 532
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/assertClassBrand.js",
+          "renderedBytes": 415
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/defineProperty.js",
+          "renderedBytes": 405
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/checkPrivateRedeclaration.js",
+          "renderedBytes": 374
+        },
+        {
+          "id": "packages/runtime/dist/compiled-legacy-dom.js",
+          "renderedBytes": 361
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/toPropertyKey.js",
+          "renderedBytes": 324
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldInitSpec.js",
+          "renderedBytes": 323
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateMethodInitSpec.js",
+          "renderedBytes": 319
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldSet2.js",
+          "renderedBytes": 313
+        },
+        {
+          "id": "packages/runtime/dist/_virtual/_@oxc-project_runtime@0.144.0/helpers/esm/classPrivateFieldGet2.js",
+          "renderedBytes": 304
+        },
+        {
+          "id": "packages/runtime/dist/compiler-runtime/hooks.js",
+          "renderedBytes": 287
+        }
+      ]
+    }
+  }
+}

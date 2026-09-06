@@ -6,14 +6,14 @@ type AppBrowserErrorInfo = { componentStack?: string }
 type AppBrowserCaughtErrorHandler = (error: unknown, errorInfo: AppBrowserErrorInfo) => void
 type AppBrowserUncaughtErrorHandler = (error: unknown, errorInfo: AppBrowserErrorInfo) => void
 type ScheduleTransition = (action: () => void) => void
-type RueRawStateSetter<T> = (value: T | ((previous: T) => T | void)) => void
+export type RueStateSetter<T> = (value: T | ((previous: T) => T)) => void
 type AppBrowserRueRuntime = {
   batch(action: () => void): void
   mount(app: () => TextRenderable, container: Element): void
   onError?: (handler: (error: unknown) => void) => (() => void) | undefined
   render(children: TextRenderable, container: Element): void
   useEffect(effect: () => void | (() => void), deps?: unknown[] | null): void
-  useState<T>(initial: T | (() => T), options: { kind: 'ref' }): [T, RueRawStateSetter<T>]
+  useState<T>(initial: T | (() => T)): [T, RueStateSetter<T>]
 }
 
 export type AppBrowserFormState = unknown
@@ -26,8 +26,6 @@ export type AppBrowserRootOptions = {
   onCaughtError?: AppBrowserCaughtErrorHandler
   onUncaughtError: AppBrowserUncaughtErrorHandler
 }
-export type RueStateSetter<T> = (value: T | ((previous: T) => T)) => void
-
 export const RSC_FORM_STATE_GLOBAL = '__TEXT_RSC_FORM_STATE__'
 
 type FormStateGlobal = {
@@ -145,32 +143,7 @@ export function mountRueRootInTransition(options: {
 }
 
 export function useRueState<T>(initial: T | (() => T)): [T, RueStateSetter<T>] {
-  const [state, setState] = getRueRuntime().useState<T>(initial, { kind: 'ref' })
-  const readStateValue = (value: T | { value: T }): T => {
-    if (value && typeof value === 'object') {
-      try {
-        const refValue = (value as { value?: T }).value
-        if (refValue !== undefined && refValue !== value) {
-          return refValue
-        }
-      } catch {
-        // Some Rue ref proxies may throw while detached; fall back to the raw
-        // object so callers keep the previous behavior.
-      }
-    }
-    return value as T
-  }
-
-  return [
-    readStateValue(state),
-    value => {
-      if (typeof value === 'function') {
-        setState(previous => (value as (previous: T) => T)(readStateValue(previous)))
-        return
-      }
-      setState(value)
-    },
-  ]
+  return getRueRuntime().useState(initial)
 }
 
 export function useRueLayoutEffect(

@@ -115,15 +115,15 @@ fn lowers_single_expr_children_for_plain_jsx_call_and_empty_cases() {
     assert_eq!(compact(&emit_expr(plain_lowered.expr)), "value;");
 
     let mut call_vt = new_vt();
-    let call = parse_jsx_element("<Box>{useMemo(() => <span />, [])}</Box>");
+    let call = parse_jsx_element("<Box>{_$compiledMemo('memo', () => <span />, [])}</Box>");
     let call_lowered = lower_slot_value(&mut call_vt, &call.children).expect("call lowered");
     let call_out = compact(&emit_expr(call_lowered.expr));
 
     assert!(call_lowered.stmts.is_empty());
     assert!(!call_lowered.is_function);
-    assert!(
-        call_out.contains("useMemo(()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{")
-    );
+    assert!(call_out.contains(
+        "_$compiledMemo('memo',()=>_$compiledRoot(Object.assign((__rue_parent_context)=>{"
+    ));
     assert!(call_out.contains("_$compiledCreateElement(\"span\",__rue_parent_context)"));
 
     let mut empty_vt = new_vt();

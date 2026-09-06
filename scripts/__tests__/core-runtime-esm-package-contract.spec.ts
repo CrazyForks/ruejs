@@ -27,17 +27,33 @@ const packages = [
     directory: 'shared',
     name: '@rue-js/shared',
     entry: 'shared',
+    indexTarget: './dist/shared.esm-bundler.js',
+    preservedEntries: null,
     subpaths: ['.'],
   },
   {
     directory: 'runtime',
     name: '@rue-js/runtime',
     entry: 'runtime',
+    indexTarget: './dist/index.js',
+    preservedEntries: {
+      '.': './dist/index.js',
+      './server': './dist/server.js',
+      './internal': './dist/internal.js',
+      './internal/compiler': './dist/compiler-internal.js',
+      './internal/component': './dist/component-internal.js',
+      './internal/builtins': './dist/builtins-internal.js',
+      './island': './dist/island.js',
+      './server-island': './dist/server-island.js',
+      './dom': './dist/dom.js',
+    },
     subpaths: [
       '.',
       './server',
       './internal',
       './internal/compiler',
+      './internal/component',
+      './internal/builtins',
       './island',
       './server-island',
       './dom',
@@ -92,7 +108,7 @@ describe('core runtime ESM package contract', () => {
     expect(JSON.stringify(manifest.exports)).not.toContain('"require"')
     expect(JSON.stringify(manifest.exports)).not.toContain('"node"')
     expect(readFileSync(path.resolve(packageDir, 'index.js'), 'utf8')).toBe(
-      `export * from './dist/${pkg.entry}.esm-bundler.js'\n`,
+      `export * from '${pkg.indexTarget}'\n`,
     )
     expect(packedFiles.filter(file => /(?:^|\/)\S*\.cjs(?:\.|$)/.test(file))).toEqual([])
     expect(packedFiles.filter(file => /(?:^|\/)dist\/.*\.esm-bundler\.js$/.test(file))).not.toEqual(
@@ -105,9 +121,10 @@ describe('core runtime ESM package contract', () => {
 
     for (const subpath of pkg.subpaths) {
       const exportEntry = manifest.exports[subpath]
+      const preservedTarget = pkg.preservedEntries?.[subpath]
       expect(exportEntry, `${pkg.name}${subpath}`).toEqual(
         expect.objectContaining({
-          import: expect.stringMatching(/^\.\/dist\/.*\.esm-bundler\.js$/),
+          import: preservedTarget ?? expect.stringMatching(/^\.\/dist\/.*\.esm-bundler\.js$/),
         }),
       )
 
@@ -131,10 +148,30 @@ describe('core runtime ESM package contract', () => {
     const subEntries = runtime.buildOptions.subEntries ?? []
 
     expect(runtime.buildOptions.formats).toEqual(['esm-bundler', 'esm-browser', 'global'])
-    expect(subEntries).toHaveLength(6)
+    expect(subEntries).toHaveLength(8)
     expect(subEntries.map(entry => entry.formats)).toEqual(
-      Array.from({ length: 6 }, () => ['esm-bundler']),
+      Array.from({ length: 8 }, () => ['esm-bundler']),
     )
+  })
+
+  it('publishes the Runtime bundler entry as a preserved module tree', () => {
+    const runtime = readManifest('runtime')
+    const runtimePackage = packages.find(pkg => pkg.directory === 'runtime')
+    if (!runtimePackage?.preservedEntries) {
+      throw new Error('missing Runtime package fixture')
+    }
+
+    expect(runtime.buildOptions).toEqual(expect.objectContaining({ preserveModules: true }))
+    for (const [subpath, target] of Object.entries(runtimePackage.preservedEntries)) {
+      expect(runtime.exports[subpath]).toEqual(
+        expect.objectContaining({ module: target, import: target }),
+      )
+    }
+
+    const packedFiles = packFiles('runtime')
+    expect(packedFiles).toContain('dist/index.js')
+    expect(packedFiles).toContain('dist/rue.js')
+    expect(packedFiles).toContain('dist/reactivity/index.js')
   })
 
   it('builds all asserted ESM artifacts before checking package contents', () => {

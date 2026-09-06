@@ -255,6 +255,7 @@ const resolveServerOperations = (value: unknown, forceComponentInvocation = fals
 export const renderToString = async (
   input:
     | Parameters<typeof renderRuntimeToString>[0]
+    | ServerOperation
     | ((props: Record<string, unknown>) => ServerOperation),
   options: RenderToStringOptions = {},
 ) => {
@@ -276,6 +277,7 @@ export const renderToString = async (
 export const renderToReadableStream = async (
   input:
     | Parameters<typeof renderRuntimeToReadableStream>[0]
+    | ServerOperation
     | ((props: Record<string, unknown>) => ServerOperation),
   options: RenderToStringOptions = {},
 ) => {

@@ -569,6 +569,19 @@ fn compiled_dynamic_template_to_block(
         .map(|hole| {
             let anchor = vt.next_el_ident();
             stmts.push(crate::emit::const_decl(anchor.clone(), child_node_path(&root, &hole.path)));
+            if hole.reuse_text {
+                stmts.push(Stmt::Expr(ExprStmt {
+                    span: DUMMY_SP,
+                    expr: Box::new(Expr::Assign(AssignExpr {
+                        span: DUMMY_SP,
+                        op: AssignOp::Assign,
+                        left: Box::new(member_expr(Expr::Ident(anchor.clone()), "data"))
+                            .try_into()
+                            .unwrap(),
+                        right: Box::new(crate::emit::string_expr("")),
+                    })),
+                }));
+            }
             let parent = vt.next_el_ident();
             stmts.push(crate::emit::const_decl(
                 parent.clone(),
@@ -587,6 +600,15 @@ fn compiled_dynamic_template_to_block(
         let expected_index = anchor_index;
         if hole.index != expected_index {
             return None;
+        }
+        if hole.reuse_text {
+            let crate::vapor::template::MarkedHoleSource::Expression(container) = &hole.source
+            else {
+                return None;
+            };
+            crate::vapor::emit_compiled_text_effect(vt, anchor, container, &mut stmts)?;
+            anchor_index += 1;
+            continue;
         }
         if matches!(hole.source, crate::vapor::template::MarkedHoleSource::Expression(_)) {
             let mut group_end = anchor_index;

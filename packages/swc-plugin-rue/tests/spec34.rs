@@ -155,7 +155,7 @@ const DocDetail: FC = () => {
     <SidebarPlayground type={sidebarType}>
       <div
         className="prose prose-sm md:prose-base"
-        dangerouslySetInnerHTML={{ __html: html.value }}
+        dangerouslySetInnerHTML={{ __html: html }}
       ></div>
       {currentIndex >= 0 && (
         <div className="mt-8 flex justify-between">
@@ -376,7 +376,7 @@ const DocDetail: FC = ()=>{
             _$setClassName(_el1, "prose prose-sm md:prose-base");
             watchEffect(()=>{
                 const __obj = ({
-                    __html: html.value
+                    __html: html
                 });
                 _$setInnerHTML(_el1, __obj && "__html" in __obj ? __obj.__html : "");
             });

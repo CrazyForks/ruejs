@@ -106,6 +106,7 @@ const evaluate = (output: string): MixedModule => {
   const module = { exports: {} as Record<string, unknown> }
   const runtimeRequire = (id: string): Record<string, unknown> => {
     if (id === '@rue-js/rue/internal/compiler') return compiledRuntime
+    if (id === '@rue-js/rue/internal/component') return internalRuntime
     if (id === '@rue-js/rue/internal') return internalRuntime
     if (id === '@rue-js/rue') return runtimeRoot
     throw new Error(`Unexpected generated import: ${id}`)
@@ -133,7 +134,7 @@ describe('compiled/Vapor fallback boundary', () => {
     expect(esm).toContain('_$reconcileKeyed')
     expect(esm).toContain('_$createComponent')
     expect(esm).toContain('_$compiledText')
-    expect(esm).toContain('from "@rue-js/rue/internal"')
+    expect(esm).toContain('from "@rue-js/rue/internal/component"')
     expect(esm).not.toContain('from "@rue-js/rue/internal/compiler"')
 
     const compiled = evaluate(transform('commonjs'))

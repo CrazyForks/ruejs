@@ -33,6 +33,14 @@ const workspaceAliasEntries = [
     find: /^@rue-js\/runtime\/internal\/compiler$/,
     replacement: path.resolve(rootDir, 'packages/runtime/src/compiler-internal.ts'),
   },
+  {
+    find: /^@rue-js\/runtime\/internal\/component$/,
+    replacement: path.resolve(rootDir, 'packages/runtime/src/component-internal.ts'),
+  },
+  {
+    find: /^@rue-js\/runtime\/internal\/builtins$/,
+    replacement: path.resolve(rootDir, 'packages/runtime/src/builtins-internal.ts'),
+  },
   { find: '@rue-js/router', replacement: path.resolve(rootDir, 'packages/router/src') },
   { find: '@rue-js/store', replacement: path.resolve(rootDir, 'packages/store/src') },
   { find: '@rue-js/i18n', replacement: path.resolve(rootDir, 'packages/i18n/src') },
@@ -327,7 +335,8 @@ function createDistributionRequest(packageInfo, buildEntry, format, prod, source
     outputFileBase: resolveOutputFileBase(buildEntry.fileName, format, prod),
     enableRueVaporTransform:
       packageInfo.target === 'rue-design' || packageInfo.packageOptions.rueTransform === true,
-    preserveModules: packageInfo.packageOptions.preserveModules === true,
+    preserveModules:
+      packageInfo.packageOptions.preserveModules === true && buildEntry.isMain && isBundlerESMBuild,
     watch: false,
   }
 }

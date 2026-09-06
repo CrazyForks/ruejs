@@ -31,6 +31,9 @@ fn classifies_compiled_core_and_vapor_fallback_helpers() {
         "createSelector",
         "_$compiledRoot",
         "_$reconcileKeyed",
+        "_$disposeCompiledKeyedRows",
+        "_$mountCompiledKeyedRowOwnerless",
+        "_$mountCompiledKeyedRowSetup",
         "_$compiledText",
         "_$withCompiledHookScope",
         "Transition",
@@ -90,8 +93,11 @@ fn distinguishes_routable_user_apis_from_generated_helpers() {
     assert!(should_auto_inject_helper("effect"));
     assert!(should_auto_inject_helper("onCleanup"));
     assert!(should_auto_inject_helper("_$compiledRoot"));
+    assert!(should_auto_inject_helper("_$compiledMemo"));
     assert!(should_auto_inject_helper("_$withCompiledHookScope"));
     assert!(should_auto_inject_helper("_$reconcileKeyed"));
+    assert!(should_auto_inject_helper("_$disposeCompiledKeyedRows"));
+    assert!(should_auto_inject_helper("_$mountCompiledKeyedRowOwnerless"));
     assert!(should_auto_inject_helper("_$compiledText"));
     assert!(should_auto_inject_helper("untrack"));
     assert!(should_auto_inject_helper("_$compiledMarkComponentRenderReactive"));
@@ -99,9 +105,13 @@ fn distinguishes_routable_user_apis_from_generated_helpers() {
 
 #[test]
 fn routes_reactive_factories_to_their_proven_runtime_tier() {
-    for helper in ["ref", "useSignal", "useState", "computed"] {
+    for helper in ["ref", "useState", "computed"] {
         assert_eq!(runtime_tier_for_helper(helper), Some(RuntimeTier::Compiled), "{helper}");
         assert_eq!(runtime_import_tier(helper, RuntimeTier::Vapor), Some(RuntimeTier::Vapor));
+    }
+
+    for helper in ["useSignal", "useMemo", "useCallback"] {
+        assert_eq!(runtime_tier_for_helper(helper), None, "{helper}");
     }
 
     for helper in [

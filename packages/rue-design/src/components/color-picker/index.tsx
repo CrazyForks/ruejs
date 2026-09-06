@@ -1128,7 +1128,7 @@ interface PresetsSectionRenderContext {
   currentMode: RefLike<ColorPickerMode>
   availableModes: ColorPickerMode[]
   currentFormat: RefLike<ColorFormatType>
-  renderVersion: RefLike<number>
+  renderVersion: number
   classNames?: ColorPickerClassNames
   styles?: ColorPickerStyles
   activePresetGroupKey: RefLike<string>
@@ -1632,7 +1632,7 @@ const renderPresetsSection = ({
                 className={appendClassName(
                   'rounded-full border px-2.5 py-1 text-xs font-medium transition',
                   (() => {
-                    void renderVersion.value
+                    void renderVersion
                     return key === resolveActiveKey()
                       ? 'border-primary bg-primary/10 text-primary shadow-sm'
                       : 'border-base-300/80 bg-base-100 text-base-content/68 hover:border-primary/55'
@@ -1658,7 +1658,7 @@ const renderPresetsSection = ({
             className={appendClassName(
               'rounded-[1rem] border border-base-300/75 bg-base-100/80 p-2.5',
               (() => {
-                void renderVersion.value
+                void renderVersion
                 return groupKey === resolveActiveKey() ? '' : 'hidden'
               })(),
             )}
@@ -1675,7 +1675,7 @@ const renderPresetsSection = ({
                   ? null
                   : ensureColor(presetColor as ColorLike, disabledAlpha)
                 if (!resolvedGradient && !resolvedColor) return null
-                void renderVersion.value
+                void renderVersion
                 const activeColor = getActiveColor()
                 const activeGradient = getActiveGradient()
                 const previewValue = resolvedGradient ?? resolvedColor
@@ -1853,7 +1853,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
   const requestRender = () => {
     clearDeferredRender()
     const bumpRenderVersion = () => {
-      setRenderVersion(renderVersion.value + 1)
+      setRenderVersion(version => version + 1)
     }
     if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
       withCallbackRuntime(bumpRenderVersion)
@@ -2478,11 +2478,11 @@ const ColorPicker: FC<ColorPickerProps> = ({
   }
 
   const activeColor = (() => {
-    void renderVersion.value
+    void renderVersion
     return getActiveColor()
   })()
   const activeGradient = (() => {
-    void renderVersion.value
+    void renderVersion
     return getActiveGradient()
   })()
   const activePreviewValue =
@@ -2746,7 +2746,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
       )}
       style={{ ...styles?.root, ...style }}
       data-rue-color-picker="true"
-      data-rue-color-picker-version={String(renderVersion.value)}
+      data-rue-color-picker-version={String(renderVersion)}
       onMouseEnter={() => {
         if (disabled || trigger !== 'hover') return
         clearHoverCloseTimer()
@@ -2874,7 +2874,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
             }}
             id={popupHostId.value}
             data-rue-color-picker-popup-host="true"
-            data-rue-color-picker-popup-version={String(renderVersion.value)}
+            data-rue-color-picker-popup-version={String(renderVersion)}
             className={appendClassName(
               'fixed left-0 top-0 z-[1200] pointer-events-auto',
               sizeTokens.popupWidthClassName,
@@ -2916,7 +2916,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
               )}
               style={{ ...styles?.panel }}
               data-rue-color-picker-popup="true"
-              data-rue-color-picker-panel-version={String(renderVersion.value)}
+              data-rue-color-picker-panel-version={String(renderVersion)}
             >
               {renderPopupPanel()}
             </div>
@@ -2930,7 +2930,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
             }}
             id={popupHostId.value}
             data-rue-color-picker-popup-host="true"
-            data-rue-color-picker-popup-version={String(renderVersion.value)}
+            data-rue-color-picker-popup-version={String(renderVersion)}
             className={appendClassName(
               'fixed left-0 top-0 z-[1200] pointer-events-auto',
               sizeTokens.popupWidthClassName,
@@ -2972,7 +2972,7 @@ const ColorPicker: FC<ColorPickerProps> = ({
               )}
               style={{ ...styles?.panel }}
               data-rue-color-picker-popup="true"
-              data-rue-color-picker-panel-version={String(renderVersion.value)}
+              data-rue-color-picker-panel-version={String(renderVersion)}
             >
               {renderPopupPanel()}
             </div>

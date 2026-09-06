@@ -50,7 +50,7 @@ export default Comp;
     std::fs::create_dir_all("target/vapor_outputs").ok();
     std::fs::write("target/vapor_outputs/spec3.out.js", strip_marker(&out)).ok();
     let normalized = normalize(&strip_marker(&out));
-    assert!(normalized.contains("@rue-js/rue/internal/compiler"), "{normalized}");
+    assert!(normalized.contains("@rue-js/rue/internal/component"), "{normalized}");
     assert!(normalized.contains("_$compiledComponent(Fragment, ()=>({"), "{normalized}");
     assert!(normalized.contains("_$mountCompiledSlotFactory"), "{normalized}");
     assert!(normalized.contains("_$compiledRoot"), "{normalized}");

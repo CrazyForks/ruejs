@@ -269,8 +269,8 @@ fn apply_closes_compiled_and_vapor_capability_boundaries() {
     let fragment_src = "export const View = () => <><i>A</i><b>B</b></>;";
     let (fragment_program, fragment_cm) = parse_program(fragment_src);
     let fragment_out = emit(apply(fragment_program), fragment_cm);
-    assert!(fragment_out.contains("@rue-js/rue/internal"), "{fragment_out}");
-    assert!(fragment_out.contains("@rue-js/rue/internal/compiler"), "{fragment_out}");
+    assert!(fragment_out.contains("@rue-js/rue/internal/component"), "{fragment_out}");
+    assert!(!fragment_out.contains("@rue-js/rue/internal/compiler"), "{fragment_out}");
     assert!(fragment_out.contains("_$compiledRoot"), "{fragment_out}");
 
     let unproven_src = "export const View = () => <div>{state.get()}</div>;";
@@ -308,7 +308,7 @@ export const View = () => <main>
     let (program, cm) = parse_program(src);
     let out = emit(apply(program), cm);
 
-    assert!(out.contains("from \"@rue-js/rue/internal\""), "{out}");
+    assert!(out.contains("from \"@rue-js/rue/internal/component\""), "{out}");
     assert!(!out.contains("@rue-js/rue/internal/compiler"), "{out}");
     assert!(!out.contains("_$compiledWithHookId"), "{out}");
     assert!(out.contains("_$compiledRoot"), "{out}");
@@ -551,7 +551,7 @@ function View(props) {
     assert!(out.contains("_$reconcileKeyed"));
     assert!(out.contains("_$compiledShowStyle"));
     assert!(out.contains("props.visible"));
-    assert!(out.contains(&normalize("_$compiledCreateElement(\"article\"")));
+    assert!(out.contains("_$mountCompiledKeyedRowOwnerless"), "{out}");
 }
 
 #[test]
@@ -650,7 +650,8 @@ function View(props) {
     assert!(out.contains(&normalize("<h1>{props.title}</h1>")));
     assert!(out.contains("dangerouslySetInnerHTML"));
     assert!(out.contains("__html"));
-    assert!(out.contains("useMemo"));
+    assert!(out.contains("_$compiledMemo"));
+    assert!(!out.contains("useMemo"));
     assert!(out.contains("value={draft.value}"));
     assert!(!out.contains("v-text"));
     assert!(!out.contains("v-html"));

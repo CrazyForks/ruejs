@@ -71,15 +71,29 @@ fn tracks_rue_reactive_factories_through_hooks_aliases_and_destructuring() {
     for name in ["count", "shallow", "custom", "property", "leftRef", "right", "countAlias"] {
         assert_eq!(transform.reactive_kind(name), Some(ReactiveKind::RefLike), "{name}");
     }
-    for name in ["total", "directSignal", "hookSignal"] {
+    for name in ["total", "directSignal"] {
         assert_eq!(transform.reactive_kind(name), Some(ReactiveKind::Signal), "{name}");
     }
+    assert_eq!(transform.reactive_kind("hookSignal"), None);
     for name in ["proxy", "readonlyProxy"] {
         assert_eq!(transform.reactive_kind(name), Some(ReactiveKind::ReactiveProxy), "{name}");
     }
     assert_eq!(transform.reactive_kind("state"), Some(ReactiveKind::StateValue));
     assert_eq!(transform.reactive_kind("setState"), None);
     assert_eq!(transform.reactive_kind("arbitraryMember"), None);
+}
+
+#[test]
+fn tracks_compiled_use_state_hidden_values_as_signals() {
+    let module = parse_module(
+        r#"
+        const [_$state, setState] = _$compiledUseState("Counter:hook:0", 0);
+        "#,
+    );
+
+    let transform = transform_with_scope(collect_module_scope(&module, &[]));
+    assert_eq!(transform.reactive_kind("_$state"), Some(ReactiveKind::Signal));
+    assert_eq!(transform.reactive_kind("setState"), None);
 }
 
 #[test]

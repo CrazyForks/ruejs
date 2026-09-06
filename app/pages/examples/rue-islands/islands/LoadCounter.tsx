@@ -15,15 +15,11 @@ const LoadCounter: FC<LoadCounterProps> = props => {
     >
       <p className="text-xs font-bold uppercase tracking-wide text-success">client:load</p>
       <h2 className="mt-2 text-2xl font-semibold">{props.label}</h2>
-      <strong className="my-4 block text-5xl text-success">{count.value}</strong>
+      <strong className="my-4 block text-5xl text-success">{count}</strong>
       <button
         type="button"
         className="btn btn-success btn-sm"
-        onClick={() =>
-          setCount(value => {
-            value.value += 1
-          })
-        }
+        onClick={() => setCount(value => value + 1)}
       >
         Increment
       </button>

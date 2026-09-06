@@ -48,7 +48,7 @@ const LocaleReader: FC = () => {
     assert!(compact.contains("currentLocale.get()"), "{output}");
     assert!(compact.contains("useI18n()"), "{output}");
     assert!(compact.contains("_$withCompiledPropsUpdater(vapor("), "{output}");
-    assert!(!compact.contains("_$compiledMarkComponentRenderReactive"), "{output}");
+    assert!(compact.contains("_$compiledMarkComponentRenderReactive(LocaleReader)"), "{output}");
 }
 
 #[test]
@@ -133,12 +133,134 @@ export function HookView() {
     );
     let compact: String = output.chars().filter(|ch| !ch.is_whitespace()).collect();
 
-    assert!(compact.contains("_$compiledUseMemo(\"HookView:hook:0\""), "{output}");
-    assert!(compact.contains("_$compiledUseRef(\"HookView:hook:1\""), "{output}");
-    assert!(compact.contains("_$compiledUseSignal(\"HookView:hook:2\""), "{output}");
-    assert!(compact.contains("_$compiledUseEffect(\"HookView:hook:3\""), "{output}");
+    assert!(compact.contains("useMemo(()=>'ready',[])"), "{output}");
+    assert!(compact.contains("_$compiledUseRef(\"HookView:hook:0\""), "{output}");
+    assert!(compact.contains("useSignal(1)"), "{output}");
+    assert!(!compact.contains("_$compiledUseMemo"), "{output}");
+    assert!(!compact.contains("_$compiledUseSignal"), "{output}");
+    assert!(compact.contains("_$compiledUseEffect(\"HookView:hook:1\""), "{output}");
     assert!(!compact.contains("_$compiledWithHookId"), "{output}");
     assert!(!compact.contains("\"@rue-js/rue/internal\""), "{output}");
+}
+
+#[test]
+fn lowers_react_use_state_bindings_to_hidden_signals() {
+    let output = transform_module(
+        r#"
+import { useEffect, useState, useState as useCounter } from '@rue-js/rue';
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  const [step, setStep] = useCounter(() => 1);
+  const snapshot = { count, step };
+  const readLatest = () => count + step;
+  useEffect(() => consume(count), [count, step]);
+  return <button title={count.toString()} onClick={() => setCount(count + step)}>
+    {count}{snapshot.count}{readLatest()}
+  </button>;
+}
+"#,
+    );
+    let compact: String = output.chars().filter(|ch| !ch.is_whitespace()).collect();
+
+    assert!(
+        compact.contains("const[_$state,setCount]=_$compiledUseState(\"Counter:hook:0\",0)"),
+        "{output}"
+    );
+    assert!(
+        compact.contains("const[_$state1,setStep]=_$compiledUseState(\"Counter:hook:1\",()=>1)"),
+        "{output}"
+    );
+    assert!(
+        compact.contains("constsnapshot={count:_$state.get(),step:_$state1.get()}"),
+        "{output}"
+    );
+    assert!(compact.contains("()=>_$state.get()+_$state1.get()"), "{output}");
+    assert!(compact.contains("()=>[_$state.get(),_$state1.get()]"), "{output}");
+    assert!(compact.contains("_$state.get().toString()"), "{output}");
+    assert!(compact.contains("setCount(_$state.get()+_$state1.get())"), "{output}");
+    assert!(!compact.contains("const[count,setCount]"), "{output}");
+    assert!(!compact.contains("const[step,setStep]"), "{output}");
+}
+
+#[test]
+fn preserves_shadowed_react_state_names() {
+    let output = transform_module(
+        r#"
+import { useState } from '@rue-js/rue';
+
+export function ShadowedState() {
+  const [count, setCount] = useState(0);
+  const rootObject = { count };
+  const member = external.count;
+  return <button onClick={() => {
+    const fromParameter = (count) => count + 1;
+    function fromFunction(count) { return count + 2; }
+    {
+      const count = 3;
+      consume(count);
+    }
+    try { consume(rootObject); } catch (count) { consume(count); }
+    for (const count of values) consume(count);
+    setCount(count + fromParameter(count) + fromFunction(count));
+  }}>
+    {count}{member}
+  </button>;
+}
+"#,
+    );
+    let compact: String = output.chars().filter(|ch| !ch.is_whitespace()).collect();
+
+    assert!(compact.contains("const[_$state,setCount]=_$compiledUseState"), "{output}");
+    assert!(compact.contains("constrootObject={count:_$state.get()}"), "{output}");
+    assert!(compact.contains("external.count"), "{output}");
+    assert!(compact.contains("(count)=>count+1"), "{output}");
+    assert!(compact.contains("functionfromFunction(count){returncount+2;}"), "{output}");
+    assert!(compact.contains("constcount=3;consume(count)"), "{output}");
+    assert!(compact.contains("catch(count){consume(count);}"), "{output}");
+    assert!(compact.contains("for(constcountofvalues)consume(count)"), "{output}");
+    assert!(
+        compact.contains(
+            "setCount(_$state.get()+fromParameter(_$state.get())+fromFunction(_$state.get()))"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn wraps_compiled_use_effect_dependencies_in_lazy_reader() {
+    let output = transform_module(
+        r#"
+import { useEffect, useMemo, useCallback } from '@rue-js/rue';
+
+export function EffectView(props) {
+  useEffect(() => consume(count.get()), [count.get(), props.id]);
+  useEffect(callback, deps);
+  useEffect(callback, null);
+  useEffect(callback);
+  useEffect(callback, []);
+  const memo = useMemo(() => compute(), deps);
+  const handler = useCallback(() => consume(), deps);
+  return <p>ready</p>;
+}
+"#,
+    );
+    let compact: String = output.chars().filter(|ch| !ch.is_whitespace()).collect();
+
+    for expected in [
+        "_$compiledUseEffect(\"EffectView:hook:0\",()=>consume(count.get()),()=>[count.get(),_$rueCompiledProp0.get()])",
+        "_$compiledUseEffect(\"EffectView:hook:1\",callback,()=>deps)",
+        "_$compiledUseEffect(\"EffectView:hook:2\",callback,()=>null)",
+        "_$compiledUseEffect(\"EffectView:hook:3\",callback)",
+        "_$compiledUseEffect(\"EffectView:hook:4\",callback,()=>[])",
+        "useMemo(()=>compute(),deps)",
+        "useCallback(()=>consume(),deps)",
+    ] {
+        assert!(compact.contains(expected), "missing {expected}\n{output}");
+    }
+    assert!(!compact.contains("_$compiledUseMemo"), "{output}");
+    assert!(!compact.contains("_$compiledUseCallback"), "{output}");
+    assert!(output.contains(", _$compiledUseEffect,"), "{output}");
 }
 
 #[test]

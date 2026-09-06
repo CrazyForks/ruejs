@@ -145,15 +145,14 @@ const Demo: FC = () => {
 
     let out = compile(src, "expr_memoized_jsx_child_slot");
 
-    assert!(out.contains("_$compiledWithHookId(\"useMemo:"));
-    assert!(out.contains(&utils::normalize("const _list1 = _$compiledWithHookId(")));
+    assert!(out.contains("_$compiledMemo(\"memo:"));
+    assert!(!out.contains("useMemo"));
+    assert!(out.contains(&utils::normalize("const _list1 = _$compiledMemo(")));
     assert!(out.contains(&utils::normalize("renderAnchor(_list1, _el2, _el1);")));
     assert!(out.contains(&utils::normalize("_$compiledText(_el3, ()=>msg.value);")));
-    assert!(
-        !out.contains(&utils::normalize("watchEffect(()=>{ const __slot = _$compiledWithHookId("))
-    );
+    assert!(!out.contains(&utils::normalize("watchEffect(()=>{ const __slot = _$compiledMemo(")));
     assert!(!out.contains(&utils::normalize("watchEffect(()=>{ _$settextContent")));
-    assert!(!out.contains("_$settextContent(_el1, _$compiledWithHookId"));
+    assert!(!out.contains("_$settextContent(_el1, _$compiledMemo"));
 }
 
 #[test]

@@ -55,7 +55,8 @@ const HandlingInput: FC = () => {
   return (
     <div className="card bg-base-100 shadow">
       <div className="card-body">
-        <h1 className="text-2xl font-semibold">{message.value}</h1>
+        <h1 className="text-2xl font-semibold">message.value: {message.value}</h1>
+        <h1 className="text-2xl font-semibold">message: {message}</h1>
         <button className="btn btn-primary" onClick={reverseMessage}>
           Reverse Message
         </button>
@@ -86,7 +87,8 @@ export default HandlingInput;`}
         {activeTab.value === 'preview' && (
           <div className="card bg-base-100 shadow">
             <div className="card-body">
-              <h1 className="text-2xl font-semibold">{message.value}</h1>
+              <h1 className="text-2xl font-semibold">message.value: {message.value}</h1>
+              <h1 className="text-2xl font-semibold">message: {message}</h1>
               <button className="btn btn-primary" onClick={reverseMessage}>
                 Reverse Message
               </button>

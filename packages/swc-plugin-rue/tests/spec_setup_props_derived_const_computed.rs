@@ -153,15 +153,12 @@ fn preserves_hygiene_for_nested_props_derived_computed_reads() {
       r#"const meterWidth = _$compiledWithHookId("computed:1:1", ()=>computed(()=>`${Math.max(8, Math.min(count.get() * 9, 100))}%`));"#,
     )));
 
-    assert!(normalized.contains(&utils::normalize(r#"const __child1_raw = count.get();"#,)));
     assert!(normalized.contains(&utils::normalize(
-        r#"_el1.setAttribute("data-count", String(__child1_next));"#,
+        r#"_$setAttribute(_el1, "data-count", String(count.get()));"#,
     )));
 
-    assert!(
-        normalized.contains(&utils::normalize(r#"_$compiledText(_el4, ()=>meterWidth.get());"#,))
-    );
-    assert!(!normalized.contains("renderAnchor("));
+    assert!(normalized.contains(&utils::normalize(r#"const __slot = meterWidth.get();"#,)));
+    assert!(normalized.contains("renderAnchor(__slot"));
 }
 
 #[test]

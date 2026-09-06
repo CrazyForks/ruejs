@@ -9,6 +9,7 @@ import {
 import type { CompiledBlock, CompiledRange, CompiledTarget } from './types'
 import type { CompiledOwner } from '../reactive-core'
 import { _$compiledValue } from '../compiled-render-anchor'
+import { unwrapDisplayRef } from '../display-value'
 
 export type CompiledSlotFactory<Props extends object = Record<string, never>> = (
   target: CompiledTarget,
@@ -108,6 +109,11 @@ type CompiledSlotRootHandle = {
   dispose(): void
 }
 
+const normalizeCompiledSlotDisplayValue = (value: unknown): unknown => {
+  const displayed = unwrapDisplayRef(value)
+  return Array.isArray(displayed) ? displayed.map(normalizeCompiledSlotDisplayValue) : displayed
+}
+
 /** Bridge compiler-created root setup into the closed block ABI at a precise target. */
 export const _$mountCompiledSlotFactory = (
   target: CompiledTarget,
@@ -136,7 +142,7 @@ export const _$mountCompiledSlotAt = <Props extends object>(
   let mountedProps: Props | undefined
   let mountedBlock: CompiledBlock | undefined
   effect(() => {
-    const factory = readFactory()
+    const factory = normalizeCompiledSlotDisplayValue(readFactory())
     const props = readProps()
     const sameProps =
       mountedProps != null &&

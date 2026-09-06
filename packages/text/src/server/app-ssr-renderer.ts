@@ -568,7 +568,6 @@ function readRueContextProviderContext(type: unknown): object | null {
 
 const CLIENT_HOOK_NAMES = [
   'useState',
-  'useSignal',
   'useEffect',
   'useReducer',
   'useRef',

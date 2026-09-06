@@ -7,6 +7,13 @@ pub(crate) enum RuntimeTier {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RuntimeImportEntry {
+    Compiler,
+    Component,
+    Builtins,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct RuntimeCapability {
     helper: &'static str,
     tier: RuntimeTier,
@@ -49,9 +56,7 @@ const RUNTIME_CAPABILITIES: &[RuntimeCapability] = &[
     auto_capability("_$compiledSetup", RuntimeTier::Compiled, true),
     auto_capability("_$compiledUseSetup", RuntimeTier::Compiled, true),
     auto_capability("_$compiledUseRef", RuntimeTier::Compiled, true),
-    auto_capability("_$compiledUseMemo", RuntimeTier::Compiled, true),
-    auto_capability("_$compiledUseCallback", RuntimeTier::Compiled, true),
-    auto_capability("_$compiledUseSignal", RuntimeTier::Compiled, true),
+    auto_capability("_$compiledMemo", RuntimeTier::Compiled, true),
     auto_capability("_$compiledUseState", RuntimeTier::Compiled, true),
     auto_capability("_$compiledUseEffect", RuntimeTier::Compiled, true),
     auto_capability("_$compiledSignal", RuntimeTier::Compiled, true),
@@ -66,8 +71,11 @@ const RUNTIME_CAPABILITIES: &[RuntimeCapability] = &[
     auto_capability("_$mountCompiledSlotAt", RuntimeTier::Compiled, true),
     auto_capability("_$mountCompiledDynamic", RuntimeTier::Compiled, true),
     auto_capability("_$reconcileKeyed", RuntimeTier::Compiled, true),
+    auto_capability("_$disposeCompiledKeyedRows", RuntimeTier::Compiled, true),
     auto_capability("_$compiledListMemo", RuntimeTier::Compiled, true),
     auto_capability("_$mountCompiledKeyedRow", RuntimeTier::Compiled, true),
+    auto_capability("_$mountCompiledKeyedRowOwnerless", RuntimeTier::Compiled, true),
+    auto_capability("_$mountCompiledKeyedRowSetup", RuntimeTier::Compiled, true),
     auto_capability("_$compiledCreateElement", RuntimeTier::Compiled, true),
     auto_capability("_$compiledCreateDocumentFragment", RuntimeTier::Compiled, true),
     auto_capability("_$compiledCreateTextNode", RuntimeTier::Compiled, true),
@@ -92,7 +100,6 @@ const RUNTIME_CAPABILITIES: &[RuntimeCapability] = &[
     capability("createResource", RuntimeTier::Compiled, true),
     capability("watch", RuntimeTier::Compiled, true),
     capability("useState", RuntimeTier::Compiled, true),
-    capability("useSignal", RuntimeTier::Compiled, true),
     capability("useEffect", RuntimeTier::Compiled, true),
     capability("ref", RuntimeTier::Compiled, true),
     capability("shallowRef", RuntimeTier::Vapor, true),
@@ -111,8 +118,6 @@ const RUNTIME_CAPABILITIES: &[RuntimeCapability] = &[
     capability("shallowReadonly", RuntimeTier::Vapor, true),
     capability("toRaw", RuntimeTier::Compiled, true),
     capability("propsReactive", RuntimeTier::Vapor, true),
-    auto_capability("useMemo", RuntimeTier::Compiled, true),
-    capability("useCallback", RuntimeTier::Compiled, true),
     auto_capability("useSetup", RuntimeTier::Vapor, true),
     capability("useRef", RuntimeTier::Compiled, true),
     capability("unref", RuntimeTier::Vapor, true),
@@ -194,5 +199,66 @@ pub(crate) fn runtime_import_tier(helper: &str, module_tier: RuntimeTier) -> Opt
         Some(RuntimeTier::Vapor)
     } else {
         Some(capability.tier)
+    }
+}
+
+const BUILTIN_HELPERS: &[&str] =
+    &["KeepAlive", "Suspense", "Teleport", "Template", "Transition", "TransitionGroup"];
+
+// Helpers implemented by the component/legacy DOM ABI rather than the compact compiler ABI.
+const COMPONENT_HELPERS: &[&str] = &[
+    "_$addEventListener",
+    "_$appendChild",
+    "_$compiledBindUseRef",
+    "_$compiledBranch",
+    "_$compiledBranchAt",
+    "_$compiledComponent",
+    "_$compiledDynamicComponent",
+    "_$compiledOmitProps",
+    "_$compiledShowStyle",
+    "_$compiledSlotValue",
+    "_$compiledSpreadAttributes",
+    "_$compiledUseEffect",
+    "_$compiledUseRef",
+    "_$compiledWithEventModifiers",
+    "_$compiledWithKey",
+    "_$compiledWithNativeEvents",
+    "_$createComment",
+    "_$createComponent",
+    "_$createDocumentFragment",
+    "_$createDynamic",
+    "_$createElement",
+    "_$createFragment",
+    "_$createTextNode",
+    "_$createTextWrapper",
+    "_$insertBefore",
+    "_$mountCompiledComponent",
+    "_$setAttribute",
+    "_$setChecked",
+    "_$setClassName",
+    "_$setDisabled",
+    "_$setInnerHTML",
+    "_$setProperty",
+    "_$setStyle",
+    "_$setValue",
+    "_$settextContent",
+    "_$spreadAttributes",
+    "getCompiledKey",
+];
+
+pub(crate) fn runtime_import_entry(
+    helper: &str,
+    module_tier: RuntimeTier,
+) -> Option<RuntimeImportEntry> {
+    if BUILTIN_HELPERS.contains(&helper) {
+        return Some(RuntimeImportEntry::Builtins);
+    }
+    if COMPONENT_HELPERS.contains(&helper) {
+        return Some(RuntimeImportEntry::Component);
+    }
+    match runtime_import_tier(helper, module_tier)? {
+        RuntimeTier::Compiled => Some(RuntimeImportEntry::Compiler),
+        RuntimeTier::Vapor => Some(RuntimeImportEntry::Component),
+        RuntimeTier::None => None,
     }
 }

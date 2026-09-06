@@ -54,7 +54,7 @@ export const View: FC = () => {
       data-readonly={readonlyProxy.nested.title}
       data-shallow-readonly={shallowReadonlyProxy.nested.title}
     >
-      <input value={state.value} checked={propsProxy.disabled} disabled={propsProxy.disabled} />
+      <input value={state} checked={propsProxy.disabled} disabled={propsProxy.disabled} />
       <span>{plain.value}</span>
       <span>{shallow.value}</span>
       <span>{custom.value}</span>
@@ -70,10 +70,10 @@ export const View: FC = () => {
 
     let vapor_import = output
         .split(';')
-        .find(|statement| statement.contains("@rue-js/rue/internal"))
+        .find(|statement| statement.contains("@rue-js/rue/internal/component"))
         .expect("reactive compiled output must use the internal runtime graph");
 
-    for helper in ["_$compiledRoot", "_$compiledText", "effect"] {
+    for helper in ["vapor", "effect"] {
         assert!(vapor_import.contains(helper), "missing {helper} from runtime import: {output}");
     }
     for read in [
@@ -90,11 +90,13 @@ export const View: FC = () => {
         "derived.get()",
         "directSignal.get()",
         "hookSignal.get()",
-        "state.value",
+        "state",
     ] {
         assert!(output.contains(read), "missing compiled read {read}: {output}");
     }
-    assert!(!output.contains("vapor("), "{output}");
+    assert!(output.contains("vapor("), "{output}");
+    assert!(!output.contains("_$compiledRoot"), "{output}");
+    assert!(!output.contains("_$compiledText"), "{output}");
     assert!(!output.contains("watchEffect"), "{output}");
 }
 
@@ -122,7 +124,7 @@ export { UnknownMember, Reassigned, UnknownCall, AsyncView };
 "#,
     );
 
-    assert!(output.contains("from \"@rue-js/rue/internal\""), "{output}");
+    assert!(output.contains("from \"@rue-js/rue/internal/component\""), "{output}");
     assert!(output.contains("vapor("), "{output}");
     assert!(output.contains("effect"), "{output}");
     assert!(!output.contains("watchEffect"), "{output}");

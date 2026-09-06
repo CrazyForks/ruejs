@@ -615,9 +615,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
   const uncontrolledOpen = ref(!!defaultOpen)
   const lastDefaultOpen = ref(!!defaultOpen)
   const isControlled = typeof open === 'boolean'
-  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value, {
-    kind: 'ref',
-  })
+  const [currentOpen, setCurrentOpen] = useState(isControlled ? !!open : uncontrolledOpen.value)
   const hovered = ref(false)
   const closeTimerRef = createCell<number | undefined>(undefined)
   const timerStartedAtRef = createCell<number | undefined>(undefined)
@@ -633,7 +631,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
     ...forwardedComponentProps
   }: Record<string, any> = { ...itemProps, ...rest }
   const rootElement = createCell<HTMLElement | null>(null)
-  const visible = isControlled ? !!open : currentOpen.value
+  const visible = isControlled ? !!open : currentOpen
 
   const tone = resolveTone(type)
   const toneStyles = toneStyleMap[tone]
@@ -696,7 +694,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
   const requestClose = (source: NotificationCloseSource, event?: Event) => {
     clearAutoCloseTimer()
     remainingDurationRef.value = 0
-    if (!currentOpen.value) return
+    if (!currentOpen) return
     setCurrentOpen(false)
     syncItemDom(false)
     if (!isControlled) uncontrolledOpen.value = false
@@ -708,7 +706,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
 
   const startAutoCloseTimer = () => {
     clearAutoCloseTimer()
-    if (!currentOpen.value) return
+    if (!currentOpen) return
     if (pauseOnHover && hovered.value) return
     if (remainingDurationRef.value == null || remainingDurationRef.value <= 0) return
     timerStartedAtRef.value = Date.now()
@@ -752,7 +750,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
   )
 
   watch(
-    () => (isControlled ? !!open : currentOpen.value),
+    () => (isControlled ? !!open : currentOpen),
     nextOpen => {
       if (!nextOpen) {
         clearAutoCloseTimer()
@@ -768,7 +766,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
   watch(
     () => duration,
     () => {
-      if (!currentOpen.value) {
+      if (!currentOpen) {
         remainingDurationRef.value = resolveDurationMs(duration)
         return
       }
@@ -779,7 +777,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
   watch(
     () => pauseOnHover,
     () => {
-      if (!currentOpen.value) return
+      if (!currentOpen) return
       refreshAutoCloseTimer(false)
     },
   )
@@ -801,7 +799,7 @@ const NotificationItem: FC<NotificationItemProps> = ({
         style={mergedRootStyle}
         ref={(element: HTMLElement | null) => {
           rootElement.value = element
-          syncItemDom(currentOpen.value)
+          syncItemDom(currentOpen)
         }}
         onClick={(event: MouseEvent) => {
           if (typeof userOnClick === 'function') userOnClick(event)

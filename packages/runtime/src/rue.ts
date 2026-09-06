@@ -40,6 +40,7 @@ import type {
   ComponentProps,
   OwnedMountProtocol,
   RenderInput,
+  Rue,
 } from './runtime-types'
 
 export { getMarkedRuntimeDOMBridge, markRuntimeDOMBridge } from './client-runtime'
@@ -108,6 +109,23 @@ const isNativeParent = (value: unknown): value is ParentNode =>
 
 const mountedRoots = new WeakMap<object, CompiledRootHandle>()
 
+const installLegacyCompiledMountBridge = (): void => {
+  const target = globalThis as typeof globalThis & {
+    __rue_mount_legacy_handle_for_compiled__?: (value: unknown, parent: ParentNode) => void
+  }
+  if (typeof target.__rue_mount_legacy_handle_for_compiled__ === 'function') return
+
+  target.__rue_mount_legacy_handle_for_compiled__ = (value, parent) => {
+    getClientRuntime().render(value, parent)
+  }
+}
+
+const resolveClientRuntime = () => {
+  const runtime = getClientRuntime()
+  installLegacyCompiledMountBridge()
+  return runtime
+}
+
 /** Create the portable descriptor used only by explicit SSR/custom runtime boundaries. */
 export const createCompiledComponent = <P = {}>(
   type: string | ComponentInstance<P>,
@@ -158,9 +176,10 @@ export const createCompiledFragmentHandle = (children: readonly unknown[]): Comp
 /** Mount one compiler-owned value into a browser container. */
 export const render = (value: RenderInput, container: DomElementLike) => {
   if (!isNativeParent(container)) {
-    return getClientRuntime().render(value, container)
+    return resolveClientRuntime().render(value, container)
   }
 
+  installLegacyCompiledMountBridge()
   const key = container as object
   mountedRoots.get(key)?.dispose()
   mountedRoots.delete(key)
@@ -184,8 +203,9 @@ export const render = (value: RenderInput, container: DomElementLike) => {
 /** Replace the compiler-owned value before a stable anchor. */
 export const renderAnchor = (value: RenderInput, parent: DomElementLike, anchor: DomNodeLike) => {
   if (!isNativeParent(parent) || !(anchor instanceof Node)) {
-    return getClientRuntime().renderAnchor(value, parent, anchor)
+    return resolveClientRuntime().renderAnchor(value, parent, anchor)
   }
+  installLegacyCompiledMountBridge()
   return renderCompiledAnchor(value, parent, anchor)
 }
 
@@ -197,7 +217,8 @@ export const mount = (App: ComponentInstance, container: string | DomElementLike
   return render(createClosedComponent(App as any, {}), target as DomElementLike)
 }
 
-export const use = (plugin: any, ...options: any[]) => getClientRuntime().use(plugin, ...options)
+export const use = (plugin: any, ...options: any[]) =>
+  resolveClientRuntime().use(plugin, ...options)
 
 export const useEmit =
   (props: ComponentProps) =>
@@ -241,7 +262,7 @@ export const runServerPrefetch = () =>
 
 export const onError = (callback: (error: any, instance?: any) => void) => {
   const stopClient = registerClientErrorHandler(callback)
-  const stopRuntime = getClientRuntime().onError(callback)
+  const stopRuntime = resolveClientRuntime().onError(callback)
   return () => {
     stopRuntime?.()
     stopClient()
@@ -249,22 +270,23 @@ export const onError = (callback: (error: any, instance?: any) => void) => {
 }
 export { onErrorCaptured }
 export const onRenderTriggered = (callback: (event: unknown) => void) =>
-  getClientRuntime().onRenderTriggered?.(callback)
+  resolveClientRuntime().onRenderTriggered?.(callback)
 export { getCurrentContainer }
 
 export const getOwnedMountProtocol = (): OwnedMountProtocol | undefined => undefined
 export const __rueActivateRange = (_start: DomNodeLike) => undefined
 export const __rueDeactivateRange = (_start: DomNodeLike) => undefined
 
-const rue = getClientRuntime()
-
-;(
-  globalThis as typeof globalThis & {
-    __rue_mount_legacy_handle_for_compiled__?: (value: unknown, parent: ParentNode) => void
-  }
-).__rue_mount_legacy_handle_for_compiled__ = (value, parent) => {
-  rue.render(value, parent)
-}
+const rue = /* @__PURE__ */ new Proxy(Object.create(null) as Rue, {
+  get: (_target, property) => Reflect.get(resolveClientRuntime(), property),
+  set: (_target, property, value) => Reflect.set(resolveClientRuntime(), property, value),
+  has: (_target, property) => Reflect.has(resolveClientRuntime(), property),
+  ownKeys: () => Reflect.ownKeys(resolveClientRuntime()),
+  getOwnPropertyDescriptor: (_target, property) => {
+    const descriptor = Reflect.getOwnPropertyDescriptor(resolveClientRuntime(), property)
+    return descriptor == null ? undefined : { ...descriptor, configurable: true }
+  },
+})
 
 export default rue
 

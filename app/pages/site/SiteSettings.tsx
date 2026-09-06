@@ -13,7 +13,7 @@ const SiteSettings: FC = () => {
   const [theme, setTheme] = useState<SiteTheme>(() => readStoredTheme())
 
   watch(
-    () => theme.value,
+    () => theme,
     nextTheme => {
       applyBrowserTheme(nextTheme)
     },
@@ -73,7 +73,7 @@ const SiteSettings: FC = () => {
           <select
             aria-label={_('切换主题')}
             className="select select-bordered w-full sm:w-72"
-            value={theme.value}
+            value={theme}
             onChange={(event: Event) => {
               setTheme(resolveTheme((event.currentTarget as HTMLSelectElement).value))
             }}
@@ -84,7 +84,7 @@ const SiteSettings: FC = () => {
               </option>
             ))}
           </select>
-          <span className="badge badge-neutral badge-lg">{theme.value}</span>
+          <span className="badge badge-neutral badge-lg">{theme}</span>
         </div>
       </section>
 

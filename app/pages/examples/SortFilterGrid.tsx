@@ -92,10 +92,8 @@ const SortFilterGrid: FC = () => {
     setSearchQuery((e.target as HTMLInputElement).value)
   }
   const sortBy = (key: string) => {
-    if (sortKey.value === key) {
-      setSortDirection(value => {
-        value.value *= -1
-      })
+    if (sortKey === key) {
+      setSortDirection(value => value * -1)
       return
     }
 
@@ -111,7 +109,7 @@ const SortFilterGrid: FC = () => {
       <div role="tablist" className="tabs tabs-box">
         <button
           role="tab"
-          className={`tab ${activeTab.value === 'preview' ? 'tab-active' : ''}`}
+          className={`tab ${activeTab === 'preview' ? 'tab-active' : ''}`}
           onClick={() => {
             setActiveTab('preview')
           }}
@@ -120,7 +118,7 @@ const SortFilterGrid: FC = () => {
         </button>
         <button
           role="tab"
-          className={`tab ${activeTab.value === 'code' ? 'tab-active' : ''}`}
+          className={`tab ${activeTab === 'code' ? 'tab-active' : ''}`}
           onClick={() => {
             setActiveTab('code')
           }}
@@ -130,7 +128,7 @@ const SortFilterGrid: FC = () => {
       </div>
 
       <div className="mt-4 grid md:grid-cols-1 gap-6 items-start">
-        {activeTab.value === 'code' && (
+        {activeTab === 'code' && (
           <div className="card bg-base-100 shadow overflow-auto h-[360px] md:h-[720px]">
             <div className="card-body p-0">
               <Code
@@ -239,7 +237,7 @@ export default SortFilterGrid;`}
           </div>
         )}
 
-        {activeTab.value === 'preview' && (
+        {activeTab === 'preview' && (
           <div className="card bg-base-100 shadow">
             <div className="card-body grid gap-4">
               <form id="search" className="flex items-center gap-2">
@@ -247,17 +245,17 @@ export default SortFilterGrid;`}
                 <input
                   name="query"
                   className="input input-bordered"
-                  value={searchQuery.value}
+                  value={searchQuery}
                   onInput={updateQuery}
                 />
               </form>
               <DemoGrid
-                key={`${searchQuery.value || 'all'}-${sortKey.value || 'none'}-${sortDirection.value}`}
+                key={`${searchQuery || 'all'}-${sortKey || 'none'}-${sortDirection}`}
                 data={gridData}
                 columns={gridColumns}
-                filterKey={searchQuery.value}
-                sortKey={sortKey.value}
-                sortDirection={sortDirection.value}
+                filterKey={searchQuery}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
                 onSort={sortBy}
               />
             </div>

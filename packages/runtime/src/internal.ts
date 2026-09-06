@@ -19,9 +19,37 @@ export { onError } from './rue'
 export { _$withCompiledHookScope } from './compiled-hook-scope'
 export * from './compiled-root'
 export * from './compiled-keyed-list'
+export {
+  _$disposeCompiledKeyedRows,
+  _$mountCompiledKeyedRowOwnerless,
+} from './compiler-runtime/compact-keyed-list'
 export * from './compiler-runtime/types'
 export * from './compiler-runtime/mount'
-export * from './compiler-runtime/hooks'
+export {
+  _$compiledMemo,
+  _$compiledUseEffect,
+  _$compiledUseRef,
+  _$compiledUseSetup,
+  _$compiledUseState,
+  getCompiledHandleOwner,
+  onActivated,
+  onBeforeCreate,
+  onBeforeMount,
+  onBeforeUnmount,
+  onBeforeUpdate,
+  onCreated,
+  onDeactivated,
+  onMounted,
+  onScopeDispose,
+  onUnmounted,
+  onUpdated,
+  ref,
+  shallowRef,
+  useEffect,
+  useRef,
+  useSetup,
+  useState,
+} from './compiler-runtime/hooks'
 export * from './compiler-runtime/builtins'
 export {
   appendChild as _$compiledAppendChild,

@@ -30,45 +30,63 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "module": "./dist/runtime.esm-bundler.js",
-      "import": "./dist/runtime.esm-bundler.js",
+      "module": "./dist/index.js",
+      "import": "./dist/index.js",
       "development": "./src/index.ts"
     },
     "./server": {
       "types": "./src/server.ts",
-      "module": "./dist/runtime.server.esm-bundler.js",
-      "import": "./dist/runtime.server.esm-bundler.js",
+      "module": "./dist/server.js",
+      "import": "./dist/server.js",
       "development": "./src/server.ts"
     },
     "./internal": {
       "types": "./src/internal.ts",
-      "module": "./dist/runtime.internal.esm-bundler.js",
-      "import": "./dist/runtime.internal.esm-bundler.js",
+      "module": "./dist/internal.js",
+      "import": "./dist/internal.js",
       "development": "./src/internal.ts"
     },
     "./internal/compiler": {
       "types": "./src/compiler-internal.ts",
-      "module": "./dist/runtime.internal-compiler.esm-bundler.js",
-      "import": "./dist/runtime.internal-compiler.esm-bundler.js",
+      "module": "./dist/compiler-internal.js",
+      "import": "./dist/compiler-internal.js",
       "development": "./src/compiler-internal.ts"
+    },
+    "./internal/component": {
+      "types": "./src/component-internal.ts",
+      "module": "./dist/component-internal.js",
+      "import": "./dist/component-internal.js",
+      "development": "./src/component-internal.ts"
+    },
+    "./internal/builtins": {
+      "types": "./src/builtins-internal.ts",
+      "module": "./dist/builtins-internal.js",
+      "import": "./dist/builtins-internal.js",
+      "development": "./src/builtins-internal.ts"
     },
     "./island": {
       "types": "./src/island.ts",
-      "module": "./dist/runtime.island.esm-bundler.js",
-      "import": "./dist/runtime.island.esm-bundler.js",
+      "module": "./dist/island.js",
+      "import": "./dist/island.js",
       "development": "./src/island.ts"
     },
     "./server-island": {
       "types": "./src/server-island.ts",
-      "module": "./dist/runtime.server-island.esm-bundler.js",
-      "import": "./dist/runtime.server-island.esm-bundler.js",
+      "module": "./dist/server-island.js",
+      "import": "./dist/server-island.js",
       "development": "./src/server-island.ts"
     },
     "./dom": {
       "types": "./src/dom.ts",
-      "module": "./dist/runtime.dom.esm-bundler.js",
-      "import": "./dist/runtime.dom.esm-bundler.js",
+      "module": "./dist/dom.js",
+      "import": "./dist/dom.js",
       "development": "./src/dom.ts"
+    },
+    "./public/*": {
+      "types": "./src/public/*.ts",
+      "module": "./dist/public/*.js",
+      "import": "./dist/public/*.js",
+      "development": "./src/public/*.ts"
     },
     "./*": "./*"
   },
@@ -84,6 +102,7 @@
   },
   "buildOptions": {
     "name": "RueRuntimeDOM",
+    "preserveModules": true,
     "formats": [
       "esm-bundler",
       "esm-browser",
@@ -107,6 +126,20 @@
       {
         "entry": "src/compiler-internal.ts",
         "filename": "runtime.internal-compiler",
+        "formats": [
+          "esm-bundler"
+        ]
+      },
+      {
+        "entry": "src/component-internal.ts",
+        "filename": "runtime.internal-component",
+        "formats": [
+          "esm-bundler"
+        ]
+      },
+      {
+        "entry": "src/builtins-internal.ts",
+        "filename": "runtime.internal-builtins",
         "formats": [
           "esm-bundler"
         ]

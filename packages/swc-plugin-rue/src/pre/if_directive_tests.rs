@@ -88,20 +88,20 @@ fn pre_directive_short_circuits_other_rewrites() {
 }
 
 #[test]
-fn memo_and_once_directives_lower_to_use_memo_wrappers() {
+fn memo_and_once_directives_lower_to_private_compiler_memo() {
     let once_el = parse_jsx_element("<section v-once className=\"x\" />");
     let once_expr = memo_or_once_element_expr(&once_el).expect("v-once expr");
     let once_out = normalize(&emit_expr(once_expr));
-    assert!(once_out.contains("_$compiledWithHookId"));
-    assert!(once_out.contains("useMemo"));
+    assert!(once_out.contains("_$compiledMemo"));
+    assert!(!once_out.contains("useMemo"));
     assert!(once_out.contains(&normalize("[]")));
     assert!(!once_out.contains("v-once"));
 
     let memo_el = parse_jsx_element("<section v-memo={[count]} />");
     let memo_expr = memo_or_once_element_expr(&memo_el).expect("v-memo expr");
     let memo_out = normalize(&emit_expr(memo_expr));
-    assert!(memo_out.contains("_$compiledWithHookId"));
-    assert!(memo_out.contains("useMemo"));
+    assert!(memo_out.contains("_$compiledMemo"));
+    assert!(!memo_out.contains("useMemo"));
     assert!(memo_out.contains(&normalize("[ count ]")));
     assert!(!memo_out.contains("v-memo"));
 }
@@ -285,8 +285,8 @@ fn transforms_if_else_chains_and_standalone_once_children() {
     transform_element(&mut once_parent);
     assert_eq!(once_parent.children.len(), 1);
     let once_child_out = normalize(&emit_expr(child_expr(&once_parent.children[0]).clone()));
-    assert!(once_child_out.contains("_$compiledWithHookId"));
-    assert!(once_child_out.contains("useMemo"));
+    assert!(once_child_out.contains("_$compiledMemo"));
+    assert!(!once_child_out.contains("useMemo"));
     assert!(!once_child_out.contains("v-once"));
 }
 

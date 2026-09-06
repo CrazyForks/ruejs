@@ -19,12 +19,45 @@ describe('compileRueStatic', () => {
     )
 
     expect(code).toContain('/* RUE_TRANSFORMED */')
-    expect(code).toContain('@rue-js/rue/internal')
+    expect(code).toContain('@rue-js/rue/internal/compiler')
+    expect(code).not.toMatch(/from\s+["']@rue-js\/rue\/internal["']/)
     expect(code).toContain('_$compiledCreateElement("main"')
     expect(code).not.toContain('@rue-js/runtime-vapor')
     expect(code).not.toContain('@rue-js/rue/vapor')
     expect(code).not.toContain('@rue-js/jsx-runtime')
     expect(code).not.toContain('<main')
+  })
+
+  it('adds the private builtins entry only when a compiled component uses a builtin', async () => {
+    const code = await compileRueStatic(
+      `
+        import { KeepAlive, type FC } from '@rue-js/rue'
+
+        const Child: FC = () => <span>child</span>
+        export const App: FC = () => <KeepAlive><Child /></KeepAlive>
+      `,
+      { id: '/virtual/static-builtin-entry.tsx', production: false },
+    )
+
+    expect(code).toContain('@rue-js/rue/internal/component')
+    expect(code).toContain('@rue-js/rue/internal/builtins')
+    expect(code).not.toMatch(/from\s+["']@rue-js\/rue\/internal["']/)
+  })
+
+  it('uses the component entry without the builtins entry for nested components', async () => {
+    const code = await compileRueStatic(
+      `
+        import { type FC } from '@rue-js/rue'
+
+        const Child: FC = () => <span>child</span>
+        export const App: FC = () => <Child />
+      `,
+      { id: '/virtual/static-component-entry.tsx', production: false },
+    )
+
+    expect(code).toContain('@rue-js/rue/internal/component')
+    expect(code).not.toContain('@rue-js/rue/internal/builtins')
+    expect(code).not.toMatch(/from\s+["']@rue-js\/rue\/internal["']/)
   })
 
   it('compiles client directives through the shared island descriptor helper', async () => {

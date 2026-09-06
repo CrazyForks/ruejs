@@ -17,10 +17,8 @@ type AppContextRuntime = {
     ...children: unknown[]
   ) => unknown
   startTransition: (callback: () => void) => void
-  useCallback: <T extends (...args: never[]) => unknown>(callback: T, deps: readonly unknown[]) => T
   useContext: <T>(context: unknown) => T
   useEffect: (effect: () => void | (() => void), deps?: readonly unknown[]) => void
-  useMemo: <T>(factory: () => T, deps: readonly unknown[]) => T
   useRef: <T>(initialValue: T) => { current: T }
   useState: <T>(initialState: T | (() => T)) => [T, (value: T | ((previous: T) => T)) => void]
   use: <T>(thenable: PromiseLike<T>) => T
@@ -47,10 +45,8 @@ const appContextRuntime: AppContextRuntime = {
   createElement: createElementCompat,
   startTransition:
     readRequiredAppRuntimeExport<AppContextRuntime['startTransition']>('startTransition'),
-  useCallback: readRequiredAppRuntimeExport<AppContextRuntime['useCallback']>('useCallback'),
   useContext: readRequiredAppRuntimeExport<AppContextRuntime['useContext']>('useContext'),
   useEffect: readRequiredAppRuntimeExport<AppContextRuntime['useEffect']>('useEffect'),
-  useMemo: readRequiredAppRuntimeExport<AppContextRuntime['useMemo']>('useMemo'),
   useRef: readRequiredAppRuntimeExport<AppContextRuntime['useRef']>('useRef'),
   useState: readRequiredAppRuntimeExport<AppContextRuntime['useState']>('useState'),
   use: readRequiredAppRuntimeExport<AppContextRuntime['use']>('use'),

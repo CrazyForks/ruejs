@@ -35,7 +35,7 @@ type DesignPlaceholderProps = {
 
 const DesignPlaceholder: FC<DesignPlaceholderProps> = props => {
   const [initialSlug] = useState(readCurrentDesignSlug)
-  const slug = computed(() => props.params?.slug || initialSlug.value || '')
+  const slug = computed(() => props.params?.slug || initialSlug || '')
   const title = computed(() => {
     const currentSlug = slug.get()
     const meta = DESIGN_ITEMS.find(item => item.id === currentSlug)

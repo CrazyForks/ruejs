@@ -19,6 +19,7 @@ import {
   useState,
   type FC,
 } from '../src'
+import { _$compiledMarkComponentRenderReactive } from '../src/internal'
 import ExamplePlayground from '../../../app/pages/examples/ExamplePlayground'
 import AttributeBindings from '../../../app/pages/examples/AttributeBindings'
 import HandlingInput from '../../../app/pages/examples/HandlingInput'
@@ -144,31 +145,25 @@ describe('RouterView renderable boundary', () => {
     const persistUnmounted = vi.fn()
     const plainMounted = vi.fn()
 
-    const PersistCounter: FC = () => {
+    const PersistCounter: FC = _$compiledMarkComponentRenderReactive(() => {
       const [count, setCount] = useState(0)
       onMounted(persistMounted)
       onUnmounted(persistUnmounted)
       return (
-        <button
-          data-testid="persist-counter"
-          onClick={() => setCount(value => void (value.value += 1))}
-        >
-          persist:{count.value}
+        <button data-testid="persist-counter" onClick={() => setCount(previous => previous + 1)}>
+          persist:{count}
         </button>
       )
-    }
-    const PlainCounter: FC = () => {
+    })
+    const PlainCounter: FC = _$compiledMarkComponentRenderReactive(() => {
       const [count, setCount] = useState(0)
       onMounted(plainMounted)
       return (
-        <button
-          data-testid="plain-counter"
-          onClick={() => setCount(value => void (value.value += 1))}
-        >
-          plain:{count.value}
+        <button data-testid="plain-counter" onClick={() => setCount(previous => previous + 1)}>
+          plain:{count}
         </button>
       )
-    }
+    })
     const router = createRouter({
       history: createMemoryHistory('/persist'),
       routes: [
@@ -208,18 +203,17 @@ describe('RouterView renderable boundary', () => {
 
   it('updates params on a reactivated persist record without remounting it', async () => {
     const mounted = vi.fn()
-    const User: FC<{ params: { id: string } }> = ({ params }) => {
-      const [count, setCount] = useState(0)
-      onMounted(mounted)
-      return (
-        <button
-          data-testid="persist-user"
-          onClick={() => setCount(value => void (value.value += 1))}
-        >
-          user:{params.id}:{count.value}
-        </button>
-      )
-    }
+    const User: FC<{ params: { id: string } }> = _$compiledMarkComponentRenderReactive(
+      ({ params }) => {
+        const [count, setCount] = useState(0)
+        onMounted(mounted)
+        return (
+          <button data-testid="persist-user" onClick={() => setCount(previous => previous + 1)}>
+            user:{params.id}:{count}
+          </button>
+        )
+      },
+    )
     const router = createRouter({
       history: createMemoryHistory('/users/1'),
       routes: [
@@ -649,22 +643,15 @@ describe('RouterView renderable boundary', () => {
   it('keeps lazy route page interactions reactive through a preview shell', async () => {
     window.location.hash = '#/demo'
 
-    const Counter: FC = () => {
+    const Counter: FC = _$compiledMarkComponentRenderReactive(() => {
       const [count, setCount] = useState(0)
 
       return (
-        <button
-          data-testid="route-lazy-counter"
-          onClick={() =>
-            setCount(value => {
-              value.value += 1
-            })
-          }
-        >
-          {count.value}
+        <button data-testid="route-lazy-counter" onClick={() => setCount(previous => previous + 1)}>
+          {count}
         </button>
       )
-    }
+    })
 
     const PreviewShell: FC<{ children?: unknown }> = props => {
       const activeTab = ref<'preview' | 'code'>('preview')
@@ -716,7 +703,7 @@ describe('RouterView renderable boundary', () => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
     await flush()
 
-    expect(button.textContent).toBe('1')
+    expect(container.querySelector('[data-testid="route-lazy-counter"]')?.textContent).toBe('1')
   })
 
   it('keeps local interactions reactive after switching between plain lazy routes', async () => {

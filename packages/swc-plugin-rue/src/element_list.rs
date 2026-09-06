@@ -569,6 +569,91 @@ fn expr_uses_declared_prefix(expr: &Expr, prefix_stmts: &[Stmt]) -> bool {
     collector.found
 }
 
+struct UnshadowedIdentUse<'a> {
+    target: &'a str,
+    shadowed: usize,
+    found: bool,
+}
+
+impl UnshadowedIdentUse<'_> {
+    fn pattern_shadows_target(&self, pat: &Pat) -> bool {
+        let mut names = std::collections::HashSet::new();
+        collect_declared_idents_from_pat(pat, &mut names);
+        names.contains(self.target)
+    }
+
+    fn with_shadowed(&mut self, shadows_target: bool, visit: impl FnOnce(&mut Self)) {
+        if shadows_target {
+            self.shadowed += 1;
+        }
+        visit(self);
+        if shadows_target {
+            self.shadowed -= 1;
+        }
+    }
+
+    fn record(&mut self, ident: &Ident) {
+        if self.shadowed == 0 && ident.sym.as_ref() == self.target {
+            self.found = true;
+        }
+    }
+}
+
+impl Visit for UnshadowedIdentUse<'_> {
+    fn visit_expr(&mut self, expr: &Expr) {
+        if let Expr::Ident(ident) = expr {
+            self.record(ident);
+        }
+        if !self.found {
+            expr.visit_children_with(self);
+        }
+    }
+
+    fn visit_prop(&mut self, prop: &Prop) {
+        if let Prop::Shorthand(ident) = prop {
+            self.record(ident);
+        }
+        if !self.found {
+            prop.visit_children_with(self);
+        }
+    }
+
+    fn visit_jsx_attr(&mut self, attr: &JSXAttr) {
+        if matches!(&attr.name, JSXAttrName::Ident(name) if name.sym == *"key") {
+            return;
+        }
+        attr.visit_children_with(self);
+    }
+
+    fn visit_arrow_expr(&mut self, arrow: &ArrowExpr) {
+        let shadows_target = arrow.params.iter().any(|pat| self.pattern_shadows_target(pat));
+        self.with_shadowed(shadows_target, |visitor| arrow.visit_children_with(visitor));
+    }
+
+    fn visit_function(&mut self, function: &Function) {
+        let shadows_target =
+            function.params.iter().any(|param| self.pattern_shadows_target(&param.pat));
+        self.with_shadowed(shadows_target, |visitor| function.visit_children_with(visitor));
+    }
+
+    fn visit_block_stmt(&mut self, block: &BlockStmt) {
+        let shadows_target = collect_declared_idents_in_stmts(&block.stmts).contains(self.target);
+        self.with_shadowed(shadows_target, |visitor| block.visit_children_with(visitor));
+    }
+}
+
+fn expr_uses_unshadowed_ident(expr: &Expr, ident: &Ident) -> bool {
+    let mut visitor = UnshadowedIdentUse { target: ident.sym.as_ref(), shadowed: 0, found: false };
+    expr.visit_with(&mut visitor);
+    visitor.found
+}
+
+fn block_uses_unshadowed_ident(block: &BlockStmt, ident: &Ident) -> bool {
+    let mut visitor = UnshadowedIdentUse { target: ident.sym.as_ref(), shadowed: 0, found: false };
+    block.visit_with(&mut visitor);
+    visitor.found
+}
+
 struct ExternalReactivePrefixCollector<'a> {
     local_names: &'a std::collections::HashSet<String>,
     found: bool,
@@ -890,6 +975,15 @@ fn rewrite_selector_bindings_in_element(
     element.visit_mut_with(&mut RewriteBindings { row_key, row_local_names, source, selector });
 }
 
+fn rewrite_selector_bindings_in_expr(
+    expr: &mut Expr,
+    row_key: &Expr,
+    source: &Expr,
+    selector: &Ident,
+) {
+    expr.visit_mut_with(&mut RewriteSelectorEquality { row_key, source, selector });
+}
+
 fn extract_jsx_element_key_expr(jsx_el: &JSXElement) -> Option<Expr> {
     for attr in &jsx_el.opening.attrs {
         if let JSXAttrOrSpread::JSXAttr(attr) = attr
@@ -965,8 +1059,12 @@ fn extract_render_root_key_expr(expr: &Expr) -> Option<Expr> {
             Some("_$compiledWithKey") if call.args.len() >= 2 => {
                 Some(crate::utils::unwrap_expr(call.args[1].expr.as_ref()).clone())
             }
-            Some("vapor") | Some("useMemo") => {
-                let first = call.args.first()?;
+            Some("vapor") | Some("_$compiledMemo") => {
+                let first = if call_callee_ident_name(call) == Some("_$compiledMemo") {
+                    call.args.get(1)?
+                } else {
+                    call.args.first()?
+                };
                 let Expr::Arrow(arrow) = crate::utils::unwrap_expr(first.expr.as_ref()) else {
                     return None;
                 };
@@ -997,8 +1095,8 @@ fn list_memo_expr(expr: &Expr) -> Option<(Expr, Expr)> {
     };
     match call_callee_ident_name(call) {
         Some("_$compiledWithHookId") => list_memo_expr(&arrow_body(&call.args.get(1)?.expr)?),
-        Some("useMemo") => {
-            Some((arrow_body(&call.args.first()?.expr)?, *call.args.get(1)?.expr.clone()))
+        Some("_$compiledMemo") => {
+            Some((arrow_body(&call.args.get(1)?.expr)?, *call.args.get(2)?.expr.clone()))
         }
         _ => None,
     }
@@ -1114,6 +1212,8 @@ fn try_build_list_from_map_with_anchor(
         let mut item_param_pattern: Option<Pat> = None;
         let mut item_alias_exprs = std::collections::HashMap::new();
         let mut selector_decl = None;
+        let mut selector_binding = None;
+        let mut row_template_decl = None;
         if let Expr::Arrow(ArrowExpr { params, body, .. }) = cb_expr {
             if !params.is_empty() {
                 match &params[0] {
@@ -1285,6 +1385,7 @@ fn try_build_list_from_map_with_anchor(
                         &source,
                         &selector,
                     );
+                    selector_binding = Some((selector_row_key, source.clone(), selector.clone()));
                     selector_decl = Some(const_decl(
                         selector,
                         call_ident(
@@ -1318,6 +1419,18 @@ fn try_build_list_from_map_with_anchor(
 
             let memo_ident = ident(&format!("{}_memo", map_base));
             let mut memo_setup = None;
+            let simple_native_row_patch = render_item_prefix_stmts.is_empty()
+                && render_item_direct_expr.as_ref().is_some_and(|expr| {
+                    crate::element_list_patch::accepts_simple_native_row(expr, &item_ident)
+                });
+            let ownerless_simple_native_row = simple_native_row_patch
+                && memo_dependencies.is_none()
+                && render_item_direct_expr.as_ref().is_some_and(|expr| {
+                    crate::element_list_patch::accepts_ownerless_simple_native_row(
+                        expr,
+                        &item_ident,
+                    )
+                });
             // A compiled row factory owns a closed DOM range. The keyed reconciler only
             // reuses, patches, moves, and disposes that explicit block.
             let mut render_item_stmts: Vec<Stmt> = Vec::new();
@@ -1332,39 +1445,106 @@ fn try_build_list_from_map_with_anchor(
                     let row_scope = vt.next_map;
                     let item_signal = ident(&format!("_$rowItem{row_scope}"));
                     let index_signal = ident(&format!("_$rowIndex{row_scope}"));
-                    let getter = |signal: &Ident| {
-                        call_member(signal.clone(), "get", vec![])
-                    };
-                    let aliases = std::collections::HashMap::from([
+                    let prefix_uses_index = block_uses_unshadowed_ident(
+                        &BlockStmt {
+                            span: DUMMY_SP,
+                            ctxt: SyntaxContext::empty(),
+                            stmts: render_item_prefix_stmts.clone(),
+                        },
+                        &idx_ident,
+                    );
+                    let row_uses_index = prefix_uses_index
+                        || expr_uses_unshadowed_ident(&compiled_inner, &idx_ident)
+                        || memo_dependencies
+                            .as_ref()
+                            .is_some_and(|deps| expr_uses_unshadowed_ident(deps, &idx_ident));
+                    let getter = |signal: &Ident| call_member(signal.clone(), "get", vec![]);
+                    let direct_item_slot = simple_native_row_patch;
+                    let mut aliases = std::collections::HashMap::from([
                         (item_ident.sym.to_string(), getter(&item_signal)),
-                        (idx_ident.sym.to_string(), getter(&index_signal)),
                     ]);
+                    if row_uses_index {
+                        aliases.insert(idx_ident.sym.to_string(), getter(&index_signal));
+                    }
                     rewrite_alias_exprs_in_expr(&mut compiled_inner, &aliases);
+                    let row_template = simple_native_row_patch.then(|| {
+                        crate::element_list_patch::mark_simple_native_row_template(
+                            &mut compiled_inner,
+                            row_scope,
+                        )
+                    }).flatten();
                     if let Some(deps) = &memo_dependencies {
                         let mut deps = deps.clone();
                         rewrite_alias_exprs_in_expr(&mut deps, &item_alias_exprs);
                         if let Some(prefix) = collect_inline_alias_exprs_from_prefix(&rewritten_callback_prefix_stmts) {
                             rewrite_alias_exprs_in_expr(&mut deps, &prefix);
                         }
+                        if let Some((row_key, source, selector)) = &selector_binding {
+                            rewrite_selector_bindings_in_expr(
+                                &mut deps,
+                                row_key,
+                                source,
+                                selector,
+                            );
+                        }
                         rewrite_alias_exprs_in_expr(&mut deps, &aliases);
                         memo_setup = Some(const_decl(memo_ident.clone(), call_ident("_$compiledListMemo", vec![list_reader(deps)])));
 
                     }
-                    vt.push_plain_local_scope(std::collections::HashSet::from([
+                    let mut row_signal_markers = std::collections::HashSet::from([
                         crate::reactive_provenance::signal_value_marker(item_signal.sym.as_ref()),
-                        crate::reactive_provenance::signal_value_marker(index_signal.sym.as_ref()),
-                    ]));
+                    ]);
+                    if row_uses_index {
+                        row_signal_markers.insert(crate::reactive_provenance::signal_value_marker(
+                            index_signal.sym.as_ref(),
+                        ));
+                    }
+                    vt.push_plain_local_scope(row_signal_markers);
                     let static_templates = vt.static_templates;
-                    vt.static_templates = false;
+                    vt.static_templates = row_template.is_some();
                     let factory =
                         crate::element_expr::compiled_slot_factory_expr(vt, &compiled_inner);
                     vt.static_templates = static_templates;
                     vt.pop_plain_local_scope();
                     factory.map(|mut factory| {
-                        if memo_dependencies.is_some() {
+                        if memo_dependencies.is_some() && !simple_native_row_patch {
                             factory.visit_mut_with(&mut GateListMemoReads(&memo_ident));
                         }
-                        (factory, item_signal, index_signal)
+                        let patch_impl = ident("_$rowPatchImpl");
+                        let direct_patch = simple_native_row_patch
+                            .then(|| {
+                                crate::element_list_patch::lower_simple_native_row_factory(
+                                    &mut factory,
+                                    patch_impl.clone(),
+                                )
+                            })
+                            .unwrap_or(false);
+                        if direct_item_slot {
+                            crate::element_list_patch::rewrite_direct_row_item_reads_in_expr(
+                                &mut factory,
+                                &item_signal,
+                            );
+                            if let Some(setup) = memo_setup.as_mut() {
+                                crate::element_list_patch::rewrite_direct_row_item_reads_in_stmt(
+                                    setup,
+                                    &item_signal,
+                                );
+                            }
+                        }
+                        let simple_row_setup = (simple_native_row_patch && direct_patch && memo_dependencies.is_none()).then(|| {
+                            crate::element_list_patch::extract_simple_row_setup(&factory)
+                        }).flatten();
+                        (
+                            factory,
+                            simple_row_setup,
+                            item_signal,
+                            index_signal,
+                            row_uses_index,
+                            direct_item_slot,
+                            direct_patch,
+                            patch_impl,
+                            row_template,
+                        )
                     })
                 } else {
                     None
@@ -1380,31 +1560,66 @@ fn try_build_list_from_map_with_anchor(
                 for stmt in &mut block.stmts {
                     rewrite_alias_exprs_in_stmt(stmt, &item_alias_exprs);
                 }
+                let row_uses_index = block_uses_unshadowed_ident(&block, &idx_ident);
                 let getter = |signal: &Ident| call_member(signal.clone(), "get", vec![]);
-                let aliases = std::collections::HashMap::from([
+                let mut aliases = std::collections::HashMap::from([
                     (item_ident.sym.to_string(), getter(&item_signal)),
-                    (idx_ident.sym.to_string(), getter(&index_signal)),
                 ]);
+                if row_uses_index {
+                    aliases.insert(idx_ident.sym.to_string(), getter(&index_signal));
+                }
                 for stmt in &mut block.stmts {
                     rewrite_alias_exprs_in_stmt(stmt, &aliases);
                 }
-                vt.push_plain_local_scope(std::collections::HashSet::from([
+                let mut row_signal_markers = std::collections::HashSet::from([
                     crate::reactive_provenance::signal_value_marker(item_signal.sym.as_ref()),
-                    crate::reactive_provenance::signal_value_marker(index_signal.sym.as_ref()),
-                ]));
+                ]);
+                if row_uses_index {
+                    row_signal_markers.insert(crate::reactive_provenance::signal_value_marker(
+                        index_signal.sym.as_ref(),
+                    ));
+                }
+                vt.push_plain_local_scope(row_signal_markers);
                 let static_templates = vt.static_templates;
                 vt.static_templates = false;
                 let factory = compiled_list_block_factory(vt, &block);
                 vt.static_templates = static_templates;
                 vt.pop_plain_local_scope();
-                factory.map(|factory| (factory, item_signal, index_signal))
+                factory.map(|factory| {
+                    (
+                        factory,
+                        None,
+                        item_signal,
+                        index_signal,
+                        row_uses_index,
+                        false,
+                        false,
+                        ident("_$rowPatchImpl"),
+                        None,
+                    )
+                })
             });
-            if let Some((factory, item_signal, index_signal)) = compiled_row_factory {
+            let row_mount_target;
+            if let Some((
+                factory,
+                simple_row_setup,
+                item_signal,
+                index_signal,
+                row_uses_index,
+                direct_item_slot,
+                direct_patch,
+                patch_impl,
+                row_template,
+            )) = compiled_row_factory
+            {
+                row_template_decl = row_template.map(crate::element_list_patch::row_template_decl);
                 let next_item = fresh_ident_avoiding("_$rowNextItem", &render_prefix_local_names);
                 let mut patch_names = render_prefix_local_names.clone();
                 patch_names.insert(next_item.sym.to_string());
                 let next_index = fresh_ident_avoiding("_$rowNextIndex", &patch_names);
-                let patch = Expr::Arrow(ArrowExpr {
+                row_mount_target =
+                    direct_item_slot.then(|| fresh_ident_avoiding("_$rowTarget", &patch_names));
+                let mut patch = Expr::Arrow(ArrowExpr {
                     span: DUMMY_SP,
                     params: vec![
                         Pat::Ident(BindingIdent { id: next_item.clone(), type_ann: None }),
@@ -1436,22 +1651,21 @@ fn try_build_list_from_map_with_anchor(
                                     right: Box::new(Expr::Ident(next_index.clone())),
                                 })),
                             }),
-                            Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::new(call_member(
+                            if direct_item_slot {
+                                crate::element_list_patch::direct_row_item_update(
                                     item_signal.clone(),
-                                    "set",
-                                    vec![Expr::Ident(next_item)],
-                                )),
-                            }),
-                            Stmt::Expr(ExprStmt {
-                                span: DUMMY_SP,
-                                expr: Box::new(call_member(
-                                    index_signal.clone(),
-                                    "set",
-                                    vec![Expr::Ident(next_index)],
-                                )),
-                            }),
+                                    next_item,
+                                )
+                            } else {
+                                Stmt::Expr(ExprStmt {
+                                    span: DUMMY_SP,
+                                    expr: Box::new(call_member(
+                                        item_signal.clone(),
+                                        "set",
+                                        vec![Expr::Ident(next_item)],
+                                    )),
+                                })
+                            },
                         ],
                     })),
                     is_async: false,
@@ -1463,22 +1677,88 @@ fn try_build_list_from_map_with_anchor(
                 if render_item_direct_expr.is_some() {
                     render_item_stmts.extend(render_item_prefix_stmts.iter().cloned());
                 }
-                render_item_stmts.push(const_decl(
-                    item_signal,
-                    call_ident("_$compiledSignal", vec![Expr::Ident(item_ident.clone())]),
-                ));
-                render_item_stmts.push(const_decl(
-                    index_signal,
-                    call_ident("_$compiledSignal", vec![Expr::Ident(idx_ident.clone())]),
-                ));
-                let mut mount_args = vec![factory, patch];
+                if direct_item_slot {
+                    render_item_stmts.push(crate::element_list_patch::direct_row_item_decl(
+                        item_signal,
+                        item_ident.clone(),
+                    ));
+                } else {
+                    render_item_stmts.push(const_decl(
+                        item_signal,
+                        call_ident("_$compiledSignal", vec![Expr::Ident(item_ident.clone())]),
+                    ));
+                }
+                if row_uses_index {
+                    render_item_stmts.push(const_decl(
+                        index_signal.clone(),
+                        call_ident("_$compiledSignal", vec![Expr::Ident(idx_ident.clone())]),
+                    ));
+                    if let Expr::Arrow(patch_arrow) = &mut patch
+                        && let BlockStmtOrExpr::BlockStmt(body) = patch_arrow.body.as_mut()
+                    {
+                        body.stmts.push(Stmt::Expr(ExprStmt {
+                            span: DUMMY_SP,
+                            expr: Box::new(call_member(
+                                index_signal,
+                                "set",
+                                vec![Expr::Ident(next_index)],
+                            )),
+                        }));
+                    }
+                }
+                if direct_patch {
+                    render_item_stmts.push(Stmt::Decl(Decl::Var(Box::new(VarDecl {
+                        span: DUMMY_SP,
+                        ctxt: SyntaxContext::empty(),
+                        kind: VarDeclKind::Let,
+                        declare: false,
+                        decls: vec![VarDeclarator {
+                            span: DUMMY_SP,
+                            name: Pat::Ident(BindingIdent {
+                                id: patch_impl.clone(),
+                                type_ann: None,
+                            }),
+                            init: None,
+                            definite: false,
+                        }],
+                    }))));
+                    if let Expr::Arrow(patch_arrow) = &mut patch
+                        && let BlockStmtOrExpr::BlockStmt(body) = patch_arrow.body.as_mut()
+                    {
+                        body.stmts.push(Stmt::Expr(ExprStmt {
+                            span: DUMMY_SP,
+                            expr: Box::new(call_ident(patch_impl.sym.as_ref(), vec![])),
+                        }));
+                    }
+                }
+                let patch_arg = if direct_patch {
+                    let patch_ident = fresh_ident_avoiding("_$rowPatch", &patch_names);
+                    render_item_stmts.push(const_decl(patch_ident.clone(), patch));
+                    Expr::Ident(patch_ident)
+                } else {
+                    patch
+                };
+                let mut mount_args = vec![factory, patch_arg];
                 if let Some(setup) = memo_setup {
                     render_item_stmts.push(setup);
                     mount_args.push(Expr::Ident(memo_ident));
                 }
+                if let Some(target) = &row_mount_target {
+                    mount_args.push(Expr::Ident(target.clone()));
+                }
+                let mount_helper = if simple_row_setup.is_some() && ownerless_simple_native_row {
+                    "_$mountCompiledKeyedRowOwnerless"
+                } else if simple_row_setup.is_some() {
+                    "_$mountCompiledKeyedRowSetup"
+                } else {
+                    "_$mountCompiledKeyedRow"
+                };
+                if let Some(setup) = simple_row_setup {
+                    mount_args[0] = setup;
+                }
                 render_item_stmts.push(Stmt::Return(ReturnStmt {
                     span: DUMMY_SP,
-                    arg: Some(Box::new(call_ident("_$mountCompiledKeyedRow", mount_args))),
+                    arg: Some(Box::new(call_ident(mount_helper, mount_args))),
                 }));
             } else {
                 (vt.next_el, vt.next_list, vt.next_map, vt.next_child) = counter_checkpoint;
@@ -1486,10 +1766,13 @@ fn try_build_list_from_map_with_anchor(
                 return true;
             }
 
-            let render_item_params = vec![
+            let mut render_item_params = vec![
                 Pat::Ident(BindingIdent { id: item_ident.clone(), type_ann: None }),
                 Pat::Ident(BindingIdent { id: idx_ident.clone(), type_ann: None }),
             ];
+            if let Some(target) = row_mount_target {
+                render_item_params.push(Pat::Ident(BindingIdent { id: target, type_ann: None }));
+            }
             let render_item_arrow = Expr::Arrow(ArrowExpr {
                 span: DUMMY_SP,
                 params: render_item_params,
@@ -1601,6 +1884,9 @@ fn try_build_list_from_map_with_anchor(
         if let Some(selector_decl) = selector_decl {
             stmts.push(selector_decl);
         }
+        if let Some(row_template_decl) = row_template_decl {
+            stmts.push(row_template_decl);
+        }
         if precomputed_anchor.is_none() {
             stmts.push(const_decl(
                 end.clone(),
@@ -1643,6 +1929,25 @@ fn try_build_list_from_map_with_anchor(
         });
         let watch_call = call_ident("effect", vec![arrow]);
         stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch_call) }));
+        stmts.push(Stmt::Expr(ExprStmt {
+            span: DUMMY_SP,
+            expr: Box::new(call_ident(
+                "onOwnerCleanup",
+                vec![Expr::Arrow(ArrowExpr {
+                    span: DUMMY_SP,
+                    params: vec![],
+                    body: Box::new(BlockStmtOrExpr::Expr(Box::new(call_ident(
+                        "_$disposeCompiledKeyedRows",
+                        vec![Expr::Ident(elements_ident)],
+                    )))),
+                    is_async: false,
+                    is_generator: false,
+                    type_params: None,
+                    return_type: None,
+                    ctxt: SyntaxContext::empty(),
+                })],
+            )),
+        }));
 
         return true;
     }

@@ -96,7 +96,7 @@ describe('compiled selector codegen', () => {
     const compiledImport = output.match(
       /import\s*\{([^}]*)\}\s*from\s*["']@rue-js\/rue\/internal\/compiler["']/,
     )
-    for (const helper of ['_$compiledSignal', 'effect', '_$reconcileKeyed']) {
+    for (const helper of ['_$mountCompiledKeyedRowSetup', 'effect', '_$reconcileKeyed']) {
       expect(compiledImport?.[1]).toContain(helper)
     }
     for (const helper of ['createOwner', 'disposeOwner', 'runWithOwner']) {

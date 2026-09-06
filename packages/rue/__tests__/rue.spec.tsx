@@ -16,6 +16,8 @@ import {
   useContext,
 } from '@rue-js/rue'
 import * as rueEntry from '@rue-js/rue'
+import * as rueInternalEntry from '@rue-js/rue/internal'
+import * as runtimeReactivityEntry from '@rue-js/runtime/public/reactivity'
 import * as runtimeEntry from '../src/runtime'
 import { render as runtimeRender } from '../src/runtime'
 import { renderToString } from '../src/server-renderer'
@@ -38,6 +40,119 @@ afterEach(() => {
 })
 
 describe('rue public package entry', () => {
+  it('keeps the complete public runtime export surface available', () => {
+    expect(Object.keys(rueEntry).sort()).toEqual([
+      'Component',
+      'Fragment',
+      'KeepAlive',
+      'Slot',
+      'Suspense',
+      'Teleport',
+      'Template',
+      'Transition',
+      'TransitionGroup',
+      'TransitionUtils',
+      'batch',
+      'computed',
+      'createContext',
+      'createElement',
+      'createResource',
+      'createRue',
+      'createTransitionRunner',
+      'customRef',
+      'effect',
+      'effectScope',
+      'getCurrentContainer',
+      'getCurrentInstance',
+      'getCurrentScope',
+      'hydrateOnIdle',
+      'hydrateOnInteraction',
+      'hydrateOnMediaQuery',
+      'hydrateOnVisible',
+      'isProxy',
+      'isReactive',
+      'isReadonly',
+      'isRef',
+      'mount',
+      'nextTick',
+      'onActivated',
+      'onBeforeCreate',
+      'onBeforeMount',
+      'onBeforeUnmount',
+      'onBeforeUpdate',
+      'onCleanup',
+      'onCreated',
+      'onDeactivated',
+      'onError',
+      'onErrorCaptured',
+      'onMounted',
+      'onRenderTracked',
+      'onRenderTriggered',
+      'onScopeDispose',
+      'onServerPrefetch',
+      'onUnmounted',
+      'onUpdated',
+      'onWatcherCleanup',
+      'propsReactive',
+      'reactive',
+      'readonly',
+      'ref',
+      'render',
+      'renderAnchor',
+      'renderStatic',
+      'runServerPrefetch',
+      'setCurrentInstance',
+      'setReactiveScheduling',
+      'shallowReactive',
+      'shallowReadonly',
+      'shallowRef',
+      'signal',
+      'toRaw',
+      'toRef',
+      'toRefs',
+      'toValue',
+      'triggerRef',
+      'unref',
+      'untrack',
+      'use',
+      'useApp',
+      'useComponent',
+      'useContext',
+      'useCustomElement',
+      'useEffect',
+      'useEmit',
+      'useError',
+      'useHost',
+      'useRef',
+      'useSetup',
+      'useShadowRoot',
+      'useState',
+      'version',
+      'watch',
+      'watchDeepSignal',
+      'watchEffect',
+      'watchFn',
+      'watchPath',
+      'watchPostEffect',
+      'watchSignal',
+      'watchSyncEffect',
+      'withHookSlot',
+    ])
+  })
+
+  it('does not expose the removed runtime Hooks from public or internal entries', () => {
+    const entries = [
+      ['@rue-js/rue', rueEntry],
+      ['@rue-js/rue/internal', rueInternalEntry],
+      ['@rue-js/runtime/public/reactivity', runtimeReactivityEntry],
+    ] as const
+    for (const [name, entry] of entries) {
+      expect(entry, name).not.toHaveProperty('useSignal')
+      expect(entry, name).not.toHaveProperty('useMemo')
+      expect(entry, name).not.toHaveProperty('useCallback')
+    }
+  })
+
   it('supports classic JSX createElement calls from the public entry', () => {
     const container = document.createElement('div')
 

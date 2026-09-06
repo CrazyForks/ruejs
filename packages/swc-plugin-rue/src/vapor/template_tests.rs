@@ -726,13 +726,14 @@ const View = props => {
     );
     let compact = compact(&output);
 
-    assert_eq!(compact.matches(".content.cloneNode(true)").count(), 1, "{output}");
     assert_eq!(compact.matches("rue:text-hole:").count(), 5, "{output}");
+    assert_eq!(compact.matches("rue:row-text").count(), 1, "{output}");
     assert!(!compact.contains("_$createElement(\"section\""), "{output}");
     assert!(!compact.contains("_$createElement(\"i\""), "{output}");
     assert!(compact.contains("_$compiledText("), "{output}");
     assert!(compact.contains("_$compiledBranchAt("), "{output}");
     assert!(compact.contains("_$reconcileKeyed("), "{output}");
+    assert_eq!(compact.matches(".content.cloneNode(true)").count(), 2, "{output}");
     assert!(!compact.contains("_$compiledKeyedList({"), "{output}");
 
     let first_mount = ["_$compiledText(", "_$compiledBranchAt(", "_$reconcileKeyed("]
@@ -740,7 +741,7 @@ const View = props => {
         .filter_map(|needle| compact.find(needle))
         .min()
         .expect("first hole mount");
-    let last_path = compact.rfind(".childNodes[").expect("precomputed hole path");
+    let last_path = compact[..first_mount].rfind(".childNodes[").expect("precomputed hole path");
     assert!(last_path < first_mount, "all hole paths must resolve before mounting\n{output}");
 
     let executable = without_imports(&output);
@@ -766,6 +767,7 @@ const registerEffect = fn => {{
 }};
 const watchEffect = registerEffect;
 const effect = registerEffect;
+const onOwnerCleanup = cleanup => cleanups.push(cleanup);
 const _$compiledText = (node, read) => {{
   let previous;
   effect(() => {{
@@ -812,6 +814,21 @@ const _$mountCompiledKeyedRow = (mount, patch) => {{
   const parent = document.createDocumentFragment();
   return {{ ...mount({{ parent, before: null }}, {{}}, null), patch }};
 }};
+const _$mountCompiledKeyedRowOwnerless = (setup, patch, target) => {{
+  const parent = target?.parent || document.createDocumentFragment();
+  const result = setup(parent);
+  const roots = result && result.__rue_compiled_roots ? [...result.__rue_compiled_roots] : [result];
+  for (const root of roots) if (root.parentNode !== parent) parent.insertBefore(root, target?.before || null);
+  return {{ node: roots[0], last: roots.at(-1), patch, dispose() {{}} }};
+}};
+const _$mountCompiledKeyedRowSetup = (setup, patch, target) => {{
+  const start = cleanups.length;
+  const row = _$mountCompiledKeyedRowOwnerless(setup, patch, target);
+  const owned = cleanups.splice(start);
+  row.dispose = () => {{ for (const cleanup of owned.splice(0)) cleanup(); }};
+  return row;
+}};
+const _$disposeCompiledKeyedRows = rows => {{ for (const row of rows) row.dispose(); }};
 const _$template = html => {{
   let cached;
   return () => {{
@@ -1191,4 +1208,11 @@ delete global.document;
         String::from_utf8_lossy(&result.stderr),
         output,
     );
+}
+
+#[test]
+fn ordinary_template_keeps_comment_text_holes() {
+    let output = transform_module("const View = () => <div>{count.get()}</div>;");
+    assert!(output.contains("rue:text-hole"), "{output}");
+    assert!(!output.contains("rue:row-text"), "{output}");
 }

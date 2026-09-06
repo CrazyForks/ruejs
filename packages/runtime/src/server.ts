@@ -36,6 +36,7 @@ import {
   RUE_COMPILED_COMPONENT_READ_PROPS_KEY,
 } from './compiled-component'
 import { _$compiledValue } from './compiled-render-anchor'
+import { unwrapDisplayRef } from './display-value'
 
 type ServerNodeType = 1 | 3 | 8 | 11
 
@@ -755,7 +756,7 @@ function normalizeServerProtocolProps(rawProps: Record<string, unknown> | null |
 }
 
 function appendNormalizedServerChild(parent: ServerNode, child: unknown) {
-  const normalized = normalizeServerProtocolRenderable(child)
+  const normalized = normalizeServerProtocolRenderable(unwrapDisplayRef(child))
   if (Array.isArray(normalized)) {
     for (const item of normalized) {
       appendNormalizedServerChild(parent, item)
