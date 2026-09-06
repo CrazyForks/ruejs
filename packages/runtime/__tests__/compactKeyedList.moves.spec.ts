@@ -5,8 +5,10 @@ import {
   _$mountCompiledKeyedRow,
   _$mountCompiledKeyedRowSetup,
   _$reconcileKeyed,
+  _$reconcileKeyedSingle,
   type CompactCompiledKeyedMountTarget,
   type CompactCompiledKeyedRow,
+  type CompactCompiledKeyedSingleRow,
 } from '../src/compiler-runtime/compact-keyed-list'
 import {
   createOwner,
@@ -85,9 +87,145 @@ const batchFixture = (range = false, throwOnId?: number) => {
   return { parent, anchor, disposed, render }
 }
 
+const singleFixture = (throwOnId?: number, throwOnDisposeId?: number) => {
+  const parent = document.createElement('div')
+  const anchor = document.createComment('end')
+  parent.appendChild(anchor)
+  let previous: CompactCompiledKeyedSingleRow<Item, number>[] = []
+  const disposed: number[] = []
+  let mounts = 0
+  const mount = (item: Item, _index: number, target?: CompactCompiledKeyedMountTarget) => {
+    mounts += 1
+    if (item.id === throwOnId) throw new Error(`failed to mount ${item.id}`)
+    const staging = target?.parent ?? document.createDocumentFragment()
+    const node = document.createElement('span')
+    node.textContent = item.label
+    staging.insertBefore(node, target?.before ?? null)
+    return {
+      node,
+      patch: (next: Item) => {
+        node.textContent = next.label
+      },
+      dispose: () => {
+        disposed.push(item.id)
+        if (item.id === throwOnDisposeId) throw new Error(`failed to dispose ${item.id}`)
+      },
+    }
+  }
+  const render = (items: Item[]) => {
+    previous = _$reconcileKeyedSingle(parent, anchor, previous, items, item => item.id, mount)
+    return previous
+  }
+  return {
+    parent,
+    anchor,
+    disposed,
+    get mounts() {
+      return mounts
+    },
+    render,
+  }
+}
+
 afterEach(() => vi.restoreAllMocks())
 
 describe('compact keyed list DOM moves', () => {
+  it('runs the full single-root keyed operation matrix without range probing or private metadata', () => {
+    const { parent, anchor, render } = singleFixture()
+    const createRange = vi.spyOn(document, 'createRange')
+    const insert = vi.spyOn(parent, 'insertBefore')
+    const remove = vi.spyOn(parent, 'removeChild')
+    const replaceChildren = vi.spyOn(parent, 'replaceChildren')
+    const a = { id: 1, label: 'one' }
+    const b = { id: 2, label: 'two' }
+    const c = { id: 3, label: 'three' }
+
+    let rows = render([a, b, c])
+    const original = rows.map(row => row.node)
+    expect(
+      rows.every(row => !('last' in row) && Object.getOwnPropertySymbols(row).length === 0),
+    ).toBe(true)
+    expect(insert).toHaveBeenCalledTimes(1)
+
+    rows = render([a, { ...b, label: 'selected' }, c])
+    expect(rows.map(row => row.node)).toEqual(original)
+    expect(rows[1].node.textContent).toBe('selected')
+
+    insert.mockClear()
+    rows = render([a, c, rows[1].item])
+    expect(rows.map(row => row.node)).toEqual([original[0], original[2], original[1]])
+    expect(insert.mock.calls.length).toBeLessThanOrEqual(2)
+
+    remove.mockClear()
+    rows = render([a, rows[2].item])
+    expect(rows.map(row => row.node)).toEqual([original[0], original[1]])
+    expect(remove).toHaveBeenCalledTimes(1)
+
+    insert.mockClear()
+    rows = render([...rows.map(row => row.item), { id: 4, label: 'four' }])
+    expect(rows.slice(0, 2).map(row => row.node)).toEqual([original[0], original[1]])
+    expect(insert).toHaveBeenCalledTimes(1)
+
+    insert.mockClear()
+    remove.mockClear()
+    rows = render([
+      { id: 5, label: 'five' },
+      { id: 6, label: 'six' },
+    ])
+    expect(insert).toHaveBeenCalledTimes(1)
+    expect(remove).not.toHaveBeenCalled()
+    expect([...parent.childNodes]).toEqual([rows[0].node, rows[1].node, anchor])
+
+    remove.mockClear()
+    expect(render([])).toEqual([])
+    expect(remove).not.toHaveBeenCalled()
+    expect([...parent.childNodes]).toEqual([anchor])
+    expect(createRange).toHaveBeenCalledTimes(1)
+    expect(replaceChildren).toHaveBeenCalledExactlyOnceWith(anchor)
+  })
+
+  it('keeps single-root duplicate, mount rollback and cleanup failure semantics atomic', () => {
+    const duplicate = singleFixture()
+    const old = duplicate.render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    const mountCount = duplicate.mounts
+    expect(() => duplicate.render([old[0].item, { id: 1, label: 'duplicate' }])).toThrow(
+      'duplicate keys',
+    )
+    expect(duplicate.mounts).toBe(mountCount)
+    expect([...duplicate.parent.childNodes]).toEqual([old[0].node, old[1].node, duplicate.anchor])
+
+    const failingMount = singleFixture(4)
+    const retained = failingMount.render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+    ])
+    expect(() =>
+      failingMount.render([
+        { id: 3, label: 'three' },
+        { id: 4, label: 'four' },
+      ]),
+    ).toThrow('failed to mount 4')
+    expect(failingMount.disposed).toEqual([3])
+    expect([...failingMount.parent.childNodes]).toEqual([
+      retained[0].node,
+      retained[1].node,
+      failingMount.anchor,
+    ])
+
+    const failingCleanup = singleFixture(undefined, 2)
+    failingCleanup.render([
+      { id: 1, label: 'one' },
+      { id: 2, label: 'two' },
+      { id: 3, label: 'three' },
+    ])
+    expect(() => failingCleanup.render([])).toThrow('failed to dispose 2')
+    expect(failingCleanup.disposed).toEqual([1, 2, 3])
+    expect([...failingCleanup.parent.childNodes]).toEqual([failingCleanup.anchor])
+  })
+
   it.each(['direct', 'plain', 'frozen', 'wrong target'] as const)(
     'batch creation, append and replacement preserve ranges with %s results',
     mode => {
@@ -680,6 +818,77 @@ describe('compact keyed list DOM moves', () => {
       [2, 2],
       [3, 3],
     ])
+  })
+
+  it('skips index-only patches when the compiler proves a multi-node row ignores index', () => {
+    const parent = document.createElement('div')
+    const anchor = document.createComment('end')
+    parent.appendChild(anchor)
+    const patched: Array<[number, number]> = []
+    const mount = (item: Item) => {
+      const node = document.createElement('span')
+      const last = document.createTextNode(`tail:${item.id}`)
+      const staging = document.createDocumentFragment()
+      node.textContent = item.label
+      staging.append(node, last)
+      return {
+        node,
+        last,
+        patch: (next: Item, index: number) => {
+          patched.push([next.id, index])
+          node.textContent = next.label
+        },
+        dispose() {},
+      }
+    }
+    const a = { id: 1, label: 'one' }
+    const b = { id: 2, label: 'two' }
+    const c = { id: 3, label: 'three' }
+    const original = _$reconcileKeyed(parent, anchor, [], [a, b, c], item => item.id, mount, false)
+
+    const reordered = _$reconcileKeyed(
+      parent,
+      anchor,
+      original,
+      [c, a, b],
+      item => item.id,
+      mount,
+      false,
+    )
+    expect(patched).toEqual([])
+    expect(reordered.map(row => row.node)).toEqual([
+      original[2].node,
+      original[0].node,
+      original[1].node,
+    ])
+    expect(reordered.map(row => row.index)).toEqual([0, 1, 2])
+    expect([...parent.childNodes]).toEqual([
+      reordered[0].node,
+      reordered[0].last,
+      reordered[1].node,
+      reordered[1].last,
+      reordered[2].node,
+      reordered[2].last,
+      anchor,
+    ])
+
+    const removed = _$reconcileKeyed(
+      parent,
+      anchor,
+      reordered,
+      [a, b],
+      item => item.id,
+      mount,
+      false,
+    )
+    expect(patched).toEqual([])
+    expect(removed.map(row => row.index)).toEqual([0, 1])
+
+    const replacement = { id: 1, label: 'ONE' }
+    _$reconcileKeyed(parent, anchor, removed, [replacement, b], item => item.id, mount, false)
+    expect(patched).toEqual([[1, 0]])
+    expect(removed[0].node.textContent).toBe('ONE')
+    expect(removed[0].item).toBe(replacement)
   })
 
   it.each([false, true])('does not move unchanged ranges during text updates (range=%s)', range => {

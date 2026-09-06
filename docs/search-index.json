@@ -9108,11 +9108,44 @@
       "title": "响应式 API：核心",
       "sectionTitle": "ref()",
       "type": "paragraph",
+      "text": "在 JSX child 的最终展示位置，Rue 会自动解包带有内部 Ref 标记（rueref === true）的值，因此可以写 {count}。computed() 和 customRef() 返回的 Ref 也遵循这一规则；普通 JavaScript 表达式、事件处理和属性绑定仍需显式读取 .value。Signal 不属于 Ref，展示时继续使用 count.get()。",
+      "searchText": "响应式 api：核心 ref() 在 jsx child 的最终展示位置，rue 会自动解包带有内部 ref 标记（rueref === true）的值，因此可以写 {count}。computed() 和 customref() 返回的 ref 也遵循这一规则；普通 javascript 表达式、事件处理和属性绑定仍需显式读取 .value。signal 不属于 ref，展示时继续使用 count.get()。 api/reactivity-core"
+    },
+    {
+      "id": "api/reactivity-core:10",
+      "docId": "api/reactivity-core",
+      "route": "/api/api/reactivity-core",
+      "href": "/api/api/reactivity-core#ref",
+      "title": "响应式 API：核心",
+      "sectionTitle": "ref()",
+      "type": "code",
+      "text": "const count = ref(0) const doubled = computed(() => count.value * 2) const view = ( <> <span>{count}</span> <span>{doubled}</span> <input value={count.value} /> </> )",
+      "searchText": "响应式 api：核心 ref() const count = ref(0) const doubled = computed(() => count.value * 2) const view = ( <> <span>{count}</span> <span>{doubled}</span> <input value={count.value} /> </> ) api/reactivity-core"
+    },
+    {
+      "id": "api/reactivity-core:11",
+      "docId": "api/reactivity-core",
+      "route": "/api/api/reactivity-core",
+      "href": "/api/api/reactivity-core#ref",
+      "title": "响应式 API：核心",
+      "sectionTitle": "ref()",
+      "type": "paragraph",
+      "text": "自动解包只发生在表达式计算完成后的最终展示边界，不会按是否存在 value 属性来解包普通对象，也不适用于 React 风格的 DOM useRef。",
+      "searchText": "响应式 api：核心 ref() 自动解包只发生在表达式计算完成后的最终展示边界，不会按是否存在 value 属性来解包普通对象，也不适用于 react 风格的 dom useref。 api/reactivity-core"
+    },
+    {
+      "id": "api/reactivity-core:12",
+      "docId": "api/reactivity-core",
+      "route": "/api/api/reactivity-core",
+      "href": "/api/api/reactivity-core#ref",
+      "title": "响应式 API：核心",
+      "sectionTitle": "ref()",
+      "type": "paragraph",
       "text": "Rue 中的 ref() 与运行时 Hook API 保持一致：除了初始值外，还支持传入 options.equals 自定义比较函数，以及可选的 forceGlobal 参数。forceGlobal 通常只用于底层封装、测试或需要跳过当前组件 Hook 槽位的场景。",
       "searchText": "响应式 api：核心 ref() rue 中的 ref() 与运行时 hook api 保持一致：除了初始值外，还支持传入 options.equals 自定义比较函数，以及可选的 forceglobal 参数。forceglobal 通常只用于底层封装、测试或需要跳过当前组件 hook 槽位的场景。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:10",
+      "id": "api/reactivity-core:13",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#ref",
@@ -9123,7 +9156,7 @@
       "searchText": "响应式 api：核心 ref() 如果一个对象被赋值给 ref，该对象将通过 reactive() 按 rue 的规则被设为深层响应式。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:11",
+      "id": "api/reactivity-core:14",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#ref",
@@ -9134,7 +9167,7 @@
       "searchText": "响应式 api：核心 ref() 要避免深层转换，请改用 shallowref()。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:12",
+      "id": "api/reactivity-core:15",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#ref",
@@ -9145,7 +9178,7 @@
       "searchText": "响应式 api：核心 ref() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:13",
+      "id": "api/reactivity-core:16",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#ref",
@@ -9156,7 +9189,7 @@
       "searchText": "响应式 api：核心 ref() const count = ref(0) console.log(count.value) // 0 count.value = 1 console.log(count.value) // 1 const state = ref({ count: 1 }, { equals: (prev, next) => prev.count === next.count }) state.value = { count: 1 } // 相等，不触发更新 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:14",
+      "id": "api/reactivity-core:17",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#ref",
@@ -9167,7 +9200,7 @@
       "searchText": "响应式 api：核心 ref() 另请参阅 - 指南 - ref() 的响应式基础 - 指南 - 为 ref() 标注类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:15",
+      "id": "api/reactivity-core:18",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9178,7 +9211,7 @@
       "searchText": "响应式 api：核心 computed() computed() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:16",
+      "id": "api/reactivity-core:19",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9189,7 +9222,7 @@
       "searchText": "响应式 api：核心 computed() 接受一个 getter 函数，返回一个 getter 返回值的只读响应式 ref 对象。它也可以接受一个带有 get 和 set 函数的对象来创建一个可写的 ref 对象。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:17",
+      "id": "api/reactivity-core:20",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9200,7 +9233,7 @@
       "searchText": "响应式 api：核心 computed() 类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:18",
+      "id": "api/reactivity-core:21",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9211,7 +9244,7 @@
       "searchText": "响应式 api：核心 computed() // 只读 function computed<t>( getter: (oldvalue: t | undefined) => t, // 见下方\"计算属性调试\"链接 debuggeroptions?: debuggeroptions, ): readonly<ref<readonly<t>>> // 可写 function computed<t>( options: { get: (oldvalue: t | undefined) => t set: (value: t) => void }, debuggeroptions?: debuggeroptions, ): ref<t> api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:19",
+      "id": "api/reactivity-core:22",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9222,7 +9255,7 @@
       "searchText": "响应式 api：核心 computed() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:20",
+      "id": "api/reactivity-core:23",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9233,7 +9266,7 @@
       "searchText": "响应式 api：核心 computed() 创建只读计算属性： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:21",
+      "id": "api/reactivity-core:24",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9244,7 +9277,7 @@
       "searchText": "响应式 api：核心 computed() const count = ref(1) const plusone = computed(() => count.value + 1) console.log(plusone.value) // 2 plusone.value++ // 错误 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:22",
+      "id": "api/reactivity-core:25",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9255,7 +9288,7 @@
       "searchText": "响应式 api：核心 computed() 创建可写的计算属性： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:23",
+      "id": "api/reactivity-core:26",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9266,7 +9299,7 @@
       "searchText": "响应式 api：核心 computed() const count = ref(1) const plusone = computed({ get: () => count.value + 1, set: val => { count.value = val - 1 }, }) plusone.value = 1 console.log(count.value) // 0 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:24",
+      "id": "api/reactivity-core:27",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9277,7 +9310,7 @@
       "searchText": "响应式 api：核心 computed() 调试： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:25",
+      "id": "api/reactivity-core:28",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9288,7 +9321,7 @@
       "searchText": "响应式 api：核心 computed() const plusone = computed(() => count.value + 1, { ontrack(e) { debugger }, ontrigger(e) { debugger }, }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:26",
+      "id": "api/reactivity-core:29",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#computed",
@@ -9299,7 +9332,7 @@
       "searchText": "响应式 api：核心 computed() 另请参阅 - 指南 - 计算属性 - 指南 - 计算属性调试 - 指南 - 为 computed() 标注类型 - 指南 - 性能 - 计算属性稳定性 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:27",
+      "id": "api/reactivity-core:30",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9310,7 +9343,7 @@
       "searchText": "响应式 api：核心 reactive() reactive() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:28",
+      "id": "api/reactivity-core:31",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9321,7 +9354,7 @@
       "searchText": "响应式 api：核心 reactive() 创建响应式代理。对象/数组会返回代理对象；原始值会被包装成带 .value 字段的响应式对象。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:29",
+      "id": "api/reactivity-core:32",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9332,7 +9365,7 @@
       "searchText": "响应式 api：核心 reactive() 类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:30",
+      "id": "api/reactivity-core:33",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9343,7 +9376,7 @@
       "searchText": "响应式 api：核心 reactive() function reactive<t extends object | function>( initial: t, options?: { equals?: (prev: t, next: t) => boolean readonly?: boolean shallow?: boolean }, forceglobal?: boolean, ): t function reactive<t>( initial: t, options?: { equals?: (prev: t, next: t) => boolean readonly?: boolean shallow?: boolean }, forceglobal?: boolean, ): { value: t } api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:31",
+      "id": "api/reactivity-core:34",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9354,7 +9387,7 @@
       "searchText": "响应式 api：核心 reactive() 详情 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:32",
+      "id": "api/reactivity-core:35",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9365,7 +9398,7 @@
       "searchText": "响应式 api：核心 reactive() 响应式转换默认是深层的：访问嵌套对象时，它们也会继续被包装为 rue 的响应式代理。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:33",
+      "id": "api/reactivity-core:36",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9376,7 +9409,7 @@
       "searchText": "响应式 api：核心 reactive() rue 当前不会在 reactive() 属性层自动解包 ref。如果某个属性本身就是 ref，读取时拿到的仍然是 ref 对象，访问内部值时需要显式使用 .value。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:34",
+      "id": "api/reactivity-core:37",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9387,7 +9420,7 @@
       "searchText": "响应式 api：核心 reactive() 要避免深层转换并仅在根级别保留响应性，请改用 shallowreactive()。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:35",
+      "id": "api/reactivity-core:38",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9398,7 +9431,7 @@
       "searchText": "响应式 api：核心 reactive() 返回的对象及其嵌套对象由 es proxy 包装，不等同于原始对象。建议只使用响应式代理，避免依赖原始对象。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:36",
+      "id": "api/reactivity-core:39",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9409,7 +9442,7 @@
       "searchText": "响应式 api：核心 reactive() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:37",
+      "id": "api/reactivity-core:40",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9420,7 +9453,7 @@
       "searchText": "响应式 api：核心 reactive() 创建一个响应式对象： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:38",
+      "id": "api/reactivity-core:41",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9431,7 +9464,7 @@
       "searchText": "响应式 api：核心 reactive() const obj = reactive({ count: 0 }) obj.count++ api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:39",
+      "id": "api/reactivity-core:42",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9442,7 +9475,7 @@
       "searchText": "响应式 api：核心 reactive() 原始值包装： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:40",
+      "id": "api/reactivity-core:43",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9453,7 +9486,7 @@
       "searchText": "响应式 api：核心 reactive() const count = reactive(0) count.value++ api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:41",
+      "id": "api/reactivity-core:44",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9464,7 +9497,7 @@
       "searchText": "响应式 api：核心 reactive() 在响应式对象中保留 ref： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:42",
+      "id": "api/reactivity-core:45",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9475,7 +9508,7 @@
       "searchText": "响应式 api：核心 reactive() const count = ref(1) const obj = reactive({ count }) console.log(obj.count === count) // true console.log(obj.count.value) // 1 count.value++ console.log(obj.count.value) // 2 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:43",
+      "id": "api/reactivity-core:46",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9486,7 +9519,7 @@
       "searchText": "响应式 api：核心 reactive() 自定义比较： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:44",
+      "id": "api/reactivity-core:47",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9497,7 +9530,7 @@
       "searchText": "响应式 api：核心 reactive() const state = reactive({ count: 1 }, { equals: (prev, next) => prev.count === next.count }) state.count = 1 // 相等，不触发更新 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:45",
+      "id": "api/reactivity-core:48",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#reactive",
@@ -9508,7 +9541,7 @@
       "searchText": "响应式 api：核心 reactive() 另请参阅 - 指南 - 响应式基础 - 指南 - 为 reactive() 标注类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:46",
+      "id": "api/reactivity-core:49",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9519,7 +9552,7 @@
       "searchText": "响应式 api：核心 readonly() readonly() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:47",
+      "id": "api/reactivity-core:50",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9530,7 +9563,7 @@
       "searchText": "响应式 api：核心 readonly() 接受一个对象，返回其只读代理。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:48",
+      "id": "api/reactivity-core:51",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9541,7 +9574,7 @@
       "searchText": "响应式 api：核心 readonly() 类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:49",
+      "id": "api/reactivity-core:52",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9552,7 +9585,7 @@
       "searchText": "响应式 api：核心 readonly() function readonly<t extends object>(initial: t, forceglobal?: boolean): t api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:50",
+      "id": "api/reactivity-core:53",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9563,7 +9596,7 @@
       "searchText": "响应式 api：核心 readonly() 详情 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:51",
+      "id": "api/reactivity-core:54",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9574,7 +9607,7 @@
       "searchText": "响应式 api：核心 readonly() 只读代理是深层的：访问到的嵌套对象也会继续保持只读。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:52",
+      "id": "api/reactivity-core:55",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9585,7 +9618,7 @@
       "searchText": "响应式 api：核心 readonly() rue 当前不会在 readonly() 属性层自动解包 ref。若属性本身是 ref，读取结果仍然是 ref 对象。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:53",
+      "id": "api/reactivity-core:56",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9596,7 +9629,7 @@
       "searchText": "响应式 api：核心 readonly() 要避免深层转换，请改用 shallowreadonly()。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:54",
+      "id": "api/reactivity-core:57",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9607,7 +9640,7 @@
       "searchText": "响应式 api：核心 readonly() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:55",
+      "id": "api/reactivity-core:58",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#readonly",
@@ -9618,7 +9651,7 @@
       "searchText": "响应式 api：核心 readonly() const original = reactive({ count: 0 }) const copy = readonly(original) watcheffect(() => { // 适用于响应式追踪 console.log(copy.count) }) // 修改原始值会触发依赖副本的侦听器 original.count++ // 修改副本将失败并导致警告 copy.count++ // 警告！ api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:56",
+      "id": "api/reactivity-core:59",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9629,7 +9662,7 @@
       "searchText": "响应式 api：核心 watcheffect() watcheffect() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:57",
+      "id": "api/reactivity-core:60",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9640,7 +9673,7 @@
       "searchText": "响应式 api：核心 watcheffect() 立即运行一个函数，同时响应式地追踪其依赖，并在依赖更改时重新运行。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:58",
+      "id": "api/reactivity-core:61",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9651,7 +9684,7 @@
       "searchText": "响应式 api：核心 watcheffect() 类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:59",
+      "id": "api/reactivity-core:62",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9662,7 +9695,7 @@
       "searchText": "响应式 api：核心 watcheffect() function watcheffect( effect: (oncleanup: oncleanup) => void, options?: watcheffectoptions, ): watchhandle type oncleanup = (cleanupfn: () => void) => void interface watcheffectoptions { flush?: 'pre' | 'post' | 'sync' // 默认：'pre' ontrack?: (event: debuggerevent) => void ontrigger?: (event: debuggerevent) => void } interface watchhandle { (): void // 可调用，与 `stop` 相同 pause: () => void resume: () => void stop: () => void } api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:60",
+      "id": "api/reactivity-core:63",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9673,7 +9706,7 @@
       "searchText": "响应式 api：核心 watcheffect() 详情 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:61",
+      "id": "api/reactivity-core:64",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9684,7 +9717,7 @@
       "searchText": "响应式 api：核心 watcheffect() 第一个参数是要运行的 effect 函数。effect 函数接收一个可用于注册清理回调的函数。清理回调将在 effect 下次重新运行之前被调用，可用于清理失效的副作用，例如待处理的异步请求（见下方示例）。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:62",
+      "id": "api/reactivity-core:65",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9695,7 +9728,7 @@
       "searchText": "响应式 api：核心 watcheffect() 第二个参数是可选的 options 对象，可用于调整 effect 的刷新时机或调试 effect 的依赖。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:63",
+      "id": "api/reactivity-core:66",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9706,7 +9739,7 @@
       "searchText": "响应式 api：核心 watcheffect() 默认情况下，侦听器将在组件渲染之前运行。将 flush 设置为 'post' 将使侦听器延迟到组件渲染之后。有关详细信息，请参阅 回调刷新时机。在极少数情况下，可能有必要在响应式依赖项更改时立即触发侦听器，例如使缓存失效。这可以通过使用 flush: 'sync' 来实现。但是，如果同时更新多个属性，此设置应谨慎使用，因为它可能导致性能和数据一致性问题。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:64",
+      "id": "api/reactivity-core:67",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9717,7 +9750,7 @@
       "searchText": "响应式 api：核心 watcheffect() 返回值是一个句柄函数，可以调用它来停止 effect 再次运行。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:65",
+      "id": "api/reactivity-core:68",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9728,7 +9761,7 @@
       "searchText": "响应式 api：核心 watcheffect() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:66",
+      "id": "api/reactivity-core:69",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9739,7 +9772,7 @@
       "searchText": "响应式 api：核心 watcheffect() const count = ref(0) watcheffect(() => console.log(count.value)) // -> 输出 0 count.value++ // -> 输出 1 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:67",
+      "id": "api/reactivity-core:70",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9750,7 +9783,7 @@
       "searchText": "响应式 api：核心 watcheffect() 停止侦听器： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:68",
+      "id": "api/reactivity-core:71",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9761,7 +9794,7 @@
       "searchText": "响应式 api：核心 watcheffect() const stop = watcheffect(() => {}) // 当不再需要侦听器时： stop() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:69",
+      "id": "api/reactivity-core:72",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9772,7 +9805,7 @@
       "searchText": "响应式 api：核心 watcheffect() 暂停/恢复侦听器： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:70",
+      "id": "api/reactivity-core:73",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9783,7 +9816,7 @@
       "searchText": "响应式 api：核心 watcheffect() const { stop, pause, resume } = watcheffect(() => {}) // 临时暂停侦听器 pause() // 稍后恢复 resume() // 停止 stop() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:71",
+      "id": "api/reactivity-core:74",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9794,7 +9827,7 @@
       "searchText": "响应式 api：核心 watcheffect() 副作用清理： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:72",
+      "id": "api/reactivity-core:75",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9805,7 +9838,7 @@
       "searchText": "响应式 api：核心 watcheffect() watcheffect(async oncleanup => { const { response, cancel } = doasyncwork(newid) // 如果 `id` 更改，将调用 `cancel`， // 取消先前的请求（如果尚未完成） oncleanup(cancel) data.value = await response }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:73",
+      "id": "api/reactivity-core:76",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9816,7 +9849,7 @@
       "searchText": "响应式 api：核心 watcheffect() 副作用清理（版本）： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:74",
+      "id": "api/reactivity-core:77",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9827,7 +9860,7 @@
       "searchText": "响应式 api：核心 watcheffect() import { onwatchercleanup } from '@rue-js/rue' watcheffect(async () => { const { response, cancel } = doasyncwork(newid) // 如果 `id` 更改，将调用 `cancel`， // 取消先前的请求（如果尚未完成） onwatchercleanup(cancel) data.value = await response }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:75",
+      "id": "api/reactivity-core:78",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9838,7 +9871,7 @@
       "searchText": "响应式 api：核心 watcheffect() 选项： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:76",
+      "id": "api/reactivity-core:79",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9849,7 +9882,7 @@
       "searchText": "响应式 api：核心 watcheffect() watcheffect(() => {}, { flush: 'post', ontrack(e) { debugger }, ontrigger(e) { debugger }, }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:77",
+      "id": "api/reactivity-core:80",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watcheffect",
@@ -9860,7 +9893,7 @@
       "searchText": "响应式 api：核心 watcheffect() 另请参阅 - 指南 - 侦听器 - 指南 - 侦听器调试 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:78",
+      "id": "api/reactivity-core:81",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchposteffect",
@@ -9871,7 +9904,7 @@
       "searchText": "响应式 api：核心 watchposteffect() watchposteffect() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:79",
+      "id": "api/reactivity-core:82",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchposteffect",
@@ -9882,7 +9915,7 @@
       "searchText": "响应式 api：核心 watchposteffect() 带有 flush: 'post' 选项的 watcheffect() 别名。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:80",
+      "id": "api/reactivity-core:83",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9893,7 +9926,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() watchsynceffect() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:81",
+      "id": "api/reactivity-core:84",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9904,7 +9937,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() 带有 flush: 'sync' 选项的 watcheffect() 别名。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:82",
+      "id": "api/reactivity-core:85",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9915,7 +9948,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() 类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:83",
+      "id": "api/reactivity-core:86",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9926,7 +9959,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() function watchsynceffect( effect: () => void, options?: { scheduler?: (run: () => void) => void }, ): watchhandle api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:84",
+      "id": "api/reactivity-core:87",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9937,7 +9970,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() 详情 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:85",
+      "id": "api/reactivity-core:88",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9948,7 +9981,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() watchsynceffect() 会立即运行一次传入的 effect，并在其追踪到的响应式依赖发生变化时同步重新运行。它等价于使用 flush: 'sync' 的 watcheffect()。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:86",
+      "id": "api/reactivity-core:89",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9959,7 +9992,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() 同步 effect 不会等待组件更新队列或下一轮响应式 flush，因此适合处理必须立刻失效的轻量状态，例如缓存标记或简单布尔值。对于可能在同一个调用栈中连续变化的数据，例如数组或批量对象更新，应谨慎使用同步侦听器，以避免重复运行带来的性能开销或中间状态观察。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:87",
+      "id": "api/reactivity-core:90",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9970,7 +10003,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:88",
+      "id": "api/reactivity-core:91",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9981,7 +10014,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() import { ref, watchsynceffect } from '@rue-js/rue' const count = ref(0) watchsynceffect(() => { console.log(count.value) }) count.value++ // effect 会在本次响应式写入后同步重新运行 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:89",
+      "id": "api/reactivity-core:92",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watchsynceffect",
@@ -9992,7 +10025,7 @@
       "searchText": "响应式 api：核心 watchsynceffect() 另请参阅 - 指南 - 同步侦听器 - watcheffect() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:90",
+      "id": "api/reactivity-core:93",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10003,7 +10036,7 @@
       "searchText": "响应式 api：核心 watch() watch() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:91",
+      "id": "api/reactivity-core:94",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10014,7 +10047,7 @@
       "searchText": "响应式 api：核心 watch() 侦听一个或多个响应式数据源，并在数据源变化时调用回调函数。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:92",
+      "id": "api/reactivity-core:95",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10025,7 +10058,7 @@
       "searchText": "响应式 api：核心 watch() 类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:93",
+      "id": "api/reactivity-core:96",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10036,7 +10069,7 @@
       "searchText": "响应式 api：核心 watch() // 侦听单个源 function watch<t>( source: watchsource<t>, callback: watchcallback<t>, options?: watchoptions, ): watchhandle // 侦听多个源 function watch<t>( sources: watchsource<t>[], callback: watchcallback<t[]>, options?: watchoptions, ): watchhandle type watchcallback<t> = ( value: t, oldvalue: t, oncleanup: (cleanupfn: () => void) => void, ) => void type watchsource<t> = | ref<t> // ref | (() => t) // getter | (t extends object ? t : never) // reactive object interface watchoptions extends watcheffectoptions { immediate?: boolean // 默认：false deep?: boolean | number // 默认：false flush?: 'pre' | 'post' | 'sync' // 默认：'pre' ontrack?: (event: debuggerevent) => void ontrigger?: (event: debuggerevent) => void once?: boolean // 默认：false } interface watchhandle { (): void // 可调用，与 `stop` 相同 pause: () => void resume: () => void stop: () => void } api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:94",
+      "id": "api/reactivity-core:97",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10047,7 +10080,7 @@
       "searchText": "响应式 api：核心 watch() > 为便于阅读，类型已简化。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:95",
+      "id": "api/reactivity-core:98",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10058,7 +10091,7 @@
       "searchText": "响应式 api：核心 watch() 详情 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:96",
+      "id": "api/reactivity-core:99",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10069,7 +10102,7 @@
       "searchText": "响应式 api：核心 watch() watch() 默认是懒侦听的——即回调仅在侦听源更改时被调用。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:97",
+      "id": "api/reactivity-core:100",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10080,7 +10113,7 @@
       "searchText": "响应式 api：核心 watch() 第一个参数是侦听器的源。源可以是以下之一： - 返回值的 getter 函数 - ref - 响应式对象 - ...或上述内容的数组。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:98",
+      "id": "api/reactivity-core:101",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10091,7 +10124,7 @@
       "searchText": "响应式 api：核心 watch() 第二个参数是源更改时调用的回调。回调接收三个参数：新值、旧值和用于注册副作用清理回调的函数。清理回调将在 effect 下次重新运行之前被调用，可用于清理失效的副作用，例如待处理的异步请求。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:99",
+      "id": "api/reactivity-core:102",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10102,7 +10135,7 @@
       "searchText": "响应式 api：核心 watch() 当侦听多个源时，回调接收两个数组，分别包含对应源数组的新值/旧值。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:100",
+      "id": "api/reactivity-core:103",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10113,7 +10146,7 @@
       "searchText": "响应式 api：核心 watch() 第三个可选参数是一个 options 对象，支持以下选项： - immediate：在侦听器创建时立即触发回调。第一次调用时旧值将为 undefined。 - deep：如果源是对象，则强制深度遍历，以便在深度变更时触发回调。在版本中，这也可以是指示最大遍历深度的数字。请参阅 深度侦听器。 - flush：调整回调的刷新时机。请参阅 回调刷新时机 和 watcheffect()。 - ontrack / ontrigger：调试侦听器的依赖。请参阅 侦听器调试。 - once：只运行一次回调。侦听器在第一次回调运行后自动停止。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:101",
+      "id": "api/reactivity-core:104",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10124,7 +10157,7 @@
       "searchText": "响应式 api：核心 watch() 与 watcheffect() 相比，watch() 使我们能够： - 惰性地执行副作用； - 更具体地说明应该触发侦听器重新运行的状态； - 访问侦听状态的先前值和当前值。 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:102",
+      "id": "api/reactivity-core:105",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10135,7 +10168,7 @@
       "searchText": "响应式 api：核心 watch() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:103",
+      "id": "api/reactivity-core:106",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10146,7 +10179,7 @@
       "searchText": "响应式 api：核心 watch() 侦听 getter： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:104",
+      "id": "api/reactivity-core:107",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10157,7 +10190,7 @@
       "searchText": "响应式 api：核心 watch() const state = reactive({ count: 0 }) watch( () => state.count, (count, prevcount) => { /* ... */ }, ) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:105",
+      "id": "api/reactivity-core:108",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10168,7 +10201,7 @@
       "searchText": "响应式 api：核心 watch() 侦听 ref： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:106",
+      "id": "api/reactivity-core:109",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10179,7 +10212,7 @@
       "searchText": "响应式 api：核心 watch() const count = ref(0) watch(count, (count, prevcount) => { /* ... */ }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:107",
+      "id": "api/reactivity-core:110",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10190,7 +10223,7 @@
       "searchText": "响应式 api：核心 watch() 当侦听多个源时，回调接收包含对应源数组的新值/旧值的数组： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:108",
+      "id": "api/reactivity-core:111",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10201,7 +10234,7 @@
       "searchText": "响应式 api：核心 watch() watch([fooref, barref], ([foo, bar], [prevfoo, prevbar]) => { /* ... */ }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:109",
+      "id": "api/reactivity-core:112",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10212,7 +10245,7 @@
       "searchText": "响应式 api：核心 watch() 当使用 getter 源时，只有当 getter 的返回值更改时，侦听器才会触发。如果希望即使深度变更也触发回调，需要使用 { deep: true } 强制侦听器进入深度模式。注意在深度模式下，如果回调是由深度变更触发的，新值和旧值将是同一个对象： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:110",
+      "id": "api/reactivity-core:113",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10223,7 +10256,7 @@
       "searchText": "响应式 api：核心 watch() const state = reactive({ count: 0 }) watch( () => state, (newvalue, oldvalue) => { // newvalue === oldvalue }, { deep: true }, ) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:111",
+      "id": "api/reactivity-core:114",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10234,7 +10267,7 @@
       "searchText": "响应式 api：核心 watch() 当直接侦听响应式对象时，侦听器自动进入深度模式： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:112",
+      "id": "api/reactivity-core:115",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10245,7 +10278,7 @@
       "searchText": "响应式 api：核心 watch() const state = reactive({ count: 0 }) watch(state, () => { /* 在状态深度变更时触发 */ }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:113",
+      "id": "api/reactivity-core:116",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10256,7 +10289,7 @@
       "searchText": "响应式 api：核心 watch() watch() 与 watcheffect() 共享相同的刷新时机和调试选项： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:114",
+      "id": "api/reactivity-core:117",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10267,7 +10300,7 @@
       "searchText": "响应式 api：核心 watch() watch(source, callback, { flush: 'post', ontrack(e) { debugger }, ontrigger(e) { debugger }, }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:115",
+      "id": "api/reactivity-core:118",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10278,7 +10311,7 @@
       "searchText": "响应式 api：核心 watch() 停止侦听器： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:116",
+      "id": "api/reactivity-core:119",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10289,7 +10322,7 @@
       "searchText": "响应式 api：核心 watch() const stop = watch(source, callback) // 当不再需要侦听器时： stop() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:117",
+      "id": "api/reactivity-core:120",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10300,7 +10333,7 @@
       "searchText": "响应式 api：核心 watch() 暂停/恢复侦听器： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:118",
+      "id": "api/reactivity-core:121",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10311,7 +10344,7 @@
       "searchText": "响应式 api：核心 watch() const { stop, pause, resume } = watch(() => {}) // 临时暂停侦听器 pause() // 稍后恢复 resume() // 停止 stop() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:119",
+      "id": "api/reactivity-core:122",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10322,7 +10355,7 @@
       "searchText": "响应式 api：核心 watch() 副作用清理： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:120",
+      "id": "api/reactivity-core:123",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10333,7 +10366,7 @@
       "searchText": "响应式 api：核心 watch() watch(id, async (newid, oldid, oncleanup) => { const { response, cancel } = doasyncwork(newid) // 如果 `id` 更改，将调用 `cancel`， // 取消先前的请求（如果尚未完成） oncleanup(cancel) data.value = await response }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:121",
+      "id": "api/reactivity-core:124",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10344,7 +10377,7 @@
       "searchText": "响应式 api：核心 watch() 副作用清理： api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:122",
+      "id": "api/reactivity-core:125",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10355,7 +10388,7 @@
       "searchText": "响应式 api：核心 watch() import { onwatchercleanup } from '@rue-js/rue' watch(id, async newid => { const { response, cancel } = doasyncwork(newid) onwatchercleanup(cancel) data.value = await response }) api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:123",
+      "id": "api/reactivity-core:126",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#watch",
@@ -10366,7 +10399,7 @@
       "searchText": "响应式 api：核心 watch() 另请参阅 - 指南 - 侦听器 - 指南 - 侦听器调试 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:124",
+      "id": "api/reactivity-core:127",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#onwatchercleanup",
@@ -10377,7 +10410,7 @@
       "searchText": "响应式 api：核心 onwatchercleanup() onwatchercleanup() api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:125",
+      "id": "api/reactivity-core:128",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#onwatchercleanup",
@@ -10388,7 +10421,7 @@
       "searchText": "响应式 api：核心 onwatchercleanup() 注册一个清理函数，在当前侦听器即将重新运行时执行。只能在 watcheffect effect 函数或 watch 回调函数的同步执行期间调用（即不能在异步函数中的 await 语句之后调用。） api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:126",
+      "id": "api/reactivity-core:129",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#onwatchercleanup",
@@ -10399,7 +10432,7 @@
       "searchText": "响应式 api：核心 onwatchercleanup() 类型 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:127",
+      "id": "api/reactivity-core:130",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#onwatchercleanup",
@@ -10410,7 +10443,7 @@
       "searchText": "响应式 api：核心 onwatchercleanup() function onwatchercleanup(cleanupfn: () => void, failsilently?: boolean): void api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:128",
+      "id": "api/reactivity-core:131",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#onwatchercleanup",
@@ -10421,7 +10454,7 @@
       "searchText": "响应式 api：核心 onwatchercleanup() 示例 api/reactivity-core"
     },
     {
-      "id": "api/reactivity-core:129",
+      "id": "api/reactivity-core:132",
       "docId": "api/reactivity-core",
       "route": "/api/api/reactivity-core",
       "href": "/api/api/reactivity-core#onwatchercleanup",
@@ -11396,8 +11429,8 @@
       "title": "快速上手",
       "sectionTitle": "快速上手",
       "type": "code",
-      "text": "import { type FC, useApp, useError } from '@rue-js/rue' import { RouterView } from '@rue-js/router' import router from './router' // 启用错误处理 useError({ overlay: true, console: true }) const App: FC = () => { return ( <div> <h1>我的 Rue 应用</h1> <RouterView /> </div> ) } // 创建并挂载应用 useApp(App).use(router).mount('#app')",
-      "searchText": "快速上手 快速上手 import { type fc, useapp, useerror } from '@rue-js/rue' import { routerview } from '@rue-js/router' import router from './router' // 启用错误处理 useerror({ overlay: true, console: true }) const app: fc = () => { return ( <div> <h1>我的 rue 应用</h1> <routerview /> </div> ) } // 创建并挂载应用 useapp(app).use(router).mount('#app') getting-started"
+      "text": "import { type FC, useApp, installBrowserErrorBridge, installErrorConsole, installDevErrorOverlay, } from '@rue-js/rue' import { RouterView } from '@rue-js/router' import router from './router' // 接入浏览器错误并启用控制台报告，仅在开发环境显示遮罩 installBrowserErrorBridge() installErrorConsole() if (import.meta.env.DEV && !import.meta.env.SSR) { installDevErrorOverlay() } const App: FC = () => { return ( <div> <h1>我的 Rue 应用</h1> <RouterView /> </div> ) } // 创建并挂载应用 useApp(App).use(router).mount('#app')",
+      "searchText": "快速上手 快速上手 import { type fc, useapp, installbrowsererrorbridge, installerrorconsole, installdeverroroverlay, } from '@rue-js/rue' import { routerview } from '@rue-js/router' import router from './router' // 接入浏览器错误并启用控制台报告，仅在开发环境显示遮罩 installbrowsererrorbridge() installerrorconsole() if (import.meta.env.dev && !import.meta.env.ssr) { installdeverroroverlay() } const app: fc = () => { return ( <div> <h1>我的 rue 应用</h1> <routerview /> </div> ) } // 创建并挂载应用 useapp(app).use(router).mount('#app') getting-started"
     },
     {
       "id": "getting-started:5",
@@ -15488,8 +15521,8 @@
       "title": "生产部署 (Production Deployment)",
       "sectionTitle": "跟踪运行时错误 (Tracking Runtime Errors)",
       "type": "code",
-      "text": "import { onError, useApp, useError } from '@rue-js/rue' useError({ console: true }) onError((err, instance) => { // 向跟踪服务报告错误 console.error('Rue Error:', err) console.error('Component:', instance) // 发送到错误跟踪服务 // sentry.captureException(err) }) useApp(App).mount('#app')",
-      "searchText": "生产部署 (production deployment) 跟踪运行时错误 (tracking runtime errors) import { onerror, useapp, useerror } from '@rue-js/rue' useerror({ console: true }) onerror((err, instance) => { // 向跟踪服务报告错误 console.error('rue error:', err) console.error('component:', instance) // 发送到错误跟踪服务 // sentry.captureexception(err) }) useapp(app).mount('#app') guide/best-practices/production-deployment"
+      "text": "import { onError, useApp, installBrowserErrorBridge } from '@rue-js/rue' // 将浏览器全局错误也交给下方的 onError 订阅处理 installBrowserErrorBridge() onError((err, instance) => { // 向跟踪服务报告错误 console.error('Rue Error:', err) console.error('Component:', instance) // 发送到错误跟踪服务 // sentry.captureException(err) }) useApp(App).mount('#app')",
+      "searchText": "生产部署 (production deployment) 跟踪运行时错误 (tracking runtime errors) import { onerror, useapp, installbrowsererrorbridge } from '@rue-js/rue' // 将浏览器全局错误也交给下方的 onerror 订阅处理 installbrowsererrorbridge() onerror((err, instance) => { // 向跟踪服务报告错误 console.error('rue error:', err) console.error('component:', instance) // 发送到错误跟踪服务 // sentry.captureexception(err) }) useapp(app).mount('#app') guide/best-practices/production-deployment"
     },
     {
       "id": "guide/best-practices/production-deployment:18",
@@ -24200,8 +24233,8 @@
       "title": "创建 Rue 应用",
       "sectionTitle": "应用配置",
       "type": "paragraph",
-      "text": "应用实例暴露了一个 .config 对象，允许我们配置一些应用级选项。例如，定义一个应用级错误处理器来捕获所有后代组件的错误：",
-      "searchText": "创建 rue 应用 应用配置 应用实例暴露了一个 .config 对象，允许我们配置一些应用级选项。例如，定义一个应用级错误处理器来捕获所有后代组件的错误： guide/essentials/application"
+      "text": "通过 onError 订阅 Rue 运行时错误。浏览器错误桥接、控制台报告和开发遮罩可分别安装，它们共享 Rue 错误链，不局限于单个应用实例：",
+      "searchText": "创建 rue 应用 应用配置 通过 onerror 订阅 rue 运行时错误。浏览器错误桥接、控制台报告和开发遮罩可分别安装，它们共享 rue 错误链，不局限于单个应用实例： guide/essentials/application"
     },
     {
       "id": "guide/essentials/application:20",
@@ -24211,11 +24244,22 @@
       "title": "创建 Rue 应用",
       "sectionTitle": "应用配置",
       "type": "code",
-      "text": "import { useError } from '@rue-js/rue' useError({ overlay: true, // 显示错误遮罩层 console: true, // 在控制台输出错误 })",
-      "searchText": "创建 rue 应用 应用配置 import { useerror } from '@rue-js/rue' useerror({ overlay: true, // 显示错误遮罩层 console: true, // 在控制台输出错误 }) guide/essentials/application"
+      "text": "import { installBrowserErrorBridge, installErrorConsole, installDevErrorOverlay, } from '@rue-js/rue' const stopBridge = installBrowserErrorBridge() const stopConsole = installErrorConsole() const stopOverlay = import.meta.env.DEV && !import.meta.env.SSR ? installDevErrorOverlay() : undefined // 在宿主页面销毁或热更新卸载时调用 function disposeErrorHandling() { stopOverlay?.() stopConsole() stopBridge() }",
+      "searchText": "创建 rue 应用 应用配置 import { installbrowsererrorbridge, installerrorconsole, installdeverroroverlay, } from '@rue-js/rue' const stopbridge = installbrowsererrorbridge() const stopconsole = installerrorconsole() const stopoverlay = import.meta.env.dev && !import.meta.env.ssr ? installdeverroroverlay() : undefined // 在宿主页面销毁或热更新卸载时调用 function disposeerrorhandling() { stopoverlay?.() stopconsole() stopbridge() } guide/essentials/application"
     },
     {
       "id": "guide/essentials/application:21",
+      "docId": "guide/essentials/application",
+      "route": "/guide/guide/essentials/application",
+      "href": "/guide/guide/essentials/application#app-configurations",
+      "title": "创建 Rue 应用",
+      "sectionTitle": "应用配置",
+      "type": "paragraph",
+      "text": "每个安装函数都返回幂等清理函数；浏览器桥接重复安装时共享监听器，最后一个引用释放后才移除监听器。遮罩清理时也会移除现有遮罩。错误上报订阅使用 onError。",
+      "searchText": "创建 rue 应用 应用配置 每个安装函数都返回幂等清理函数；浏览器桥接重复安装时共享监听器，最后一个引用释放后才移除监听器。遮罩清理时也会移除现有遮罩。错误上报订阅使用 onerror。 guide/essentials/application"
+    },
+    {
+      "id": "guide/essentials/application:22",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#app-configurations",
@@ -24226,7 +24270,7 @@
       "searchText": "创建 rue 应用 应用配置 应用实例还提供了一些用于注册应用范围资源的方法。例如，注册一个插件： guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:22",
+      "id": "guide/essentials/application:23",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#app-configurations",
@@ -24237,7 +24281,7 @@
       "searchText": "创建 rue 应用 应用配置 import { useapp } from '@rue-js/rue' import router from './router' const rustplugin = createplugin() useapp(app).use(router).mount('#app') guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:23",
+      "id": "guide/essentials/application:24",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#app-configurations",
@@ -24248,7 +24292,7 @@
       "searchText": "创建 rue 应用 应用配置 这使得 router 和 rustplugin 可以在我们的整个应用中使用。我们将在本指南的后续部分讨论组件和其他类型资源的注册。你还可以在其 api 参考 中浏览应用实例 api 的完整列表。 guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:24",
+      "id": "guide/essentials/application:25",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#app-configurations",
@@ -24259,7 +24303,7 @@
       "searchText": "创建 rue 应用 应用配置 确保在挂载应用之前应用所有应用配置！ guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:25",
+      "id": "guide/essentials/application:26",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#multiple-application-instances",
@@ -24270,7 +24314,7 @@
       "searchText": "创建 rue 应用 多个应用实例 多个应用实例 guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:26",
+      "id": "guide/essentials/application:27",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#multiple-application-instances",
@@ -24281,7 +24325,7 @@
       "searchText": "创建 rue 应用 多个应用实例 在同一页面上不限于单个应用实例。useapp api 允许多个 rue 应用在同一页面上共存，每个都有自己的配置和全局资源范围： guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:27",
+      "id": "guide/essentials/application:28",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#multiple-application-instances",
@@ -24292,7 +24336,7 @@
       "searchText": "创建 rue 应用 多个应用实例 const app1 = useapp(app1) app1.mount('#container-1') const app2 = useapp(app2) app2.mount('#container-2') guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:28",
+      "id": "guide/essentials/application:29",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#multiple-application-instances",
@@ -24303,7 +24347,7 @@
       "searchText": "创建 rue 应用 多个应用实例 如果你使用 rue 来增强服务器渲染的 html，并且只需要 rue 控制大页面的特定部分，请避免在整个页面上挂载单个 rue 应用实例。相反，创建多个小型应用实例，并将它们挂载在它们负责的各个元素上。 guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:29",
+      "id": "guide/essentials/application:30",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#quick-start-example",
@@ -24314,7 +24358,7 @@
       "searchText": "创建 rue 应用 快速开始示例 快速开始示例 guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:30",
+      "id": "guide/essentials/application:31",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#quick-start-example",
@@ -24325,18 +24369,18 @@
       "searchText": "创建 rue 应用 快速开始示例 以下是一个完整的 rue 应用示例： guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:31",
+      "id": "guide/essentials/application:32",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#quick-start-example",
       "title": "创建 Rue 应用",
       "sectionTitle": "快速开始示例",
       "type": "code",
-      "text": "// main.tsx import { type FC, useApp, useError } from '@rue-js/rue' import { RouterView } from '@rue-js/router' import router from './router' // 启用错误处理 useError({ overlay: true, console: true }) // 根组件 const App: FC = () => { return ( <div className=\"app\"> <header> <h1>我的 Rue 应用</h1> </header> <main> <RouterView /> </main> </div> ) } // 创建并挂载应用 useApp(App).use(router).mount('#app')",
-      "searchText": "创建 rue 应用 快速开始示例 // main.tsx import { type fc, useapp, useerror } from '@rue-js/rue' import { routerview } from '@rue-js/router' import router from './router' // 启用错误处理 useerror({ overlay: true, console: true }) // 根组件 const app: fc = () => { return ( <div classname=\"app\"> <header> <h1>我的 rue 应用</h1> </header> <main> <routerview /> </main> </div> ) } // 创建并挂载应用 useapp(app).use(router).mount('#app') guide/essentials/application"
+      "text": "// main.tsx import { type FC, useApp, installBrowserErrorBridge, installErrorConsole, installDevErrorOverlay, } from '@rue-js/rue' import { RouterView } from '@rue-js/router' import router from './router' // 接入浏览器错误并启用控制台报告，仅在开发环境显示遮罩 installBrowserErrorBridge() installErrorConsole() if (import.meta.env.DEV && !import.meta.env.SSR) { installDevErrorOverlay() } // 根组件 const App: FC = () => { return ( <div className=\"app\"> <header> <h1>我的 Rue 应用</h1> </header> <main> <RouterView /> </main> </div> ) } // 创建并挂载应用 useApp(App).use(router).mount('#app')",
+      "searchText": "创建 rue 应用 快速开始示例 // main.tsx import { type fc, useapp, installbrowsererrorbridge, installerrorconsole, installdeverroroverlay, } from '@rue-js/rue' import { routerview } from '@rue-js/router' import router from './router' // 接入浏览器错误并启用控制台报告，仅在开发环境显示遮罩 installbrowsererrorbridge() installerrorconsole() if (import.meta.env.dev && !import.meta.env.ssr) { installdeverroroverlay() } // 根组件 const app: fc = () => { return ( <div classname=\"app\"> <header> <h1>我的 rue 应用</h1> </header> <main> <routerview /> </main> </div> ) } // 创建并挂载应用 useapp(app).use(router).mount('#app') guide/essentials/application"
     },
     {
-      "id": "guide/essentials/application:32",
+      "id": "guide/essentials/application:33",
       "docId": "guide/essentials/application",
       "route": "/guide/guide/essentials/application",
       "href": "/guide/guide/essentials/application#quick-start-example",
@@ -35420,8 +35464,8 @@
       "title": "编译 JSX 与动态渲染",
       "sectionTitle": "创建渲染输出",
       "type": "code",
-      "text": "import { ref, type FC } from '@rue-js/rue' interface Props { message: string } const Counter: FC<Props> = props => { const count = ref(0) return ( <button onClick={() => (count.value += 1)}> {props.message}: {count.value} </button> ) }",
-      "searchText": "编译 jsx 与动态渲染 创建渲染输出 import { ref, type fc } from '@rue-js/rue' interface props { message: string } const counter: fc<props> = props => { const count = ref(0) return ( <button onclick={() => (count.value += 1)}> {props.message}: {count.value} </button> ) } guide/extras/render-function"
+      "text": "import { ref, type FC } from '@rue-js/rue' interface Props { message: string } const Counter: FC<Props> = props => { const count = ref(0) return ( <button onClick={() => (count.value += 1)}> {props.message}: {count} </button> ) }",
+      "searchText": "编译 jsx 与动态渲染 创建渲染输出 import { ref, type fc } from '@rue-js/rue' interface props { message: string } const counter: fc<props> = props => { const count = ref(0) return ( <button onclick={() => (count.value += 1)}> {props.message}: {count} </button> ) } guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:11",
@@ -35438,26 +35482,92 @@
       "id": "guide/extras/render-function:12",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#creating-render-output",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
       "title": "编译 JSX 与动态渲染",
-      "sectionTitle": "创建渲染输出",
-      "type": "paragraph",
-      "text": "组件也可以返回文本、条件片段或多个根节点：",
-      "searchText": "编译 jsx 与动态渲染 创建渲染输出 组件也可以返回文本、条件片段或多个根节点： guide/extras/render-function"
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "heading",
+      "text": "Ref 的最终展示自动解包",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 ref 的最终展示自动解包 guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:13",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
-      "href": "/guide/guide/extras/render-function#creating-render-output",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
       "title": "编译 JSX 与动态渲染",
-      "sectionTitle": "创建渲染输出",
-      "type": "code",
-      "text": "const Message: FC<{ ready: boolean }> = props => props.ready ? <strong>ready</strong> : <span>waiting</span> const MultiRoot: FC = () => ( <> <div>one</div> <div>two</div> </> )",
-      "searchText": "编译 jsx 与动态渲染 创建渲染输出 const message: fc<{ ready: boolean }> = props => props.ready ? <strong>ready</strong> : <span>waiting</span> const multiroot: fc = () => ( <> <div>one</div> <div>two</div> </> ) guide/extras/render-function"
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "paragraph",
+      "text": "JSX child 表达式计算完成后，如果最终展示值是 Rue 标记的 Ref，运行时会自动读取一层 .value。这包括 ref()、computed() 和 customRef() 返回的 Ref，也包括条件表达式选出的 Ref 和数组中的 Ref 叶子：",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 jsx child 表达式计算完成后，如果最终展示值是 rue 标记的 ref，运行时会自动读取一层 .value。这包括 ref()、computed() 和 customref() 返回的 ref，也包括条件表达式选出的 ref 和数组中的 ref 叶子： guide/extras/render-function"
     },
     {
       "id": "guide/extras/render-function:14",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "code",
+      "text": "import { computed, ref } from '@rue-js/rue' const count = ref(0) const doubled = computed(() => count.value * 2) const ready = ref(true) return ( <div> <span>{count}</span> <span>{ready.value ? doubled : count}</span> <p>{[count, ' / ', doubled]}</p> </div> )",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 import { computed, ref } from '@rue-js/rue' const count = ref(0) const doubled = computed(() => count.value * 2) const ready = ref(true) return ( <div> <span>{count}</span> <span>{ready.value ? doubled : count}</span> <p>{[count, ' / ', doubled]}</p> </div> ) guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:15",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "paragraph",
+      "text": "自动解包仅限最终展示边界。表达式内部的计算、条件测试、事件处理和 DOM 属性仍使用 .value；Signal 仍使用 get()：",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 自动解包仅限最终展示边界。表达式内部的计算、条件测试、事件处理和 dom 属性仍使用 .value；signal 仍使用 get()： guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:16",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "code",
+      "text": "import { ref, signal } from '@rue-js/rue' const count = ref(0) const enabled = ref(true) const signalCount = signal(0) return ( <> <span>{count.value + 1}</span> <input disabled={!enabled.value} value={count.value} /> <button onClick={() => count.value++}>加一</button> <span>{signalCount.get()}</span> </> )",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 import { ref, signal } from '@rue-js/rue' const count = ref(0) const enabled = ref(true) const signalcount = signal(0) return ( <> <span>{count.value + 1}</span> <input disabled={!enabled.value} value={count.value} /> <button onclick={() => count.value++}>加一</button> <span>{signalcount.get()}</span> </> ) guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:17",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "paragraph",
+      "text": "组件 Props 也不会在传递时解包： 传入的是 Ref 本身；只有子组件把 props.value 放到自己的 JSX child 最终展示位置时才会解包。Rue 只识别严格的 Ref 标记，不会因为普通对象含有 value 属性而解包，也不会把用于 DOM / 组件实例的 React 风格 useRef 当作响应式 Ref。",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 组件 props 也不会在传递时解包： 传入的是 ref 本身；只有子组件把 props.value 放到自己的 jsx child 最终展示位置时才会解包。rue 只识别严格的 ref 标记，不会因为普通对象含有 value 属性而解包，也不会把用于 dom / 组件实例的 react 风格 useref 当作响应式 ref。 guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:18",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "paragraph",
+      "text": "组件也可以返回文本、条件片段或多个根节点：",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 组件也可以返回文本、条件片段或多个根节点： guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:19",
+      "docId": "guide/extras/render-function",
+      "route": "/guide/guide/extras/render-function",
+      "href": "/guide/guide/extras/render-function#ref-display-unwrapping",
+      "title": "编译 JSX 与动态渲染",
+      "sectionTitle": "Ref 的最终展示自动解包",
+      "type": "code",
+      "text": "const Message: FC<{ ready: boolean }> = props => props.ready ? <strong>ready</strong> : <span>waiting</span> const MultiRoot: FC = () => ( <> <div>one</div> <div>two</div> </> )",
+      "searchText": "编译 jsx 与动态渲染 ref 的最终展示自动解包 const message: fc<{ ready: boolean }> = props => props.ready ? <strong>ready</strong> : <span>waiting</span> const multiroot: fc = () => ( <> <div>one</div> <div>two</div> </> ) guide/extras/render-function"
+    },
+    {
+      "id": "guide/extras/render-function:20",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#control-flow",
@@ -35468,7 +35578,7 @@
       "searchText": "编译 jsx 与动态渲染 条件与列表 条件与列表 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:15",
+      "id": "guide/extras/render-function:21",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#control-flow",
@@ -35479,7 +35589,7 @@
       "searchText": "编译 jsx 与动态渲染 条件与列表 使用 javascript 表达式描述条件和列表： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:16",
+      "id": "guide/extras/render-function:22",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#control-flow",
@@ -35490,7 +35600,7 @@
       "searchText": "编译 jsx 与动态渲染 条件与列表 import { ref, type fc } from '@rue-js/rue' const todolist: fc = () => { const showdone = ref(false) const items = ref([ { id: 1, text: '编译 jsx', done: true }, { id: 2, text: '运行验证', done: false }, ]) return ( <ul> {items.value .filter(item => showdone.value || !item.done) .map(item => ( <li key={item.id}>{item.text}</li> ))} </ul> ) } guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:17",
+      "id": "guide/extras/render-function:23",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#control-flow",
@@ -35501,7 +35611,7 @@
       "searchText": "编译 jsx 与动态渲染 条件与列表 稳定列表项应提供 key，以便编译器和运行时保持身份及 dom 区间。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:18",
+      "id": "guide/extras/render-function:24",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#events-and-attributes",
@@ -35512,7 +35622,7 @@
       "searchText": "编译 jsx 与动态渲染 事件和属性 事件和属性 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:19",
+      "id": "guide/extras/render-function:25",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#events-and-attributes",
@@ -35523,7 +35633,7 @@
       "searchText": "编译 jsx 与动态渲染 事件和属性 事件监听器使用 onxxx props；dom 属性、attribute、class 和 style 直接写在 jsx 上： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:20",
+      "id": "guide/extras/render-function:26",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#events-and-attributes",
@@ -35534,7 +35644,7 @@
       "searchText": "编译 jsx 与动态渲染 事件和属性 <button class={active.value ? 'active' : ''} aria-pressed={active.value} onclick={() => (active.value = !active.value)} > 切换 </button> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:21",
+      "id": "guide/extras/render-function:27",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#events-and-attributes",
@@ -35545,7 +35655,7 @@
       "searchText": "编译 jsx 与动态渲染 事件和属性 .passive、.capture 和 .once 可以拼在事件名后，例如 onclickcapture 和 onkeyuponce。其他控制逻辑直接写在处理器中。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:22",
+      "id": "guide/extras/render-function:28",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35556,7 +35666,7 @@
       "searchText": "编译 jsx 与动态渲染 组件与动态身份 组件与动态身份 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:23",
+      "id": "guide/extras/render-function:29",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35567,7 +35677,7 @@
       "searchText": "编译 jsx 与动态渲染 组件与动态身份 已知组件直接使用其 jsx 标签： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:24",
+      "id": "guide/extras/render-function:30",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35578,7 +35688,7 @@
       "searchText": "编译 jsx 与动态渲染 组件与动态身份 import usercard from './usercard' const profile = () => ( <section> <usercard name=\"rue\" /> </section> ) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:25",
+      "id": "guide/extras/render-function:31",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35589,7 +35699,7 @@
       "searchText": "编译 jsx 与动态渲染 组件与动态身份 如果标签或组件身份直到运行时才确定，使用公开的 边界： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:26",
+      "id": "guide/extras/render-function:32",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35600,7 +35710,7 @@
       "searchText": "编译 jsx 与动态渲染 组件与动态身份 import { component, type fc } from '@rue-js/rue' const dynamicpanel: fc<{ as: string | fc }> = props => ( <component is={props.as} classname=\"panel\"> 动态内容 </component> ) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:27",
+      "id": "guide/extras/render-function:33",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#components",
@@ -35611,7 +35721,7 @@
       "searchText": "编译 jsx 与动态渲染 组件与动态身份 is 支持原生标签名、组件函数和已注册组件名。不要为了静态节点使用动态边界；直接 tsx 能提供更精确的编译结果。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:28",
+      "id": "guide/extras/render-function:34",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35622,7 +35732,7 @@
       "searchText": "编译 jsx 与动态渲染 children、具名内容与 render prop children、具名内容与 render prop guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:29",
+      "id": "guide/extras/render-function:35",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35633,7 +35743,7 @@
       "searchText": "编译 jsx 与动态渲染 children、具名内容与 render prop 默认内容读取 props.children。具名内容使用显式命名 props；需要把数据传回父组件时使用函数 prop： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:30",
+      "id": "guide/extras/render-function:36",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#rendering-slots",
@@ -35644,7 +35754,7 @@
       "searchText": "编译 jsx 与动态渲染 children、具名内容与 render prop import type { fc, renderableoutput } from '@rue-js/rue' interface layoutprops { footer?: (text: string) => renderableoutput children?: renderableoutput } const layout: fc<layoutprops> = props => ( <section> <main>{props.children}</main> <footer>{props.footer?.('状态正常')}</footer> </section> ) const page = () => <layout footer={text => <small>{text}</small>}>正文</layout> guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:31",
+      "id": "guide/extras/render-function:37",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#built-in-components",
@@ -35655,7 +35765,7 @@
       "searchText": "编译 jsx 与动态渲染 内置组件 内置组件 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:32",
+      "id": "guide/extras/render-function:38",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#built-in-components",
@@ -35666,7 +35776,7 @@
       "searchText": "编译 jsx 与动态渲染 内置组件 内置组件和普通组件一样显式导入并在 tsx 中使用： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:33",
+      "id": "guide/extras/render-function:39",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#built-in-components",
@@ -35677,7 +35787,7 @@
       "searchText": "编译 jsx 与动态渲染 内置组件 import { teleport, transition, transitiongroup } from '@rue-js/rue' const overlay = () => ( <teleport to=\"body\"> <transition mode=\"out-in\"> <div>overlay</div> </transition> </teleport> ) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:34",
+      "id": "guide/extras/render-function:40",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#template-refs",
@@ -35688,7 +35798,7 @@
       "searchText": "编译 jsx 与动态渲染 模板 refs 模板 refs guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:35",
+      "id": "guide/extras/render-function:41",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#template-refs",
@@ -35699,7 +35809,7 @@
       "searchText": "编译 jsx 与动态渲染 模板 refs 在 jsx 路径中使用 useref() 返回的容器或函数 ref 持有 dom / 组件实例。模板 ref 与带 .value 的响应式 ref 是两类不同概念。 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:36",
+      "id": "guide/extras/render-function:42",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -35710,7 +35820,7 @@
       "searchText": "编译 jsx 与动态渲染 函数组件类型 函数组件类型 guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:37",
+      "id": "guide/extras/render-function:43",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -35721,7 +35831,7 @@
       "searchText": "编译 jsx 与动态渲染 函数组件类型 使用 fc 标注函数组件；需要 render prop 时将函数签名声明到 props： guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:38",
+      "id": "guide/extras/render-function:44",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -35732,7 +35842,7 @@
       "searchText": "编译 jsx 与动态渲染 函数组件类型 import type { fc, renderableoutput } from '@rue-js/rue' interface listprops { items: string[] children?: (item: string, index: number) => renderableoutput } const list: fc<listprops> = props => ( <ul> {props.items.map((item, index) => ( <li key={item}>{props.children?.(item, index) ?? item}</li> ))} </ul> ) guide/extras/render-function"
     },
     {
-      "id": "guide/extras/render-function:39",
+      "id": "guide/extras/render-function:45",
       "docId": "guide/extras/render-function",
       "route": "/guide/guide/extras/render-function",
       "href": "/guide/guide/extras/render-function#functional-components",
@@ -37719,8 +37829,8 @@
       "title": "简介",
       "sectionTitle": "Rue 是什么？",
       "type": "code",
-      "text": "import { type FC, ref } from '@rue-js/rue' const App: FC = () => { const count = ref(0) return <button onClick={() => count.value++}>计数：{count.value}</button> } export default App",
-      "searchText": "简介 rue 是什么？ import { type fc, ref } from '@rue-js/rue' const app: fc = () => { const count = ref(0) return <button onclick={() => count.value++}>计数：{count.value}</button> } export default app guide/introduction"
+      "text": "import { type FC, ref } from '@rue-js/rue' const App: FC = () => { const count = ref(0) return <button onClick={() => count.value++}>计数：{count}</button> } export default App",
+      "searchText": "简介 rue 是什么？ import { type fc, ref } from '@rue-js/rue' const app: fc = () => { const count = ref(0) return <button onclick={() => count.value++}>计数：{count}</button> } export default app guide/introduction"
     },
     {
       "id": "guide/introduction:8",
@@ -37741,11 +37851,22 @@
       "title": "简介",
       "sectionTitle": "Rue 是什么？",
       "type": "paragraph",
+      "text": "这里的 {count} 位于 JSX child 的最终展示位置，Rue 会自动解包 Ref。写入、计算或条件判断仍使用 count.value；DOM 属性仍写作 ，而 Signal 仍写作 {count.get()}。",
+      "searchText": "简介 rue 是什么？ 这里的 {count} 位于 jsx child 的最终展示位置，rue 会自动解包 ref。写入、计算或条件判断仍使用 count.value；dom 属性仍写作 ，而 signal 仍写作 {count.get()}。 guide/introduction"
+    },
+    {
+      "id": "guide/introduction:10",
+      "docId": "guide/introduction",
+      "route": "/guide/guide/introduction",
+      "href": "/guide/guide/introduction#what-is-rue",
+      "title": "简介",
+      "sectionTitle": "Rue 是什么？",
+      "type": "paragraph",
       "text": "上面的示例展示了 Rue 的两个核心特性：",
       "searchText": "简介 rue 是什么？ 上面的示例展示了 rue 的两个核心特性： guide/introduction"
     },
     {
-      "id": "guide/introduction:10",
+      "id": "guide/introduction:11",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#what-is-rue",
@@ -37756,7 +37877,7 @@
       "searchText": "简介 rue 是什么？ 声明式渲染：rue 使用 jsx 扩展了 javascript，允许我们基于 javascript 状态声明式地描述 ui 输出。 guide/introduction"
     },
     {
-      "id": "guide/introduction:11",
+      "id": "guide/introduction:12",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#what-is-rue",
@@ -37767,7 +37888,7 @@
       "searchText": "简介 rue 是什么？ 响应式：rue 会自动追踪 javascript 状态的变化，并在状态变化时高效地更新 dom。 guide/introduction"
     },
     {
-      "id": "guide/introduction:12",
+      "id": "guide/introduction:13",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-编译型框架",
@@ -37778,7 +37899,7 @@
       "searchText": "简介 编译型框架 编译型框架 guide/introduction"
     },
     {
-      "id": "guide/introduction:13",
+      "id": "guide/introduction:14",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-编译型框架",
@@ -37789,7 +37910,7 @@
       "searchText": "简介 编译型框架 rue 是一个覆盖了前端开发中大部分常见功能需求的框架和生态系统。但 web 极其多样化——我们在 web 上构建的东西在形式和规模上可能千差万别。考虑到这一点，rue 被设计成灵活且可逐步采用的。根据你的使用场景，rue 可以以不同的方式使用： guide/introduction"
     },
     {
-      "id": "guide/introduction:14",
+      "id": "guide/introduction:15",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-编译型框架",
@@ -37800,7 +37921,7 @@
       "searchText": "简介 编译型框架 无需构建步骤增强静态 html 在任何页面上嵌入为 web 组件 单页应用（spa） guide/introduction"
     },
     {
-      "id": "guide/introduction:15",
+      "id": "guide/introduction:16",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-jsx-组件",
@@ -37811,7 +37932,7 @@
       "searchText": "简介 jsx 组件 jsx 组件 guide/introduction"
     },
     {
-      "id": "guide/introduction:16",
+      "id": "guide/introduction:17",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-jsx-组件",
@@ -37822,18 +37943,18 @@
       "searchText": "简介 jsx 组件 在 rue 项目中，我们使用 jsx/tsx 语法编写组件。jsx 是一种 javascript 语法扩展，允许你在 javascript 中编写类似 html 的代码。rue 的组件是使用函数定义的，我们称之为函数组件（fc，functional component）。 guide/introduction"
     },
     {
-      "id": "guide/introduction:17",
+      "id": "guide/introduction:18",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-jsx-组件",
       "title": "简介",
       "sectionTitle": "JSX 组件",
       "type": "code",
-      "text": "import { type FC, ref } from '@rue-js/rue' const App: FC = () => { const count = ref(0) const increment = () => { count.value++ } return <button onClick={increment}>计数：{count.value}</button> } export default App",
-      "searchText": "简介 jsx 组件 import { type fc, ref } from '@rue-js/rue' const app: fc = () => { const count = ref(0) const increment = () => { count.value++ } return <button onclick={increment}>计数：{count.value}</button> } export default app guide/introduction"
+      "text": "import { type FC, ref } from '@rue-js/rue' const App: FC = () => { const count = ref(0) const increment = () => { count.value++ } return <button onClick={increment}>计数：{count}</button> } export default App",
+      "searchText": "简介 jsx 组件 import { type fc, ref } from '@rue-js/rue' const app: fc = () => { const count = ref(0) const increment = () => { count.value++ } return <button onclick={increment}>计数：{count}</button> } export default app guide/introduction"
     },
     {
-      "id": "guide/introduction:18",
+      "id": "guide/introduction:19",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-jsx-组件",
@@ -37844,7 +37965,7 @@
       "searchText": "简介 jsx 组件 rue 的组件系统不需要特殊的文件格式。你可以在任何 .tsx 或 .jsx 文件中编写组件。 guide/introduction"
     },
     {
-      "id": "guide/introduction:19",
+      "id": "guide/introduction:20",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-api-风格",
@@ -37855,7 +37976,7 @@
       "searchText": "简介 api 风格 api 风格 guide/introduction"
     },
     {
-      "id": "guide/introduction:20",
+      "id": "guide/introduction:21",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-api-风格",
@@ -37866,7 +37987,7 @@
       "searchText": "简介 api 风格 rue 支持多种编写组件的方式，让你可以根据自己的偏好选择： guide/introduction"
     },
     {
-      "id": "guide/introduction:21",
+      "id": "guide/introduction:22",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-ref-and-reactive",
@@ -37877,7 +37998,7 @@
       "searchText": "简介 使用 ref 和 reactive 使用 ref 和 reactive guide/introduction"
     },
     {
-      "id": "guide/introduction:22",
+      "id": "guide/introduction:23",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-ref-and-reactive",
@@ -37888,18 +38009,29 @@
       "searchText": "简介 使用 ref 和 reactive rue 提供了直观的响应式 api，包括 ref、reactive，也可以使用 getter / setter 风格的 signal： guide/introduction"
     },
     {
-      "id": "guide/introduction:23",
+      "id": "guide/introduction:24",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-ref-and-reactive",
       "title": "简介",
       "sectionTitle": "使用 ref 和 reactive",
       "type": "code",
-      "text": "import { type FC, ref, reactive, computed } from '@rue-js/rue' const App: FC = () => { // 使用 ref 创建响应式基本类型 const count = ref(0) // 使用 reactive 创建响应式对象 const state = reactive({ message: 'Hello Rue!', items: ['苹果', '香蕉', '橘子'], }) // 使用 computed 创建计算属性 const doubleCount = computed(() => count.value * 2) return ( <div> <p>{state.message}</p> <p>计数：{count.value}</p> <p>双倍计数：{doubleCount.value}</p> <ul> {state.items.map(item => ( <li key={item}>{item}</li> ))} </ul> </div> ) }",
-      "searchText": "简介 使用 ref 和 reactive import { type fc, ref, reactive, computed } from '@rue-js/rue' const app: fc = () => { // 使用 ref 创建响应式基本类型 const count = ref(0) // 使用 reactive 创建响应式对象 const state = reactive({ message: 'hello rue!', items: ['苹果', '香蕉', '橘子'], }) // 使用 computed 创建计算属性 const doublecount = computed(() => count.value * 2) return ( <div> <p>{state.message}</p> <p>计数：{count.value}</p> <p>双倍计数：{doublecount.value}</p> <ul> {state.items.map(item => ( <li key={item}>{item}</li> ))} </ul> </div> ) } guide/introduction"
+      "text": "import { type FC, ref, reactive, computed } from '@rue-js/rue' const App: FC = () => { // 使用 ref 创建响应式基本类型 const count = ref(0) // 使用 reactive 创建响应式对象 const state = reactive({ message: 'Hello Rue!', items: ['苹果', '香蕉', '橘子'], }) // 使用 computed 创建计算属性 const doubleCount = computed(() => count.value * 2) return ( <div> <p>{state.message}</p> <p>计数：{count}</p> <p>双倍计数：{doubleCount}</p> <ul> {state.items.map(item => ( <li key={item}>{item}</li> ))} </ul> </div> ) }",
+      "searchText": "简介 使用 ref 和 reactive import { type fc, ref, reactive, computed } from '@rue-js/rue' const app: fc = () => { // 使用 ref 创建响应式基本类型 const count = ref(0) // 使用 reactive 创建响应式对象 const state = reactive({ message: 'hello rue!', items: ['苹果', '香蕉', '橘子'], }) // 使用 computed 创建计算属性 const doublecount = computed(() => count.value * 2) return ( <div> <p>{state.message}</p> <p>计数：{count}</p> <p>双倍计数：{doublecount}</p> <ul> {state.items.map(item => ( <li key={item}>{item}</li> ))} </ul> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:24",
+      "id": "guide/introduction:25",
+      "docId": "guide/introduction",
+      "route": "/guide/guide/introduction",
+      "href": "/guide/guide/introduction#using-ref-and-reactive",
+      "title": "简介",
+      "sectionTitle": "使用 ref 和 reactive",
+      "type": "paragraph",
+      "text": "ref()、computed() 和 customRef() 创建的 Rue Ref 都会在 JSX child 的最终展示位置自动解包。这个规则不会改变普通 JavaScript：上面的 computed(() => count.value 2) 仍需显式读取 .value；组件 Props 也保持原对象，例如 会把 Ref 本身传给子组件。",
+      "searchText": "简介 使用 ref 和 reactive ref()、computed() 和 customref() 创建的 rue ref 都会在 jsx child 的最终展示位置自动解包。这个规则不会改变普通 javascript：上面的 computed(() => count.value 2) 仍需显式读取 .value；组件 props 也保持原对象，例如 会把 ref 本身传给子组件。 guide/introduction"
+    },
+    {
+      "id": "guide/introduction:26",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-ref-and-reactive",
@@ -37910,7 +38042,7 @@
       "searchText": "简介 使用 ref 和 reactive 如果你更喜欢 getter / setter 风格，也可以直接使用 signal： guide/introduction"
     },
     {
-      "id": "guide/introduction:25",
+      "id": "guide/introduction:27",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-ref-and-reactive",
@@ -37921,7 +38053,7 @@
       "searchText": "简介 使用 ref 和 reactive import { type fc, signal, computed } from '@rue-js/rue' const app: fc = () => { const count = signal(0) const doublecount = computed(() => count.get() * 2) return ( <div> <p>计数：{count.get()}</p> <p>双倍计数：{doublecount.get()}</p> <button onclick={() => count.set(count.get() + 1)}>加一</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:26",
+      "id": "guide/introduction:28",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-usestate",
@@ -37932,7 +38064,7 @@
       "searchText": "简介 使用 usestate 使用 usestate guide/introduction"
     },
     {
-      "id": "guide/introduction:27",
+      "id": "guide/introduction:29",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-usestate",
@@ -37943,7 +38075,7 @@
       "searchText": "简介 使用 usestate 如果你更喜欢 react 风格的 api，rue 也提供了 usestate。它返回当前的普通值和一个支持直接值或函数式更新的 setter： guide/introduction"
     },
     {
-      "id": "guide/introduction:28",
+      "id": "guide/introduction:30",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-usestate",
@@ -37954,7 +38086,7 @@
       "searchText": "简介 使用 usestate usestate<t>(initial: t | (() => t)): [t, dispatch<setstateaction<t>>] guide/introduction"
     },
     {
-      "id": "guide/introduction:29",
+      "id": "guide/introduction:31",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-usestate",
@@ -37965,7 +38097,7 @@
       "searchText": "简介 使用 usestate import { type fc, usestate } from '@rue-js/rue' const app: fc = () => { const [count, setcount] = usestate(0) return <button onclick={() => setcount(previous => previous + 1)}>计数：{count}</button> } guide/introduction"
     },
     {
-      "id": "guide/introduction:30",
+      "id": "guide/introduction:32",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-usestate",
@@ -37976,7 +38108,7 @@
       "searchText": "简介 使用 usestate 在编译后的组件中，rue 会用隐藏的 signal 保存状态并驱动细粒度更新，但 usestate 的用户 api 始终是普通值。如果需要显式的 signal 句柄及 get()、set() 等细粒度操作，请使用 signal；偏好 .value 属性访问时则使用 ref。 guide/introduction"
     },
     {
-      "id": "guide/introduction:31",
+      "id": "guide/introduction:33",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37987,7 +38119,7 @@
       "searchText": "简介 使用 signal 使用 signal guide/introduction"
     },
     {
-      "id": "guide/introduction:32",
+      "id": "guide/introduction:34",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -37998,7 +38130,7 @@
       "searchText": "简介 使用 signal signal 是 rue 提供的底层响应式状态句柄。与 ref 主要通过 .value 读写不同，signal 提供了一组更细粒度的 api，包括： guide/introduction"
     },
     {
-      "id": "guide/introduction:33",
+      "id": "guide/introduction:35",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -38009,7 +38141,7 @@
       "searchText": "简介 使用 signal get() / set() peek() / update() getpath() / setpath() / updatepath() / peekpath() value / tojson() / valueof() / tostring() guide/introduction"
     },
     {
-      "id": "guide/introduction:34",
+      "id": "guide/introduction:36",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -38020,7 +38152,7 @@
       "searchText": "简介 使用 signal 它特别适合以下场景： guide/introduction"
     },
     {
-      "id": "guide/introduction:35",
+      "id": "guide/introduction:37",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -38031,7 +38163,7 @@
       "searchText": "简介 使用 signal 你更喜欢 getter / setter 风格 你需要对嵌套对象按路径读写 你希望区分“读取并建立依赖”和“只读取但不建立依赖” 你希望用函数式更新复杂状态 guide/introduction"
     },
     {
-      "id": "guide/introduction:36",
+      "id": "guide/introduction:38",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -38042,7 +38174,7 @@
       "searchText": "简介 使用 signal signal 的签名如下： guide/introduction"
     },
     {
-      "id": "guide/introduction:37",
+      "id": "guide/introduction:39",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -38053,7 +38185,7 @@
       "searchText": "简介 使用 signal signal<t>(initial: t, options?: { equals?: (prev: t, next: t) => boolean }, forceglobal?: boolean) guide/introduction"
     },
     {
-      "id": "guide/introduction:38",
+      "id": "guide/introduction:40",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#using-signal",
@@ -38064,7 +38196,7 @@
       "searchText": "简介 使用 signal initial：初始值 options.equals：自定义等值比较；返回 true 表示新旧值等价，不触发更新 forceglobal：在需要脱离组件 hook 上下文时强制创建全局 signal，一般场景下可忽略 guide/introduction"
     },
     {
-      "id": "guide/introduction:39",
+      "id": "guide/introduction:41",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-基本用法",
@@ -38075,7 +38207,7 @@
       "searchText": "简介 基本用法 基本用法 guide/introduction"
     },
     {
-      "id": "guide/introduction:40",
+      "id": "guide/introduction:42",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-基本用法",
@@ -38086,7 +38218,7 @@
       "searchText": "简介 基本用法 import { type fc, signal } from '@rue-js/rue' const app: fc = () => { const count = signal(0) const name = signal('rue') return ( <div> <p> {name.get()} 的计数：{count.get()} </p> <button onclick={() => count.set(count.get() + 1)}>加一</button> <button onclick={() => count.set(count.get() - 1)}>减一</button> <button onclick={() => count.set(0)}>重置</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:41",
+      "id": "guide/introduction:43",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -38097,7 +38229,7 @@
       "searchText": "简介 get / set / update / peek / value get / set / update / peek / value guide/introduction"
     },
     {
-      "id": "guide/introduction:42",
+      "id": "guide/introduction:44",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -38108,7 +38240,7 @@
       "searchText": "简介 get / set / update / peek / value 下面几个 api 是最常用的一组： guide/introduction"
     },
     {
-      "id": "guide/introduction:43",
+      "id": "guide/introduction:45",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -38119,7 +38251,7 @@
       "searchText": "简介 get / set / update / peek / value get()：读取值，并在响应式上下文中建立依赖 set(next)：直接设置新值 update(updater)：基于旧值计算新值 peek()：读取值，但不建立依赖 value：便捷属性；读取时等同于无依赖读取，写入时等价于 set() guide/introduction"
     },
     {
-      "id": "guide/introduction:44",
+      "id": "guide/introduction:46",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-get-set-update-peek-value",
@@ -38130,7 +38262,7 @@
       "searchText": "简介 get / set / update / peek / value import { type fc, signal, watcheffect } from '@rue-js/rue' const app: fc = () => { const count = signal(1) // get(): 建立依赖，count 变化时会重新执行 watcheffect(() => { console.log('count =', count.get()) }) const increment = () => { count.set(count.get() + 1) } const double = () => { count.update(prev => prev * 2) } const logsnapshot = () => { // peek(): 只读取，不建立依赖 console.log('snapshot =', count.peek()) // value: 读取当前值；写入等价于 set() console.log('value =', count.value) } const reset = () => { count.value = 0 } return ( <div> <p>计数：{count.get()}</p> <button onclick={increment}>加一</button> <button onclick={double}>翻倍</button> <button onclick={logsnapshot}>打印快照</button> <button onclick={reset}>重置</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:45",
+      "id": "guide/introduction:47",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-computed-配合",
@@ -38141,7 +38273,7 @@
       "searchText": "简介 与 computed 配合 与 computed 配合 guide/introduction"
     },
     {
-      "id": "guide/introduction:46",
+      "id": "guide/introduction:48",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-computed-配合",
@@ -38152,7 +38284,7 @@
       "searchText": "简介 与 computed 配合 signal 与 computed 无缝配合，计算属性会自动追踪所有访问过的 signal 依赖： guide/introduction"
     },
     {
-      "id": "guide/introduction:47",
+      "id": "guide/introduction:49",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-computed-配合",
@@ -38163,7 +38295,7 @@
       "searchText": "简介 与 computed 配合 import { type fc, signal, computed } from '@rue-js/rue' const app: fc = () => { const firstname = signal('张') const lastname = signal('三') // computed 自动追踪 firstname 和 lastname 的变化 const fullname = computed(() => `${firstname.get()}${lastname.get()}`) const greeting = computed(() => `你好，${fullname.value}！`) const initials = computed(() => `${firstname.get()[0]}${lastname.get()[0]}`) return ( <div> <div> <input value={firstname.get()} oninput={e => firstname.set((e.target as htmlinputelement).value)} placeholder=\"姓\" /> <input value={lastname.get()} oninput={e => lastname.set((e.target as htmlinputelement).value)} placeholder=\"名\" /> </div> <p>{greeting.value}</p> <p>缩写：{initials.value}</p> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:48",
+      "id": "guide/introduction:50",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38174,7 +38306,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath getpath / setpath / updatepath / peekpath guide/introduction"
     },
     {
-      "id": "guide/introduction:49",
+      "id": "guide/introduction:51",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38185,7 +38317,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 当 signal 内部存的是对象或数组时，可以按路径操作任意嵌套字段： guide/introduction"
     },
     {
-      "id": "guide/introduction:50",
+      "id": "guide/introduction:52",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38196,7 +38328,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath getpath(path)：读取路径值，并建立该路径的依赖 setpath(path, value)：设置路径值 updatepath(path, updater)：基于路径旧值更新 peekpath(path)：读取路径值，但不建立依赖 guide/introduction"
     },
     {
-      "id": "guide/introduction:51",
+      "id": "guide/introduction:53",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38207,7 +38339,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath path 同时支持两种写法： guide/introduction"
     },
     {
-      "id": "guide/introduction:52",
+      "id": "guide/introduction:54",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38218,7 +38350,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 数组路径：['user', 'profile', 'name'] 字符串路径：'user.profile.name' guide/introduction"
     },
     {
-      "id": "guide/introduction:53",
+      "id": "guide/introduction:55",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38229,7 +38361,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 数组下标同样支持： guide/introduction"
     },
     {
-      "id": "guide/introduction:54",
+      "id": "guide/introduction:56",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38240,7 +38372,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath ['items', 0] 'items.0' guide/introduction"
     },
     {
-      "id": "guide/introduction:55",
+      "id": "guide/introduction:57",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38251,7 +38383,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath import { type fc, signal, watcheffect } from '@rue-js/rue' const app: fc = () => { const state = signal({ user: { profile: { name: 'rue', }, age: 20, }, items: ['苹果', '香蕉'], }) watcheffect(() => { // 订阅 user.profile.name 这条路径 console.log('当前用户名：', state.getpath('user.profile.name')) }) const rename = () => { state.setpath(['user', 'profile', 'name'], 'rue next') } const growup = () => { state.updatepath('user.age', prev => (prev ?? 0) + 1) } const replacefirstitem = () => { state.setpath('items.0', '西瓜') } const lograwname = () => { // 不建立依赖，适合调试或一次性读取 console.log(state.peekpath('user.profile.name')) } return ( <div> <p>姓名：{state.getpath('user.profile.name')}</p> <p>年龄：{state.getpath('user.age')}</p> <p>第一个水果：{state.getpath(['items', 0])}</p> <button onclick={rename}>改名</button> <button onclick={growup}>年龄 +1</button> <button onclick={replacefirstitem}>替换第一个水果</button> <button onclick={lograwname}>打印姓名快照</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:56",
+      "id": "guide/introduction:58",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38262,7 +38394,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 路径写入还有几个很实用的特性： guide/introduction"
     },
     {
-      "id": "guide/introduction:57",
+      "id": "guide/introduction:59",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38273,7 +38405,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath 空路径 [] 或 '' 表示整个根值 缺失的中间路径会自动按对象补齐 写入数组越界索引时会自动扩展数组长度 函数会被当作普通值存储，不会自动执行 guide/introduction"
     },
     {
-      "id": "guide/introduction:58",
+      "id": "guide/introduction:60",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-getpath-setpath-updatepath-peekpath",
@@ -38284,7 +38416,7 @@
       "searchText": "简介 getpath / setpath / updatepath / peekpath import { signal } from '@rue-js/rue' const state = signal({ items: ['a'], }) state.setpath(['config', 'theme', 'mode'], 'dark') state.setpath('items.2', 'c') state.setpath('', { ok: true }) state.setpath('callback', () => 42) console.log(state.get()) // { // ok: true, // callback: [function] // } guide/introduction"
     },
     {
-      "id": "guide/introduction:59",
+      "id": "guide/introduction:61",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-watch-watcheffect-配合",
@@ -38295,7 +38427,7 @@
       "searchText": "简介 与 watch / watcheffect 配合 与 watch / watcheffect 配合 guide/introduction"
     },
     {
-      "id": "guide/introduction:60",
+      "id": "guide/introduction:62",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-watch-watcheffect-配合",
@@ -38306,7 +38438,7 @@
       "searchText": "简介 与 watch / watcheffect 配合 signal 可以直接传入 watch 进行监听，也可以在 watcheffect 中被自动追踪： guide/introduction"
     },
     {
-      "id": "guide/introduction:61",
+      "id": "guide/introduction:63",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-与-watch-watcheffect-配合",
@@ -38317,7 +38449,7 @@
       "searchText": "简介 与 watch / watcheffect 配合 import { type fc, signal, watch, watcheffect } from '@rue-js/rue' const app: fc = () => { const count = signal(0) const keyword = signal('') // 监听单个 signal：第一个参数传入 signal 本身 watch(count, (newval, oldval) => { console.log(`count 从 ${oldval} 变为 ${newval}`) }) // 同时监听多个 signal watch([count, keyword], ([newcount, newkeyword], [oldcount, oldkeyword]) => { console.log(`count: ${oldcount} → ${newcount}`) console.log(`keyword: \"${oldkeyword}\" → \"${newkeyword}\"`) }) // watcheffect 自动追踪内部用到的所有 signal watcheffect(() => { if (keyword.get()) { console.log(`正在搜索\"${keyword.get()}\"，当前计数：${count.get()}`) } }) return ( <div> <input value={keyword.get()} oninput={e => keyword.set((e.target as htmlinputelement).value)} placeholder=\"搜索关键词\" /> <p>计数：{count.get()}</p> <button onclick={() => count.set(count.get() + 1)}>加一</button> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:62",
+      "id": "guide/introduction:64",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-自定义-equals",
@@ -38328,7 +38460,7 @@
       "searchText": "简介 自定义 equals 自定义 equals guide/introduction"
     },
     {
-      "id": "guide/introduction:63",
+      "id": "guide/introduction:65",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-自定义-equals",
@@ -38339,7 +38471,7 @@
       "searchText": "简介 自定义 equals 默认情况下，signal 会根据内部的等值比较决定是否触发订阅者。你也可以通过 options.equals 自定义比较策略： guide/introduction"
     },
     {
-      "id": "guide/introduction:64",
+      "id": "guide/introduction:66",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-自定义-equals",
@@ -38350,7 +38482,7 @@
       "searchText": "简介 自定义 equals import { signal, watcheffect } from '@rue-js/rue' const user = signal( { id: 1, name: 'rue' }, { equals: (prev, next) => prev.id === next.id && prev.name === next.name, }, ) watcheffect(() => { console.log('user changed:', user.get()) }) user.set({ id: 1, name: 'rue' }) // equals 返回 true，不触发 user.set({ id: 1, name: 'rue next' }) // 触发 guide/introduction"
     },
     {
-      "id": "guide/introduction:65",
+      "id": "guide/introduction:67",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38361,7 +38493,7 @@
       "searchText": "简介 调试与序列化 调试与序列化 guide/introduction"
     },
     {
-      "id": "guide/introduction:66",
+      "id": "guide/introduction:68",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38372,7 +38504,7 @@
       "searchText": "简介 调试与序列化 signal 还提供了一些调试辅助 api： guide/introduction"
     },
     {
-      "id": "guide/introduction:67",
+      "id": "guide/introduction:69",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38383,7 +38515,7 @@
       "searchText": "简介 调试与序列化 tojson()：json.stringify(signal) 时返回内部值 valueof()：返回内部原始值 tostring()：返回 json 字符串；无法序列化时会退回占位文本 guide/introduction"
     },
     {
-      "id": "guide/introduction:68",
+      "id": "guide/introduction:70",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-调试与序列化",
@@ -38394,7 +38526,7 @@
       "searchText": "简介 调试与序列化 import { signal } from '@rue-js/rue' const state = signal({ count: 1, nested: { ok: true }, }) console.log(state.tojson()) console.log(state.valueof()) console.log(state.tostring()) console.log(json.stringify(state)) guide/introduction"
     },
     {
-      "id": "guide/introduction:69",
+      "id": "guide/introduction:71",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-对象与数组类型",
@@ -38405,7 +38537,7 @@
       "searchText": "简介 对象与数组类型 对象与数组类型 guide/introduction"
     },
     {
-      "id": "guide/introduction:70",
+      "id": "guide/introduction:72",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-对象与数组类型",
@@ -38416,7 +38548,7 @@
       "searchText": "简介 对象与数组类型 signal 可以存储任意类型的值，包括对象和数组。更新引用类型时，传入新的引用以触发响应式更新： guide/introduction"
     },
     {
-      "id": "guide/introduction:71",
+      "id": "guide/introduction:73",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-对象与数组类型",
@@ -38427,7 +38559,7 @@
       "searchText": "简介 对象与数组类型 import { type fc, signal, computed } from '@rue-js/rue' interface todo { id: number text: string done: boolean } const todoapp: fc = () => { const todos = signal<todo[]>([ { id: 1, text: '学习 rue', done: false }, { id: 2, text: '构建应用', done: false }, ]) const input = signal('') // 从 signal 派生计算属性 const remaining = computed(() => todos.get().filter(t => !t.done).length) const total = computed(() => todos.get().length) const addtodo = () => { if (!input.get().trim()) return // 传入新数组引用来触发更新 todos.set([...todos.get(), { id: date.now(), text: input.get(), done: false }]) input.set('') } const toggletodo = (id: number) => { todos.set(todos.get().map(t => (t.id === id ? { ...t, done: !t.done } : t))) } const removetodo = (id: number) => { todos.set(todos.get().filter(t => t.id !== id)) } return ( <div> <h3> 待完成：{remaining.value} / {total.value} </h3> <div> <input value={input.get()} oninput={e => input.set((e.target as htmlinputelement).value)} onkeydown={e => e.key === 'enter' && addtodo()} placeholder=\"新待办事项，回车确认\" /> <button onclick={addtodo}>添加</button> </div> <ul> {todos.get().map(todo => ( <li key={todo.id}> <span style={{ textdecoration: todo.done ? 'line-through' : 'none', cursor: 'pointer' }} onclick={() => toggletodo(todo.id)} > {todo.text} </span> <button onclick={() => removetodo(todo.id)}>删除</button> </li> ))} </ul> </div> ) } guide/introduction"
     },
     {
-      "id": "guide/introduction:72",
+      "id": "guide/introduction:74",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-signal-与-ref-的对比",
@@ -38438,7 +38570,7 @@
       "searchText": "简介 signal 与 ref 的对比 signal 与 ref 的对比 guide/introduction"
     },
     {
-      "id": "guide/introduction:73",
+      "id": "guide/introduction:75",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-signal-与-ref-的对比",
@@ -38449,7 +38581,7 @@
       "searchText": "简介 signal 与 ref 的对比 | 特性 | signal | ref | | -------- | -------------------- | ---------------------- | | 读取值 | count.get() | count.value | | 写入值 | count.set(newval) | count.value = newval | | 类型风格 | getter / setter 函数 | 属性访问 | | 适合场景 | 函数式编程偏好 | 属性访问偏好 | guide/introduction"
     },
     {
-      "id": "guide/introduction:74",
+      "id": "guide/introduction:76",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-signal-与-ref-的对比",
@@ -38460,7 +38592,7 @@
       "searchText": "简介 signal 与 ref 的对比 两者在响应式追踪能力上完全等价，可以在同一个项目中混合使用，按团队偏好选择即可。如果你需要路径级别的读取和更新、无依赖快照读取、函数式更新等能力，signal 会更灵活。 guide/introduction"
     },
     {
-      "id": "guide/introduction:75",
+      "id": "guide/introduction:77",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-使用-watch-和-watcheffect",
@@ -38471,7 +38603,7 @@
       "searchText": "简介 使用 watch 和 watcheffect 使用 watch 和 watcheffect guide/introduction"
     },
     {
-      "id": "guide/introduction:76",
+      "id": "guide/introduction:78",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-使用-watch-和-watcheffect",
@@ -38482,7 +38614,7 @@
       "searchText": "简介 使用 watch 和 watcheffect rue 提供了 watch 和 watcheffect 来监听响应式状态的变化： guide/introduction"
     },
     {
-      "id": "guide/introduction:77",
+      "id": "guide/introduction:79",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#-使用-watch-和-watcheffect",
@@ -38493,7 +38625,7 @@
       "searchText": "简介 使用 watch 和 watcheffect import { type fc, ref, watch, watcheffect } from '@rue-js/rue' const app: fc = () => { const count = ref(0) // 监听特定值的变化 watch(count, (newvalue, oldvalue) => { console.log(`计数从 ${oldvalue} 变为 ${newvalue}`) }) // 自动追踪依赖 watcheffect(() => { console.log(`当前计数：${count.value}`) }) return <button onclick={() => count.value++}>计数：{count.value}</button> } guide/introduction"
     },
     {
-      "id": "guide/introduction:78",
+      "id": "guide/introduction:80",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#lifecycle-hooks",
@@ -38504,7 +38636,7 @@
       "searchText": "简介 生命周期钩子 生命周期钩子 guide/introduction"
     },
     {
-      "id": "guide/introduction:79",
+      "id": "guide/introduction:81",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#lifecycle-hooks",
@@ -38515,7 +38647,7 @@
       "searchText": "简介 生命周期钩子 rue 提供了完整的生命周期钩子： guide/introduction"
     },
     {
-      "id": "guide/introduction:80",
+      "id": "guide/introduction:82",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#lifecycle-hooks",
@@ -38526,7 +38658,7 @@
       "searchText": "简介 生命周期钩子 import { type fc, ref, onbeforemount, onmounted, onbeforeupdate, onupdated, onbeforeunmount, onunmounted, } from '@rue-js/rue' const app: fc = () => { const count = ref(0) onbeforemount(() => { console.log('组件即将挂载') }) onmounted(() => { console.log('组件已挂载') }) onbeforeupdate(() => { console.log('组件即将更新') }) onupdated(() => { console.log('组件已更新') }) return <button onclick={() => count.value++}>计数：{count.value}</button> } guide/introduction"
     },
     {
-      "id": "guide/introduction:81",
+      "id": "guide/introduction:83",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#component-communication",
@@ -38537,7 +38669,7 @@
       "searchText": "简介 组件通信 组件通信 guide/introduction"
     },
     {
-      "id": "guide/introduction:82",
+      "id": "guide/introduction:84",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#component-communication",
@@ -38548,7 +38680,7 @@
       "searchText": "简介 组件通信 rue 使用 props 和事件回调进行组件间通信： guide/introduction"
     },
     {
-      "id": "guide/introduction:83",
+      "id": "guide/introduction:85",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#component-communication",
@@ -38559,7 +38691,7 @@
       "searchText": "简介 组件通信 import { type fc, ref } from '@rue-js/rue' // 子组件 const child: fc<{ message: string onnotify?: (msg: string) => void }> = props => { return ( <div> <p>{props.message}</p> <button onclick={() => props.onnotify?.('来自子组件的消息')}>通知父组件</button> </div> ) } // 父组件 const parent: fc = () => { const parentmessage = ref('来自父组件的消息') const handlenotify = (msg: string) => { console.log('收到通知：', msg) } return <child message={parentmessage.value} onnotify={handlenotify} /> } guide/introduction"
     },
     {
-      "id": "guide/introduction:84",
+      "id": "guide/introduction:86",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38570,7 +38702,7 @@
       "searchText": "简介 选择哪种方式？ 选择哪种方式？ guide/introduction"
     },
     {
-      "id": "guide/introduction:85",
+      "id": "guide/introduction:87",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38581,7 +38713,7 @@
       "searchText": "简介 选择哪种方式？ 所有这些 api 风格都能完全覆盖常见的使用场景。rue 的灵活性允许你： guide/introduction"
     },
     {
-      "id": "guide/introduction:86",
+      "id": "guide/introduction:88",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38592,7 +38724,7 @@
       "searchText": "简介 选择哪种方式？ 如果你喜欢属性访问风格的响应式系统，使用 ref、reactive 和 computed 如果你熟悉 react，使用 usestate 如果你更习惯 getter / setter 风格，使用 signal 和 computed 可以根据项目需要混合使用不同的 api guide/introduction"
     },
     {
-      "id": "guide/introduction:87",
+      "id": "guide/introduction:89",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38603,7 +38735,7 @@
       "searchText": "简介 选择哪种方式？ 对于学习目的，选择看起来更容易理解的风格。大多数核心概念在不同风格之间是共享的。你可以随时在学习过程中切换到另一种风格。 guide/introduction"
     },
     {
-      "id": "guide/introduction:88",
+      "id": "guide/introduction:90",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",
@@ -38614,7 +38746,7 @@
       "searchText": "简介 选择哪种方式？ 对于生产使用： guide/introduction"
     },
     {
-      "id": "guide/introduction:89",
+      "id": "guide/introduction:91",
       "docId": "guide/introduction",
       "route": "/guide/guide/introduction",
       "href": "/guide/guide/introduction#which-to-choose",

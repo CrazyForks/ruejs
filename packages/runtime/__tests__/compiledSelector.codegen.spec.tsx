@@ -14,10 +14,10 @@ import {
   onCleanup as compiledOnCleanup,
   onOwnerCleanup as compiledOnOwnerCleanup,
   runWithOwner as runWithCompiledOwner,
+  setReactiveScheduling,
   signal,
-} from '../src/internal-reactive'
-import { _$compiledRoot } from '../src/compiled-root'
-import { _$reconcileKeyed } from '../src/compiled-keyed-list'
+} from '../src/runtime-core/compiled'
+import { _$reconcileKeyedSingle } from '../src/compiler-runtime/compact-keyed-list'
 import {
   _$compiledAppendChild,
   _$compiledCreateComment,
@@ -25,6 +25,7 @@ import {
   _$compiledCreateTextNode,
 } from '../src/internal'
 import * as internalRuntime from '../src/internal'
+import * as compilerInternalRuntime from '../src/compiler-internal'
 
 void createCompiledSelector
 void compiledOnCleanup
@@ -87,6 +88,7 @@ const flushCompiledEffects = async (): Promise<void> => {
 }
 
 afterEach(() => {
+  setReactiveScheduling('frame')
   document.body.innerHTML = ''
 })
 
@@ -96,9 +98,15 @@ describe('compiled selector codegen', () => {
     const compiledImport = output.match(
       /import\s*\{([^}]*)\}\s*from\s*["']@rue-js\/rue\/internal\/compiler["']/,
     )
-    for (const helper of ['_$mountCompiledKeyedRowSetup', 'effect', '_$reconcileKeyed']) {
+    for (const helper of [
+      '_$mountCompiledKeyedSingleRowOwnerless',
+      'createSelector',
+      '_$reconcileKeyedSingle',
+    ]) {
       expect(compiledImport?.[1]).toContain(helper)
     }
+    expect(compiledImport?.[1]).not.toContain('_$mountCompiledKeyedRowSetup')
+    expect(compiledImport?.[1]).not.toMatch(/(?:^|,)\s*effect\s*(?:,|$)/)
     for (const helper of ['createOwner', 'disposeOwner', 'runWithOwner']) {
       expect(compiledImport?.[1]).not.toContain(helper)
     }
@@ -106,6 +114,7 @@ describe('compiled selector codegen', () => {
     expect(output).not.toContain('_$compiledKeyedList')
     expect(output.match(/\bcreateOwner\(\)/g)).toBeNull()
     expect(output.match(/\bdisposeOwner\(/g)).toBeNull()
+    expect(output).toContain('.subscribe(')
     expect(output).toContain('onOwnerCleanup(')
 
     let selectorBindingRuns = 0
@@ -117,9 +126,9 @@ describe('compiled selector codegen', () => {
     const selected = signal<number | undefined>(undefined)
 
     let reconcileRuns = 0
-    const reconcile: typeof _$reconcileKeyed = (...args) => {
+    const reconcile: typeof _$reconcileKeyedSingle = (...args) => {
       reconcileRuns += 1
-      return _$reconcileKeyed(...args)
+      return _$reconcileKeyedSingle(...args)
     }
 
     const activeEffects = new Set<number>()
@@ -142,13 +151,15 @@ describe('compiled selector codegen', () => {
 
     const executable = `${stripModuleSyntax(output)}\nreturn View;`
     const bindings = {
-      ...internalRuntime,
+      ...compilerInternalRuntime,
       rows,
       selected,
       onRowClick: (id: number) => clickEvents.push(id),
       onRowMouseOver: (id: number) => mouseOverEvents.push(id),
       effect: trackedEffect,
-      _$reconcileKeyed: reconcile,
+      createSelector: createCompiledSelector,
+      _$compiledRenderEffect: compilerInternalRuntime._$compiledRenderEffect,
+      _$reconcileKeyedSingle: reconcile,
       String: (value: unknown) => {
         selectorBindingRuns += 1
         return String(value)
@@ -160,6 +171,7 @@ describe('compiled selector codegen', () => {
       __rue_compiled_mount(parent: ParentNode): HTMLTableSectionElement
     }
 
+    const debugBefore = compilerInternalRuntime.__rueGetCompiledReactiveDebugState()
     const rootOwner = createCompiledOwner()
     const host = document.createElement('table')
     let tbody: HTMLTableSectionElement | undefined
@@ -170,7 +182,7 @@ describe('compiled selector codegen', () => {
     })
     if (!tbody) throw new Error('Expected compiled tbody')
     expect(tbody.querySelectorAll('tr')).toHaveLength(1_000)
-    expect(activeEffects.size).toBe(1_001)
+    expect(activeEffects.size).toBe(0)
     const firstRow = tbody.querySelectorAll('tr')[0]!
     firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     firstRow.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
@@ -202,6 +214,11 @@ describe('compiled selector codegen', () => {
     expect(tbody.querySelectorAll('tr')[124]?.className).toBe('danger')
 
     selectorBindingRuns = 0
+    selected.set(125)
+    await flushCompiledEffects()
+    expect(selectorBindingRuns).toBe(0)
+
+    selectorBindingRuns = 0
     mutations.length = 0
     selected.set(875)
     await flushCompiledEffects()
@@ -222,38 +239,53 @@ describe('compiled selector codegen', () => {
     expect(tbody.querySelectorAll('tr')[499]?.textContent).toBe('row 500 updated')
     expect(mutations).toHaveLength(1)
 
+    const retained = tbody.querySelectorAll('tr')[499]!
+    retained.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(clickEvents.at(-1)).toBe(500)
+
+    rows.set([rows.peek()[1]!, rows.peek()[0]!, ...rows.peek().slice(2)])
+    await flushCompiledEffects()
+    expect(tbody.querySelectorAll('tr')[0]?.textContent).toBe('row 2')
+
     mutations.length = 0
     const removedSelectedRow = tbody.querySelectorAll('tr')[874]!
     rows.set(rows.peek().filter(row => row.key !== 875))
     await flushCompiledEffects()
     const afterSelectedRowRemoval = { effects: activeEffects.size }
-    expect(afterSelectedRowRemoval).toEqual({ effects: 1_000 })
+    expect(afterSelectedRowRemoval).toEqual({ effects: 0 })
     removedSelectedRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     removedSelectedRow.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
     expect({ clickEvents, mouseOverEvents }).toEqual({
-      clickEvents: [1],
+      clickEvents: [1, 500],
       mouseOverEvents: [1],
     })
     selectorBindingRuns = 0
+    reconcileRuns = 0
     selected.set(1)
     await flushCompiledEffects()
     expect(selectorBindingRuns).toBe(1)
+    expect(reconcileRuns).toBe(0)
 
     selectorBindingRuns = 0
     rows.set([])
     await flushCompiledEffects()
     expect(tbody.querySelectorAll('tr')).toHaveLength(0)
     expect(tbody.childNodes).toHaveLength(1)
-    expect(activeEffects.size).toBe(1)
+    expect(activeEffects.size).toBe(0)
     firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     firstRow.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
     selected.set(2)
     await flushCompiledEffects()
     expect(selectorBindingRuns).toBe(0)
     expect({ clickEvents, mouseOverEvents }).toEqual({
-      clickEvents: [1],
+      clickEvents: [1, 500],
       mouseOverEvents: [1],
     })
+
+    rows.set([makeRow(2, 'row 2 rebuilt')])
+    await flushCompiledEffects()
+    expect(tbody.querySelector('tr')?.className).toBe('danger')
+    expect(tbody.querySelector('tr')?.textContent).toBe('row 2 rebuilt')
 
     console.info('[compiled selector codegen]', {
       firstSelection,
@@ -264,6 +296,28 @@ describe('compiled selector codegen', () => {
 
     observer.disconnect()
     disposeCompiledOwner(rootOwner)
+    expect(compilerInternalRuntime.__rueGetCompiledReactiveDebugState()).toEqual(debugBefore)
+  })
+
+  it('detaches a direct selector subscription when its initial callback throws', () => {
+    setReactiveScheduling('sync')
+    const selected = signal(1)
+    const owner = createCompiledOwner()
+    let runs = 0
+    runWithCompiledOwner(owner, () => {
+      const isSelected = createCompiledSelector(() => selected.get())
+      expect(() =>
+        isSelected.subscribe(() => {
+          runs += 1
+          isSelected(1)
+          throw new Error('selector setup failed')
+        }),
+      ).toThrow('selector setup failed')
+    })
+
+    selected.set(2)
+    expect(runs).toBe(1)
+    disposeCompiledOwner(owner)
   })
 
   it('does not optimize complex, callable, multi-external, or non-key comparisons', () => {

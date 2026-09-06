@@ -46,7 +46,11 @@ export { TransitionGroup } from './components/TransitionGroup'
 export type { TransitionGroupProps } from './components/TransitionGroup'
 export * from './reactivity'
 export { useApp } from './hooks/useApp'
-export { useError } from './hooks/useError'
+export {
+  installBrowserErrorBridge,
+  installErrorConsole,
+  installDevErrorOverlay,
+} from './hooks/error-installers'
 export {
   useComponent,
   hydrateOnIdle,

@@ -1,8 +1,23 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useError } from '../src'
+import {
+  onError,
+  installBrowserErrorBridge,
+  installErrorConsole,
+  installDevErrorOverlay,
+} from '../src'
+import rue from '../src/rue'
 
-useError({ overlay: true })
+const disposers: (() => void)[] = []
+const track = (dispose: () => void) => {
+  disposers.push(dispose)
+  return dispose
+}
+const reject = (reason: unknown) => {
+  const event = new Event('unhandledrejection')
+  Object.defineProperty(event, 'reason', { value: reason })
+  window.dispatchEvent(event)
+}
 
 const flush = async () => {
   await Promise.resolve()
@@ -12,11 +27,19 @@ const flush = async () => {
 const getOverlayText = () => document.getElementById('rue-error-overlay')?.textContent ?? ''
 
 afterEach(() => {
+  disposers
+    .splice(0)
+    .reverse()
+    .forEach(dispose => dispose())
   document.body.innerHTML = ''
   vi.restoreAllMocks()
 })
 
-describe('useError browser bridge', () => {
+describe('browser error bridge', () => {
+  beforeEach(() => {
+    track(installBrowserErrorBridge())
+    track(installDevErrorOverlay())
+  })
   it('shows the overlay for unhandled promise rejections', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const reason = new Error('dynamic import exploded')
@@ -124,5 +147,65 @@ describe('useError browser bridge', () => {
 
     expect(getOverlayText()).toBe('')
     expect(consoleError).not.toHaveBeenCalled()
+  })
+})
+
+describe('independent error installers', () => {
+  it('shares the bridge until the last reference is disposed and supports reinstall', () => {
+    const received: unknown[] = []
+    track(onError(error => received.push(error)))
+    const first = track(installBrowserErrorBridge())
+    const second = track(installBrowserErrorBridge())
+    reject('first')
+    expect(received).toEqual(['first'])
+    first()
+    first()
+    reject('second')
+    expect(received).toEqual(['first', 'second'])
+    second()
+    reject('removed')
+    const resourceError = new Event('error')
+    Object.defineProperty(resourceError, 'target', { value: document.createElement('script') })
+    window.dispatchEvent(resourceError)
+    expect(received).toEqual(['first', 'second'])
+    track(installBrowserErrorBridge())
+    reject('reinstalled')
+    expect(received).toEqual(['first', 'second', 'reinstalled'])
+  })
+
+  it('installs console output independently and unsubscribes idempotently', () => {
+    const output = vi.spyOn(console, 'error').mockImplementation(() => {})
+    track(onError(() => {}))
+    const dispose = track(installErrorConsole())
+    reject('not bridged')
+    expect(output).not.toHaveBeenCalled()
+    rue.handleError('console only')
+    expect(output).toHaveBeenCalledTimes(1)
+    expect(output.mock.calls[0][0]).toContain('console only')
+    dispose()
+    dispose()
+    rue.handleError('removed')
+    expect(output).toHaveBeenCalledTimes(1)
+  })
+
+  it('removes the overlay and its subscription, and allows closing and reinstalling', () => {
+    track(onError(() => {}))
+    const dispose = track(installDevErrorOverlay())
+    reject('not bridged')
+    expect(getOverlayText()).toBe('')
+    rue.handleError('<bad>')
+    expect(getOverlayText()).toContain('<bad>')
+    document.querySelector<HTMLButtonElement>('#rue-error-close')!.click()
+    expect(getOverlayText()).toBe('')
+    rue.handleError('again')
+    expect(getOverlayText()).toContain('again')
+    dispose()
+    dispose()
+    expect(document.getElementById('rue-error-overlay')).toBeNull()
+    rue.handleError('removed')
+    expect(getOverlayText()).toBe('')
+    track(installDevErrorOverlay())
+    rue.handleError('reinstalled')
+    expect(getOverlayText()).toContain('reinstalled')
   })
 })

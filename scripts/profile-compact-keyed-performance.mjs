@@ -9,7 +9,14 @@ import { pathToFileURL } from 'node:url'
 import { chromium } from 'playwright-core'
 import { build } from 'vite'
 
-export const PROFILE_SCHEMA_VERSION = 3
+export const PROFILE_SCHEMA_VERSION = 4
+
+export const REFERENCE_BENCHMARK_SUMMARY = Object.freeze({
+  measuredRounds: 6,
+  metric: 'nine-operation CPU geometric ratio',
+  rueVsVueJsx: 0.967,
+  rueVsVueVapor: 1.154,
+})
 
 export const PROFILE_SCENARIOS = [
   'create1k',
@@ -28,6 +35,7 @@ export const COUNTER_NAMES = [
   'reconciles',
   'rowMounts',
   'rowPatches',
+  'indexOnlyPatches',
   'rowDisposes',
   'keyReads',
   'mapConstructions',
@@ -69,13 +77,16 @@ const profileDist = path.resolve(profileRoot, 'dist')
 const defaultOutput = path.resolve(profileRoot, 'profile.json')
 const defaultEvidence = path.resolve(
   workspaceRoot,
-  '.plans/2026-09-05-性能继续优化/evidence/1-画像.md',
+  '.plans/2026-09-06-keyed列表性能超越Vue-Vapor/evidence/1-baseline.md',
 )
 const compactKeyedSource = path.resolve(
   workspaceRoot,
   'packages/runtime/src/compiler-runtime/compact-keyed-list.ts',
 )
 const fixtureSource = path.resolve(benchmarkRoot, 'src/main.tsx')
+const workspacePackage = path.resolve(workspaceRoot, 'packages/rue/package.json')
+const benchmarkPackage = path.resolve(benchmarkRoot, 'package.json')
+const localRuePackage = path.resolve(benchmarkRoot, 'node_modules/@rue-js/rue/package.json')
 
 const round = value => Number(value.toFixed(3))
 
@@ -142,15 +153,31 @@ export const instrumentCompactKeyedSource = input =>
     [
       '): CompactCompiledKeyedRow<T, K>[] => {\n  let result',
       "): CompactCompiledKeyedRow<T, K>[] => {\n  profileCount('reconciles')\n  let result",
-      'reconcile',
+      'range reconcile',
     ],
-    counted('new Map(previous.map(row => [row.key, row]))', 'mapConstructions'),
-    counted('new Set<K>()', 'setConstructions', 2),
-    counted('getKey(items[index], index)', 'keyReads', 3),
+    [
+      '): CompactCompiledKeyedSingleRow<T, K>[] => {\n  let result',
+      "): CompactCompiledKeyedSingleRow<T, K>[] => {\n  profileCount('reconciles')\n  let result",
+      'single reconcile',
+    ],
+    counted('new Map(previous.map(row => [row.key, row]))', 'mapConstructions', 2),
+    counted('new Set<K>()', 'setConstructions', 4),
+    counted('getKey(items[index], index)', 'keyReads', 6),
+    [
+      'if (itemChanged || (rowUsesIndex && indexChanged)) {\n    row.patch(item, index)',
+      "if (itemChanged || (rowUsesIndex && indexChanged)) {\n    if (!itemChanged && indexChanged) profileCount('indexOnlyPatches');\n    row.patch(item, index)",
+      'index-only patches',
+    ],
     counted('row.patch(item, index)', 'rowPatches', 2),
-    counted('row.dispose()', 'rowDisposes', 5),
-    counted('createOwner()', 'keyedOwnersCreated', 2),
+    counted('row.dispose()', 'rowDisposes', 8),
+    counted('createOwner()', 'keyedOwnersCreated', 4),
     ['const mounted = mount(', "profileCount('rowMounts')\nconst mounted = mount(", 'mounts', 2],
+    [
+      'const row = mount(',
+      "profileCount('rowMounts')\nprofileCount('rowRecordReuses')\nconst row = mount(",
+      'single mounts',
+      2,
+    ],
     [
       'const row = mounted as CompactCompiledKeyedRow<T, K>',
       "profileCount('rowRecordReuses'); const row = mounted as CompactCompiledKeyedRow<T, K>",
@@ -210,6 +237,16 @@ export const instrumentCompiledRuntimeSource = input => {
     source = `${source.slice(0, insertion)}\n  profileCount('${counterName}')${source.slice(insertion)}`
   }
   return instrumentSites(source, [
+    [
+      "let schedulingMode: ReactiveSchedulingMode = 'frame'",
+      "let schedulingMode: ReactiveSchedulingMode = 'frame'\nglobalThis.__RUE_PROFILE_SCHEDULING_MODE__ = schedulingMode",
+      'default scheduling mode',
+    ],
+    [
+      'export const setReactiveScheduling = (mode: ReactiveSchedulingMode): void => {\n  schedulingMode = mode',
+      'export const setReactiveScheduling = (mode: ReactiveSchedulingMode): void => {\n  schedulingMode = mode\n  globalThis.__RUE_PROFILE_SCHEDULING_MODE__ = mode',
+      'scheduling mode updates',
+    ],
     [
       'for (const cleanup of record.cleanups.splice(0)) attempt(cleanup, undefined)',
       "for (const cleanup of record.cleanups.splice(0)) { profileCount('ownerCleanupCallbacks'); attempt(cleanup, undefined) }",
@@ -469,6 +506,7 @@ export const installBrowserCounters = () => {
     'reconciles',
     'rowMounts',
     'rowPatches',
+    'indexOnlyPatches',
     'rowDisposes',
     'keyReads',
     'mapConstructions',
@@ -610,6 +648,7 @@ const performScenario = (page, scenario) =>
         firstId: ids[0] ?? null,
         lastId: ids.at(-1) ?? null,
         uniqueIds: new Set(ids).size,
+        updatedLabels: labels.filter(label => label.endsWith(' !!!')).length,
       },
       immediateMs,
       settledMs,
@@ -673,17 +712,10 @@ const counterMedian = (scenarios, scenario, counter) =>
 
 export const buildHotspots = scenarios =>
   [
-    [2, 'create1k', 'nested row owner allocation', 'rootOwnersCreated'],
-    [3, 'replace1k', 'individual old row DOM removal', 'individualRowDeletes'],
-    [
-      4,
-      'create1k',
-      'row record copy and batch position check',
-      'rowRecordCopies',
-      'batchPositionChecks',
-    ],
-    [5, 'create1k', 'empty-list old-key Map allocation', 'mapConstructions'],
-    [6, 'create1k', 'isolated text hole replacement', 'textHoleReplacements'],
+    [5, 'create1k', 'row owner and effect allocation', 'ownersCreated', 'effects'],
+    [4, 'create1k', 'per-row native listeners', 'listenersAdded'],
+    [6, 'append1k', 'append key reads', 'keyReads'],
+    [3, 'remove1k', 'index-only row patches', 'indexOnlyPatches'],
   ]
     .map(([task, scenario, costCenter, ...counters]) => {
       const baselineCount = counters.reduce(
@@ -699,6 +731,7 @@ export const buildHotspots = scenarios =>
         avoidableShare: baselineCount > 0 ? 1 : 0,
       }
     })
+    .filter(hotspot => hotspot.baselineCount > 0)
     .sort((a, b) => b.upperBoundCalls - a.upperBoundCalls)
 
 const sha256Pattern = /^[a-f0-9]{64}$/
@@ -711,6 +744,26 @@ export const validateProfileReport = report => {
     if (!sha256Pattern.test(report.source?.[field] ?? '')) throw new Error(`Invalid ${field}`)
   }
   if (!report.source?.chromeVersion) throw new Error('Missing chromeVersion')
+  for (const field of [
+    'workspaceVersion',
+    'localPackageVersion',
+    'benchmarkPackageVersion',
+    'benchmarkMetadataVersion',
+  ]) {
+    if (typeof report.source?.[field] !== 'string' || report.source[field].length === 0) {
+      throw new Error(`Missing ${field}`)
+    }
+  }
+  if (!['sync', 'microtask', 'frame'].includes(report.configuration?.schedulingMode)) {
+    throw new Error('Invalid schedulingMode')
+  }
+  if (
+    !Number.isInteger(report.benchmarkComparison?.measuredRounds) ||
+    !Number.isFinite(report.benchmarkComparison?.rueVsVueJsx) ||
+    !Number.isFinite(report.benchmarkComparison?.rueVsVueVapor)
+  ) {
+    throw new Error('Missing benchmarkComparison')
+  }
   const expectedSamples = report.configuration?.measuredRounds
   if (!Number.isInteger(expectedSamples) || expectedSamples < 3) {
     throw new Error('Profile requires at least three measured rounds')
@@ -734,6 +787,8 @@ export const validateProfileReport = report => {
         throw new Error(`${name}: owner conservation failed`)
       if (c.rowMounts !== c.rowRecordCopies + c.rowRecordReuses)
         throw new Error(`${name}: row record conservation failed`)
+      if (c.indexOnlyPatches > c.rowPatches)
+        throw new Error(`${name}: index-only patch conservation failed`)
     }
     if (scenario.samples.some(sample => sample.domCorrect !== true)) {
       throw new Error(`${name} has a failed DOM assertion`)
@@ -773,12 +828,16 @@ const renderEvidence = report => {
 
 - Schema：${report.schemaVersion}
 - Chrome：${report.source.chromeVersion}（${report.source.chromeExecutable}）
+- 工作区源码版本：${report.source.workspaceVersion}；实际安装到 fixture 的本地包版本：${report.source.localPackageVersion}
+- benchmark package/元数据版本：${report.source.benchmarkPackageVersion}/${report.source.benchmarkMetadataVersion}（它们仅描述 fixture，不作为本地 Rue 源码版本）
+- 响应式调度基线：${report.configuration.schedulingMode}
 - 真实 fixture：\`${report.source.fixturePath}\`，SHA-256 \`${report.source.fixtureSha256}\`
 - 插桩源码（已验证安装副本与工作区一致）：${JSON.stringify(report.source.instrumentedSources)}
 - compact keyed 源码 SHA-256：\`${report.source.compactKeyedSha256}\`
 - 真实 SWC/Vite 构建产物 SHA-256：\`${report.source.artifactSha256}\`
 - 采样：${report.configuration.warmupRounds} 轮预热、${report.configuration.measuredRounds} 轮旋转顺序实测；每个场景每轮均验证真实 DOM，强制 GC 后读取 heap。
-- 命令：\`node scripts/profile-compact-keyed-performance.mjs\`
+- 命令：\`node scripts/profile-compact-keyed-performance.mjs --rounds ${report.configuration.measuredRounds} --warmup-rounds ${report.configuration.warmupRounds} --output ${report.configuration.outputPath} --evidence ${report.configuration.evidencePath} --skip-install\`
+- 既有同机三方 CPU 摘要（本画像不重复运行）：${report.benchmarkComparison.measuredRounds} 次中位数，Rue/Vue JSX=${report.benchmarkComparison.rueVsVueJsx}，Rue/Vue Vapor=${report.benchmarkComparison.rueVsVueVapor}；口径为 ${report.benchmarkComparison.metric}。
 
 ## 场景统计
 
@@ -790,11 +849,11 @@ ${rows}
 
 ## 深度计数（各轮中位数）
 
-| 场景 | keyed/root owner | owner cleanup | listener add/remove | text create/hole | batch check | row copy/reuse | individual delete | private metadata |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 场景 | keyed/root owner | effect | owner cleanup | listener add/remove | text create/hole | index-only patch | batch check | row copy/reuse | individual delete | private metadata |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 ${PROFILE_SCENARIOS.map(name => {
   const c = report.scenarios[name].counters
-  return `| ${name} | ${c.keyedOwnersCreated.median}/${c.rootOwnersCreated.median} | ${c.ownerCleanupCallbacks.median} | ${c.listenersAdded.median}/${c.listenersRemoved.median} | ${c.textNodesCreated.median}/${c.textHoleReplacements.median} | ${c.batchPositionChecks.median} | ${c.rowRecordCopies.median}/${c.rowRecordReuses.median} | ${c.individualRowDeletes.median} | ${c.privateMountMetadata.median} |`
+  return `| ${name} | ${c.keyedOwnersCreated.median}/${c.rootOwnersCreated.median} | ${c.effects.median} | ${c.ownerCleanupCallbacks.median} | ${c.listenersAdded.median}/${c.listenersRemoved.median} | ${c.textNodesCreated.median}/${c.textHoleReplacements.median} | ${c.indexOnlyPatches.median} | ${c.batchPositionChecks.median} | ${c.rowRecordCopies.median}/${c.rowRecordReuses.median} | ${c.individualRowDeletes.median} | ${c.privateMountMetadata.median} |`
 }).join('\n')}
 
 ## Chrome trace 主线程阶段
@@ -874,6 +933,7 @@ export const runProfile = async options => {
     await page.goto(server.url, { waitUntil: 'networkidle' })
     await page.waitForSelector('#run')
     await page.evaluate(settle)
+    const schedulingMode = await page.evaluate(() => globalThis.__RUE_PROFILE_SCHEDULING_MODE__)
     const session = await context.newCDPSession(page)
     await session.send('HeapProfiler.enable')
 
@@ -898,6 +958,11 @@ export const runProfile = async options => {
     const scenarios = Object.fromEntries(
       PROFILE_SCENARIOS.map(name => [name, summarizeScenario(samples[name])]),
     )
+    const [workspaceManifest, localPackageManifest, benchmarkManifest] = await Promise.all([
+      fs.readFile(workspacePackage, 'utf8').then(JSON.parse),
+      fs.readFile(localRuePackage, 'utf8').then(JSON.parse),
+      fs.readFile(benchmarkPackage, 'utf8').then(JSON.parse),
+    ])
     const report = validateProfileReport({
       schemaVersion: PROFILE_SCHEMA_VERSION,
       generatedAt: new Date().toISOString(),
@@ -911,13 +976,21 @@ export const runProfile = async options => {
         compactKeyedSha256: await sha256(compactKeyedSource),
         fixturePath: path.relative(workspaceRoot, fixtureSource),
         fixtureSha256: await sha256(fixtureSource),
+        workspaceVersion: workspaceManifest.version,
+        localPackageVersion: localPackageManifest.version,
+        benchmarkPackageVersion: benchmarkManifest.version,
+        benchmarkMetadataVersion: benchmarkManifest['js-framework-benchmark']?.frameworkVersion,
       },
       configuration: {
+        evidencePath: path.relative(workspaceRoot, options.evidence),
         measuredRounds: options.measuredRounds,
         order: 'left rotation by measured round index',
+        outputPath: path.relative(workspaceRoot, options.output),
+        schedulingMode,
         traceRoundsPerScenario: 1,
         warmupRounds: options.warmupRounds,
       },
+      benchmarkComparison: REFERENCE_BENCHMARK_SUMMARY,
       scenarios,
       hotspots: buildHotspots(scenarios),
     })

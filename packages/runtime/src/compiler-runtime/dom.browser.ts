@@ -143,6 +143,11 @@ const resolveParentContext = (parent: Node | null | undefined): Node | null | un
   return current
 }
 
+/** Resolve a staging fragment back to the stable browser parent that owns it. */
+export const resolveDOMHostParentContext = (
+  parent: Node | null | undefined,
+): Node | null | undefined => resolveParentContext(parent)
+
 export const createDocumentFragment = (parent?: Node | null): DocumentFragment => {
   const context = resolveParentContext(parent ?? activeParent)
   const fragment = hostAdapterFor(context).createDocumentFragment() as DocumentFragment

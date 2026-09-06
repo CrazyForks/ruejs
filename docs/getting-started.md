@@ -11,12 +11,22 @@ pnpm add @rue-js/rue @rue-js/router
 在 `app.tsx` 中创建应用：
 
 ```tsx
-import { type FC, useApp, useError } from '@rue-js/rue'
+import {
+  type FC,
+  useApp,
+  installBrowserErrorBridge,
+  installErrorConsole,
+  installDevErrorOverlay,
+} from '@rue-js/rue'
 import { RouterView } from '@rue-js/router'
 import router from './router'
 
-// 启用错误处理
-useError({ overlay: true, console: true })
+// 接入浏览器错误并启用控制台报告，仅在开发环境显示遮罩
+installBrowserErrorBridge()
+installErrorConsole()
+if (import.meta.env.DEV && !import.meta.env.SSR) {
+  installDevErrorOverlay()
+}
 
 const App: FC = () => {
   return (

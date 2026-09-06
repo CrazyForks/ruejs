@@ -50,6 +50,17 @@ interface DependencyRecord {
   onEmpty?: () => void
 }
 
+interface SelectorDependencyRecord extends DependencyRecord {
+  directSubscribers: Set<DirectSelectorSubscriber>
+}
+
+interface DirectSelectorSubscriber {
+  callback: EffectCallback
+  dependencies: Set<SelectorDependencyRecord>
+  active: boolean
+  running: boolean
+}
+
 interface EffectRecord {
   id: number
   callback: EffectCallback
@@ -74,7 +85,9 @@ interface OwnerRecord {
 
 let schedulingMode: ReactiveSchedulingMode = 'frame'
 let currentEffect: EffectRecord | undefined
+let currentDirectSelectorSubscriber: DirectSelectorSubscriber | undefined
 let currentOwner: CompiledOwner | undefined
+let currentOwnerCleanupCollector: EffectCleanup[] | undefined
 let ownerDisposalDepth = 0
 let nextEffectId = 1
 let nextOwnerId = 1
@@ -293,6 +306,30 @@ export const effect = (callback: EffectCallback, options?: EffectOptions | null)
   return handle
 }
 
+/**
+ * Run compiler-generated DOM/list work synchronously once, then coalesce invalidations into the
+ * next microtask. Public effects continue to use the configured (frame by default) scheduler.
+ */
+export const _$compiledRenderEffect = (callback: EffectCallback): EffectHandle => {
+  let initialized = false
+  let pending = false
+  return effect(callback, {
+    scheduler: runner => {
+      if (!initialized) {
+        initialized = true
+        runner()
+        return
+      }
+      if (pending) return
+      pending = true
+      queueMicrotask(() => {
+        pending = false
+        runner()
+      })
+    },
+  })
+}
+
 type CompiledTextTarget = {
   textContent: string | null
 }
@@ -335,7 +372,22 @@ export const onCleanup = (cleanup: EffectCleanup): void => {
 }
 
 export const onOwnerCleanup = (cleanup: EffectCleanup): void => {
-  if (currentOwner !== undefined) owners.get(currentOwner)?.cleanups.push(cleanup)
+  if (currentOwnerCleanupCollector !== undefined) currentOwnerCleanupCollector.push(cleanup)
+  else if (currentOwner !== undefined) owners.get(currentOwner)?.cleanups.push(cleanup)
+}
+
+/** Collect compiler-proven row disposers without allocating a general reactive owner. */
+export const _$collectCompiledOwnerCleanups = <T>(
+  cleanups: EffectCleanup[],
+  callback: () => T,
+): T => {
+  const previous = currentOwnerCleanupCollector
+  currentOwnerCleanupCollector = cleanups
+  try {
+    return callback()
+  } finally {
+    currentOwnerCleanupCollector = previous
+  }
 }
 
 export const createOwner = (): CompiledOwner => {
@@ -474,10 +526,40 @@ export const disposeOwner = (owner: CompiledOwner): boolean => {
   }
 }
 
-export type Selector<T> = (key: T) => boolean
+export type Selector<T> = ((key: T) => boolean) & {
+  /** @internal Compiler-only direct subscription used by proven keyed-row bindings. */
+  subscribe(callback: EffectCallback): EffectCleanup
+}
+
+const detachDirectSelectorSubscriber = (subscriber: DirectSelectorSubscriber): void => {
+  for (const dependency of subscriber.dependencies) {
+    dependency.directSubscribers.delete(subscriber)
+    if (dependency.directSubscribers.size === 0 && dependency.subscribers.size === 0) {
+      dependency.onEmpty?.()
+    }
+  }
+  subscriber.dependencies.clear()
+}
+
+const runDirectSelectorSubscriber = (subscriber: DirectSelectorSubscriber): void => {
+  if (!subscriber.active || subscriber.running) return
+  subscriber.running = true
+  detachDirectSelectorSubscriber(subscriber)
+  const previousEffect = currentEffect
+  const previousSubscriber = currentDirectSelectorSubscriber
+  currentEffect = undefined
+  currentDirectSelectorSubscriber = subscriber
+  try {
+    subscriber.callback()
+  } finally {
+    currentDirectSelectorSubscriber = previousSubscriber
+    currentEffect = previousEffect
+    subscriber.running = false
+  }
+}
 
 export const createSelector = <T>(source: () => T): Selector<T> => {
-  const dependencies = new Map<T, DependencyRecord>()
+  const dependencies = new Map<T, SelectorDependencyRecord>()
   let initialized = false
   let selected: T
   effect(() => {
@@ -491,24 +573,37 @@ export const createSelector = <T>(source: () => T): Selector<T> => {
     const previous = selected
     selected = next
     batch(() => {
-      notifyDependency(dependencies.get(previous))
-      notifyDependency(dependencies.get(next))
+      for (const dependency of [dependencies.get(previous), dependencies.get(next)]) {
+        notifyDependency(dependency)
+        if (dependency !== undefined && !dependency.disposed) {
+          for (const subscriber of Array.from(dependency.directSubscribers)) {
+            runDirectSelectorSubscriber(subscriber)
+          }
+        }
+      }
     })
   })
   onCleanup(() => {
     for (const dependency of dependencies.values()) {
       dependency.disposed = true
+      for (const subscriber of dependency.directSubscribers) {
+        subscriber.dependencies.delete(dependency)
+      }
+      dependency.directSubscribers.clear()
       dependency.subscribers.clear()
     }
     dependencies.clear()
   })
-  return key => {
+  const read = (key: T): boolean => {
     let dependency = dependencies.get(key)
     if (dependency === undefined) {
       dependency = {
         subscribers: new Set(),
+        directSubscribers: new Set(),
         disposed: false,
-        onEmpty: () => dependencies.delete(key),
+        onEmpty: () => {
+          if (dependency?.directSubscribers.size === 0) dependencies.delete(key)
+        },
       }
       dependencies.set(key, dependency)
     }
@@ -516,6 +611,32 @@ export const createSelector = <T>(source: () => T): Selector<T> => {
       dependency.subscribers.add(currentEffect)
       currentEffect.dependencies.add(dependency)
     }
+    if (currentDirectSelectorSubscriber !== undefined) {
+      dependency.directSubscribers.add(currentDirectSelectorSubscriber)
+      currentDirectSelectorSubscriber.dependencies.add(dependency)
+    }
     return Object.is(key, selected)
   }
+  return Object.assign(read, {
+    subscribe(callback: EffectCallback): EffectCleanup {
+      const subscriber: DirectSelectorSubscriber = {
+        callback,
+        dependencies: new Set(),
+        active: true,
+        running: false,
+      }
+      try {
+        runDirectSelectorSubscriber(subscriber)
+      } catch (error) {
+        subscriber.active = false
+        detachDirectSelectorSubscriber(subscriber)
+        throw error
+      }
+      return () => {
+        if (!subscriber.active) return
+        subscriber.active = false
+        detachDirectSelectorSubscriber(subscriber)
+      }
+    },
+  })
 }

@@ -168,6 +168,9 @@ fn simple_native_element(element: &JSXElement, row: &Ident, root: bool) -> bool 
             if name == "key" {
                 return root;
             }
+            if name == "ref" {
+                return false;
+            }
             if is_event(name) {
                 return true;
             }
@@ -180,8 +183,10 @@ fn simple_native_element(element: &JSXElement, row: &Ident, root: bool) -> bool 
                 Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
                     expr: JSXExpr::Expr(expr),
                     ..
-                })) if matches!(name, "class" | "className") => {
-                    direct_row_field(expr, row) || compiled_row_selector(expr, row)
+                })) => {
+                    direct_row_field(expr, row)
+                        || (matches!(name, "class" | "className")
+                            && compiled_row_selector(expr, row))
                 }
                 _ => false,
             }
@@ -225,8 +230,17 @@ fn resource_free_native_element(element: &JSXElement, row: &Ident, root: bool) -
             if name == "key" {
                 return root;
             }
-            if is_event(name) {
+            if name == "ref" {
                 return false;
+            }
+            if is_event(name) {
+                return matches!(
+                    &attr.value,
+                    Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
+                        expr: JSXExpr::Expr(handler),
+                        ..
+                    })) if crate::attrs::is_compiled_delegated_event(name, handler)
+                );
             }
             match &attr.value {
                 None | Some(JSXAttrValue::Str(_)) => true,
@@ -237,7 +251,11 @@ fn resource_free_native_element(element: &JSXElement, row: &Ident, root: bool) -
                 Some(JSXAttrValue::JSXExprContainer(JSXExprContainer {
                     expr: JSXExpr::Expr(expr),
                     ..
-                })) if matches!(name, "class" | "className") => direct_row_field(expr, row),
+                })) => {
+                    direct_row_field(expr, row)
+                        || (matches!(name, "class" | "className")
+                            && compiled_row_selector(expr, row))
+                }
                 _ => false,
             }
         }
@@ -401,20 +419,30 @@ struct DirectBindingCollector {
 #[derive(Default)]
 struct CompiledSelectorRead {
     found: bool,
+    selector: Option<Ident>,
+    ambiguous: bool,
 }
 
 impl swc_core::ecma::visit::Visit for CompiledSelectorRead {
     fn visit_ident(&mut self, ident: &Ident) {
-        self.found |= ident.sym.ends_with("_selector");
+        if !ident.sym.ends_with("_selector") {
+            return;
+        }
+        self.found = true;
+        if self.selector.as_ref().is_some_and(|selector| selector.to_id() != ident.to_id()) {
+            self.ambiguous = true;
+        } else if self.selector.is_none() {
+            self.selector = Some(ident.clone());
+        }
     }
 }
 
-fn reads_compiled_selector(call: &CallExpr) -> bool {
+fn compiled_selector_read(call: &CallExpr) -> Option<Ident> {
     use swc_core::ecma::visit::VisitWith;
 
     let mut read = CompiledSelectorRead::default();
     call.visit_with(&mut read);
-    read.found
+    (read.found && !read.ambiguous).then_some(read.selector).flatten()
 }
 
 impl VisitMut for DirectBindingCollector {
@@ -437,12 +465,20 @@ impl VisitMut for DirectBindingCollector {
                         ctxt: SyntaxContext::empty(),
                         stmts: body,
                     });
-                    if reads_compiled_selector(call) {
-                        next_stmts.push(stmt.clone());
+                    if let Some(selector) = compiled_selector_read(call) {
+                        let callback =
+                            call.args.first().expect("effect callback").expr.as_ref().clone();
+                        next_stmts.push(Stmt::Expr(ExprStmt {
+                            span: DUMMY_SP,
+                            expr: Box::new(call_ident(
+                                "onOwnerCleanup",
+                                vec![call_member(selector, "subscribe", vec![callback])],
+                            )),
+                        }));
                     } else {
                         next_stmts.push(block.clone());
+                        patch_blocks.push(block);
                     }
-                    patch_blocks.push(block);
                     self.found = true;
                     continue;
                 }

@@ -174,6 +174,31 @@ export const effect = (callback: EffectCallback, options?: EffectOptions | null)
   ) as EffectHandle
 }
 
+/**
+ * Run compiler-generated DOM/list work synchronously once, then coalesce invalidations into the
+ * next microtask. Component-tier compiled output must use this full-runtime variant so reads stay
+ * on the same reactive graph as public signals and hooks.
+ */
+export const _$compiledRenderEffect = (callback: EffectCallback): EffectHandle => {
+  let initialized = false
+  let pending = false
+  return effect(callback, {
+    scheduler: runner => {
+      if (!initialized) {
+        initialized = true
+        runner()
+        return
+      }
+      if (pending) return
+      pending = true
+      queueMicrotask(() => {
+        pending = false
+        runner()
+      })
+    },
+  })
+}
+
 export type CompiledComputedInput<T> = (() => T) | { get: () => T; set?: (value: T) => void }
 
 export const computed = <T>(input: CompiledComputedInput<T>): CompiledSignalHandle<T> =>

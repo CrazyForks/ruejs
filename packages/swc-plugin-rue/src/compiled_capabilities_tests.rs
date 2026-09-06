@@ -31,9 +31,13 @@ fn classifies_compiled_core_and_vapor_fallback_helpers() {
         "createSelector",
         "_$compiledRoot",
         "_$reconcileKeyed",
+        "_$reconcileKeyedSingle",
         "_$disposeCompiledKeyedRows",
         "_$mountCompiledKeyedRowOwnerless",
         "_$mountCompiledKeyedRowSetup",
+        "_$mountCompiledKeyedSingleRow",
+        "_$mountCompiledKeyedSingleRowOwnerless",
+        "_$mountCompiledKeyedSingleRowSetup",
         "_$compiledText",
         "_$withCompiledHookScope",
         "Transition",
@@ -96,8 +100,11 @@ fn distinguishes_routable_user_apis_from_generated_helpers() {
     assert!(should_auto_inject_helper("_$compiledMemo"));
     assert!(should_auto_inject_helper("_$withCompiledHookScope"));
     assert!(should_auto_inject_helper("_$reconcileKeyed"));
+    assert!(should_auto_inject_helper("_$reconcileKeyedSingle"));
     assert!(should_auto_inject_helper("_$disposeCompiledKeyedRows"));
     assert!(should_auto_inject_helper("_$mountCompiledKeyedRowOwnerless"));
+    assert!(should_auto_inject_helper("_$mountCompiledKeyedSingleRowOwnerless"));
+    assert!(should_auto_inject_helper("createSelector"));
     assert!(should_auto_inject_helper("_$compiledText"));
     assert!(should_auto_inject_helper("untrack"));
     assert!(should_auto_inject_helper("_$compiledMarkComponentRenderReactive"));

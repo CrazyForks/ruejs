@@ -8,6 +8,7 @@ import {
   PROFILE_SCHEMA_VERSION,
   PROFILE_SCENARIOS,
   COUNTER_NAMES,
+  REFERENCE_BENCHMARK_SUMMARY,
   buildHotspots,
   instrumentSites,
   installBrowserCounters,
@@ -65,6 +66,12 @@ describe('compact keyed performance profiler', () => {
         expect(counters.rowRecordReuses ?? 0).toBe(fallback ? 0 : 1000)
         expect(counters.batchPositionChecks ?? 0).toBe(fallback ? 1000 : 0)
       }
+      items = items.filter((_, index) => index !== 500)
+      const counters = ((globalThis as any).__RUE_PROFILE_COUNTERS__ = {})
+      rows = reconcile(parent, null, rows, items, item => item, mount)
+      expect(parent.childNodes).toHaveLength(999)
+      expect(counters.rowPatches).toBe(499)
+      expect(counters.indexOnlyPatches).toBe(499)
     } finally {
       reconcile(parent, null, rows, [], item => item, mount)
       delete (globalThis as any).__RUE_PROFILE_COUNTERS__
@@ -81,14 +88,14 @@ describe('compact keyed performance profiler', () => {
         },
       },
     })
-    expect(hotspots.find(hotspot => hotspot.task === 4)?.upperBoundCalls).toBe(0)
+    expect(hotspots.find(hotspot => hotspot.task === 4)).toBeUndefined()
   })
 
   it('keeps duplicate validation Set out of the avoidable initialization cost', () => {
     const hotspots = buildHotspots({
       create1k: { counters: { mapConstructions: { median: 0 }, setConstructions: { median: 1 } } },
     })
-    expect(hotspots.find(hotspot => hotspot.task === 5)?.upperBoundCalls).toBe(0)
+    expect(hotspots.find(hotspot => hotspot.task === 5)).toBeUndefined()
   })
 
   it('does not count the remaining single row owner as an avoidable nested owner', () => {
@@ -100,7 +107,50 @@ describe('compact keyed performance profiler', () => {
         },
       },
     })
-    expect(hotspots.find(hotspot => hotspot.task === 2)?.upperBoundCalls).toBe(0)
+    expect(hotspots.find(hotspot => hotspot.task === 2)).toBeUndefined()
+  })
+
+  it('ranks the current non-zero row, listener, key-read, and index-only patch costs', () => {
+    const hotspots = buildHotspots({
+      create1k: {
+        counters: {
+          effects: { median: 1000 },
+          ownersCreated: { median: 1000 },
+          listenersAdded: { median: 2000 },
+          rootOwnersCreated: { median: 0 },
+          rowRecordCopies: { median: 0 },
+          batchPositionChecks: { median: 0 },
+          mapConstructions: { median: 0 },
+          textHoleReplacements: { median: 0 },
+        },
+      },
+      append1k: { counters: { keyReads: { median: 2000 } } },
+      remove1k: { counters: { indexOnlyPatches: { median: 499 } } },
+      replace1k: { counters: { individualRowDeletes: { median: 0 } } },
+    })
+
+    expect(hotspots).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          task: 5,
+          costCenter: 'row owner and effect allocation',
+          baselineCount: 2000,
+        }),
+        expect.objectContaining({
+          task: 4,
+          costCenter: 'per-row native listeners',
+          baselineCount: 2000,
+        }),
+        expect.objectContaining({ task: 6, costCenter: 'append key reads', baselineCount: 2000 }),
+        expect.objectContaining({
+          task: 3,
+          costCenter: 'index-only row patches',
+          baselineCount: 499,
+        }),
+      ]),
+    )
+    expect(hotspots[0].upperBoundCalls).toBeGreaterThan(0)
+    expect(hotspots.every(hotspot => hotspot.baselineCount > 0)).toBe(true)
   })
 
   it('counts every Set and continuous cleanup site and rejects shape drift', () => {
@@ -249,12 +299,14 @@ roots = Array.from(new Set(result.__rue_compiled_roots))`)
     expect(keyed).toContain("profileCount('keyReads')")
     expect(keyed).toContain("profileCount('mapConstructions')")
     expect(keyed).toContain("profileCount('rowMounts')")
-    expect(keyed.match(/profileCount\('rowDisposes'\)/g)).toHaveLength(5)
-    expect(keyed.match(/profileCount\('setConstructions'\)/g)).toHaveLength(2)
+    expect(keyed).toContain("profileCount('indexOnlyPatches')")
+    expect(keyed.match(/profileCount\('rowDisposes'\)/g)).toHaveLength(8)
+    expect(keyed.match(/profileCount\('setConstructions'\)/g)).toHaveLength(4)
     expect(keyed).toContain("profileCount('keyedOwnersCreated')")
     expect(compiled).toContain("profileCount('ownerCleanupCallbacks')")
     expect(compiled).toContain("profileCount('signals')")
     expect(compiled).toContain("profileCount('ownersCreated')")
+    expect(compiled).toContain('__RUE_PROFILE_SCHEDULING_MODE__')
     expect(compiled).toContain('export const createOwner')
   })
 
@@ -266,8 +318,13 @@ roots = Array.from(new Set(result.__rue_compiled_roots))`)
         compactKeyedSha256: 'b'.repeat(64),
         fixtureSha256: 'c'.repeat(64),
         chromeVersion: 'Chrome/140.0',
+        workspaceVersion: '0.9.6',
+        localPackageVersion: '0.9.6',
+        benchmarkPackageVersion: '0.9.3',
+        benchmarkMetadataVersion: '0.9.3',
       },
-      configuration: { measuredRounds: 3, warmupRounds: 1 },
+      configuration: { measuredRounds: 3, warmupRounds: 1, schedulingMode: 'frame' },
+      benchmarkComparison: REFERENCE_BENCHMARK_SUMMARY,
       scenarios: Object.fromEntries(
         PROFILE_SCENARIOS.map(name => [
           name,
@@ -293,6 +350,15 @@ roots = Array.from(new Set(result.__rue_compiled_roots))`)
     reused.scenarios.create1k.samples[0].counters.rowMounts = 999
     expect(() => validateProfileReport(reused)).toThrow(/row record conservation/)
 
+    const impossibleIndexPatches = structuredClone(report)
+    Object.assign(impossibleIndexPatches.scenarios.remove1k.samples[0].counters, {
+      indexOnlyPatches: 2,
+      rowPatches: 1,
+    })
+    expect(() => validateProfileReport(impossibleIndexPatches)).toThrow(
+      /index-only patch conservation/,
+    )
+
     expect(() => validateProfileReport({ ...report, scenarios: {} })).toThrow(/Missing scenario/)
     const bad = structuredClone(report)
     delete bad.scenarios.create1k.samples[0].counters.textHoleReplacements
@@ -300,6 +366,12 @@ roots = Array.from(new Set(result.__rue_compiled_roots))`)
     const unbalanced = structuredClone(report)
     unbalanced.scenarios.create1k.samples[0].counters.ownersCreated = 1
     expect(() => validateProfileReport(unbalanced)).toThrow(/conservation/)
+    const missingVersion = structuredClone(report)
+    delete missingVersion.source.localPackageVersion
+    expect(() => validateProfileReport(missingVersion)).toThrow(/localPackageVersion/)
+    const missingScheduling = structuredClone(report)
+    delete missingScheduling.configuration.schedulingMode
+    expect(() => validateProfileReport(missingScheduling)).toThrow(/schedulingMode/)
 
     expect(() =>
       validateProfileReport({

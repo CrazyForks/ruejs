@@ -296,6 +296,33 @@ export const View = (props) => (
 }
 
 #[test]
+fn delegates_only_zero_parameter_static_bubbling_event_arrows() {
+    let output = transform_module(
+        r#"
+export const View = () => (
+  <section>
+    <button onClick={() => select(1)}>Delegated</button>
+    <button onClick={(event) => selectEvent(event)}>Event parameter</button>
+    <button onClickCapture={() => capture()}>Capture</button>
+    <button onClickOnce={() => once()}>Once</button>
+    <button onClickPassive={() => passive()}>Passive</button>
+    <button onMouseEnter={() => enter()}>Non bubbling</button>
+    <button onClick={dynamicHandler}>Dynamic</button>
+  </section>
+);
+"#,
+    );
+    let out = normalize(&output);
+
+    assert_eq!(out.matches("_$compiledDelegateEvent(").count(), 1, "{output}");
+    assert!(out.contains("_$compiledDelegateEvent("), "{output}");
+    assert_eq!(out.matches(".addEventListener(").count(), 6, "{output}");
+    assert_eq!(out.matches(".removeEventListener(").count(), 6, "{output}");
+    assert!(out.contains("capture: true"), "{output}");
+    assert!(out.contains("()=>()=>select(1)"), "{output}");
+}
+
+#[test]
 fn keeps_complex_event_and_ref_capabilities_on_the_vapor_fallback() {
     let output = transform_module(
         r#"

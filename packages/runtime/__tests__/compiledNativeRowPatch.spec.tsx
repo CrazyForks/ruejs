@@ -42,16 +42,48 @@ const stripModuleSyntax = (output: string): string =>
     .replace(/export\s+const\s+/g, 'const ')
 
 const compactKeyedHelpers = new Set([
+  '_$compiledDelegateEvent',
   '_$compiledListMemo',
   '_$disposeCompiledKeyedRows',
   '_$mountCompiledKeyedRow',
   '_$mountCompiledKeyedRowOwnerless',
   '_$mountCompiledKeyedRowSetup',
+  '_$mountCompiledKeyedSingleRow',
+  '_$mountCompiledKeyedSingleRowOwnerless',
+  '_$mountCompiledKeyedSingleRowSetup',
   '_$mountCompiledSlotFactory',
   '_$reconcileKeyed',
+  '_$reconcileKeyedSingle',
+  'createSelector',
 ])
 
-const evaluateView = (output: string, rows: ReturnType<typeof signal<Row[]>>, capture: unknown) => {
+const fullRuntimeCompiledRenderEffect: typeof compilerInternalRuntime._$compiledRenderEffect =
+  callback => {
+    let initialized = false
+    let pending = false
+    return internalRuntime.effect(callback, {
+      scheduler: runner => {
+        if (!initialized) {
+          initialized = true
+          runner()
+          return
+        }
+        if (pending) return
+        pending = true
+        queueMicrotask(() => {
+          pending = false
+          runner()
+        })
+      },
+    }) as unknown as ReturnType<typeof compilerInternalRuntime._$compiledRenderEffect>
+  }
+
+const evaluateView = (
+  output: string,
+  rows: ReturnType<typeof signal<Row[]>>,
+  capture: unknown,
+  compilerReactive = false,
+) => {
   const names = new Set<string>()
   for (const match of output.matchAll(/import\s*\{([^}]*)\}\s*from\s*["'][^"']+["']/g)) {
     for (const name of match[1].split(',')) names.add(name.trim())
@@ -61,9 +93,14 @@ const evaluateView = (output: string, rows: ReturnType<typeof signal<Row[]>>, ca
     rows,
     capture,
     ...helpers.map(name =>
-      compactKeyedHelpers.has(name)
-        ? compilerInternalRuntime[name as keyof typeof compilerInternalRuntime]
-        : internalRuntime[name as keyof typeof internalRuntime],
+      compilerReactive
+        ? (compilerInternalRuntime[name as keyof typeof compilerInternalRuntime] ??
+          internalRuntime[name as keyof typeof internalRuntime])
+        : name === '_$compiledRenderEffect'
+          ? fullRuntimeCompiledRenderEffect
+          : compactKeyedHelpers.has(name)
+            ? compilerInternalRuntime[name as keyof typeof compilerInternalRuntime]
+            : internalRuntime[name as keyof typeof internalRuntime],
     ),
   ) as () => ReturnType<typeof _$compiledRoot>
 }
@@ -159,7 +196,7 @@ describe('compiled simple native row patch', () => {
     const output = compile(`export const View = () => <ul>{rows.get().map(row =>
       <li key={row.id} onClick={() => capture(row)}>{row.label}</li>
     )}</ul>`)
-    expect(output).toContain('_$mountCompiledKeyedRowSetup')
+    expect(output).toContain('_$mountCompiledKeyedSingleRowOwnerless')
     const names = [...output.matchAll(/import\s*\{([^}]*)\}\s*from\s*["'][^"']+["']/g)].flatMap(
       match => match[1].split(',').map(name => name.trim()),
     )
@@ -167,15 +204,17 @@ describe('compiled simple native row patch', () => {
     const reconciled: unknown[] = []
     const bindings = {
       ...compilerInternalRuntime,
-      _$mountCompiledKeyedRowSetup: (
-        ...args: Parameters<typeof compilerInternalRuntime._$mountCompiledKeyedRowSetup>
+      _$mountCompiledKeyedSingleRowOwnerless: (
+        ...args: Parameters<typeof compilerInternalRuntime._$mountCompiledKeyedSingleRowOwnerless>
       ) => {
-        const result = compilerInternalRuntime._$mountCompiledKeyedRowSetup(...args)
+        const result = compilerInternalRuntime._$mountCompiledKeyedSingleRowOwnerless(...args)
         mounted.push(result)
         return result
       },
-      _$reconcileKeyed: (...args: Parameters<typeof compilerInternalRuntime._$reconcileKeyed>) => {
-        const result = compilerInternalRuntime._$reconcileKeyed(...args)
+      _$reconcileKeyedSingle: (
+        ...args: Parameters<typeof compilerInternalRuntime._$reconcileKeyedSingle>
+      ) => {
+        const result = compilerInternalRuntime._$reconcileKeyedSingle(...args)
         reconciled.splice(0, reconciled.length, ...result)
         return result
       },
@@ -218,14 +257,16 @@ describe('compiled simple native row patch', () => {
     }
   })
 
-  it('uses one owner per resource row and releases events and selector effects', async () => {
+  it('mounts delegated-event and selector rows ownerlessly and releases explicit disposers', async () => {
     const output = compile(`
       export const View = () => <ul>{rows.get().map(row =>
         <li key={row.id} onClick={() => capture(row)}
           className={row.id === capture.get() ? 'selected' : ''}>{row.label}</li>
       )}</ul>
     `)
-    expect(output).toContain('_$mountCompiledKeyedRowSetup')
+    expect(output).toContain('_$mountCompiledKeyedSingleRowOwnerless')
+    expect(output).not.toContain('_$mountCompiledKeyedSingleRowSetup')
+    expect(output).toContain('.subscribe(')
     const names = [...output.matchAll(/import\s*\{([^}]*)\}\s*from\s*["'][^"']+["']/g)].flatMap(
       match => match[1].split(',').map(name => name.trim()),
     )
@@ -252,8 +293,8 @@ describe('compiled simple native row patch', () => {
     rows.set(Array.from({ length: 1000 }, (_, id) => ({ id, label: String(id), className: '' })))
     await flush()
     const mounted = compilerInternalRuntime.__rueGetCompiledReactiveDebugState()
-    expect(mounted.activeOwners - empty.activeOwners, 'row owners').toBe(1000)
-    expect(mounted.activeEffects - empty.activeEffects, 'row effects').toBe(1000)
+    expect(mounted.activeOwners - empty.activeOwners, 'row owners').toBe(0)
+    expect(mounted.activeEffects - empty.activeEffects, 'row effects').toBe(0)
     const first = host.querySelector('li')!
     const replacement = { id: 0, label: 'latest', className: '' }
     rows.set([replacement, ...rows.peek().slice(1)])
@@ -273,12 +314,18 @@ describe('compiled simple native row patch', () => {
     retained.click()
     expect(capture).toHaveBeenCalledTimes(1)
     expect(compilerInternalRuntime.__rueGetCompiledReactiveDebugState()).toEqual(empty)
-    const clickCount = (spy: typeof listeners) =>
+    const rowClickCount = (spy: typeof listeners) =>
       spy.mock.calls.filter(
         ([type], index) => type === 'click' && spy.mock.contexts[index] instanceof HTMLLIElement,
       ).length
-    expect(clickCount(listeners), 'click additions').toBe(1000)
-    expect(clickCount(removals), 'click removals').toBe(1000)
+    const rootClickCount = (spy: typeof listeners) =>
+      spy.mock.calls.filter(
+        ([type], index) => type === 'click' && spy.mock.contexts[index] instanceof HTMLUListElement,
+      ).length
+    expect(rowClickCount(listeners), 'row click additions').toBe(0)
+    expect(rootClickCount(listeners), 'root click additions').toBe(1)
+    expect(rowClickCount(removals), 'row click removals').toBe(0)
+    expect(rootClickCount(removals), 'root click removals').toBe(0)
     handle.dispose()
     expect(compilerInternalRuntime.__rueGetCompiledReactiveDebugState()).toEqual(before)
 
@@ -295,7 +342,8 @@ describe('compiled simple native row patch', () => {
     const failing = View()
     expect(() => failing.__rue_compiled_mount(host)).toThrow('setup failed')
     expect(compilerInternalRuntime.__rueGetCompiledReactiveDebugState()).toEqual(before)
-    expect(clickCount(listeners)).toBe(clickCount(removals))
+    expect(rowClickCount(listeners)).toBe(0)
+    expect(rowClickCount(removals)).toBe(0)
     expect(host.querySelectorAll('li')).toHaveLength(0)
   })
 
@@ -316,10 +364,13 @@ describe('compiled simple native row patch', () => {
     )(
       rows,
       capture,
-      ...names.map(
-        name =>
-          internalRuntime[name as keyof typeof internalRuntime] ??
-          compilerInternalRuntime[name as keyof typeof compilerInternalRuntime],
+      ...names.map(name =>
+        name === '_$compiledRenderEffect'
+          ? fullRuntimeCompiledRenderEffect
+          : name === '_$compiledDelegateEvent'
+            ? compilerInternalRuntime._$compiledDelegateEvent
+            : (internalRuntime[name as keyof typeof internalRuntime] ??
+              compilerInternalRuntime[name as keyof typeof compilerInternalRuntime]),
       ),
     )
     const host = document.createElement('div')
@@ -345,19 +396,22 @@ describe('compiled simple native row patch', () => {
         <li key={row.id} className={row.className}>{row.label}</li>
       )}</ul>
     `)
-    expect(resourceFree).toContain('_$mountCompiledKeyedRowOwnerless')
+    expect(resourceFree).toContain('_$mountCompiledKeyedSingleRowOwnerless')
+    expect(resourceFree).toContain('_$reconcileKeyedSingle')
+    expect(resourceFree).not.toContain('_$reconcileKeyed,')
+    expect(resourceFree).not.toContain('_$mountCompiledKeyedRowOwnerless')
     expect(resourceFree).not.toMatch(/return\s+_\$mountCompiledKeyedRow\s*\(/)
-    expect(resourceFree.match(/\beffect\s*\(/g)).toHaveLength(1)
+    expect(resourceFree.match(/_\$compiledRenderEffect\s*\(/g)).toHaveLength(1)
 
     for (const source of [
-      `export const View = () => <ul>{rows.get().map(row => <li key={row.id} onClick={() => capture(row)}>{row.label}</li>)}</ul>`,
-      `export const View = () => <ul>{rows.get().map(row => <li key={row.id} className={row.id === capture.get() ? 'selected' : ''}>{row.label}</li>)}</ul>`,
+      `export const View = () => <ul>{rows.get().map(row => <li key={row.id} onClick={event => capture(event, row)}>{row.label}</li>)}</ul>`,
+      `export const View = () => <ul>{rows.get().map(row => <li key={row.id} onClickCapture={() => capture(row)}>{row.label}</li>)}</ul>`,
       `export const View = () => <ul>{rows.get().map(row => <li key={row.id} v-memo={[row.label]}>{row.label}</li>)}</ul>`,
       `export const View = () => <ul>{rows.get().map(row => <Row key={row.id}>{row.label}</Row>)}</ul>`,
       `export const View = () => <ul>{rows.get().map(row => { onCleanup(() => capture(row)); return <li key={row.id}>{row.label}</li> })}</ul>`,
       `export const View = () => <ul>{rows.get().map(row => { effect(() => capture(row)); return <li key={row.id}>{row.label}</li> })}</ul>`,
     ]) {
-      expect(compile(source)).not.toContain('_$mountCompiledKeyedRowOwnerless')
+      expect(compile(source)).not.toContain('_$mountCompiledKeyedSingleRowOwnerless')
     }
   })
 
@@ -420,7 +474,7 @@ describe('compiled simple native row patch', () => {
 
     const resourceOutput = compile(`
       export const View = () => <ul>{rows.get().map(row =>
-        <li key={row.id} onClick={() => capture(row)}>{row.label}</li>
+        <li key={row.id} onClick={event => capture(event, row)}>{row.label}</li>
       )}</ul>
     `)
     const resourceRows = signal<Row[]>([
@@ -537,7 +591,7 @@ describe('compiled simple native row patch', () => {
     disposeOwner(owner)
   })
 
-  it('batch mounts 1k initial and fully replaced rows through one list fragment', async () => {
+  it('batch mounts 1k initial and fully replaced single rows without range probing', async () => {
     const output = compile(`
       export const View = () => <ul>{rows.get().map(row =>
         <li key={row.id} className={row.className}>{row.label}</li>
@@ -649,7 +703,7 @@ describe('compiled simple native row patch', () => {
     expect(output).toContain('_$rowPatch')
     expect(output).not.toMatch(/_\$rowItem\d+\s*=\s*_\$compiledSignal\s*\(/)
     expect(output).not.toContain('_$compiledText')
-    expect(output.match(/\beffect\s*\(/g)).toHaveLength(1)
+    expect(output.match(/_\$compiledRenderEffect\s*\(/g)).toHaveLength(1)
 
     const rows = signal<Row[]>([
       { id: 1, label: 'one', className: 'cold' },
@@ -752,15 +806,20 @@ describe('compiled simple native row patch', () => {
     expect(output).toContain('_$rowPatch')
     expect(output).not.toMatch(/_\$rowItem\d+\s*=\s*_\$compiledSignal\s*\(/)
 
-    const selected = signal(1)
-    const rows = signal<Row[]>([
+    const selected = compilerInternalRuntime.signal(1)
+    const rows = compilerInternalRuntime.signal<Row[]>([
       { id: 1, label: 'one', className: 'cold' },
       { id: 2, label: 'two', className: 'hot' },
     ])
-    const owner = createOwner()
+    const owner = compilerInternalRuntime.createOwner()
     const host = document.createElement('div')
-    runWithOwner(owner, () => {
-      const handle = evaluateView(output, rows, selected)()
+    compilerInternalRuntime.runWithOwner(owner, () => {
+      const handle = evaluateView(
+        output,
+        rows as unknown as ReturnType<typeof signal<Row[]>>,
+        selected,
+        true,
+      )()
       host.appendChild(handle.__rue_compiled_mount(host)!)
     })
     const rendered = [...host.querySelectorAll('li')]
@@ -777,7 +836,7 @@ describe('compiled simple native row patch', () => {
     await flush()
     expect(rendered.map(row => row.textContent)).toEqual(['ONE', 'TWO'])
     expect(rendered.map(row => row.className)).toEqual(['', 'selected'])
-    disposeOwner(owner)
+    compilerInternalRuntime.disposeOwner(owner)
   })
 
   it('keeps components, spreads and control flow on the existing effect path', () => {
@@ -787,7 +846,9 @@ describe('compiled simple native row patch', () => {
       `export const View = () => <ul>{rows.get().map(row => row.ok ? <li key={row.id}>{row.label}</li> : null)}</ul>`,
       `export const View = () => <ul>{rows.get().map(row => <li key={row.id} data-id={format(row.id)}>{row.label}</li>)}</ul>`,
     ]) {
-      expect(compile(source)).not.toContain('_$rowPatch')
+      const output = compile(source)
+      expect(output).not.toContain('_$rowPatch')
+      expect(output).not.toContain('_$reconcileKeyedSingle')
     }
   })
 })

@@ -1,4 +1,9 @@
-import { insertBefore, removeChild, withDOMHostOperations } from './compiler-runtime/dom.browser'
+import {
+  createDocumentFragment,
+  insertBefore,
+  removeChild,
+  withDOMHostOperations,
+} from './compiler-runtime/dom.browser'
 import { computed, createOwner, disposeOwner, signal, untrack } from './internal-reactive'
 import { _$mountCompiledSlotFactory, type CompiledSlotFactory } from './compiler-runtime/mount'
 import { _$compiledRoot, type CompiledRootSetupResult } from './compiled-root'
@@ -21,7 +26,11 @@ export interface CompiledKeyedMountResult<T> {
   dispose: () => void
 }
 
-export type CompiledKeyedMount<T> = (item: T, index: number) => CompiledKeyedMountResult<T>
+export type CompiledKeyedMount<T> = (
+  item: T,
+  index: number,
+  target?: { parent: ParentNode; before: Node | null },
+) => CompiledKeyedMountResult<T>
 
 type CompiledKeyedParent = Node & ParentNode
 
@@ -69,9 +78,10 @@ export const _$mountCompiledKeyedRow = <T>(
   factory: CompiledSlotFactory,
   patch: (item: T, index: number) => void,
   memo?: CompiledListMemo,
+  target?: { parent: ParentNode; before: Node | null },
 ): CompiledKeyedMountResult<T> => {
   const owner = createOwner()
-  const staging = document.createDocumentFragment()
+  const staging = createDocumentFragment(target?.parent as Node | undefined)
   try {
     const block = factory({ parent: staging, before: null }, {}, owner)
     return {
@@ -98,6 +108,7 @@ export const _$mountCompiledKeyedRow = <T>(
 export const _$mountCompiledKeyedRowSetup = <T>(
   setup: (parent: ParentNode | null) => CompiledRootSetupResult,
   patch: (item: T, index: number) => void,
+  target?: { parent: ParentNode; before: Node | null },
 ): CompiledKeyedMountResult<T> =>
   _$mountCompiledKeyedRow(
     (target, _props, owner) =>
@@ -105,6 +116,8 @@ export const _$mountCompiledKeyedRowSetup = <T>(
         _$compiledRoot(Object.assign(setup, { __rue_compiled_explicit_roots: true as const })),
       ),
     patch,
+    undefined,
+    target,
   )
 
 const rowLast = <T, K>(row: Pick<CompiledKeyedRow<T, K>, 'node' | 'last'>) => row.last ?? row.node
@@ -330,7 +343,7 @@ export const _$reconcileKeyed = <T, K>(
       const next: CompiledKeyedRow<T, K>[] = []
       next.length = items.length
       const mountRow = (index: number, cursor: Node | null) => {
-        const mounted = mount(items[index], index)
+        const mounted = mount(items[index], index, { parent, before: cursor })
         if (
           mounted == null ||
           mounted.node == null ||

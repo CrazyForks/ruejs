@@ -370,7 +370,7 @@ export function Example() {
     expect(insertBefore).toHaveBeenCalledTimes(writesBeforeDispose)
   })
 
-  it('compiles and updates a props conditional index-key list as one compiled region', () => {
+  it('compiles and updates a props conditional index-key list as one compiled region', async () => {
     const source = `
       import { reactive } from '@rue-js/rue'
 
@@ -399,7 +399,7 @@ export function Example() {
     `
     const esm = compileSource(source, 'es6', 'compiled-props-video-list.tsx')
     expect(esm).toContain('_$compiledBranchAt(')
-    expect(esm).toContain('_$reconcileKeyed(')
+    expect(esm).toContain('_$reconcileKeyedSingle(')
     expect(esm).not.toContain('watchEffect')
     expect(esm).not.toContain('_$compiledKeyedList')
     expect(esm).not.toMatch(/\bvapor\(/)
@@ -422,6 +422,7 @@ export function Example() {
       { title: 'one', desc: 'first' },
       { title: 'two', desc: 'second' },
     ]
+    await Promise.resolve()
     expect(root.textContent).toBe('2 videosonefirsttwosecond')
     const initialRows = Array.from(root.querySelectorAll('li'))
 
@@ -429,12 +430,14 @@ export function Example() {
       { title: 'TWO', desc: 'SECOND' },
       { title: 'ONE', desc: 'FIRST' },
     ]
+    await Promise.resolve()
     const patchedRows = Array.from(root.querySelectorAll('li'))
     expect(patchedRows[0]).toBe(initialRows[0])
     expect(patchedRows[1]).toBe(initialRows[1])
     expect(root.textContent).toBe('2 videosTWOSECONDONEFIRST')
 
     compiled.state.videos = []
+    await Promise.resolve()
     expect(root.textContent).toBe('0 videosnone')
     expect(initialRows.every(row => !row.isConnected)).toBe(true)
     compiledRuntime.disposeOwner(owner)

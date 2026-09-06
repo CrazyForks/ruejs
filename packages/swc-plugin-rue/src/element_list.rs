@@ -1434,6 +1434,8 @@ fn try_build_list_from_map_with_anchor(
             // A compiled row factory owns a closed DOM range. The keyed reconciler only
             // reuses, patches, moves, and disposes that explicit block.
             let mut render_item_stmts: Vec<Stmt> = Vec::new();
+            let compiled_row_uses_index;
+            let compiled_single_root;
             let compiled_row_factory = render_item_direct_expr.as_ref().and_then(|inner| {
                 let inner = utils::unwrap_expr(inner);
                 let needs_block_range =
@@ -1612,6 +1614,8 @@ fn try_build_list_from_map_with_anchor(
                 row_template,
             )) = compiled_row_factory
             {
+                compiled_row_uses_index = row_uses_index;
+                compiled_single_root = simple_native_row_patch && direct_patch;
                 row_template_decl = row_template.map(crate::element_list_patch::row_template_decl);
                 let next_item = fresh_ident_avoiding("_$rowNextItem", &render_prefix_local_names);
                 let mut patch_names = render_prefix_local_names.clone();
@@ -1746,7 +1750,16 @@ fn try_build_list_from_map_with_anchor(
                 if let Some(target) = &row_mount_target {
                     mount_args.push(Expr::Ident(target.clone()));
                 }
-                let mount_helper = if simple_row_setup.is_some() && ownerless_simple_native_row {
+                let mount_helper = if compiled_single_root
+                    && simple_row_setup.is_some()
+                    && ownerless_simple_native_row
+                {
+                    "_$mountCompiledKeyedSingleRowOwnerless"
+                } else if compiled_single_root && simple_row_setup.is_some() {
+                    "_$mountCompiledKeyedSingleRowSetup"
+                } else if compiled_single_root {
+                    "_$mountCompiledKeyedSingleRow"
+                } else if simple_row_setup.is_some() && ownerless_simple_native_row {
                     "_$mountCompiledKeyedRowOwnerless"
                 } else if simple_row_setup.is_some() {
                     "_$mountCompiledKeyedRowSetup"
@@ -1857,7 +1870,7 @@ fn try_build_list_from_map_with_anchor(
                 Expr::Ident(el_ident.clone())
             };
             let reconcile = call_ident(
-                "_$reconcileKeyed",
+                if compiled_single_root { "_$reconcileKeyedSingle" } else { "_$reconcileKeyed" },
                 vec![
                     parent_expr,
                     Expr::Ident(end.clone()),
@@ -1865,6 +1878,7 @@ fn try_build_list_from_map_with_anchor(
                     Expr::Ident(map_current.clone()),
                     get_key_arrow,
                     render_item_arrow,
+                    Expr::Lit(Lit::Bool(Bool { span: DUMMY_SP, value: compiled_row_uses_index })),
                 ],
             );
             body_stmts.push(Stmt::Expr(ExprStmt {
@@ -1927,7 +1941,7 @@ fn try_build_list_from_map_with_anchor(
             return_type: None,
             ctxt: SyntaxContext::empty(),
         });
-        let watch_call = call_ident("effect", vec![arrow]);
+        let watch_call = call_ident("_$compiledRenderEffect", vec![arrow]);
         stmts.push(Stmt::Expr(ExprStmt { span: DUMMY_SP, expr: Box::new(watch_call) }));
         stmts.push(Stmt::Expr(ExprStmt {
             span: DUMMY_SP,

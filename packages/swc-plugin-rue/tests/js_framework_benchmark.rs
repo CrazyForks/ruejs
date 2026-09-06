@@ -138,32 +138,38 @@ fn benchmark_row_codegen_stays_within_effect_budget() {
     let output = transform_benchmark_row();
 
     assert!(
-        output.contains("_$reconcileKeyed"),
-        "benchmark row must use the compiled keyed core: {output}"
+        output.contains("_$reconcileKeyedSingle") && !output.contains("_$reconcileKeyed,"),
+        "benchmark row must use only the compact single-root keyed core: {output}"
+    );
+    assert!(
+        output.contains("_$compiledRenderEffect"),
+        "benchmark list scheduling must use the compiled render effect: {output}"
     );
     assert!(
         !output.contains("_$compiledKeyedList"),
         "benchmark row must not retain the generic list helper: {output}"
     );
     assert!(
-        output.contains("_$mountCompiledKeyedRow")
-            && output.contains("_$mountCompiledSlotFactory")
-            && output.contains("__rue_compiled_host:"),
-        "benchmark mount must use the compiled keyed-row/root protocol: {output}"
+        output.contains("_$mountCompiledKeyedSingleRow") && output.contains("__rue_compiled_host:"),
+        "benchmark mount must use the compact single-node keyed-row/root protocol: {output}"
     );
     assert!(
-        output.contains(".addEventListener(")
-            && output.matches(".addEventListener(").count()
-                == output.matches(".removeEventListener(").count(),
-        "benchmark events must be direct and owner-cleaned: {output}"
+        !output.contains("_$mountCompiledKeyedRow(")
+            && !output.contains("_$mountCompiledSlotFactory("),
+        "benchmark row must not retain the generic range mount protocol: {output}"
+    );
+    assert_eq!(
+        output.matches("_$compiledDelegateEvent(").count(),
+        2,
+        "both benchmark click handlers must use compact delegation: {output}"
     );
     assert!(
-        output.contains("onOwnerCleanup("),
-        "benchmark event resources must be disposed with the row owner: {output}"
+        !output.contains(".addEventListener(") && !output.contains(".removeEventListener("),
+        "benchmark rows must not allocate native listeners per event node: {output}"
     );
     assert!(
-        output.contains("_$compiledText("),
-        "benchmark row-local text must use the compiled text binding: {output}"
+        output.contains("_$rowPatchImpl") && !output.contains("_$compiledText("),
+        "benchmark row-local text must lower into the direct row patch: {output}"
     );
     assert!(
         !output.contains("_$createTextWrapper("),
@@ -188,14 +194,17 @@ fn signal_benchmark_row_uses_the_same_direct_root_budget() {
     let output = transform_signal_benchmark_row();
 
     assert!(
-        output.contains("_$reconcileKeyed"),
-        "signal.get() bindings must use the compiled keyed core: {output}"
+        output.contains("_$reconcileKeyedSingle") && !output.contains("_$reconcileKeyed,"),
+        "signal.get() bindings must use the compact single-root keyed core: {output}"
     );
     assert!(
-        output.contains("_$mountCompiledKeyedRow")
-            && output.contains("_$mountCompiledSlotFactory")
-            && output.contains("__rue_compiled_host:"),
-        "signal.get() mount must use the compiled keyed-row/root protocol: {output}"
+        output.contains("_$mountCompiledKeyedSingleRow") && output.contains("__rue_compiled_host:"),
+        "signal.get() mount must use the compact single-node keyed-row/root protocol: {output}"
+    );
+    assert!(
+        !output.contains("_$mountCompiledKeyedRow(")
+            && !output.contains("_$mountCompiledSlotFactory("),
+        "signal.get() row must not retain the generic range mount protocol: {output}"
     );
     assert!(
         output.contains("selected.get()"),
@@ -248,7 +257,7 @@ fn signal_benchmark_stays_on_native_signal_apis() {
         .lines()
         .find(|line| line.contains("@rue-js/rue/internal"))
         .expect("compiled runtime import");
-    for helper in ["signal", "effect", "_$reconcileKeyed", "createSelector"] {
+    for helper in ["signal", "_$compiledRenderEffect", "_$reconcileKeyedSingle", "createSelector"] {
         assert!(
             compiled_import.contains(helper),
             "generated `{helper}` must share the explicit compiled signal graph: {output}"

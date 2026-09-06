@@ -523,6 +523,7 @@ pub fn ensure_runtime_imports(m: &mut Module) {
         "_$appendChild",
         "_$insertBefore",
         "effect",
+        "_$compiledDelegateEvent",
         "_$reconcileKeyed",
         "_$compiledBranch",
         "_$compiledBranchAt",

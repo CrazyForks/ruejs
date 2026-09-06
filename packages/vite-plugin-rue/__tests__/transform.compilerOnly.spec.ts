@@ -79,7 +79,7 @@ describe('vite-plugin-rue compiler-only JSX contract', () => {
     )
 
     expect(code).toContain('_$compiledRoot(')
-    expect(code).toContain('_$reconcileKeyed(')
+    expect(code).toContain('_$reconcileKeyedSingle(')
     expectClosedCompiledAbi(code)
     expect(code).toMatch(/from\s*["']@rue-js\/rue\/internal\/compiler["']/)
     expect(code).not.toMatch(/from\s*["']@rue-js\/rue\/internal["']/)

@@ -40,9 +40,10 @@
 可以使用 `onError()` 向跟踪服务报告错误：
 
 ```tsx
-import { onError, useApp, useError } from '@rue-js/rue'
+import { onError, useApp, installBrowserErrorBridge } from '@rue-js/rue'
 
-useError({ console: true })
+// 将浏览器全局错误也交给下方的 onError 订阅处理
+installBrowserErrorBridge()
 
 onError((err, instance) => {
   // 向跟踪服务报告错误

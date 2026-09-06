@@ -62,16 +62,30 @@ app.mount('#app')
 
 ## 应用配置 {#app-configurations}
 
-应用实例暴露了一个 `.config` 对象，允许我们配置一些应用级选项。例如，定义一个应用级错误处理器来捕获所有后代组件的错误：
+通过 `onError` 订阅 Rue 运行时错误。浏览器错误桥接、控制台报告和开发遮罩可分别安装，它们共享 Rue 错误链，不局限于单个应用实例：
 
 ```tsx
-import { useError } from '@rue-js/rue'
+import {
+  installBrowserErrorBridge,
+  installErrorConsole,
+  installDevErrorOverlay,
+} from '@rue-js/rue'
 
-useError({
-  overlay: true, // 显示错误遮罩层
-  console: true, // 在控制台输出错误
-})
+const stopBridge = installBrowserErrorBridge()
+const stopConsole = installErrorConsole()
+const stopOverlay = import.meta.env.DEV && !import.meta.env.SSR
+  ? installDevErrorOverlay()
+  : undefined
+
+// 在宿主页面销毁或热更新卸载时调用
+function disposeErrorHandling() {
+  stopOverlay?.()
+  stopConsole()
+  stopBridge()
+}
 ```
+
+每个安装函数都返回幂等清理函数；浏览器桥接重复安装时共享监听器，最后一个引用释放后才移除监听器。遮罩清理时也会移除现有遮罩。错误上报订阅使用 `onError`。
 
 应用实例还提供了一些用于注册应用范围资源的方法。例如，注册一个插件：
 
@@ -108,12 +122,22 @@ app2.mount('#container-2')
 
 ```tsx
 // main.tsx
-import { type FC, useApp, useError } from '@rue-js/rue'
+import {
+  type FC,
+  useApp,
+  installBrowserErrorBridge,
+  installErrorConsole,
+  installDevErrorOverlay,
+} from '@rue-js/rue'
 import { RouterView } from '@rue-js/router'
 import router from './router'
 
-// 启用错误处理
-useError({ overlay: true, console: true })
+// 接入浏览器错误并启用控制台报告，仅在开发环境显示遮罩
+installBrowserErrorBridge()
+installErrorConsole()
+if (import.meta.env.DEV && !import.meta.env.SSR) {
+  installDevErrorOverlay()
+}
 
 // 根组件
 const App: FC = () => {

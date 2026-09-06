@@ -45,10 +45,15 @@ export * from './compiled-keyed-list'
 export {
   _$disposeCompiledKeyedRows,
   _$mountCompiledKeyedRowOwnerless,
+  _$mountCompiledKeyedSingleRow,
+  _$mountCompiledKeyedSingleRowOwnerless,
+  _$mountCompiledKeyedSingleRowSetup,
+  _$reconcileKeyedSingle,
 } from './compiler-runtime/compact-keyed-list'
 export * from './compiler-runtime/types'
 export * from './compiler-runtime/mount'
 export * from './compiler-runtime/hooks'
+export * from './compiler-runtime/compact-events'
 export {
   appendChild as _$compiledAppendChild,
   createComment as _$compiledCreateComment,

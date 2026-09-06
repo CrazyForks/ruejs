@@ -77,6 +77,8 @@ fn compiles_keyed_native_rows_to_closed_factories() {
             .expect("compiled list");
 
     assert!(out.contains("_$reconcileKeyed("), "{out}");
+    assert!(out.contains("_$compiledRenderEffect("), "{out}");
+    assert!(!out.contains("effect("), "{out}");
     assert!(out.contains("(item,index)=>item.id"), "{out}");
     assert!(out.contains("_$mountCompiledKeyedRow("), "{out}");
     assert!(out.contains("_$rowItem1.set(_$rowNextItem)"), "{out}");
@@ -105,16 +107,43 @@ fn emits_ownerless_mount_only_for_resource_free_simple_native_rows() {
         "items.map(item => <li key={item.id} className={item.className}>{item.name}</li>)",
     )
     .expect("compiled list");
-    assert!(resource_free.contains("_$mountCompiledKeyedRowOwnerless("), "{resource_free}");
+    assert!(resource_free.contains("_$mountCompiledKeyedSingleRowOwnerless("), "{resource_free}");
+    assert!(resource_free.contains("_$reconcileKeyedSingle("), "{resource_free}");
+    assert!(!resource_free.contains("_$reconcileKeyed("), "{resource_free}");
     assert!(!resource_free.contains("_$mountCompiledSlotFactory("), "{resource_free}");
 
     for source in [
-        "items.map(item => <li key={item.id} onClick={() => select(item)}>{item.name}</li>)",
         "items.map(item => <li key={item.id} v-memo={[item.name]}>{item.name}</li>)",
         "items.map(item => <Row key={item.id}>{item.name}</Row>)",
     ] {
         let out = compile_list(source).expect("compiled list");
-        assert!(!out.contains("_$mountCompiledKeyedRowOwnerless("), "{source}: {out}");
+        assert!(!out.contains("_$mountCompiledKeyedSingleRowOwnerless("), "{source}: {out}");
+    }
+}
+
+#[test]
+fn emits_ownerless_mount_for_delegated_events_and_direct_selector_subscriptions() {
+    let delegated = compile_list(
+        "items.map(item => <li key={item.id} onClick={() => select(item)}>{item.name}</li>)",
+    )
+    .expect("compiled list");
+    assert!(delegated.contains("_$mountCompiledKeyedSingleRowOwnerless("), "{delegated}");
+    assert!(delegated.contains("_$compiledDelegateEvent("), "{delegated}");
+
+    let selector = compile_list(
+        "items.map(item => <li key={item.id} className={item.id === selected.get() ? 'selected' : ''}>{item.name}</li>)",
+    )
+    .expect("compiled list");
+    assert!(selector.contains("_$mountCompiledKeyedSingleRowOwnerless("), "{selector}");
+    assert!(selector.contains("_selector.subscribe("), "{selector}");
+    assert!(!selector.contains("effect("), "{selector}");
+
+    for source in [
+        "items.map(item => <li key={item.id} onClick={event => select(event, item)}>{item.name}</li>)",
+        "items.map(item => <li key={item.id} onClickCapture={() => select(item)}>{item.name}</li>)",
+    ] {
+        let out = compile_list(source).expect("compiled list");
+        assert!(!out.contains("_$mountCompiledKeyedSingleRowOwnerless("), "{source}: {out}");
     }
 }
 
@@ -145,6 +174,25 @@ fn keeps_index_signal_for_direct_and_event_closure_reads() {
         assert!(out.contains("_$rowIndex1=_$compiledSignal(index)"), "{source}: {out}");
         assert!(out.contains("_$rowIndex1.set(_$rowNextIndex)"), "{source}: {out}");
     }
+}
+
+#[test]
+fn emits_the_existing_index_proof_into_the_reconcile_abi() {
+    let without_index = compile_list(
+        "items.map((item, index) => <li key={item.id} onClick={() => select(item)}>{item.name}</li>)",
+    )
+    .expect("compiled list");
+    let text_index =
+        compile_list("items.map((item, index) => <li key={item.id}>{index}:{item.name}</li>)")
+            .expect("compiled list");
+    let event_index = compile_list(
+        "items.map((item, index) => <li key={item.id} onClick={() => select(index)}>{item.name}</li>)",
+    )
+    .expect("compiled list");
+
+    assert!(without_index.contains("},false)"), "{without_index}");
+    assert!(text_index.contains("},true)"), "{text_index}");
+    assert!(event_index.contains("},true)"), "{event_index}");
 }
 
 #[test]
@@ -197,7 +245,7 @@ fn compiles_index_keyed_rows_at_a_precomputed_anchor() {
         &mut stmts,
     ));
     let out = compact(&emit_stmts(stmts));
-    assert!(out.contains("_$reconcileKeyed(parent,hole"), "{out}");
+    assert!(out.contains("_$reconcileKeyedSingle(parent,hole"), "{out}");
     assert!(out.contains("(row,idx)=>idx"), "{out}");
     assert!(!out.contains("rue:list:end"), "{out}");
     assert!(!out.contains("_$compiledKeyedList"), "{out}");
@@ -235,10 +283,10 @@ fn rejects_non_map_calls_without_output() {
 #[test]
 fn resource_row_setup_requires_proven_native_row_without_memo_or_ref() {
     let out = compile_list(
-        "items.map(item => <li key={item.id} onClick={() => select(item)}>{item.name}</li>)",
+        "items.map(item => <li key={item.id} onClick={event => select(event, item)}>{item.name}</li>)",
     )
     .expect("compiled list");
-    assert!(out.contains("_$mountCompiledKeyedRowSetup("), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedSingleRowSetup("), "{out}");
     assert!(!out.contains("_$mountCompiledSlotFactory("), "{out}");
     for source in [
         "items.map(item => <li key={item.id} v-memo={[item.name]} onClick={() => select(item)}>{item.name}</li>)",
@@ -247,7 +295,7 @@ fn resource_row_setup_requires_proven_native_row_without_memo_or_ref() {
         "items.map(item => <li key={item.id} {...item}>{item.name}</li>)",
     ] {
         let out = compile_list(source).expect("compiled list");
-        assert!(!out.contains("_$mountCompiledKeyedRowSetup("), "{source}: {out}");
+        assert!(!out.contains("_$mountCompiledKeyedSingleRowSetup("), "{source}: {out}");
     }
 }
 

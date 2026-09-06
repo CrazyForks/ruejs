@@ -1,9 +1,8 @@
 /*
-错误处理 Hook 概述
-- 能力目标：统一错误捕获与呈现（控制台 + 页面覆盖层），并提供主动触发接口。
+错误安装 API 概述
+- 能力目标：统一错误捕获与呈现（控制台 + 页面覆盖层）。
 - console：将错误堆栈以美化样式输出到控制台，突出显示标题与堆栈信息。
 - overlay：在页面上显示可关闭的错误覆盖层（遮罩 + 对话框），开发阶段便于快速定位。
-- emit：主动调用 Rue 框架的 handleError，支持传入实例上下文以便精确定位。
 */
 import rue, { onError } from '../rue'
 import { setInnerHTML } from '../dom'
@@ -23,7 +22,16 @@ type BrowserResourceTarget = EventTarget & {
   rel?: string
 }
 
-let bridgedWindow: Window | null = null
+const browserBridges = new WeakMap<Window, { references: number; remove: () => void }>()
+
+const once = (dispose: () => void): (() => void) => {
+  let disposed = false
+  return () => {
+    if (disposed) return
+    disposed = true
+    dispose()
+  }
+}
 const bridgedBrowserErrors = new WeakSet<object>()
 
 const escapeHtml = (value: string) =>
@@ -151,13 +159,16 @@ const reportBrowserError = (error: unknown) => {
   ;(rue as any).handleError(error, null)
 }
 
-const installBrowserBridge = () => {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  if (bridgedWindow === window) {
-    return
+/** 将浏览器错误接入 Rue；最后一个安装引用释放时移除监听器。 */
+export function installBrowserErrorBridge(): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const target = window
+  const existing = browserBridges.get(target)
+  if (existing) {
+    existing.references++
+    return once(() => {
+      if (--existing.references === 0) existing.remove()
+    })
   }
 
   const handleWindowError = (event: Event) => {
@@ -174,24 +185,25 @@ const installBrowserBridge = () => {
     }
   }
 
-  window.addEventListener('error', handleWindowError, true)
-  window.addEventListener('unhandledrejection', handleUnhandledRejection)
-  bridgedWindow = window
+  target.addEventListener('error', handleWindowError, true)
+  target.addEventListener('unhandledrejection', handleUnhandledRejection)
+  const state = {
+    references: 1,
+    remove: () => {
+      target.removeEventListener('error', handleWindowError, true)
+      target.removeEventListener('unhandledrejection', handleUnhandledRejection)
+      browserBridges.delete(target)
+    },
+  }
+  browserBridges.set(target, state)
+  return once(() => {
+    if (--state.references === 0) state.remove()
+  })
 }
 
-/** 安装错误处理能力
- * @param opts overlay/console 开关
- * @returns 组合 API：on/emit/installConsole/installOverlay
- */
-export function useError(opts?: {
-  /** 是否立即安装页面错误覆盖层。 */
-  overlay?: boolean
-  /** 是否立即安装控制台错误输出。 */
-  console?: boolean
-}) {
-  /** 安装控制台输出处理 */
-  const installConsole = () => {
-    installBrowserBridge()
+/** 订阅 Rue 错误并输出到控制台；返回幂等清理函数。 */
+export function installErrorConsole(): () => void {
+  return once(
     onError((error: any) => {
       try {
         // 尝试读取错误堆栈；若不存在则为 ''
@@ -210,62 +222,56 @@ export function useError(opts?: {
           'color:red;padding:3px 5px',
         )
       } catch {}
-    })
-  }
+    }),
+  )
+}
 
-  /** 安装页面覆盖层处理 */
-  const installOverlay = () => {
-    installBrowserBridge()
-    onError((error: any) => {
-      const details = normalizeErrorDetails(error)
-      let root = document.getElementById(RUE_ERROR_OVERLAY_ID)
-      if (!root) {
-        // 懒创建覆盖层根节点，挂载到 body
-        root = document.createElement('div')
-        root.id = RUE_ERROR_OVERLAY_ID
-        document.body.appendChild(root)
+/** 在浏览器中订阅 Rue 错误并显示开发遮罩；清理时移除订阅和遮罩。 */
+export function installDevErrorOverlay(): () => void {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return () => {}
+  const targetDocument = document
+  const stop = onError((error: any) => {
+    const details = normalizeErrorDetails(error)
+    let root = targetDocument.getElementById(RUE_ERROR_OVERLAY_ID)
+    if (!root) {
+      // 懒创建覆盖层根节点，挂载到 body
+      root = targetDocument.createElement('div')
+      root.id = RUE_ERROR_OVERLAY_ID
+      targetDocument.body.appendChild(root)
+    }
+    const escapedMessage = escapeHtml(details.message)
+    const escapedStack = details.stack ? escapeHtml(details.stack) : ''
+    const overlayMarkup = [
+      '<div id="rue-error-backdrop" class="fixed inset-0 z-50 bg-black/50 flex items-center justifycenter p-4">',
+      '<div id="rue-error-dialog" class="w-full max-w-2xl rounded-md overflow-hidden bg-gray-900 text-gray-100 max-h-[80vh] flex flex-col">',
+      '<div id="rue-error-header" class="flex items-center justify-between px-3 py-2 border-b border-gray-700 text-white" style="background:linear-gradient(to right, oklch(0.541 0.281 293.009) 0%, oklch(0.667 0.295 322.15) 50%, oklch(0.656 0.241 354.308) 100%)">',
+      '<span class="text-sm font-bold">Rue Error</span>',
+      '<button id="rue-error-close" aria-label="close" class="text-xs font-medium cursor-pointer hover:opacity-80">close</button>',
+      '</div>',
+      '<div class="p-4 text-sm leading-relaxed overflow-auto">',
+      '<div class="font-semibold text-error break-words">' + escapedMessage + '</div>',
+      ...(escapedStack
+        ? [
+            '<pre class="mt-3 overflow-auto whitespace-pre-wrap break-words rounded bg-black/30 p-3 text-xs text-gray-300">' +
+              escapedStack +
+              '</pre>',
+          ]
+        : []),
+      '</div>',
+      '</div>',
+    ].join('')
+    // 写入覆盖层结构（遮罩 + 对话框），内容含错误文案与关闭按钮
+    setInnerHTML(root as any, overlayMarkup)
+    // 绑定关闭行为：点击后移除覆盖层
+    const close = root.querySelector('#rue-error-close') as HTMLButtonElement | null
+    if (close)
+      close.onclick = e => {
+        e.preventDefault()
+        if (root) root.remove()
       }
-      const escapedMessage = escapeHtml(details.message)
-      const escapedStack = details.stack ? escapeHtml(details.stack) : ''
-      const overlayMarkup = [
-        '<div id="rue-error-backdrop" class="fixed inset-0 z-50 bg-black/50 flex items-center justifycenter p-4">',
-        '<div id="rue-error-dialog" class="w-full max-w-2xl rounded-md overflow-hidden bg-gray-900 text-gray-100 max-h-[80vh] flex flex-col">',
-        '<div id="rue-error-header" class="flex items-center justify-between px-3 py-2 border-b border-gray-700 text-white" style="background:linear-gradient(to right, oklch(0.541 0.281 293.009) 0%, oklch(0.667 0.295 322.15) 50%, oklch(0.656 0.241 354.308) 100%)">',
-        '<span class="text-sm font-bold">Rue Error</span>',
-        '<button id="rue-error-close" aria-label="close" class="text-xs font-medium cursor-pointer hover:opacity-80">close</button>',
-        '</div>',
-        '<div class="p-4 text-sm leading-relaxed overflow-auto">',
-        '<div class="font-semibold text-error break-words">' + escapedMessage + '</div>',
-        ...(escapedStack
-          ? [
-              '<pre class="mt-3 overflow-auto whitespace-pre-wrap break-words rounded bg-black/30 p-3 text-xs text-gray-300">' +
-                escapedStack +
-                '</pre>',
-            ]
-          : []),
-        '</div>',
-        '</div>',
-      ].join('')
-      // 写入覆盖层结构（遮罩 + 对话框），内容含错误文案与关闭按钮
-      setInnerHTML(root as any, overlayMarkup)
-      // 绑定关闭行为：点击后移除覆盖层
-      const close = root.querySelector('#rue-error-close') as HTMLButtonElement | null
-      if (close)
-        close.onclick = e => {
-          e.preventDefault()
-          if (root) root.remove()
-        }
-    })
-  }
-
-  /** 主动触发错误处理 */
-  const emit = (error: any, instance?: any) => {
-    // 委托给 Rue 的统一错误处理逻辑；instance 可用于关联组件上下文
-    ;(rue as any).handleError(error, instance ?? null)
-  }
-
-  if (opts?.console) installConsole()
-  if (opts?.overlay) installOverlay()
-
-  return { on: onError, emit, installConsole, installOverlay }
+  })
+  return once(() => {
+    stop()
+    targetDocument.getElementById(RUE_ERROR_OVERLAY_ID)?.remove()
+  })
 }

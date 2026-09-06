@@ -133,7 +133,7 @@ describe('compiled/Vapor fallback boundary', () => {
     expect(esm).toContain('effect')
     expect(esm).toContain('_$reconcileKeyed')
     expect(esm).toContain('_$createComponent')
-    expect(esm).toContain('_$compiledText')
+    expect(esm).toContain('_$mountCompiledKeyedSingleRowOwnerless')
     expect(esm).toContain('from "@rue-js/rue/internal/component"')
     expect(esm).not.toContain('from "@rue-js/rue/internal/compiler"')
 

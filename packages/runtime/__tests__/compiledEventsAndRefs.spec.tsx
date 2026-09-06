@@ -15,6 +15,7 @@ import {
   _$compiledCreateTextNode,
 } from '../src/internal'
 import { template as _$template } from '../src/compiler-runtime/dom.browser'
+import { _$compiledDelegateEvent } from '../src/compiler-runtime/compact-events'
 
 type Row = {
   id: number
@@ -35,6 +36,9 @@ export const View = (functionRef, objectRef) => (
   <section>
     <button ref={functionRef} onClick={event => currentItem.onClick(currentItem, event)} onFocusCapture={currentItem.onFocus}>
       Save
+    </button>
+    <button className="delegated" onClick={() => currentItem.onClick(currentItem, new Event('delegated'))}>
+      Delegated
     </button>
     <input ref={objectRef} />
   </section>
@@ -75,6 +79,7 @@ const evaluate = (output: string) => {
     '_$compiledCreateTextNode',
     '_$compiledCreateComment',
     '_$compiledAppendChild',
+    '_$compiledDelegateEvent',
     '_$template',
     'onOwnerCleanup',
     executable,
@@ -84,6 +89,7 @@ const evaluate = (output: string) => {
     compiledCreateTextNode: typeof _$compiledCreateTextNode,
     compiledCreateComment: typeof _$compiledCreateComment,
     compiledAppendChild: typeof _$compiledAppendChild,
+    compiledDelegateEvent: typeof _$compiledDelegateEvent,
     template: typeof _$template,
     cleanup: typeof onOwnerCleanup,
   ) => {
@@ -99,6 +105,7 @@ const evaluate = (output: string) => {
     _$compiledCreateTextNode,
     _$compiledCreateComment,
     _$compiledAppendChild,
+    _$compiledDelegateEvent,
     _$template,
     onOwnerCleanup,
   )
@@ -155,6 +162,7 @@ describe('compiled native events and refs', () => {
   it('executes real compiler output with latest handlers and root-owned ref cleanup', () => {
     const output = compile()
     expect(output).toContain('from "@rue-js/rue/internal/compiler"')
+    expect(output).toContain('_$compiledDelegateEvent')
     expect(output).toContain('.addEventListener(')
     expect(output).toContain('.removeEventListener(')
     expect(output).toContain('onOwnerCleanup')
@@ -165,16 +173,23 @@ describe('compiled native events and refs', () => {
     const add = vi.spyOn(EventTarget.prototype, 'addEventListener')
     const remove = vi.spyOn(EventTarget.prototype, 'removeEventListener')
     const calls: string[] = []
+    const currentTargets: EventTarget[] = []
     const functionRefCalls: Array<HTMLButtonElement | null> = []
     const objectRef: ObjectRef<HTMLInputElement> = { current: null }
     const first: Row = {
       id: 1,
-      onClick: row => calls.push(`first:${row.id}`),
+      onClick: (row, event) => {
+        calls.push(`first:${row.id}`)
+        if (event.currentTarget) currentTargets.push(event.currentTarget)
+      },
       onFocus: () => calls.push('focus:first'),
     }
     const second: Row = {
       id: 1,
-      onClick: row => calls.push(`second:${row.id}`),
+      onClick: (row, event) => {
+        calls.push(`second:${row.id}`)
+        if (event.currentTarget) currentTargets.push(event.currentTarget)
+      },
       onFocus: () => calls.push('focus:second'),
     }
     const { View, setItem } = evaluate(output)
@@ -187,7 +202,8 @@ describe('compiled native events and refs', () => {
     host.appendChild(mounted)
     const button = mounted.querySelector('button')
     const input = mounted.querySelector('input')
-    if (!button || !input) throw new Error('Expected compiled event/ref targets')
+    const delegated = mounted.querySelector<HTMLButtonElement>('button.delegated')
+    if (!button || !delegated || !input) throw new Error('Expected compiled event/ref targets')
 
     const matchingCalls = (spy: typeof add, type: string) =>
       spy.mock.calls.filter(
@@ -202,11 +218,13 @@ describe('compiled native events and refs', () => {
     expect(objectRef.current).toBe(input)
 
     button.dispatchEvent(new Event('click'))
+    delegated.dispatchEvent(new Event('click', { bubbles: true }))
     setItem(second)
     button.dispatchEvent(new Event('click'))
     button.dispatchEvent(new Event('focus'))
 
-    expect(calls).toEqual(['first:1', 'second:1', 'focus:second'])
+    expect(calls).toEqual(['first:1', 'first:1', 'second:1', 'focus:second'])
+    expect(currentTargets).toEqual([button, button])
     expect(matchingCalls(add, 'click')).toHaveLength(1)
     expect(matchingCalls(add, 'focus')).toHaveLength(1)
 
@@ -214,7 +232,7 @@ describe('compiled native events and refs', () => {
     handle.dispose()
     button.dispatchEvent(new Event('click'))
 
-    expect(calls).toEqual(['first:1', 'second:1', 'focus:second'])
+    expect(calls).toEqual(['first:1', 'first:1', 'second:1', 'focus:second'])
     expect(matchingCalls(remove, 'click')).toHaveLength(1)
     expect(matchingCalls(remove, 'focus')).toEqual([
       ['focus', expect.any(Function), { capture: true }],
@@ -248,5 +266,64 @@ describe('compiled native events and refs', () => {
     expect(row.remove).toHaveBeenCalledTimes(1)
     expect(functionRefCalls).toEqual([row.node, null])
     expect(objectRef.current).toBeNull()
+  })
+
+  it('shares one listener per root and event type while preserving propagation and weak slots', () => {
+    const add = vi.spyOn(EventTarget.prototype, 'addEventListener')
+    const remove = vi.spyOn(EventTarget.prototype, 'removeEventListener')
+    const firstRoot = document.createElement('div')
+    const secondRoot = document.createElement('div')
+    const outer = document.createElement('div')
+    const inner = document.createElement('button')
+    const other = document.createElement('button')
+    outer.appendChild(inner)
+    firstRoot.appendChild(outer)
+    secondRoot.appendChild(other)
+    document.body.append(firstRoot, secondRoot)
+
+    const calls: string[] = []
+    let current = 'first'
+    let activeEvent: Event
+    _$compiledDelegateEvent(firstRoot, outer, 'click', () => () => calls.push('outer'))
+    _$compiledDelegateEvent(firstRoot, inner, 'click', () => () => {
+      calls.push(current)
+      activeEvent.stopPropagation()
+    })
+    _$compiledDelegateEvent(secondRoot, other, 'click', () => () => calls.push('other'))
+
+    expect(add.mock.calls.filter(call => call[0] === 'click')).toHaveLength(2)
+    activeEvent = new Event('click', { bubbles: true, composed: true })
+    inner.dispatchEvent(activeEvent)
+    expect(calls).toEqual(['first'])
+
+    current = 'second'
+    activeEvent = new Event('click', { bubbles: true, composed: true })
+    inner.dispatchEvent(activeEvent)
+    other.dispatchEvent(new Event('click', { bubbles: true, composed: true }))
+    expect(calls).toEqual(['first', 'second', 'other'])
+
+    inner.remove()
+    inner.dispatchEvent(new Event('click', { bubbles: true, composed: true }))
+    expect(calls).toEqual(['first', 'second', 'other'])
+    expect(remove.mock.calls.filter(call => call[0] === 'click')).toHaveLength(0)
+  })
+
+  it.each([1_000, 10_000])('keeps %i delegated rows at one native listener', count => {
+    const add = vi.spyOn(EventTarget.prototype, 'addEventListener')
+    const remove = vi.spyOn(EventTarget.prototype, 'removeEventListener')
+    const root = document.createElement('div')
+    const fragment = document.createDocumentFragment()
+
+    for (let index = 0; index < count; index++) {
+      const node = document.createElement('button')
+      _$compiledDelegateEvent(root, node, 'click', () => () => index)
+      fragment.appendChild(node)
+    }
+    root.appendChild(fragment)
+
+    expect(add.mock.calls.filter(call => call[0] === 'click')).toHaveLength(1)
+    expect(remove.mock.calls.filter(call => call[0] === 'click')).toHaveLength(0)
+    root.replaceChildren()
+    expect(remove.mock.calls.filter(call => call[0] === 'click')).toHaveLength(0)
   })
 })

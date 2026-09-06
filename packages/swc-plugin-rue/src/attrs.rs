@@ -400,6 +400,73 @@ fn is_compiled_event_handler_expr(expr: &Expr) -> bool {
         || matches!(unwrap_expr(expr), Expr::Call(call) if crate::compiled_component::is_static_prop_get_call(call))
 }
 
+fn is_delegated_bubbling_event(name: &str) -> bool {
+    matches!(
+        name,
+        "auxclick"
+            | "beforeinput"
+            | "change"
+            | "click"
+            | "compositionend"
+            | "compositionstart"
+            | "compositionupdate"
+            | "contextmenu"
+            | "copy"
+            | "cut"
+            | "dblclick"
+            | "drag"
+            | "dragend"
+            | "dragenter"
+            | "dragleave"
+            | "dragover"
+            | "dragstart"
+            | "drop"
+            | "input"
+            | "keydown"
+            | "keypress"
+            | "keyup"
+            | "mousedown"
+            | "mousemove"
+            | "mouseout"
+            | "mouseover"
+            | "mouseup"
+            | "paste"
+            | "pointercancel"
+            | "pointerdown"
+            | "pointermove"
+            | "pointerout"
+            | "pointerover"
+            | "pointerup"
+            | "reset"
+            | "submit"
+            | "touchcancel"
+            | "touchend"
+            | "touchmove"
+            | "touchstart"
+            | "wheel"
+    )
+}
+
+pub(crate) fn is_compiled_delegated_event(attr_name: &str, handler: &Expr) -> bool {
+    let Some(spec) = compiled_event_spec(attr_name) else { return false };
+    if spec.capture
+        || attr_name.ends_with("Once")
+        || attr_name.ends_with("Passive")
+        || !is_delegated_bubbling_event(&spec.name)
+    {
+        return false;
+    }
+    matches!(
+        unwrap_expr(handler),
+        Expr::Arrow(ArrowExpr {
+            params,
+            is_async: false,
+            is_generator: false,
+            ..
+        }) if params.is_empty()
+    )
+}
+
 fn is_compiled_ref_expr(expr: &Expr) -> bool {
     matches!(unwrap_expr(expr), Expr::Ident(_) | Expr::Member(_) | Expr::Arrow(_) | Expr::Fn(_))
 }
@@ -534,6 +601,19 @@ fn emit_compiled_event(
     handler: &Expr,
 ) {
     let spec = compiled_event_spec(attr_name).expect("compiled event must have a static name");
+    if is_compiled_delegated_event(attr_name, handler) {
+        let register = call_ident(
+            "_$compiledDelegateEvent",
+            vec![
+                Expr::Ident(ident("__rue_parent_context")),
+                Expr::Ident(target.clone()),
+                string_expr(&spec.name),
+                compiled_arrow(vec![], BlockStmtOrExpr::Expr(Box::new(handler.clone()))),
+            ],
+        );
+        push_expr_stmt(stmts, call_ident("onOwnerCleanup", vec![register]));
+        return;
+    }
     let listener = vt.next_event_ident();
     let event = ident("$event");
     let current_handler = ident(&format!("{}_handler", listener.sym));

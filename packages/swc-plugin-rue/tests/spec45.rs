@@ -8,12 +8,14 @@ mod utils;
 #[test]
 fn transforms_spec45() {
     let src = r##"
-import { type FC, useError, useApp } from '@rue-js/rue'
+import { type FC, installBrowserErrorBridge, installErrorConsole, installDevErrorOverlay, useApp } from '@rue-js/rue'
 import { RouterView } from '@rue-js/router'
 import router from './router'
 import SiteLayout from './pages/site/components/Layout'
 
-useError({ overlay: true, console: true })
+installBrowserErrorBridge()
+installErrorConsole()
+installDevErrorOverlay()
 
 const RootApp: FC = () => {
   return (
@@ -31,14 +33,13 @@ useApp(RootApp).use(router).mount('#app')
 
     let _expected_fragment = r##"
 import { useApp, _$createComponent } from "@rue-js/rue/internal";
-import { type FC, useError } from '@rue-js/rue';
+import { type FC, installBrowserErrorBridge, installErrorConsole, installDevErrorOverlay } from '@rue-js/rue';
 import { RouterView } from '@rue-js/router';
 import router from './router';
 import SiteLayout from './pages/site/components/Layout';
-useError({
-    overlay: true,
-    console: true
-});
+installBrowserErrorBridge();
+installErrorConsole();
+installDevErrorOverlay();
 const RootApp: FC = ()=>{
     return (()=>{
         const __child1 = _$createComponent(RouterView, {});

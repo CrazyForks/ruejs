@@ -155,6 +155,12 @@ export {
 } from '@rue-js/runtime/internal'
 export type * from '@rue-js/runtime/internal'
 export {
+  _$compiledDelegateEvent,
+  _$compiledRenderEffect,
   _$disposeCompiledKeyedRows,
   _$mountCompiledKeyedRowOwnerless,
+  _$mountCompiledKeyedSingleRow,
+  _$mountCompiledKeyedSingleRowOwnerless,
+  _$mountCompiledKeyedSingleRowSetup,
+  _$reconcileKeyedSingle,
 } from '@rue-js/runtime/internal/compiler'

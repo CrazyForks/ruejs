@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  _$compiledRenderEffect,
   _$compiledSetup,
   __rueGetCompiledReactiveDebugState,
   adoptOwner,
@@ -28,6 +29,66 @@ afterEach(() => {
 })
 
 describe('compact compiler reactive kernel', () => {
+  it('coalesces compiled render effects in a microtask without changing public frame effects', async () => {
+    const originalRaf = globalThis.requestAnimationFrame
+    let queuedFrame: FrameRequestCallback | undefined
+    globalThis.requestAnimationFrame = callback => {
+      queuedFrame = callback
+      return 1
+    }
+
+    try {
+      const source = signal(0)
+      const renderValues: number[] = []
+      const publicValues: number[] = []
+
+      _$compiledRenderEffect(() => renderValues.push(source.get()))
+      effect(() => publicValues.push(source.get()))
+
+      source.set(1)
+      source.set(2)
+      source.set(3)
+
+      expect(renderValues).toEqual([0])
+      expect(publicValues).toEqual([0])
+      await Promise.resolve()
+      expect(renderValues).toEqual([0, 3])
+      expect(publicValues).toEqual([0])
+
+      queuedFrame?.(performance.now())
+      expect(publicValues).toEqual([0, 3])
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf
+    }
+  })
+
+  it('cancels a queued compiled render effect when it is disposed', async () => {
+    const source = signal(0)
+    const values: number[] = []
+    const render = _$compiledRenderEffect(() => values.push(source.get()))
+
+    source.set(1)
+    render.dispose()
+    await Promise.resolve()
+
+    expect(values).toEqual([0])
+  })
+
+  it('runs the initial compiled render synchronously and propagates its error without RAF', () => {
+    const originalRaf = globalThis.requestAnimationFrame
+    // SSR does not provide a frame scheduler.
+    Reflect.deleteProperty(globalThis, 'requestAnimationFrame')
+    try {
+      expect(() =>
+        _$compiledRenderEffect(() => {
+          throw new Error('render failed')
+        }),
+      ).toThrow('render failed')
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf
+    }
+  })
+
   it('finishes owner-tree disposal after lifecycle, effect and owner cleanup errors', () => {
     const baseline = __rueGetCompiledReactiveDebugState()
     const owner = createOwner()

@@ -3,10 +3,15 @@
 // retain the full reactive/runtime facade even when Rollup drops the unused exports.
 export * from './compiled-hook-compat'
 export * from './runtime-core/compiled'
-export { batch as _$compiledBatch, signal as _$compiledSignal } from './runtime-core/compiled'
+export {
+  _$compiledRenderEffect,
+  batch as _$compiledBatch,
+  signal as _$compiledSignal,
+} from './runtime-core/compiled'
 export { onOwnerCleanup as onScopeDispose } from './runtime-core/compiled'
 export * from './compiler-runtime/compact-root'
 export * from './compiler-runtime/compact-keyed-list'
+export * from './compiler-runtime/compact-events'
 export * from './compiler-runtime/compact-component-abi'
 export {
   computed,

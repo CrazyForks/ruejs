@@ -8,11 +8,13 @@ mod utils;
 #[test]
 fn transforms_spec46() {
     let src = r##"
-import { type FC, useError, useApp } from '@rue-js/rue'
+import { type FC, installBrowserErrorBridge, installErrorConsole, installDevErrorOverlay, useApp } from '@rue-js/rue'
 import { RouterView } from '@rue-js/router'
 import router from './router'
 
-useError({ overlay: true, console: true })
+installBrowserErrorBridge()
+installErrorConsole()
+installDevErrorOverlay()
 
 const ParentBox: FC = (p) => (
   <div>
