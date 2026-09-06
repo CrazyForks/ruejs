@@ -1,3 +1,11 @@
+## [0.9.7](https://github.com/hunzhiwange/ruejs/compare/v0.9.6...v0.9.7) (2026-09-06)
+
+
+### Features
+
+* 修复因为性能优化的错误 ([5fb3e1f](https://github.com/hunzhiwange/ruejs/commit/5fb3e1f616b1be97e714d23a0e8c8925bda0d5de))
+* 性能优化 ([4a94773](https://github.com/hunzhiwange/ruejs/commit/4a94773572cb9d064f33335267ef7ac0dedaa75c))
+
 ## [0.9.4](https://github.com/hunzhiwange/ruejs/compare/v0.9.3...v0.9.4) (2026-09-06)
 
 
