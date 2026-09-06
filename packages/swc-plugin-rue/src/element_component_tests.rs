@@ -246,7 +246,8 @@ fn lowers_safe_native_component_children_without_vapor_wrappers() {
     assert!(output.contains("_$template(\"<h1>Demo</h1>\")"), "{output}");
     assert!(output.contains(".content.cloneNode(true)"), "{output}");
     assert!(output.contains("effect(()=>{"), "{output}");
-    assert!(output.contains("addEventListener(\"click\""), "{output}");
+    assert!(output.contains("_$compiledDelegateEvent("), "{output}");
+    assert!(output.contains("\"click\""), "{output}");
     assert!(
         !output.contains("const__child1=vapor(") && !output.contains("children:vapor("),
         "{output}"

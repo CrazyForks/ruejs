@@ -1,14 +1,19 @@
 import { resolveDOMHostParentContext } from './dom.browser'
+import { hasActiveDOMHostOperations, isFreshBrowserDOMHost } from './dom-host-operations'
 
 type CompiledDelegatedHandler = () => unknown
 type CompiledDelegatedHandlerRead = () => CompiledDelegatedHandler | null | undefined
 
 type DelegatedTarget = EventTarget & { parentNode?: Node | null }
+type DelegatedRegistration = {
+  read: CompiledDelegatedHandlerRead
+  root: EventTarget
+}
 
-const handlers = new Map<string, WeakMap<EventTarget, CompiledDelegatedHandlerRead>>()
+const handlers = new Map<string, WeakMap<EventTarget, DelegatedRegistration>>()
 const roots = new WeakMap<EventTarget, Map<string, EventListener>>()
 
-const readHandler = (target: EventTarget, type: string): CompiledDelegatedHandlerRead | undefined =>
+const readHandler = (target: EventTarget, type: string): DelegatedRegistration | undefined =>
   handlers.get(type)?.get(target)
 
 const eventPath = (event: Event, root: EventTarget): EventTarget[] => {
@@ -27,9 +32,9 @@ const eventPath = (event: Event, root: EventTarget): EventTarget[] => {
 
 const dispatch = (root: EventTarget, type: string, event: Event): void => {
   for (const target of eventPath(event, root)) {
-    const read = readHandler(target, type)
-    if (read) {
-      const handler = read()
+    const registration = readHandler(target, type)
+    if (registration?.root === root) {
+      const handler = registration.read()
       if (typeof handler === 'function') handler()
     }
     if (target === root || event.cancelBubble) break
@@ -46,20 +51,46 @@ export const _$compiledDelegateEvent = (
   type: string,
   read: CompiledDelegatedHandlerRead,
 ): (() => void) => {
+  // Hydration records native target listeners so it can transfer them from the speculative client
+  // node to the adopted SSR node. A WeakMap-only delegated registration cannot be transferred.
+  if (hasActiveDOMHostOperations() && !isFreshBrowserDOMHost() && canListen(target)) {
+    const listener: EventListener = () => {
+      const handler = read()
+      if (typeof handler === 'function') handler()
+    }
+    target.addEventListener(type, listener)
+    return () => target.removeEventListener(type, listener)
+  }
+
+  const resolvedRoot =
+    typeof Node !== 'undefined' && root instanceof Node ? resolveDOMHostParentContext(root) : root
+  // An unassociated staging fragment is emptied when its children are committed, so a listener
+  // installed on it would become unreachable. Mapped list fragments resolve to their stable host;
+  // otherwise keep the listener on the target that actually moves into the document.
+  const detachedStagingRoot =
+    typeof DocumentFragment !== 'undefined' &&
+    root instanceof DocumentFragment &&
+    resolvedRoot === root
+  const listenerRoot =
+    detachedStagingRoot && canListen(target)
+      ? target
+      : canListen(resolvedRoot)
+        ? resolvedRoot
+        : canListen(target)
+          ? target
+          : null
+  if (listenerRoot == null) return () => {}
+
   let typeHandlers = handlers.get(type)
   if (typeHandlers == null) {
     typeHandlers = new WeakMap()
     handlers.set(type, typeHandlers)
   }
-  typeHandlers.set(target, read)
+  const registration: DelegatedRegistration = { read, root: listenerRoot }
+  typeHandlers.set(target, registration)
   const dispose = (): void => {
-    if (typeHandlers.get(target) === read) typeHandlers.delete(target)
+    if (typeHandlers.get(target) === registration) typeHandlers.delete(target)
   }
-
-  const resolvedRoot =
-    typeof Node !== 'undefined' && root instanceof Node ? resolveDOMHostParentContext(root) : root
-  const listenerRoot = canListen(resolvedRoot) ? resolvedRoot : canListen(target) ? target : null
-  if (listenerRoot == null) return dispose
 
   let rootListeners = roots.get(listenerRoot)
   if (!rootListeners) {

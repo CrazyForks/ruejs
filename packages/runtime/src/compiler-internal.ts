@@ -14,6 +14,7 @@ export * from './compiler-runtime/compact-keyed-list'
 export * from './compiler-runtime/compact-events'
 export * from './compiler-runtime/compact-component-abi'
 export {
+  _$compiledUseState,
   computed,
   onMounted,
   onUnmounted,

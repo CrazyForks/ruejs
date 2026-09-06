@@ -317,14 +317,22 @@ export const _$compiledRenderEffect = (callback: EffectCallback): EffectHandle =
     scheduler: runner => {
       if (!initialized) {
         initialized = true
-        runner()
+        pending = true
+        try {
+          runner()
+        } finally {
+          pending = false
+        }
         return
       }
       if (pending) return
       pending = true
       queueMicrotask(() => {
-        pending = false
-        runner()
+        try {
+          runner()
+        } finally {
+          pending = false
+        }
       })
     },
   })

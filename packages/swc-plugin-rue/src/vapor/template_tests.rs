@@ -767,6 +767,7 @@ const registerEffect = fn => {{
 }};
 const watchEffect = registerEffect;
 const effect = registerEffect;
+const _$compiledRenderEffect = registerEffect;
 const onOwnerCleanup = cleanup => cleanups.push(cleanup);
 const _$compiledText = (node, read) => {{
   let previous;
@@ -821,6 +822,7 @@ const _$mountCompiledKeyedRowOwnerless = (setup, patch, target) => {{
   for (const root of roots) if (root.parentNode !== parent) parent.insertBefore(root, target?.before || null);
   return {{ node: roots[0], last: roots.at(-1), patch, dispose() {{}} }};
 }};
+const _$mountCompiledKeyedSingleRowOwnerless = _$mountCompiledKeyedRowOwnerless;
 const _$mountCompiledKeyedRowSetup = (setup, patch, target) => {{
   const start = cleanups.length;
   const row = _$mountCompiledKeyedRowOwnerless(setup, patch, target);
@@ -901,6 +903,7 @@ const _$reconcileKeyed = (parent, before, previous, items, getKey, renderItem) =
   }}
   return next;
 }};
+const _$reconcileKeyedSingle = _$reconcileKeyed;
 const _$compiledKeyedList = (options) => {{
   let cursor = options.start.nextSibling;
   while (cursor && cursor !== options.before) {{

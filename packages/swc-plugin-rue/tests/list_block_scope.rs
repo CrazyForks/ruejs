@@ -242,7 +242,7 @@ const Demo: FC = () => {
     assert!(!out.contains(concat!("direct", "Root:")), "{out}");
     assert!(!out.contains(concat!("compiled", "RowPatch:")), "{out}");
     assert_eq!(
-        out.matches("effect(").count(),
+        out.matches("_$compiledRenderEffect(").count(),
         1,
         "safe getter reads should run through the list-level patch effect: {out}"
     );

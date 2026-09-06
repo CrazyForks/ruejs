@@ -216,7 +216,7 @@ fn renders_static_jsx_slots_once_and_map_expressions_as_lists() {
         &mut map_stmts,
     );
     let map_out = compact(&emit_stmts(map_stmts));
-    assert!(map_out.contains("_$reconcileKeyed("));
+    assert!(map_out.contains("_$reconcileKeyedSingle("));
     assert!(map_out.contains("(item,idx,_$rowTarget)=>{"));
     assert!(!map_out.contains(concat!("direct", "Root:true")));
     assert!(!map_out.contains("_$createDocumentFragment"));

@@ -159,6 +159,44 @@ afterEach(() => {
 })
 
 describe('compiled native events and refs', () => {
+  it('keeps delegated handlers live when an unmapped staging fragment is committed', () => {
+    const staging = document.createDocumentFragment()
+    const button = document.createElement('button')
+    const host = document.createElement('main')
+    const calls: string[] = []
+    staging.appendChild(button)
+
+    const dispose = _$compiledDelegateEvent(
+      staging,
+      button,
+      'click',
+      () => () => calls.push('click'),
+    )
+    host.appendChild(staging)
+    button.click()
+    expect(calls).toEqual(['click'])
+
+    dispose()
+    button.click()
+    expect(calls).toEqual(['click'])
+  })
+
+  it('dispatches a target only from the delegated root that registered it', () => {
+    const outerRoot = document.createElement('div')
+    const innerRoot = document.createElement('section')
+    const button = document.createElement('button')
+    const calls: string[] = []
+    innerRoot.appendChild(button)
+    outerRoot.appendChild(innerRoot)
+    document.body.appendChild(outerRoot)
+
+    _$compiledDelegateEvent(innerRoot, button, 'click', () => () => calls.push('button'))
+    _$compiledDelegateEvent(outerRoot, outerRoot, 'click', () => () => calls.push('outer'))
+    button.click()
+
+    expect(calls).toEqual(['button', 'outer'])
+  })
+
   it('executes real compiler output with latest handlers and root-owned ref cleanup', () => {
     const output = compile()
     expect(output).toContain('from "@rue-js/rue/internal/compiler"')

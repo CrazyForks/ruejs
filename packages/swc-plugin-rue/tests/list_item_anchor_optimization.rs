@@ -22,7 +22,7 @@ const Page: FC<{ items: Array<{ id: string; title: string }> }> = props => (
 
     assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
     assert!(out.contains("_$template("), "{out}");
-    assert!(out.contains("_$mountCompiledKeyedRowOwnerless"), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedSingleRowOwnerless"), "{out}");
     assert!(!out.contains("_$mountCompiledSlotFactory"), "{out}");
     assert!(!out.contains(&utils::normalize("singleRoot:")));
     assert!(!out.contains(&utils::normalize(concat!("direct", "Root:"))));
@@ -157,11 +157,9 @@ const Page: FC<{ todos: Array<{ id: number; text: string; completed: boolean }>;
     let program = apply(program);
     let out = utils::normalize(&utils::strip_marker(&utils::emit(program, cm)));
     assert!(out.contains(&utils::normalize("_$reconcileKeyed")));
-    assert!(out.contains(&utils::normalize(".addEventListener(")));
-    assert_eq!(
-        out.matches(&utils::normalize(".addEventListener(")).count(),
-        out.matches(&utils::normalize(".removeEventListener(")).count()
-    );
+    assert_eq!(out.matches("_$compiledDelegateEvent(").count(), 2, "{out}");
+    assert!(!out.contains(&utils::normalize(".addEventListener(")), "{out}");
+    assert!(!out.contains(&utils::normalize(".removeEventListener(")), "{out}");
     assert!(out.contains("onOwnerCleanup("), "{out}");
     assert!(!out.contains(&utils::normalize("disposeOwner(")));
     assert!(!out.contains(&utils::normalize("_$compiledKeyedList")));

@@ -344,8 +344,8 @@ export const View = () => <>
         .unwrap_or_else(|| panic!("missing Vapor import: {out}"));
 
     assert!(vapor_import.contains("signal"), "{out}");
-    assert!(vapor_import.contains("effect"), "{out}");
-    assert!(vapor_import.contains("_$reconcileKeyed"), "{out}");
+    assert!(vapor_import.contains("_$compiledRenderEffect"), "{out}");
+    assert!(vapor_import.contains("_$reconcileKeyedSingle"), "{out}");
     assert!(vapor_import.contains("_$createComponent"), "{out}");
 }
 
@@ -551,7 +551,7 @@ function View(props) {
     assert!(out.contains("_$reconcileKeyed"));
     assert!(out.contains("_$compiledShowStyle"));
     assert!(out.contains("props.visible"));
-    assert!(out.contains("_$mountCompiledKeyedRowOwnerless"), "{out}");
+    assert!(out.contains("_$mountCompiledKeyedSingleRowOwnerless"), "{out}");
 }
 
 #[test]

@@ -14,6 +14,7 @@ export {
   _$compiledSetup,
   _$compiledSignal,
   _$compiledText,
+  _$compiledUseState,
   _$compiledWithHookId,
   _$compiledListMemo,
   _$disposeCompiledKeyedRows,

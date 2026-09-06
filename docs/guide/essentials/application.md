@@ -65,17 +65,12 @@ app.mount('#app')
 通过 `onError` 订阅 Rue 运行时错误。浏览器错误桥接、控制台报告和开发遮罩可分别安装，它们共享 Rue 错误链，不局限于单个应用实例：
 
 ```tsx
-import {
-  installBrowserErrorBridge,
-  installErrorConsole,
-  installDevErrorOverlay,
-} from '@rue-js/rue'
+import { installBrowserErrorBridge, installErrorConsole, installDevErrorOverlay } from '@rue-js/rue'
 
 const stopBridge = installBrowserErrorBridge()
 const stopConsole = installErrorConsole()
-const stopOverlay = import.meta.env.DEV && !import.meta.env.SSR
-  ? installDevErrorOverlay()
-  : undefined
+const stopOverlay =
+  import.meta.env.DEV && !import.meta.env.SSR ? installDevErrorOverlay() : undefined
 
 // 在宿主页面销毁或热更新卸载时调用
 function disposeErrorHandling() {

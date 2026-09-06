@@ -42,6 +42,9 @@ export const getDOMHostAdapter = <T extends DOMHostAdapter>(fallback: T): T =>
 
 export const isFreshBrowserDOMHost = (): boolean => activeContext?.freshBrowser === true
 
+/** Whether compiled DOM work is currently running through an installed host context. */
+export const hasActiveDOMHostOperations = (): boolean => activeContext !== undefined
+
 export const rememberDOMHostContext = (value: object): void => {
   if (activeContext) contexts.set(value, activeContext)
 }

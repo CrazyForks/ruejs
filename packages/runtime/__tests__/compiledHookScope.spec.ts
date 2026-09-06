@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 
+import * as compilerInternalRuntime from '../src/compiler-internal'
 import * as compiledRuntime from '../src/internal'
 import { createContext, useContext } from '../src/context'
 
@@ -11,6 +12,28 @@ afterEach(() => {
 })
 
 describe('compiled hook owner', () => {
+  it('exports React-compatible useState from the compact compiler entry', () => {
+    compilerInternalRuntime.setReactiveScheduling('sync')
+    const owner = compilerInternalRuntime.createOwner()
+    let initializerRuns = 0
+    const render = () =>
+      compilerInternalRuntime.runWithOwner(owner, () =>
+        compilerInternalRuntime._$compiledUseState('state:count', () => {
+          initializerRuns += 1
+          return 0
+        }),
+      )!
+
+    const first = render()
+    const second = render()
+    expect(second).toEqual(first)
+    expect(initializerRuns).toBe(1)
+
+    first[1](previous => previous + 2)
+    expect(first[0].get()).toBe(2)
+    compilerInternalRuntime.disposeOwner(owner)
+  })
+
   it('brands compiler refs as readonly Rue refs', () => {
     const state = compiledRuntime.ref('ready')
 

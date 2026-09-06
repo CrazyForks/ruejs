@@ -87,7 +87,7 @@ fn preserves_children_slots_and_map_lists_inside_fragments() {
 
     assert!(out.contains(&normalize(r#"rue:children:anchor"#)));
     assert!(out.contains("_$mountCompiledSlotAt"), "{out}");
-    assert!(out.contains(&normalize(r#"_$reconcileKeyed("#)));
+    assert!(out.contains(&normalize(r#"_$reconcileKeyedSingle("#)));
     assert!(out.contains(&normalize(r#"rue:list:end"#)));
 }
 
@@ -105,7 +105,7 @@ fn treats_any_member_children_as_children_slots_inside_fragments() {
 fn map_list_children_short_circuit_slot_rendering_inside_fragments() {
     let out = compile_fragment_children("<>{items.map(item => <span>{item.label}</span>)}</>");
 
-    assert!(out.contains("_$reconcileKeyed("), "{out}");
+    assert!(out.contains("_$reconcileKeyedSingle("), "{out}");
     assert!(out.contains(&normalize(r#"rue:list:end"#)), "{out}");
 }
 

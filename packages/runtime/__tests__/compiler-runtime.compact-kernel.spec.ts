@@ -74,6 +74,25 @@ describe('compact compiler reactive kernel', () => {
     expect(values).toEqual([0])
   })
 
+  it('does not recursively reschedule from mutations during its own render', async () => {
+    const source = signal(0)
+    let runs = 0
+
+    _$compiledRenderEffect(() => {
+      runs += 1
+      source.get()
+      source.set(runs)
+    })
+
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(runs).toBe(1)
+
+    source.set(10)
+    await Promise.resolve()
+    expect(runs).toBe(2)
+  })
+
   it('runs the initial compiled render synchronously and propagates its error without RAF', () => {
     const originalRaf = globalThis.requestAnimationFrame
     // SSR does not provide a frame scheduler.
