@@ -11,7 +11,7 @@ import { BENCHMARK_GZIP_LIMIT } from '../js-framework-benchmark-size.js'
 const projectRoot = process.cwd()
 const benchmarkSourceDir = path.resolve(
   projectRoot,
-  '../js-framework-benchmark/frameworks/keyed/rue-signal/src',
+  'scripts/__tests__/fixtures/benchmark-compiler-entry',
 )
 const fixtureDir = path.resolve(projectRoot, 'temp/benchmark-compiler-entry')
 const fixtureSourceDir = path.resolve(fixtureDir, 'src')
